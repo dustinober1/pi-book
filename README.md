@@ -1,5 +1,7 @@
 # Genesis for Pi
 
+> Private repository/package: intended for private use unless you explicitly choose to publish it.
+
 Genesis for Pi is the Pi-native packaging of Book Genesis Universal Core.
 
 This package is now extension-first: it exposes Pi commands, blocker-triage UI/tooling, the primary `genesis-for-pi` skill, and the `book-genesis-codex` compatibility alias for durable intake, foundation, architecture, drafting, adversarial audit, Genesis Score, and editorial package generation.
@@ -86,6 +88,13 @@ For multiple machines, put this folder in a private git repo and install from gi
 ```bash
 pi install git:github.com/YOUR_USER/genesis-for-pi@v0.1.0
 ```
+
+## Privacy and local-use notes
+
+- This repo is intended to stay private by default.
+- `package.json` uses `"license": "UNLICENSED"`.
+- Do not commit secrets, `.env` files, `.pi/`, `.agents/`, build output, or local `node_modules/`.
+- Review machine-specific absolute paths before pushing future changes.
 
 Use tags or commit refs to keep machines pinned to the same version.
 
