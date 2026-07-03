@@ -17,23 +17,25 @@ Create and update:
 - `artifacts/continuity-ledger.md`
 - `artifacts/reader-promise-tracker.md`
 - `artifacts/drift-loop-alarm.md`
+- `artifacts/expansion-integrity.md`
 - `artifacts/07-opening-strategy.md`
 - `PROJECT_STATE.yaml`
 
 ## Architecture Rules
 
-- build a chapter or block outline with clear narrative function
-- define the ending turn for each major block
-- preserve escalation logic from the story engine
+- build a chapter or block outline with clear narrative, argumentative, or instructional function
+- define the ending turn, claim turn, or learning turn for each major block
+- preserve escalation logic from the story engine or argument/learning progression from the core problem
 - build `artifacts/causality-chain.md` so major scenes connect by therefore/but causality rather than and-then sequence
 - align the architecture with the emotional curve
-- design 2-3 integrated subplots for book-length work unless the user explicitly requests a shorter or single-threaded form
+- design 2-3 integrated subplots for book-length fiction when appropriate, or 2-3 integrated nonfiction/study-guide threads such as case lines, recurring examples, domain clusters, or competency tracks
 - give each subplot a dramatic question, escalation path, convergence point, and payoff before drafting begins
 - ensure each subplot changes the main plot, character choice, thematic pressure, or ending; cut or merge ornamental subplots
-- initialize `artifacts/continuity-ledger.md` with every fact the drafting phase must preserve
-- initialize `artifacts/reader-promise-tracker.md` with every promise the book is making to the reader
-- initialize `artifacts/drift-loop-alarm.md` with hard stop conditions for drift, loops, no-state-change chapters, reopened tickets, phase mismatch, and false productivity
-- include a visible tension map
+- initialize `artifacts/continuity-ledger.md` with every fact the drafting phase must preserve; use `references/templates/continuity-ledger.md` unless the project clearly needs a different structure
+- initialize `artifacts/reader-promise-tracker.md` with every promise the book is making to the reader, including learning, transformation, exam-readiness, or series-continuity promises when relevant
+- initialize `artifacts/drift-loop-alarm.md` with hard stop conditions for drift, loops, no-state-change chapters, reopened tickets, phase mismatch, false productivity, and filler expansion
+- create `artifacts/expansion-integrity.md` whenever target length, trim pressure, or pacing concerns suggest the manuscript may need expansion; use `references/templates/expansion-integrity.md` unless the project clearly needs a different structure, and ensure expansion comes from consequence, not padding
+- include a visible tension map, learning-pressure map, or argument-pressure map
 - define an opening strategy that promises what the book will actually deliver
 - map physical scene embodiment before drafting so scenes are not only conversations about meaning
 - preserve intentional ambiguity, weirdness, and residue from `artifacts/risk-budget.md` rather than forcing every beat into clean explanation
@@ -77,7 +79,7 @@ Every major scene must either cause, constrain, complicate, reveal, reverse, or 
 
 ## Subplot Map Requirements
 
-`05-subplot-map.md` must include 2-3 subplots for book-length work:
+`05-subplot-map.md` must include 2-3 subplots for book-length fiction, or the equivalent recurring pressure lines for nonfiction and study guides:
 
 - subplot name
 - dramatic question
@@ -92,6 +94,8 @@ Every major scene must either cause, constrain, complicate, reveal, reverse, or 
 - risk if the subplot is removed
 
 Every subplot must pass the removal test: if removing it does not weaken the main plot, character arc, theme, or ending, revise, merge, or cut it before drafting.
+
+For study guides and certification books, those recurring pressure lines may be domains, objective clusters, case studies, scenario families, or recurring reader pain points.
 
 ## Continuity Ledger Requirements
 
@@ -111,14 +115,27 @@ Keep the ledger concise enough to update after every chapter block.
 `reader-promise-tracker.md` must initialize the book's promise contract before drafting:
 
 - premise promise
-- genre promise
-- emotional promise
-- mystery, question, or suspense promise
-- character arc promise
-- subplot promises cross-referenced to `05-subplot-map.md`
+- genre or use-case promise
+- emotional, learning, or exam-readiness promise
+- mystery, question, suspense, argument, or competency promise
+- character arc, reader transformation, or capability promise
+- subplot or pressure-line promises cross-referenced to `05-subplot-map.md`
 - opening-page and chapter-one promises
-- planned payoff, transformation, or deliberate denial for each promise
+- planned payoff, transformation, mastery gain, or deliberate denial for each promise
 - risk if the promise is ignored or paid off weakly
+
+## Expansion Integrity Requirements
+
+`expansion-integrity.md` must define how the book earns its length:
+
+- current target length or scope pressure
+- whether expansion is actually needed, and why
+- approved expansion paths such as subplot escalation, relational pressure, aftermath, reversals, cost, investigation, or thematic complication
+- forbidden filler patterns such as repeated introspection, duplicate exposition, low-stakes banter, atmospheric drift, decorative worldbuilding, or no-state-change scenes
+- proposed added scenes or chapter blocks and what each one changes in plot, character, promise, or ending pressure
+- removal test for any expansion path: if cutting it would not damage the book, it is padding and must be revised, merged, or cut
+
+If the project is already long enough, record that no expansion is currently justified.
 
 ## Drift And Loop Alarm Requirements
 
@@ -128,6 +145,7 @@ Keep the ledger concise enough to update after every chapter block.
 - emotional-loop alarm: stop if characters repeat the same argument or emotional beat without new information or altered stakes
 - no-state-change alarm: stop if a chapter scorecard records no plot, character, promise, continuity, or subplot movement
 - subplot-stall alarm: stop if a subplot appears twice without escalation, complication, convergence, or payoff movement
+- padding alarm: stop if new outline material increases length without adding consequence, pressure, or changed end conditions
 - continuity-regression alarm: stop if a revision reintroduces a fixed continuity error
 - ticket-reopen alarm: stop if three revision tickets reopen after attempted repair
 - prose-flattening alarm: stop if revision makes voice less specific, less textured, or more generic across two passes

@@ -13,6 +13,6 @@ When invoked:
 - load `./SKILL.md`
 - treat `genesis-for-pi` as the canonical skill
 - preserve legacy compatibility for older slash commands, prompts, and habits
-- prefer Pi-native commands such as `/genesis-init`, `/genesis-open`, `/genesis-status`, `/genesis-next`, and `/genesis-blockers`
+- prefer Pi-native commands such as `/genesis-init`, `/genesis-open`, `/genesis-status`, `/genesis-plan`, `/genesis-next`, and `/genesis-blockers`
 
 If both names appear, follow the `genesis-for-pi` skill contract.

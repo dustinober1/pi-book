@@ -4,6 +4,8 @@
 
 Genesis for Pi is the Pi-native packaging of Book Genesis Universal Core.
 
+It can be used for novels, memoir, narrative nonfiction, prescriptive nonfiction, study guides, certification-prep books, and installments within a larger series.
+
 This package is now extension-first: it exposes Pi commands, blocker-triage UI/tooling, the primary `genesis-for-pi` skill, and the `book-genesis-codex` compatibility alias for durable intake, foundation, architecture, drafting, adversarial audit, Genesis Score, and editorial package generation.
 
 ## Install in Pi
@@ -57,8 +59,13 @@ This package provides Pi-native extension commands:
 /genesis-init
 /genesis-open
 /genesis-status
+/genesis-plan
 /genesis-next
+/genesis-validate
+/genesis-set-mode
 /genesis-blockers
+/genesis-scaffold-templates
+/genesis-audit-fluff
 ```
 
 Legacy aliases remain available:
@@ -67,19 +74,34 @@ Legacy aliases remain available:
 /bg-init
 /bg-open
 /bg-status
+/bg-plan
 /bg-next
+/bg-validate
+/bg-set-mode
 /bg-blockers
+/bg-scaffold-templates
+/bg-audit-fluff
 ```
 
-Use `/genesis-init` to create a fresh Genesis project tree, initialize git when needed, and optionally kick off Phase 0 intake.
+Use `/genesis-init` to create a fresh Genesis project tree, initialize git when needed, scaffold research folders, and optionally kick off Phase 0 intake.
 
 Use `/genesis-open` to pick an existing Genesis project under the current working directory, then inspect it or continue it.
 
-Use `/genesis-status` to inspect the current Genesis project root, detected phase, missing expected files, and potential blocker files.
+Use `/genesis-status` to inspect the current Genesis project root, detected phase, phase-aware missing expected files, git state, and potential blocker files.
 
-Use `/genesis-next` to clear blockers when possible, then advance the current Genesis project to the next incomplete pipeline step. It bypasses optional approval pauses for that turn, but it does not bypass hard blockers such as active drift alarms, open blocker/high revision tickets, unresolved AI-tell or author-voice blockers, missing required phase outputs, or phase contract mismatches.
+Use `/genesis-plan` for a dry-run summary of what Genesis would do next before any agent turn is queued.
+
+Use `/genesis-next` to clear blockers when possible, then advance the current Genesis project to the next incomplete pipeline step. It bypasses optional approval pauses for that turn, but it does not bypass hard blockers such as active drift alarms, open blocker/high revision tickets, unresolved AI-tell or author-voice blockers, missing required phase outputs, phase contract mismatches, or missing git initialization.
+
+Use `/genesis-validate` to run a stricter phase-contract check for the current project before advancing. It also checks mode-specific artifacts for series, nonfiction, study-guide, and certification-prep workflows.
+
+Use `/genesis-set-mode` to explicitly set the workflow mode, update `PROJECT_STATE.yaml`, `ASSUMPTIONS.md`, and `artifacts/00-brief.md`, and offer mode-specific scaffold files when templates exist.
 
 Use `/genesis-blockers` for interactive blocker triage. It lets you inspect blocker evidence and queue a targeted fix turn from the UI.
+
+Use `/genesis-scaffold-templates` to copy core artifact templates such as `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `argument-spine.md`, `certification-blueprint-map.md`, and `research/reference-inventory.md` into the active project.
+
+Use `/genesis-audit-fluff` to run a focused anti-padding audit when a draft feels thin, repetitive, or suspiciously long for how little it changes.
 
 You can append instructions:
 
@@ -110,6 +132,7 @@ What happens:
 - a new project directory is created
 - the standard Genesis folders are created
 - starter files such as `PROJECT_STATE.yaml`, `ASSUMPTIONS.md`, and intake artifacts are scaffolded
+- research folders such as `research/reference-inventory.md`, `research/notes/`, and `research/sources/` are scaffolded
 - `git init` runs automatically if needed
 - you can immediately kick off Phase 0 intake
 
@@ -130,6 +153,7 @@ If you already have one or more Genesis projects under your current working dire
 This lets you pick a project and then:
 
 - show status
+- show a dry-run plan
 - inspect blockers
 - continue the next step
 
@@ -150,6 +174,7 @@ Use this when you want a quick read on:
 - detected current phase
 - likely blocker files
 - missing expected outputs
+- updated `STATUS.md` dashboard for easy resume
 
 Legacy alias:
 
@@ -157,7 +182,25 @@ Legacy alias:
 /bg-status
 ```
 
-### 4. Advance the project
+### 4. Preview the next step
+
+```text
+/genesis-plan
+```
+
+Use this when you want a dry-run summary of:
+
+- hard blockers and warnings
+- the next expected file for the current phase
+- what `/genesis-next` will try to do
+
+Legacy alias:
+
+```text
+/bg-plan
+```
+
+### 5. Advance the project
 
 ```text
 /genesis-next
@@ -188,7 +231,52 @@ Legacy alias:
 /bg-next
 ```
 
-### 5. Inspect blockers directly
+### 6. Validate the current phase contract
+
+```text
+/genesis-validate
+```
+
+Use this when you want to verify:
+
+- detected phase
+- required outputs for that phase
+- missing outputs
+- blocker and warning state
+- likely mismatch between `PROJECT_STATE.yaml` and actual files
+
+Legacy alias:
+
+```text
+/bg-validate
+```
+
+### 7. Set the workflow mode
+
+```text
+/genesis-set-mode
+```
+
+Use this when you want to explicitly mark a project as:
+
+- novel
+- memoir
+- narrative nonfiction
+- prescriptive nonfiction
+- study guide
+- certification prep
+- series installment
+- other
+
+When templates are available for the selected mode, Genesis can also scaffold those mode-specific starter files immediately.
+
+Legacy alias:
+
+```text
+/bg-set-mode
+```
+
+### 8. Inspect blockers directly
 
 ```text
 /genesis-blockers
@@ -204,6 +292,52 @@ Legacy alias:
 
 ```text
 /bg-blockers
+```
+
+### 9. Scaffold core templates
+
+```text
+/genesis-scaffold-templates
+```
+
+Use this when you want to quickly create or replace structured starter files for:
+
+- `voice-bible.md`
+- `continuity-ledger.md`
+- `revision-tickets.md`
+- `expansion-integrity.md`
+- `series-bible.md`
+- `argument-spine.md`
+- `certification-blueprint-map.md`
+- `study-guide-objectives.md`
+- `evidence-map.md`
+- `research/reference-inventory.md`
+
+Legacy alias:
+
+```text
+/bg-scaffold-templates
+```
+
+### 10. Audit fluff directly
+
+```text
+/genesis-audit-fluff
+```
+
+Use this when you want a focused pass on:
+
+- padding
+- ornamental subplots
+- repeated introspection
+- duplicate exposition
+- low-consequence chapter blocks
+- scenes that increase length without increasing pressure
+
+Legacy alias:
+
+```text
+/bg-audit-fluff
 ```
 
 ## Typical ways to work
@@ -223,6 +357,20 @@ Legacy alias:
 2. run `/genesis-open` or `/genesis-status`
 3. if blockers appear, use `/genesis-blockers`
 4. run `/genesis-next` to continue safely
+
+### Workflow modes
+
+During intake, Genesis should record a workflow mode such as:
+
+- novel
+- memoir
+- narrative nonfiction
+- prescriptive nonfiction
+- study guide
+- certification prep
+- series installment
+
+This helps the system decide whether to emphasize subplots, argument flow, reference integrity, objective coverage, or series continuity.
 
 ### Force explicit skill usage
 
@@ -260,10 +408,12 @@ Genesis for Pi uses this sequence:
    - name audits
 3. **Phase 2: Architecture**
    - outline
-   - subplot map
-   - causality chain
+   - subplot/pressure-line map
+   - causality or argument chain
    - continuity ledger
    - reader promise tracker
+   - expansion integrity plan
+   - optional series / nonfiction / study-guide support artifacts
 4. **Phase 3: Drafting**
    - chapter drafting
    - chapter scorecards
@@ -284,6 +434,7 @@ Genesis for Pi is designed to avoid generic AI-clean prose.
 In practice, that means:
 
 - preserve the writer's rhythm, taste, roughness, and obsessions
+- do not pad to reach word count; if the book needs to grow, add real subplot pressure, consequence, and aftermath instead of filler
 - use `review-personas.md` to catch false notes early
 - use `author-voice-fingerprint.md` and `voice-bible.md` during drafting and revision
 - clear blockers by repairing the underlying prose or structure, not by cosmetic word swaps
@@ -311,6 +462,7 @@ Use tags or commit refs to keep machines pinned to the same version.
 - `SKILL.md` — primary `genesis-for-pi` skill entrypoint and workflow contract
 - `book-genesis-codex.md` — legacy compatibility alias skill
 - `references/` — pipeline prompts, scoring contract, and reference docs
-- `extensions/genesis.ts` — Pi-native `/genesis-init`, `/genesis-open`, `/genesis-status`, `/genesis-next`, `/genesis-blockers`, `/bg-init`, `/bg-open`, `/bg-status`, `/bg-next`, and `/bg-blockers` commands plus the `genesis_blocker_triage` tool
+- `extensions/genesis.ts` — Pi-native `/genesis-init`, `/genesis-open`, `/genesis-status`, `/genesis-plan`, `/genesis-next`, `/genesis-validate`, `/genesis-set-mode`, `/genesis-blockers`, `/genesis-scaffold-templates`, `/genesis-audit-fluff`, `/bg-init`, `/bg-open`, `/bg-status`, `/bg-plan`, `/bg-next`, `/bg-validate`, `/bg-set-mode`, `/bg-blockers`, `/bg-scaffold-templates`, and `/bg-audit-fluff` commands plus the `genesis_blocker_triage` tool
+- `references/templates/` — starter templates for high-friction artifacts such as `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `argument-spine.md`, `certification-blueprint-map.md`, `study-guide-objectives.md`, `evidence-map.md`, and `research/reference-inventory.md`
 - `prompts/genesis-next-prompt.md` and `prompts/bg-next-prompt.md` — fallback prompt-template versions of `/genesis-next`
 - `agents/openai.yaml` — adapter metadata

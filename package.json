@@ -15,6 +15,9 @@
     "writing"
   ],
   "license": "UNLICENSED",
+  "scripts": {
+    "test": "node scripts/validate-genesis-package.mjs && node scripts/test-genesis-sample-projects.mjs"
+  },
   "pi": {
     "skills": [
       "."
@@ -37,5 +40,11 @@
     "prompts/",
     "extensions/",
     "README.md"
-  ]
+  ],
+  "devDependencies": {
+    "@types/node": "^26.1.0"
+  },
+  "dependencies": {
+    "typebox": "^1.3.3"
+  }
 }

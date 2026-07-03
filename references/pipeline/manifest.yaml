@@ -41,6 +41,7 @@ phase_2_architecture:
     - "artifacts/continuity-ledger.md"
     - "artifacts/reader-promise-tracker.md"
     - "artifacts/drift-loop-alarm.md"
+    - "artifacts/expansion-integrity.md"
     - "artifacts/07-opening-strategy.md"
   next: "Phase 3: Drafting"
 
@@ -50,6 +51,7 @@ phase_3_drafting:
   gate: "drafting"
   outputs:
     - "manuscript/chapters"
+    - "artifacts/expansion-integrity.md"
     - "artifacts/human-specificity-ledger.md"
     - "artifacts/subtext-audit.md"
     - "artifacts/ear-pass.md"
@@ -71,6 +73,7 @@ phase_4_adversarial_audit:
     - "artifacts/ear-pass.md"
     - "artifacts/over-polish-audit.md"
     - "artifacts/negative-capability-audit.md"
+    - "artifacts/expansion-integrity.md"
     - "artifacts/revision-philosophy.md"
     - "artifacts/revision-tickets.md"
   next: "Phase 5: Final Score"

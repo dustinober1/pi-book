@@ -12,8 +12,9 @@ Mandatory rules:
 - write every important decision to files
 - keep `PROJECT_STATE.yaml` synchronized with reality
 - keep `ASSUMPTIONS.md` explicit
-- keep `artifacts/continuity-ledger.md` synchronized with manuscript facts, timeline, promises, clues, reveals, and subplot status
-- keep `artifacts/reader-promise-tracker.md` synchronized with premise, genre, emotional, mystery, subplot, and opening promises
+- record and respect the project's workflow mode: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, or another explicitly named mode
+- keep `artifacts/continuity-ledger.md` synchronized with manuscript facts, timeline, promises, clues, reveals, subplot status, or nonfiction/study-guide continuity facts when those replace plot continuity
+- keep `artifacts/reader-promise-tracker.md` synchronized with premise, genre/use-case, emotional/learning, mystery/argument/competency, subplot/pressure-line, and opening promises
 - keep `artifacts/drift-loop-alarm.md` synchronized with repeated structure, loop, contradiction, reopened-ticket, no-state-change, and phase-boundary hard stop conditions
 - keep `artifacts/causality-chain.md` synchronized with scene-level therefore/but cause, constraint, consequence, and payoff logic
 - keep `artifacts/scene-embodiment-map.md` synchronized with physical action, objects, task pressure, spatial friction, interruptions, and behavior beyond explanation
@@ -33,6 +34,8 @@ Mandatory rules:
 - keep `artifacts/revision-philosophy.md` synchronized with revision priorities, preservation rules, order of operations, and acceptable intermediate messiness
 - keep `artifacts/reader-response-plan.md`, `artifacts/beta-feedback-log.md`, and `artifacts/positioning-strategy.md` synchronized when packaging or outside feedback begins
 - keep `artifacts/revision-tickets.md` synchronized with audit/scoring issues, severity, repair type, owner phase, and status
+- for series work, keep `artifacts/series-bible.md` and related series continuity artifacts synchronized when used
+- for nonfiction, study-guide, or certification work, keep `artifacts/argument-spine.md`, `artifacts/certification-blueprint-map.md`, and `research/reference-inventory.md` synchronized when used
 - keep `evaluations/chapter-scorecards.md` synchronized after chapter blocks
 - use `intake.md` for Phase 0 and `foundation.md` for Phase 1
 - use `architecture.md` for Phase 2 and `drafting.md` for Phase 3

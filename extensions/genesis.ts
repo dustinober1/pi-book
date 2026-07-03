@@ -1,79 +1,206 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { execSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-type Blocker = {
-  file: string;
-  label: string;
-  evidence: string;
-  suggestion: string;
-  severity: "blocker" | "warning";
+const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const MANIFEST_PATH = join(PACKAGE_ROOT, "references", "pipeline", "manifest.yaml");
+
+const DEFAULT_PHASE_DEFINITIONS = [
+  {
+    key: "phase_0_intake",
+    label: "Phase 0: Intake",
+    prompt: "references/prompts/intake.md",
+    gate: "intake",
+    outputs: [
+      "ASSUMPTIONS.md",
+      "artifacts/00-brief.md",
+      "artifacts/01-market-map.md",
+      "artifacts/02-story-engine.md",
+      "artifacts/author-intent.md",
+      "artifacts/taste-profile.md",
+      "artifacts/risk-budget.md",
+      "artifacts/discarded-choices.md",
+      "artifacts/review-personas.md",
+    ],
+    next: "Phase 1: Foundation",
+  },
+  {
+    key: "phase_1_foundation",
+    label: "Phase 1: Foundation",
+    prompt: "references/prompts/foundation.md",
+    gate: "foundation",
+    outputs: [
+      "artifacts/03-characters.md",
+      "artifacts/04-theme.md",
+      "artifacts/voice-bible.md",
+      "artifacts/author-voice-fingerprint.md",
+      "artifacts/human-source-bank.md",
+      "artifacts/name-collision-audit.md",
+      "artifacts/name-entity-filter.md",
+      "artifacts/06-emotional-curve.md",
+    ],
+    next: "Phase 2: Architecture",
+  },
+  {
+    key: "phase_2_architecture",
+    label: "Phase 2: Architecture",
+    prompt: "references/prompts/architecture.md",
+    gate: "architecture",
+    outputs: [
+      "artifacts/05-outline.md",
+      "artifacts/causality-chain.md",
+      "artifacts/scene-embodiment-map.md",
+      "artifacts/05-subplot-map.md",
+      "artifacts/continuity-ledger.md",
+      "artifacts/reader-promise-tracker.md",
+      "artifacts/drift-loop-alarm.md",
+      "artifacts/expansion-integrity.md",
+      "artifacts/07-opening-strategy.md",
+    ],
+    next: "Phase 3: Drafting",
+  },
+  {
+    key: "phase_3_drafting",
+    label: "Phase 3: Drafting",
+    prompt: "references/prompts/drafting.md",
+    gate: "drafting",
+    outputs: [
+      "manuscript/chapters",
+      "artifacts/expansion-integrity.md",
+      "artifacts/human-specificity-ledger.md",
+      "artifacts/subtext-audit.md",
+      "artifacts/ear-pass.md",
+      "artifacts/over-polish-audit.md",
+      "artifacts/scene-embodiment-map.md",
+      "artifacts/discarded-choices.md",
+      "evaluations/chapter-scorecards.md",
+    ],
+    next: "Phase 4: Adversarial Audit",
+  },
+  {
+    key: "phase_4_adversarial_audit",
+    label: "Phase 4: Adversarial Audit",
+    prompt: "references/prompts/adversarial-audit.md",
+    gate: "adversarial_audit",
+    outputs: [
+      "artifacts/08-adversarial-audit.md",
+      "artifacts/narrative-fingerprint-audit.md",
+      "artifacts/ai-tell-mitigation-audit.md",
+      "artifacts/subtext-audit.md",
+      "artifacts/ear-pass.md",
+      "artifacts/over-polish-audit.md",
+      "artifacts/negative-capability-audit.md",
+      "artifacts/expansion-integrity.md",
+      "artifacts/revision-philosophy.md",
+      "artifacts/revision-tickets.md",
+    ],
+    next: "Phase 5: Final Score",
+  },
+  {
+    key: "phase_5_final_score",
+    label: "Phase 5: Final Score",
+    prompt: "references/scoring/genesis-score-codex.md",
+    gate: "final_score",
+    outputs: ["artifacts/09-genesis-score.md"],
+    next: "Phase 6: Editorial Package",
+  },
+  {
+    key: "phase_6_editorial_package",
+    label: "Phase 6: Editorial Package",
+    prompt: "references/prompts/editorial-package.md",
+    gate: "editorial_package",
+    outputs: [
+      "artifacts/10-editorial-package.md",
+      "artifacts/reader-response-plan.md",
+      "artifacts/beta-feedback-log.md",
+      "artifacts/positioning-strategy.md",
+    ],
+    next: "",
+  },
+];
+
+const WORKFLOW_MODES = [
+  "novel",
+  "memoir",
+  "narrative nonfiction",
+  "prescriptive nonfiction",
+  "study guide",
+  "certification prep",
+  "series installment",
+  "other",
+];
+
+const CORE_PROJECT_FILES = ["PROJECT_STATE.yaml", "ASSUMPTIONS.md"];
+
+const MODE_ARTIFACTS = {
+  "series installment": ["artifacts/series-bible.md"],
+  "narrative nonfiction": ["artifacts/argument-spine.md", "research/reference-inventory.md"],
+  "prescriptive nonfiction": ["artifacts/argument-spine.md", "research/reference-inventory.md"],
+  "study guide": ["artifacts/study-guide-objectives.md", "research/reference-inventory.md"],
+  "certification prep": [
+    "artifacts/certification-blueprint-map.md",
+    "artifacts/study-guide-objectives.md",
+    "artifacts/evidence-map.md",
+    "research/reference-inventory.md",
+  ],
 };
 
-const PHASES = [
-  "Phase 0: Intake",
-  "Phase 1: Foundation",
-  "Phase 2: Architecture",
-  "Phase 3: Drafting",
-  "Phase 4: Adversarial Audit",
-  "Phase 5: Final Score",
-  "Phase 6: Editorial Package",
+const TEMPLATE_SCAFFOLDS = [
+  {
+    label: "voice-bible.md",
+    template: "references/templates/voice-bible.md",
+    destination: "artifacts/voice-bible.md",
+  },
+  {
+    label: "continuity-ledger.md",
+    template: "references/templates/continuity-ledger.md",
+    destination: "artifacts/continuity-ledger.md",
+  },
+  {
+    label: "revision-tickets.md",
+    template: "references/templates/revision-tickets.md",
+    destination: "artifacts/revision-tickets.md",
+  },
+  {
+    label: "expansion-integrity.md",
+    template: "references/templates/expansion-integrity.md",
+    destination: "artifacts/expansion-integrity.md",
+  },
+  {
+    label: "series-bible.md",
+    template: "references/templates/series-bible.md",
+    destination: "artifacts/series-bible.md",
+  },
+  {
+    label: "argument-spine.md",
+    template: "references/templates/argument-spine.md",
+    destination: "artifacts/argument-spine.md",
+  },
+  {
+    label: "certification-blueprint-map.md",
+    template: "references/templates/certification-blueprint-map.md",
+    destination: "artifacts/certification-blueprint-map.md",
+  },
+  {
+    label: "reference-inventory.md",
+    template: "references/templates/reference-inventory.md",
+    destination: "research/reference-inventory.md",
+  },
+  {
+    label: "evidence-map.md",
+    template: "references/templates/evidence-map.md",
+    destination: "artifacts/evidence-map.md",
+  },
+  {
+    label: "study-guide-objectives.md",
+    template: "references/templates/study-guide-objectives.md",
+    destination: "artifacts/study-guide-objectives.md",
+  },
 ];
 
-const REQUIRED_FILES = [
-  "PROJECT_STATE.yaml",
-  "ASSUMPTIONS.md",
-  "artifacts/00-brief.md",
-  "artifacts/01-market-map.md",
-  "artifacts/02-story-engine.md",
-  "artifacts/author-intent.md",
-  "artifacts/taste-profile.md",
-  "artifacts/risk-budget.md",
-  "artifacts/discarded-choices.md",
-  "artifacts/review-personas.md",
-  "artifacts/03-characters.md",
-  "artifacts/04-theme.md",
-  "artifacts/voice-bible.md",
-  "artifacts/author-voice-fingerprint.md",
-  "artifacts/human-source-bank.md",
-  "artifacts/name-collision-audit.md",
-  "artifacts/name-entity-filter.md",
-  "artifacts/06-emotional-curve.md",
-  "artifacts/05-outline.md",
-  "artifacts/causality-chain.md",
-  "artifacts/scene-embodiment-map.md",
-  "artifacts/05-subplot-map.md",
-  "artifacts/continuity-ledger.md",
-  "artifacts/reader-promise-tracker.md",
-  "artifacts/drift-loop-alarm.md",
-  "artifacts/07-opening-strategy.md",
-  "artifacts/human-specificity-ledger.md",
-  "artifacts/subtext-audit.md",
-  "artifacts/ear-pass.md",
-  "artifacts/over-polish-audit.md",
-  "evaluations/chapter-scorecards.md",
-  "artifacts/08-adversarial-audit.md",
-  "artifacts/narrative-fingerprint-audit.md",
-  "artifacts/ai-tell-mitigation-audit.md",
-  "artifacts/negative-capability-audit.md",
-  "artifacts/revision-philosophy.md",
-  "artifacts/revision-tickets.md",
-  "artifacts/09-genesis-score.md",
-  "artifacts/10-editorial-package.md",
-  "artifacts/reader-response-plan.md",
-  "artifacts/beta-feedback-log.md",
-  "artifacts/positioning-strategy.md",
-];
-
-const BLOCKER_CHECKS: Array<{
-  file: string;
-  label: string;
-  pattern: RegExp;
-  suggestion: string;
-  severity?: "blocker" | "warning";
-}> = [
+const BLOCKER_CHECKS = [
   {
     file: "artifacts/drift-loop-alarm.md",
     label: "Active drift-loop hard stop",
@@ -130,6 +257,12 @@ const BLOCKER_CHECKS: Array<{
     severity: "warning",
   },
   {
+    file: "artifacts/expansion-integrity.md",
+    label: "Expansion-integrity blocker",
+    pattern: /blocker|unresolved|padding|filler|ornamental subplot|no-state-change/i,
+    suggestion: "Replace filler growth with real subplot pressure, consequence, aftermath, or meaningful scene work.",
+  },
+  {
     file: "artifacts/negative-capability-audit.md",
     label: "Negative-capability blocker",
     pattern: /blocker|unresolved|false opacity/i,
@@ -143,17 +276,63 @@ const BLOCKER_CHECKS: Array<{
   },
 ];
 
-function findProjectRoot(cwd: string): string {
-  let dir = cwd;
-  while (true) {
-    if (existsSync(join(dir, "PROJECT_STATE.yaml")) || existsSync(join(dir, "artifacts"))) return dir;
-    const parent = dirname(dir);
-    if (parent === dir) return cwd;
-    dir = parent;
-  }
+function unquote(value) {
+  return value.replace(/^['"]|['"]$/g, "");
 }
 
-function readIfExists(path: string): string | null {
+function parseManifest(text) {
+  const phases = [];
+  const lines = text.split(/\r?\n/);
+  let current = null;
+  let inOutputs = false;
+
+  for (const line of lines) {
+    if (!line.trim() || line.trimStart().startsWith("#")) continue;
+
+    const topLevelMatch = line.match(/^([a-z0-9_]+):\s*$/i);
+    if (topLevelMatch) {
+      current = { key: topLevelMatch[1], label: "", prompt: "", gate: "", outputs: [], next: "" };
+      phases.push(current);
+      inOutputs = false;
+      continue;
+    }
+
+    if (!current) continue;
+
+    const fieldMatch = line.match(/^\s{2}([a-z_]+):\s*(.*)$/i);
+    if (fieldMatch) {
+      const [, key, rawValue] = fieldMatch;
+      const value = unquote(rawValue.trim());
+      inOutputs = key === "outputs";
+      if (key === "label" || key === "prompt" || key === "gate" || key === "next") current[key] = value;
+      continue;
+    }
+
+    const outputMatch = line.match(/^\s{4}-\s*(.*)$/);
+    if (outputMatch && inOutputs) {
+      current.outputs.push(unquote(outputMatch[1].trim()));
+    }
+  }
+
+  return phases.filter((phase) => phase.label);
+}
+
+function loadPhaseDefinitions() {
+  try {
+    const text = readFileSync(MANIFEST_PATH, "utf8");
+    const parsed = parseManifest(text);
+    if (parsed.length) return parsed;
+  } catch {
+    // fall through to defaults
+  }
+  return DEFAULT_PHASE_DEFINITIONS;
+}
+
+const PHASE_DEFINITIONS = loadPhaseDefinitions();
+const PHASES = PHASE_DEFINITIONS.map((phase) => phase.label);
+const PHASE_OUTPUTS = Object.fromEntries(PHASE_DEFINITIONS.map((phase) => [phase.label, phase.outputs]));
+
+function readIfExists(path) {
   try {
     return existsSync(path) ? readFileSync(path, "utf8") : null;
   } catch {
@@ -161,20 +340,112 @@ function readIfExists(path: string): string | null {
   }
 }
 
-function detectPhase(state: string | null): string {
+function normalizePhaseLabel(value) {
+  if (!value) return "";
+  const normalized = String(value).trim().toLowerCase();
+  return PHASES.find((phase) => phase.toLowerCase() === normalized) || "";
+}
+
+function parseYamlScalar(state, keys) {
+  if (!state) return "";
+  for (const key of keys) {
+    const match = state.match(new RegExp(`^${key}\\s*:\\s*([^\\r\\n]+)$`, "im"));
+    if (match?.[1]) return unquote(match[1].trim());
+  }
+  return "";
+}
+
+function detectPhase(state) {
   if (!state) return "unknown: PROJECT_STATE.yaml not found";
+
+  const direct = normalizePhaseLabel(parseYamlScalar(state, ["current_phase", "phase", "label"]));
+  if (direct) return direct;
+
   for (const phase of PHASES) {
     if (state.includes(phase)) return phase;
   }
-  const match = state.match(/(?:current_phase|phase|label)\s*:\s*["']?([^"'\n]+)["']?/i);
-  return match?.[1]?.trim() || "unknown: could not detect phase from PROJECT_STATE.yaml";
+
+  return "unknown: could not detect phase from PROJECT_STATE.yaml";
 }
 
-function missingRequired(root: string): string[] {
-  return REQUIRED_FILES.filter((file) => !existsSync(join(root, file)));
+function pathExists(root, relativePath) {
+  return existsSync(join(root, relativePath));
 }
 
-function extractEvidence(text: string, pattern: RegExp): string {
+function findProjectRoot(cwd) {
+  let dir = cwd;
+  let fallback = null;
+
+  while (true) {
+    if (existsSync(join(dir, "PROJECT_STATE.yaml"))) return dir;
+    if (!fallback && existsSync(join(dir, "artifacts")) && existsSync(join(dir, "ASSUMPTIONS.md"))) fallback = dir;
+    const parent = dirname(dir);
+    if (parent === dir) return fallback || cwd;
+    dir = parent;
+  }
+}
+
+function detectWorkflowMode(root) {
+  const state = readIfExists(join(root, "PROJECT_STATE.yaml")) || "";
+  const assumptions = readIfExists(join(root, "ASSUMPTIONS.md")) || "";
+  const direct = parseYamlScalar(state, ["workflow_mode"]);
+  if (direct) return direct.trim().toLowerCase();
+  const combined = `${state}\n${assumptions}`;
+  const match = combined.match(/workflow mode\s*:\s*([^\n]+)/i);
+  return (match?.[1] || "unknown").trim().toLowerCase();
+}
+
+function setWorkflowModeInState(state, mode) {
+  const next = state || "";
+  if (/^workflow_mode\s*:/im.test(next)) {
+    return next.replace(/^workflow_mode\s*:.*$/im, `workflow_mode: ${JSON.stringify(mode)}`);
+  }
+  return `${next.trimEnd()}\nworkflow_mode: ${JSON.stringify(mode)}\n`;
+}
+
+function setWorkflowModeInAssumptions(assumptions, mode) {
+  const next = assumptions || "# Assumptions\n";
+  if (/^- Workflow mode:/im.test(next)) {
+    return next.replace(/^- Workflow mode:.*$/im, `- Workflow mode: ${mode}`);
+  }
+  const marker = "## Inferred assumptions";
+  if (next.includes(marker)) {
+    return next.replace(marker, `${marker}\n\n- Workflow mode: ${mode}`);
+  }
+  return `${next.trimEnd()}\n\n- Workflow mode: ${mode}\n`;
+}
+
+function getPhaseIndex(phase) {
+  return PHASES.indexOf(phase);
+}
+
+function getExpectedFilesForPhase(phase) {
+  const index = getPhaseIndex(phase);
+  const expected = [...CORE_PROJECT_FILES];
+  if (index < 0) return expected;
+
+  for (let i = 0; i <= index; i += 1) {
+    expected.push(...(PHASE_DEFINITIONS[i]?.outputs || []));
+  }
+
+  return [...new Set(expected)];
+}
+
+function missingExpectedForPhase(root, phase) {
+  return getExpectedFilesForPhase(phase).filter((file) => !pathExists(root, file));
+}
+
+function missingPhaseOutputs(root, phase) {
+  const outputs = PHASE_OUTPUTS[phase] || [];
+  return outputs.filter((file) => !pathExists(root, file));
+}
+
+function missingModeArtifacts(root, workflowMode) {
+  const modeArtifacts = MODE_ARTIFACTS[workflowMode] || [];
+  return modeArtifacts.filter((file) => !pathExists(root, file));
+}
+
+function extractEvidence(text, pattern) {
   const match = text.match(pattern);
   if (!match || match.index == null) return "pattern matched but no snippet available";
   const start = Math.max(0, match.index - 80);
@@ -182,8 +453,26 @@ function extractEvidence(text: string, pattern: RegExp): string {
   return text.slice(start, end).replace(/\s+/g, " ").trim();
 }
 
-function collectBlockers(root: string, includeMissing = true): Blocker[] {
-  const blockers: Blocker[] = [];
+function getGitState(root) {
+  try {
+    const inside = execSync("git rev-parse --is-inside-work-tree", { cwd: root, stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+    if (inside !== "true") return { initialized: false, dirty: 0 };
+    const dirty = execSync("git status --porcelain", { cwd: root, stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .split(/\r?\n/)
+      .filter(Boolean).length;
+    return { initialized: true, dirty };
+  } catch {
+    return { initialized: false, dirty: 0 };
+  }
+}
+
+function collectBlockers(root, includeMissing = true) {
+  const blockers = [];
+  const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
+  const workflowMode = detectWorkflowMode(root);
 
   for (const check of BLOCKER_CHECKS) {
     const text = readIfExists(join(root, check.file));
@@ -198,25 +487,54 @@ function collectBlockers(root: string, includeMissing = true): Blocker[] {
   }
 
   if (includeMissing) {
-    for (const file of missingRequired(root).slice(0, 12)) {
+    for (const file of missingExpectedForPhase(root, phase).slice(0, 12)) {
       blockers.push({
         file,
-        label: "Missing required output",
-        evidence: `${file} does not exist in the project root.`,
-        suggestion: "Create the missing required file or document why the project state is intentionally paused.",
+        label: "Missing expected output for current phase",
+        evidence: `${file} does not exist yet, but it is expected by ${phase}.`,
+        suggestion: "Create the missing file or correct PROJECT_STATE.yaml if the phase is ahead of the actual project artifacts.",
+        severity: file === "PROJECT_STATE.yaml" || file === "ASSUMPTIONS.md" ? "blocker" : "warning",
+      });
+    }
+
+    for (const file of missingModeArtifacts(root, workflowMode)) {
+      blockers.push({
+        file,
+        label: "Missing workflow-mode artifact",
+        evidence: `${file} does not exist, but workflow mode is ${workflowMode}.`,
+        suggestion: "Scaffold or create the missing mode-specific artifact before relying on this workflow mode.",
         severity: "warning",
       });
     }
   }
 
+  const git = getGitState(root);
+  if (!git.initialized) {
+    blockers.push({
+      file: ".git",
+      label: "Git repository not initialized",
+      evidence: `${root} is not inside a Git work tree.`,
+      suggestion: "Run git init in the project root before writing more Genesis artifacts.",
+      severity: "blocker",
+    });
+  } else if (git.dirty > 0) {
+    blockers.push({
+      file: ".git",
+      label: "Uncommitted Genesis changes",
+      evidence: `${git.dirty} file(s) currently have uncommitted changes.`,
+      suggestion: "Commit each changed Genesis file separately to preserve rollback points.",
+      severity: "warning",
+    });
+  }
+
   return blockers;
 }
 
-function blockerSummary(root: string): string[] {
+function blockerSummary(root) {
   return collectBlockers(root, false).map((blocker) => blocker.file);
 }
 
-function renderBlockers(root: string, includeMissing = true): string {
+function renderBlockers(root, includeMissing = true) {
   const blockers = collectBlockers(root, includeMissing);
   if (!blockers.length) return "No blockers detected by Genesis triage.";
 
@@ -228,13 +546,173 @@ function renderBlockers(root: string, includeMissing = true): string {
     .join("\n\n");
 }
 
-function findGenesisProjects(startDir: string, maxDepth = 3): string[] {
-  const found = new Set<string>();
+function nextMissingOutput(root, phase) {
+  const currentMissing = missingExpectedForPhase(root, phase);
+  return currentMissing[0] || null;
+}
 
-  function walk(dir: string, depth: number): void {
-    if (existsSync(join(dir, "PROJECT_STATE.yaml")) || existsSync(join(dir, "artifacts"))) {
-      found.add(dir);
-    }
+function nextRecommendedAction(root) {
+  const blockers = collectBlockers(root, true);
+  const hardBlocker = blockers.find((blocker) => blocker.severity === "blocker");
+  if (hardBlocker) return `Clear ${hardBlocker.file}: ${hardBlocker.suggestion}`;
+
+  const state = readIfExists(join(root, "PROJECT_STATE.yaml"));
+  const phase = detectPhase(state);
+  const missing = nextMissingOutput(root, phase);
+  if (missing) return `Create ${missing} for ${phase}.`;
+
+  return `Advance the next required ${phase} output with /genesis-next.`;
+}
+
+function renderValidationReport(root) {
+  const state = readIfExists(join(root, "PROJECT_STATE.yaml"));
+  const phase = detectPhase(state);
+  const workflowMode = detectWorkflowMode(root);
+  const expectedMissing = missingExpectedForPhase(root, phase);
+  const phaseMissing = missingPhaseOutputs(root, phase);
+  const modeMissing = missingModeArtifacts(root, workflowMode);
+  const blockers = collectBlockers(root, true);
+  const git = getGitState(root);
+  const phaseKnown = Boolean(PHASE_OUTPUTS[phase]);
+  const phaseMismatch = phaseKnown && phaseMissing.length > 0;
+
+  return [
+    "# Genesis Validation",
+    "",
+    `- Project root: ${root}`,
+    `- Detected phase: ${phase}`,
+    `- Workflow mode: ${workflowMode}`,
+    `- Git initialized: ${git.initialized ? "yes" : "no"}`,
+    `- Uncommitted changes: ${git.initialized ? git.dirty : "n/a"}`,
+    `- Phase recognized: ${phaseKnown ? "yes" : "no"}`,
+    `- Missing expected files through current phase: ${expectedMissing.length}`,
+    `- Phase output mismatches: ${phaseMissing.length}`,
+    `- Mode-specific missing artifacts: ${modeMissing.length}`,
+    `- Blockers/warnings detected: ${blockers.length}`,
+    "",
+    "## Missing expected files through current phase",
+    "",
+    ...(expectedMissing.length ? expectedMissing.map((file) => `- ${file}`) : ["- none"]),
+    "",
+    "## Missing outputs for detected phase",
+    "",
+    ...(phaseKnown ? (phaseMissing.length ? phaseMissing.map((file) => `- ${file}`) : ["- none"]) : ["- unknown phase; cannot validate outputs"]),
+    "",
+    "## Missing mode-specific artifacts",
+    "",
+    ...(MODE_ARTIFACTS[workflowMode]?.length ? (modeMissing.length ? modeMissing.map((file) => `- ${file}`) : ["- none"]) : ["- no extra mode-specific artifacts configured"]),
+    "",
+    "## Blockers and warnings",
+    "",
+    ...(blockers.length
+      ? blockers.slice(0, 12).map((blocker, index) => `${index + 1}. [${blocker.severity}] ${blocker.label} — ${blocker.file}`)
+      : ["- none"]),
+    "",
+    "## Verdict",
+    "",
+    phaseMismatch
+      ? "- Phase contract mismatch detected. Repair missing outputs or correct PROJECT_STATE.yaml before advancing."
+      : "- No phase-contract mismatch detected by lightweight validation.",
+    modeMissing.length
+      ? "- Mode-specific artifacts are missing. Scaffold or create them before relying on that workflow mode."
+      : "- No mode-specific artifact gap detected by lightweight validation.",
+    blockers.length
+      ? "- Blockers or warnings exist. Review blocker files before advancing."
+      : "- No blockers detected by lightweight validation.",
+    "",
+  ].join("\n");
+}
+
+function renderStatusDashboard(root) {
+  const state = readIfExists(join(root, "PROJECT_STATE.yaml"));
+  const phase = detectPhase(state);
+  const workflowMode = detectWorkflowMode(root);
+  const missing = missingExpectedForPhase(root, phase);
+  const blockers = collectBlockers(root, true);
+  const git = getGitState(root);
+  const expansion = readIfExists(join(root, "artifacts", "expansion-integrity.md")) || "";
+  const expansionRisk = /blocker|unresolved|padding|filler|ornamental subplot|no-state-change/i.test(expansion)
+    ? "active risk"
+    : existsSync(join(root, "artifacts", "expansion-integrity.md"))
+      ? "no active risk detected"
+      : "file not required yet or missing";
+
+  return [
+    "# Genesis Status",
+    "",
+    `- Project root: ${root}`,
+    `- Current phase: ${phase}`,
+    `- Workflow mode: ${workflowMode}`,
+    `- Git initialized: ${git.initialized ? "yes" : "no"}`,
+    `- Uncommitted changes: ${git.initialized ? git.dirty : "n/a"}`,
+    `- Blockers: ${blockers.length ? blockers.length : "none detected"}`,
+    `- Missing expected files through current phase: ${missing.length}`,
+    `- Expansion integrity: ${expansionRisk}`,
+    `- Next recommended action: ${nextRecommendedAction(root)}`,
+    "",
+    "## Top blockers",
+    "",
+    ...(blockers.length
+      ? blockers.slice(0, 8).map((blocker, index) => `${index + 1}. ${blocker.label} — ${blocker.file}`)
+      : ["- none"]),
+    "",
+    "## First missing expected files",
+    "",
+    ...(missing.length ? missing.slice(0, 12).map((file) => `- ${file}`) : ["- none"]),
+    "",
+    "## Notes",
+    "",
+    "- Regenerate this file with /genesis-status.",
+    "- Use /genesis-plan for a dry-run summary before /genesis-next.",
+    "- Use /genesis-blockers for interactive blocker triage.",
+    "- Use /genesis-audit-fluff to inspect padding and subplot-integrity risk.",
+    "",
+  ].join("\n");
+}
+
+function renderPlan(root) {
+  const state = readIfExists(join(root, "PROJECT_STATE.yaml"));
+  const phase = detectPhase(state);
+  const workflowMode = detectWorkflowMode(root);
+  const blockers = collectBlockers(root, true);
+  const missing = missingExpectedForPhase(root, phase);
+  const nextFile = nextMissingOutput(root, phase);
+  const nextPhase = PHASE_DEFINITIONS[getPhaseIndex(phase)]?.next || "unknown";
+
+  return [
+    "# Genesis Plan",
+    "",
+    `- Project root: ${root}`,
+    `- Current phase: ${phase}`,
+    `- Workflow mode: ${workflowMode}`,
+    `- Hard blockers: ${blockers.filter((blocker) => blocker.severity === "blocker").length}`,
+    `- Warnings: ${blockers.filter((blocker) => blocker.severity === "warning").length}`,
+    `- Next expected file: ${nextFile || "none missing in current phase"}`,
+    `- Next pipeline phase after this one: ${nextPhase || "none"}`,
+    "",
+    "## What /genesis-next would do",
+    "",
+    ...(blockers.length
+      ? [
+          "- Clear hard blockers first when possible.",
+          ...blockers.slice(0, 6).map((blocker) => `- ${blocker.label}: ${blocker.suggestion}`),
+        ]
+      : nextFile
+        ? [`- Create or repair ${nextFile}.`, "- Update PROJECT_STATE.yaml and STATUS.md to match reality."]
+        : ["- Advance the next incomplete pipeline step.", "- Update PROJECT_STATE.yaml and STATUS.md to match reality."]),
+    "",
+    "## Missing expected files through current phase",
+    "",
+    ...(missing.length ? missing.map((file) => `- ${file}`) : ["- none"]),
+    "",
+  ].join("\n");
+}
+
+function findGenesisProjects(startDir, maxDepth = 3) {
+  const found = new Set();
+
+  function walk(dir, depth) {
+    if (existsSync(join(dir, "PROJECT_STATE.yaml"))) found.add(dir);
     if (depth >= maxDepth) return;
 
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -253,28 +731,54 @@ function findGenesisProjects(startDir: string, maxDepth = 3): string[] {
   return [...found].sort();
 }
 
-function slugifyProjectName(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "genesis-project";
+function slugifyProjectName(name) {
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "genesis-project"
+  );
 }
 
-function ensureDir(path: string): void {
+function ensureDir(path) {
   mkdirSync(path, { recursive: true });
 }
 
-function writeIfMissing(path: string, content: string): void {
+function scaffoldTemplate(projectRoot, templatePath, destinationPath, overwrite = false) {
+  const source = resolve(PACKAGE_ROOT, templatePath);
+  const destination = join(projectRoot, destinationPath);
+  ensureDir(dirname(destination));
+  if (!overwrite && existsSync(destination)) return "skipped";
+  copyFileSync(source, destination);
+  return "written";
+}
+
+function getModeTemplateEntries(mode) {
+  const destinations = new Set(MODE_ARTIFACTS[mode] || []);
+  return TEMPLATE_SCAFFOLDS.filter((item) => destinations.has(item.destination));
+}
+
+function scaffoldModeArtifacts(projectRoot, mode, overwrite = false) {
+  return getModeTemplateEntries(mode).map((item) => ({
+    label: item.label,
+    destination: item.destination,
+    status: scaffoldTemplate(projectRoot, item.template, item.destination, overwrite),
+  }));
+}
+
+function writeIfMissing(path, content) {
   if (!existsSync(path)) writeFileSync(path, content, "utf8");
 }
 
-function initializeProject(root: string, projectName: string, idea: string): void {
+function initializeProject(root, projectName, idea) {
   ensureDir(root);
   ensureDir(join(root, "artifacts"));
   ensureDir(join(root, "manuscript", "chapters"));
   ensureDir(join(root, "evaluations"));
   ensureDir(join(root, "delivery"));
+  ensureDir(join(root, "research", "sources"));
+  ensureDir(join(root, "research", "notes"));
 
   writeIfMissing(
     join(root, "PROJECT_STATE.yaml"),
@@ -284,6 +788,7 @@ function initializeProject(root: string, projectName: string, idea: string): voi
       'phase_gate: "intake"',
       'status: "initialized"',
       'language: "unknown"',
+      'workflow_mode: "unknown"',
       'project_root_initialized_by: "genesis-init"',
       'next_required_outputs:',
       '  - "ASSUMPTIONS.md"',
@@ -302,34 +807,43 @@ function initializeProject(root: string, projectName: string, idea: string): voi
 
   writeIfMissing(
     join(root, "ASSUMPTIONS.md"),
-    `# Assumptions\n\n## Explicit user input\n\n- Project: ${projectName}\n- Seed idea: ${idea || "Not provided yet."}\n\n## Inferred assumptions\n\n- Language: unknown\n- Genre: unknown\n- Audience: unknown\n- Target length: unknown\n- Narrative mode: unknown\n\nMark each assumption as confirmed, provisional, or rejected during Phase 0.\n`,
+    `# Assumptions\n\n## Explicit user input\n\n- Project: ${projectName}\n- Seed idea: ${idea || "Not provided yet."}\n\n## Inferred assumptions\n\n- Language: unknown\n- Genre: unknown\n- Audience: unknown\n- Target length: unknown\n- Narrative mode: unknown\n- Workflow mode: unknown (novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, other)\n\nMark each assumption as confirmed, provisional, or rejected during Phase 0.\n`,
   );
 
   writeIfMissing(
     join(root, "artifacts", "00-brief.md"),
-    `# Brief\n\n## Original idea\n\n${idea || "Add the writer's seed idea here."}\n\n## Intake scaffold\n\n- Language:\n- Genre:\n- Audience:\n- Target length:\n- Narrative mode:\n- Reader promise:\n`,
+    `# Brief\n\n## Original idea\n\n${idea || "Add the writer's seed idea here."}\n\n## Intake scaffold\n\n- Language:\n- Genre:\n- Audience:\n- Target length:\n- Narrative mode:\n- Workflow mode:\n- Reader promise:\n`,
   );
 
   writeIfMissing(join(root, "artifacts", "01-market-map.md"), "# Market Map\n\n- market signals\n- comp titles\n- recurring patterns\n- whitespace opportunity\n");
+  writeIfMissing(join(root, "research", "reference-inventory.md"), "# Reference Inventory\n\n## Source index\n\n| id | source type | title | author / org | date | status | location | notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n");
+  writeIfMissing(join(root, "research", "notes", "README.md"), "# Research Notes\n\nUse this folder for study notes, source summaries, interview notes, certification objective breakdowns, and working research memos.\n");
+  writeIfMissing(join(root, "research", "sources", "README.md"), "# Research Sources\n\nStore downloaded PDFs, copied standards, exam blueprints, article captures, transcripts, and other raw reference material here when permitted.\n");
   writeIfMissing(join(root, "artifacts", "02-story-engine.md"), "# Story Engine\n\n- premise expansion\n- central conflict\n- escalation logic\n- differentiation strategy\n");
   writeIfMissing(join(root, "artifacts", "author-intent.md"), "# Author Intent\n\n- why this book matters\n- what must not be changed\n- reader experience goals\n- intentional risks\n");
   writeIfMissing(join(root, "artifacts", "taste-profile.md"), "# Taste Profile\n\n- what the writer loves\n- what the writer rejects\n- safe but wrong choices\n");
   writeIfMissing(join(root, "artifacts", "risk-budget.md"), "# Risk Budget\n\n| risk | intentional? | reader cost | payoff | verdict |\n| --- | --- | --- | --- | --- |\n");
   writeIfMissing(join(root, "artifacts", "discarded-choices.md"), "# Discarded Choices\n\nTrack rejected openings, names, tones, premises, and turns here.\n");
   writeIfMissing(join(root, "artifacts", "review-personas.md"), "# Review Personas\n\n- ideal reader\n- skeptical but persuadable reader\n- genre-native reviewer\n- voice-sensitive craft reader\n- optional hostile or misaligned reader\n");
+  writeIfMissing(
+    join(root, "artifacts", "expansion-integrity.md"),
+    "# Expansion Integrity\n\n## Current scope pressure\n\n- target length: unknown\n- expansion needed?: unknown\n- why: \n\n## Approved expansion paths\n\n- real subplot escalation\n- stronger aftermath or consequence\n- reversals or new constraints\n- relational conflict\n- materially new scene work\n\n## Forbidden filler patterns\n\n- repeated introspection\n- duplicate exposition\n- low-stakes banter\n- atmospheric drift\n- decorative worldbuilding\n- no-state-change scenes\n\n## Proposed additions and what they change\n\n| addition | why it exists | what changes | keep/cut verdict |\n| --- | --- | --- | --- |\n",
+  );
+  writeIfMissing(join(root, "STATUS.md"), renderStatusDashboard(root));
 }
 
-function maybeInitGit(root: string): boolean {
+function maybeInitGit(root) {
   if (existsSync(join(root, ".git"))) return false;
   execSync("git init", { cwd: root, stdio: "ignore" });
   return true;
 }
 
-function buildNextPrompt(root: string, args: string, commandName = "genesis-next"): string {
+function buildNextPrompt(root, args, commandName = "genesis-next") {
   const state = readIfExists(join(root, "PROJECT_STATE.yaml"));
   const phase = detectPhase(state);
-  const missing = missingRequired(root).slice(0, 12);
+  const missing = missingExpectedForPhase(root, phase).slice(0, 12);
   const blockers = blockerSummary(root);
+  const nextFile = nextMissingOutput(root, phase);
 
   return `Use the \`genesis-for-pi\` skill and advance this Genesis for Pi project. The invoking command was \`/${commandName}\`.
 
@@ -337,7 +851,8 @@ Project root: ${root}
 Detected current phase: ${phase}
 User instructions: ${args.trim() || "none"}
 Known blocker files from extension precheck: ${blockers.length ? blockers.join(", ") : "none detected by lightweight precheck"}
-First missing expected files from extension precheck: ${missing.length ? missing.join(", ") : "none from full package list"}
+First missing expected files through the current phase: ${missing.length ? missing.join(", ") : "none"}
+Next expected file by phase-aware precheck: ${nextFile || "none"}
 
 Rules:
 
@@ -345,18 +860,19 @@ Rules:
 2. Identify the current phase, the next incomplete required output, and any active blocker that prevents safe advancement.
 3. Continue from the current state; do not restart unless state is missing or explicitly invalid.
 4. Bypass optional writer approval gates for this turn unless the user explicitly asks for a check-in.
-5. Do not bypass hard blockers: active drift-loop hard stops, open blocker/high revision tickets, unresolved name-collision blockers, unresolved AI-tell blockers, unresolved author-voice blockers, unresolved subtext/ear/over-polish blockers, missing required phase outputs, or phase contract mismatches.
+5. Do not bypass hard blockers: active drift-loop hard stops, open blocker/high revision tickets, unresolved name-collision blockers, unresolved AI-tell blockers, unresolved author-voice blockers, unresolved subtext/ear/over-polish blockers, unresolved expansion-integrity blockers, missing required phase outputs, or phase contract mismatches.
 6. If blockers exist, clear them first when possible by updating the relevant blocker files, repair artifacts, revision tickets, and manuscript/project files with concrete evidence-based fixes. Do not merely report blockers if they can be actively resolved this turn.
 7. If a blocker cannot be cleared safely in this turn, report the blocker, the exact file/evidence needed to unblock, and stop after updating any files that clarify the blockage.
 8. Once blockers are cleared or none exist, produce only the next required pipeline step's outputs, update \`PROJECT_STATE.yaml\`, and commit each changed file separately.
 9. Preserve the Human Voice Rule: optimize for reader trust, author fingerprint, subtext, rhythm, sensory authority, and controlled imperfection rather than AI-detector evasion.
-10. Use \`artifacts/review-personas.md\`, \`artifacts/author-voice-fingerprint.md\`, \`artifacts/voice-bible.md\`, and \`artifacts/human-source-bank.md\` to protect voice when revising or unblocking.
-11. Do not skip Phase 4. Do not run Final Score before Adversarial Audit is complete.
+10. Preserve the Expansion Integrity Rule: if the manuscript needs to grow, add real pressure, consequence, aftermath, or subplot movement rather than filler.
+11. Use \`artifacts/review-personas.md\`, \`artifacts/author-voice-fingerprint.md\`, \`artifacts/voice-bible.md\`, \`artifacts/human-source-bank.md\`, and \`artifacts/expansion-integrity.md\` to protect voice and structural density when revising or unblocking.
+12. Do not skip Phase 4. Do not run Final Score before Adversarial Audit is complete.
 
 Proceed now.`;
 }
 
-export default function (pi: ExtensionAPI) {
+export default function (pi) {
   pi.registerTool({
     name: "genesis_blocker_triage",
     label: "Genesis Blocker Triage",
@@ -367,7 +883,7 @@ export default function (pi: ExtensionAPI) {
     ],
     parameters: Type.Object({
       project_root: Type.Optional(Type.String({ description: "Optional project root. Defaults to current working directory." })),
-      include_missing: Type.Optional(Type.Boolean({ description: "Include missing required outputs in the triage report." })),
+      include_missing: Type.Optional(Type.Boolean({ description: "Include missing required outputs in the report for the current phase." })),
       focus_file: Type.Optional(Type.String({ description: "Optional blocker file to isolate in the response." })),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
@@ -396,32 +912,103 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  const registerStatusCommand = (name: string, description: string) => {
+  const registerStatusCommand = (name, description) => {
     pi.registerCommand(name, {
       description,
       handler: async (_args, ctx) => {
         const root = findProjectRoot(ctx.cwd);
         const state = readIfExists(join(root, "PROJECT_STATE.yaml"));
         const phase = detectPhase(state);
-        const missing = missingRequired(root);
+        const missing = missingExpectedForPhase(root, phase);
         const blockers = blockerSummary(root);
+        const git = getGitState(root);
 
         const lines = [
           `Genesis root: ${root}`,
           `Current phase: ${phase}`,
           `Potential blocker files: ${blockers.length ? blockers.join(", ") : "none detected"}`,
-          `Missing expected files: ${missing.length ? missing.slice(0, 10).join(", ") + (missing.length > 10 ? `, +${missing.length - 10} more` : "") : "none"}`,
+          `Missing expected files through current phase: ${missing.length ? missing.slice(0, 10).join(", ") + (missing.length > 10 ? `, +${missing.length - 10} more` : "") : "none"}`,
+          `Git status: ${git.initialized ? `${git.dirty} uncommitted change(s)` : "not initialized"}`,
         ];
 
-        ctx.ui.notify(lines.join("\n"), blockers.length ? "warning" : "info");
+        writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+        ctx.ui.notify(`${lines.join("\n")}\nSTATUS.md updated.`, blockers.length ? "warning" : "info");
       },
     });
   };
 
-  const registerNextCommand = (name: string, description: string) => {
+  const registerValidateCommand = (name, description) => {
     pi.registerCommand(name, {
       description,
-      getArgumentCompletions: (prefix: string) => {
+      handler: async (_args, ctx) => {
+        const root = findProjectRoot(ctx.cwd);
+        const report = renderValidationReport(root);
+        writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+        ctx.ui.notify(`${report}\nSTATUS.md updated.`, /mismatch|warning|blockers\/warnings detected: [1-9]/i.test(report) ? "warning" : "info");
+      },
+    });
+  };
+
+  const registerPlanCommand = (name, description) => {
+    pi.registerCommand(name, {
+      description,
+      handler: async (_args, ctx) => {
+        const root = findProjectRoot(ctx.cwd);
+        writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+        ctx.ui.notify(`${renderPlan(root)}\nSTATUS.md updated.`, "info");
+      },
+    });
+  };
+
+  const registerSetModeCommand = (name, description) => {
+    pi.registerCommand(name, {
+      description,
+      handler: async (args, ctx) => {
+        const root = findProjectRoot(ctx.cwd);
+        const requested = args.trim().toLowerCase();
+        const mode = WORKFLOW_MODES.includes(requested)
+          ? requested
+          : await ctx.ui.select("Choose a workflow mode:", [...WORKFLOW_MODES]);
+        if (!mode) return;
+
+        const statePath = join(root, "PROJECT_STATE.yaml");
+        const assumptionsPath = join(root, "ASSUMPTIONS.md");
+        const briefPath = join(root, "artifacts", "00-brief.md");
+
+        writeFileSync(statePath, setWorkflowModeInState(readIfExists(statePath), mode), "utf8");
+        writeFileSync(assumptionsPath, setWorkflowModeInAssumptions(readIfExists(assumptionsPath), mode), "utf8");
+
+        const brief = readIfExists(briefPath);
+        if (brief) {
+          const nextBrief = /- Workflow mode:/i.test(brief)
+            ? brief.replace(/- Workflow mode:.*$/im, `- Workflow mode: ${mode}`)
+            : `${brief.trimEnd()}\n- Workflow mode: ${mode}\n`;
+          writeFileSync(briefPath, nextBrief, "utf8");
+        }
+
+        const modeTemplates = getModeTemplateEntries(mode);
+        let scaffolded = [];
+        if (modeTemplates.length) {
+          const shouldScaffold = await ctx.ui.confirm(
+            "Scaffold mode-specific artifacts?",
+            `Create starter files for ${mode}?\n\n${modeTemplates.map((item) => `- ${item.destination}`).join("\n")}`,
+          );
+          if (shouldScaffold) scaffolded = scaffoldModeArtifacts(root, mode, false);
+        }
+
+        writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+        const scaffoldSummary = scaffolded.length
+          ? `\nMode scaffolds:\n${scaffolded.map((item) => `- ${item.destination}: ${item.status}`).join("\n")}`
+          : "";
+        ctx.ui.notify(`Workflow mode set to ${mode}. STATUS.md updated.${scaffoldSummary}`, "info");
+      },
+    });
+  };
+
+  const registerNextCommand = (name, description) => {
+    pi.registerCommand(name, {
+      description,
+      getArgumentCompletions: (prefix) => {
         const items = [
           "main checkpoints only",
           "careful mode",
@@ -445,7 +1032,75 @@ export default function (pi: ExtensionAPI) {
     });
   };
 
-  const registerBlockerCommand = (name: string, description: string) => {
+  const registerTemplateCommand = (name, description) => {
+    pi.registerCommand(name, {
+      description,
+      handler: async (_args, ctx) => {
+        const root = findProjectRoot(ctx.cwd);
+        const labels = TEMPLATE_SCAFFOLDS.map((item) => item.label);
+        const selected = await ctx.ui.multiSelect?.("Choose templates to scaffold:", labels);
+        const chosen = selected?.length ? selected : [await ctx.ui.select("Choose a template to scaffold:", labels)].filter(Boolean);
+        if (!chosen.length) return;
+
+        const overwrite = await ctx.ui.confirm(
+          "Overwrite existing files?",
+          "If yes, existing artifact files for the selected templates will be replaced.",
+        );
+
+        const results = chosen.map((label) => {
+          const item = TEMPLATE_SCAFFOLDS.find((entry) => entry.label === label);
+          const status = scaffoldTemplate(root, item.template, item.destination, overwrite);
+          return `${label}: ${status}`;
+        });
+
+        writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+        ctx.ui.notify(`Scaffolded templates in ${root}\n${results.join("\n")}`, "info");
+      },
+    });
+  };
+
+  const registerFluffAuditCommand = (name, description) => {
+    pi.registerCommand(name, {
+      description,
+      handler: async (_args, ctx) => {
+        const root = findProjectRoot(ctx.cwd);
+        const targets = [
+          "artifacts/expansion-integrity.md",
+          "artifacts/05-subplot-map.md",
+          "artifacts/drift-loop-alarm.md",
+          "evaluations/chapter-scorecards.md",
+          "artifacts/revision-tickets.md",
+        ];
+
+        const message = [
+          "Use the `genesis-for-pi` skill and run a focused fluff audit.",
+          "",
+          `Project root: ${root}`,
+          "",
+          "Audit for padding, ornamental subplots, duplicate beats, atmospheric drift, repeated introspection, duplicate exposition, low-stakes banter, and no-state-change scenes.",
+          "If target length pressure exists, enforce the Expansion Integrity Rule: longer must mean denser with consequence.",
+          "Inspect these files first:",
+          ...targets.map((file) => `- ${file}`),
+          "",
+          "Required outputs:",
+          "- update artifacts/expansion-integrity.md with any active padding risk",
+          "- update artifacts/revision-tickets.md with concrete cut/merge/rebuild tickets when needed",
+          "- update artifacts/drift-loop-alarm.md if a padding hard stop should trigger",
+          "- if no issue exists, state that clearly with evidence",
+        ].join("\n");
+
+        if (!ctx.isIdle()) {
+          pi.sendUserMessage(message, { deliverAs: "followUp" });
+          ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+          return;
+        }
+
+        pi.sendUserMessage(message);
+      },
+    });
+  };
+
+  const registerBlockerCommand = (name, description) => {
     pi.registerCommand(name, {
       description,
       handler: async (_args, ctx) => {
@@ -489,7 +1144,7 @@ export default function (pi: ExtensionAPI) {
     });
   };
 
-  const registerInitCommand = (name: string, description: string) => {
+  const registerInitCommand = (name, description) => {
     pi.registerCommand(name, {
       description,
       handler: async (args, ctx) => {
@@ -500,7 +1155,7 @@ export default function (pi: ExtensionAPI) {
         const baseDir = ctx.cwd;
         const projectRoot = resolve(baseDir, projectDirName);
 
-        if (existsSync(projectRoot) && (existsSync(join(projectRoot, "PROJECT_STATE.yaml")) || existsSync(join(projectRoot, "artifacts")))) {
+        if (existsSync(projectRoot) && existsSync(join(projectRoot, "PROJECT_STATE.yaml"))) {
           ctx.ui.notify(`Genesis project already exists: ${projectRoot}`, "warning");
           return;
         }
@@ -520,6 +1175,7 @@ export default function (pi: ExtensionAPI) {
           ctx.ui.notify("Project created, but git init failed. Initialize git manually if needed.", "warning");
         }
 
+        writeFileSync(join(projectRoot, "STATUS.md"), renderStatusDashboard(projectRoot), "utf8");
         ctx.ui.notify(
           `Initialized Genesis project at ${projectRoot}${gitInitialized ? "\nGit repository initialized." : ""}`,
           "info",
@@ -544,7 +1200,7 @@ export default function (pi: ExtensionAPI) {
     });
   };
 
-  const registerOpenCommand = (name: string, description: string) => {
+  const registerOpenCommand = (name, description) => {
     pi.registerCommand(name, {
       description,
       handler: async (_args, ctx) => {
@@ -559,6 +1215,7 @@ export default function (pi: ExtensionAPI) {
 
         const action = await ctx.ui.select("What should Genesis do with this project?", [
           "Show status",
+          "Show plan",
           "Inspect blockers",
           "Advance next step",
         ]);
@@ -567,7 +1224,14 @@ export default function (pi: ExtensionAPI) {
         if (action === "Show status") {
           const phase = detectPhase(readIfExists(join(selectedProject, "PROJECT_STATE.yaml")));
           const blockers = renderBlockers(selectedProject, true);
-          ctx.ui.notify(`Genesis root: ${selectedProject}\nCurrent phase: ${phase}\n\n${blockers}`, "info");
+          writeFileSync(join(selectedProject, "STATUS.md"), renderStatusDashboard(selectedProject), "utf8");
+          ctx.ui.notify(`Genesis root: ${selectedProject}\nCurrent phase: ${phase}\n\n${blockers}\n\nSTATUS.md updated.`, "info");
+          return;
+        }
+
+        if (action === "Show plan") {
+          writeFileSync(join(selectedProject, "STATUS.md"), renderStatusDashboard(selectedProject), "utf8");
+          ctx.ui.notify(`${renderPlan(selectedProject)}\nSTATUS.md updated.`, "info");
           return;
         }
 
@@ -590,6 +1254,9 @@ export default function (pi: ExtensionAPI) {
   registerStatusCommand("genesis-status", "Show Genesis for Pi project status from PROJECT_STATE and artifact files");
   registerStatusCommand("bg-status", "Legacy alias for /genesis-status");
 
+  registerPlanCommand("genesis-plan", "Show a dry-run summary of what Genesis would do next");
+  registerPlanCommand("bg-plan", "Legacy alias for /genesis-plan");
+
   registerInitCommand("genesis-init", "Create a fresh Genesis for Pi project tree and optionally start intake");
   registerInitCommand("bg-init", "Legacy alias for /genesis-init");
 
@@ -599,6 +1266,18 @@ export default function (pi: ExtensionAPI) {
   registerNextCommand("genesis-next", "Clear blockers when possible, then advance Genesis for Pi to the next incomplete pipeline step");
   registerNextCommand("bg-next", "Legacy alias for /genesis-next");
 
+  registerValidateCommand("genesis-validate", "Validate the current Genesis phase contract, missing outputs, and blocker state");
+  registerValidateCommand("bg-validate", "Legacy alias for /genesis-validate");
+
+  registerSetModeCommand("genesis-set-mode", "Set the active Genesis workflow mode and update project files");
+  registerSetModeCommand("bg-set-mode", "Legacy alias for /genesis-set-mode");
+
   registerBlockerCommand("genesis-blockers", "Interactively inspect Genesis blockers and optionally queue a blocker-fix turn");
   registerBlockerCommand("bg-blockers", "Legacy alias for /genesis-blockers");
+
+  registerTemplateCommand("genesis-scaffold-templates", "Scaffold core Genesis artifact templates into the current project");
+  registerTemplateCommand("bg-scaffold-templates", "Legacy alias for /genesis-scaffold-templates");
+
+  registerFluffAuditCommand("genesis-audit-fluff", "Run a focused anti-padding audit for fluff, filler scenes, and ornamental subplots");
+  registerFluffAuditCommand("bg-audit-fluff", "Legacy alias for /genesis-audit-fluff");
 }

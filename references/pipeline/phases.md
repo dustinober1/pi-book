@@ -27,6 +27,7 @@
 - scene-level therefore/but causality chain
 - scene embodiment map for physical action, objects, task pressure, and embodied scene friction
 - 2-3 integrated subplot arcs
+- expansion integrity plan so added length comes from real pressure, not filler
 - continuity ledger
 - reader promise tracker
 - drift and loop alarm
@@ -40,6 +41,7 @@
 - weave and update subplot beats
 - update continuity after every chapter block
 - update reader promises and chapter scorecards
+- update expansion integrity when target length or pacing pressure changes
 - update human specificity ledger with restraint
 - update scene embodiment, discarded choices, subtext, read-aloud ear, and over-polish notes
 - check drift and loop hard stops
@@ -53,7 +55,7 @@
 - run source-informed AI tell mitigation audit for visible prose, punctuation, formatting, and subtext tells
 - run subtext, read-aloud ear, and over-polish audits to protect author fingerprint and reader trust
 - pressure-test the manuscript against review personas so false notes and workshop-clean generic prose get caught before scoring
-- run creative sovereignty, scene embodiment, negative capability, and revision philosophy passes
+- run creative sovereignty, scene embodiment, negative capability, expansion integrity, and revision philosophy passes
 - convert findings into revision tickets
 - cut, merge, reorder, or rewrite when needed
 

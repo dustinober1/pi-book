@@ -28,7 +28,7 @@ Save the negative capability audit to `artifacts/negative-capability-audit.md`.
 
 Create or update `artifacts/revision-philosophy.md`.
 
-Create or update `artifacts/revision-tickets.md` with every actionable repair found during the audit.
+Create or update `artifacts/revision-tickets.md` with every actionable repair found during the audit. Use `references/templates/revision-tickets.md` unless the project clearly needs a different structure.
 
 ## Mandatory Passes
 
@@ -37,7 +37,9 @@ Create or update `artifacts/revision-tickets.md` with every actionable repair fo
 For each chapter, justify why it must exist.
 
 - if the chapter has no unique function, recommend cut or merge
+- in nonfiction or study guides, if the chapter does not earn its place in the argument, explanation ladder, or objective coverage, recommend cut, merge, or rebuild
 - mood alone is not enough
+- if the chapter mainly increases word count without adding consequence, mark it as padding and recommend cut, merge, or rebuild
 
 ### Pass 2: Voice Differentiation
 
@@ -77,7 +79,7 @@ Find where the manuscript explains what it already dramatized.
 
 Audit `artifacts/reader-promise-tracker.md` against the manuscript.
 
-- verify every premise, genre, emotional, mystery, character arc, subplot, opening-page, and chapter-one promise is paid off, transformed, or deliberately denied
+- verify every premise, genre/use-case, emotional/learning, mystery/argument/competency, character arc or reader-transformation, subplot/pressure-line, opening-page, and chapter-one promise is paid off, transformed, or deliberately denied
 - flag promises that disappear, change genre without payoff, or produce weaker emotional returns than the opening implied
 - create revision tickets for broken, missing, or underpowered promises
 
@@ -118,7 +120,16 @@ Audit `artifacts/drift-loop-alarm.md` against the manuscript, scorecards, contin
 - if a hard stop is active, pause approval and create a revision ticket naming the evidence and affected files
 - if the alarm file was not updated during drafting, treat that as a process failure
 
-### Pass 10: Name Collision And Trope Audit
+### Pass 10: Research And Reference Integrity Audit
+
+For nonfiction, study guides, certification books, or research-heavy projects, audit `research/reference-inventory.md` and any research folders actually used by the project.
+
+- verify the project has a visible source inventory for important claims, frameworks, standards, blueprints, examples, or exam objectives
+- flag unsupported claims, stale references, vague sourcing, or missing blueprint authority where the mode requires it
+- flag study-guide coverage that is organized for length but not for learner usefulness or exam relevance
+- create revision tickets for unsupported factual material, weak reference handling, or missing coverage evidence
+
+### Pass 11: Name Collision And Trope Audit
 
 Audit `artifacts/name-collision-audit.md` against the manuscript.
 Audit `artifacts/name-entity-filter.md` against the manuscript.
@@ -133,28 +144,38 @@ Audit `artifacts/name-entity-filter.md` against the manuscript.
 - create revision tickets for unresolved collision risk, missing web-backed evidence, rejected names that remain in prose, and replacement candidates that were not propagated through the manuscript
 - create revision tickets for unresolved name-entity-filter.md failures, missing rejected alternatives, and accepted-risk names without rationale
 
-### Pass 11: Failure Audit
+### Pass 12: Failure Audit
 
 Find where important plans or beats succeed too easily.
 
 - if success arrives too cleanly, recommend complication
 
-### Pass 12: Structural Repetition
+### Pass 13: Structural Repetition
 
 Check whether too many consecutive chapters repeat the same internal template.
 
 - if repetition becomes predictive, recommend restructuring
 
-### Pass 13: Subplot Integration
+### Pass 14: Expansion Integrity Audit
+
+Audit `artifacts/expansion-integrity.md` against the manuscript, outline, subplot map, scorecards, and revision tickets.
+
+- verify that any length expansion was justified by new pressure, complication, reversal, aftermath, relational conflict, investigation, or payoff
+- flag repeated introspection, duplicate exposition, low-stakes banter, atmospheric drift, decorative worldbuilding, and no-state-change scenes used to hit word count
+- verify every added subplot or chapter block changes main-plot conditions, character choices, reader promises, or ending pressure
+- if an added line can be removed without damage, treat it as padding rather than support
+- create revision tickets for filler expansion, ornamental subplots, duplicate beats, and chapters that are longer but not denser with consequence
+
+### Pass 15: Subplot Or Pressure-Line Integration
 
 Audit `artifacts/05-subplot-map.md` against the manuscript.
 
-- each required subplot must have setup, escalation, complication, convergence, and payoff or deliberate unresolved residue
-- if a subplot can be removed without weakening main plot, character arc, theme, or ending, recommend cut or merge
-- if a subplot resolves too neatly, disappears for too long, or competes with the central conflict, flag the affected chapters
-- identify dangling promises, duplicate functions, and missing causal links between subplot and main plot
+- each required subplot or pressure line must have setup, escalation, complication, convergence, and payoff or deliberate unresolved residue
+- if a subplot, case line, domain thread, or objective cluster can be removed without weakening main plot, argument, reader transformation, theme, or ending, recommend cut or merge
+- if it resolves too neatly, disappears for too long, or competes with the central spine, flag the affected chapters
+- identify dangling promises, duplicate functions, and missing causal links between the side line and the main spine
 
-### Pass 14: StoryScope Narrative Fingerprint Audit
+### Pass 16: StoryScope Narrative Fingerprint Audit
 
 Write `artifacts/narrative-fingerprint-audit.md` as a whole-book audit of AI-shaped narrative construction.
 
@@ -183,7 +204,7 @@ Reward human-leaning structural choices when they are earned:
 
 Create revision tickets for blocker or high-severity narrative fingerprint risks. Do not recommend random complexity; every proposed complication must serve character, theme, causality, reader promise, or ending pressure.
 
-### Pass 15: Agent Pitch Test
+### Pass 17: Agent Pitch Test
 
 Read the opening promise, the ending, and the pitch logic as a skeptical literary agent.
 
@@ -191,7 +212,7 @@ Read the opening promise, the ending, and the pitch logic as a skeptical literar
 - would page 5 survive?
 - does the ending repay the opening promise?
 
-### Pass 16: AI Tell Mitigation Audit
+### Pass 18: AI Tell Mitigation Audit
 
 Write `artifacts/ai-tell-mitigation-audit.md` as a source-informed prose and formatting audit.
 
@@ -210,7 +231,7 @@ Flag visible AI tells:
 
 Do not treat any single sign as proof. The audit should identify clusters, context, and reader-trust risk, then repair the underlying prose habit rather than merely removing a flagged word or punctuation mark. Do not create anti-AI prose that is just as artificial; the goal is reader trust, not detector evasion.
 
-### Pass 17: Subtext Audit
+### Pass 19: Subtext Audit
 
 Write `artifacts/subtext-audit.md` as a scene-level check for over-explicit meaning.
 
@@ -225,7 +246,7 @@ Flag:
 
 Create revision tickets for subtext failures that damage reader trust, character believability, voice, or tension.
 
-### Pass 18: Read-Aloud Ear Pass
+### Pass 20: Read-Aloud Ear Pass
 
 Write `artifacts/ear-pass.md` as a rhythm and dialogue audit.
 
@@ -240,7 +261,7 @@ For each chapter or representative sample, flag:
 
 Create revision tickets only when rhythm problems are clustered or reader-facing.
 
-### Pass 19: Over-Polish Audit
+### Pass 21: Over-Polish Audit
 
 Write `artifacts/over-polish-audit.md` to protect productive imperfection.
 
@@ -254,7 +275,7 @@ Flag where revision has made or may make the prose:
 
 Name the roughness that should be preserved. Do not protect sloppiness by default; protect only roughness that serves voice, character, tension, humor, subtext, or truth.
 
-### Pass 20: Creative Sovereignty Audit
+### Pass 22: Creative Sovereignty Audit
 
 Audit `artifacts/author-intent.md`, `artifacts/taste-profile.md`, `artifacts/risk-budget.md`, and `artifacts/discarded-choices.md` against the manuscript.
 
@@ -268,7 +289,7 @@ Flag:
 
 Do not treat every risk as a defect. Classify each as keep, reduce, heighten, explain in packaging, defer, or accepted risk.
 
-### Pass 21: Scene Embodiment Audit
+### Pass 23: Scene Embodiment Audit
 
 Audit `artifacts/scene-embodiment-map.md` against the manuscript.
 
@@ -276,7 +297,7 @@ Flag scenes where characters mainly explain feelings, backstory, theme, or plot 
 
 Create revision tickets for disembodied scenes that damage credibility, tension, subtext, pacing, or voice.
 
-### Pass 22: Negative Capability Audit
+### Pass 24: Negative Capability Audit
 
 Write `artifacts/negative-capability-audit.md` as a counterweight to excessive coherence.
 
@@ -292,7 +313,7 @@ Flag where the manuscript wrongly explains, resolves, moralizes, or thematizes:
 
 Also flag false opacity: confusion, evasive vagueness, missing setup, or incoherence disguised as ambiguity.
 
-### Pass 23: Revision Philosophy
+### Pass 25: Revision Philosophy
 
 Create or update `artifacts/revision-philosophy.md` before extracting tickets.
 
@@ -305,7 +326,7 @@ Define:
 - acceptable messiness during intermediate drafts
 - risks that should be protected rather than repaired
 
-### Pass 24: Revision Ticket Extraction
+### Pass 26: Revision Ticket Extraction
 
 Convert the audit into a repair queue in `artifacts/revision-tickets.md`.
 
@@ -330,12 +351,13 @@ Do not create vague tickets. If a finding lacks evidence and affected files, kee
 - any active drift-loop-alarm.md hard stop must prevent approval until resolved, deferred with rationale, or accepted as deliberate risk
 - any unresolved web-backed name collision blocker, finalized `web_blocked` name, or high-risk IP collision must prevent approval until fixed, renamed, deferred with rationale, or accepted as deliberate risk
 - any unresolved name-entity-filter.md blocker or empty human-specificity-ledger.md must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
-- any unresolved StoryScope-style narrative-fingerprint-audit.md blocker, including thematic over-determination, tidy single-track plotting, embodied emotion overuse, or lesson-shaped closure, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
+- any unresolved StoryScope-style narrative-fingerprint-audit.md blocker, including thematic over-determination, tidy single-track plotting, embodied emotion overuse, lesson-shaped closure, or filler expansion disguised as structure, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any unresolved ai-tell-mitigation-audit.md blocker, including placeholder leakage, markdown artifacts, subtext vacuum, fake citations, or formulaic sentence-shape clusters, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any unresolved subtext-audit.md blocker, including over-explained meaning, too-direct dialogue, interpreted symbolism, or explained jokes that damage reader trust, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any unresolved ear-pass.md blocker, including clustered repeated sentence shapes, assistant-like exposition, or unnatural dialogue, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any unresolved over-polish-audit.md blocker, including revision that erases author fingerprint or replaces AI tells with anti-AI tells, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any unresolved creative sovereignty blocker, including erased author intent, ignored taste constraints, accidental risk, or reintroduced rejected choices, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
+- any unresolved expansion-integrity.md blocker, including padding added to meet a target length, ornamental subplots, or repeated no-consequence beats, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any unresolved negative-capability-audit.md blocker, including over-explained ambiguity or false opacity, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any unresolved scene-embodiment-map.md blocker for disembodied scenes must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any blocker or high-severity ticket must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk

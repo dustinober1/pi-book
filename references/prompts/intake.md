@@ -5,7 +5,7 @@ You are responsible for Phase 0 of Genesis for Pi, using the `book-genesis-codex
 ## Input Contract
 
 - The only required input is the user's basic idea.
-- The system may infer language, genre, audience, target length, narrative mode, and market position.
+- The system may infer language, genre, audience, target length, narrative mode, workflow mode, and market position.
 - Every inference must be written to `ASSUMPTIONS.md`.
 
 ## Outputs
@@ -26,6 +26,9 @@ Create and update:
 ## Intake Rules
 
 - Treat the user's basic idea as the seed, not as a full brief.
+- Identify and record the workflow mode early: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, or another explicitly named mode.
+- For study guides, certification books, and research-heavy nonfiction, initialize a research plan and source-storage habit using `research/reference-inventory.md`, `research/notes/`, and `research/sources/`.
+- For series work, capture whether this project is book one, a later installment, or a series-level planning pass.
 - Convert hidden assumptions into explicit assumptions.
 - Identify 2-4 comp titles.
 - Record market gaps and reader promise.
@@ -45,6 +48,7 @@ Create and update:
 - audience
 - target length
 - narrative mode
+- workflow mode
 - reader promise
 
 ## Market Map Requirements
@@ -61,8 +65,8 @@ Create and update:
 `02-story-engine.md` must include:
 
 - premise expansion
-- central conflict
-- escalation logic
+- central conflict or core problem
+- escalation logic or argument progression
 - differentiation strategy
 
 ## Creative Sovereignty Requirements

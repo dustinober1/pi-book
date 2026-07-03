@@ -12,6 +12,8 @@ The package folder is now `genesis-for-pi`, with a compatibility symlink from `b
 Use this skill for:
 
 - fiction, memoir, nonfiction, or hybrid book projects
+- certification study guides, exam-prep books, and research-heavy instructional books
+- single-book projects or installments within a larger series
 - turning a rough idea into a structured book
 - drafting full manuscripts chapter by chapter
 - auditing AI-written prose and narrative structure
@@ -32,6 +34,10 @@ The manuscript should not merely avoid AI tells. It should preserve the author's
 
 Do not optimize away the author's intent, taste, risk, opacity, weirdness, or productive imperfection in pursuit of a cleaner score. The system exists to operationalize the writer's book, not replace it with a safer, smoother, more generically marketable book.
 
+## Expansion Integrity Rule
+
+Do not increase manuscript length with filler. If the book needs more words, add consequence rather than volume: stronger subplots, sharper reversals, added pressure, meaningful aftermath, new relational conflict, material scene work, or real thematic complication. Do not pad with repetitive introspection, duplicate exposition, low-stakes banter, atmospheric drift, decorative worldbuilding, or scenes that leave plot, character, and stakes unchanged.
+
 ## Version Control Rule
 
 Before writing project files, verify that the project directory is inside a Git work tree. If it is not, run `git init` in the project directory.
@@ -50,6 +56,7 @@ Default project layout:
 <project>/
   PROJECT_STATE.yaml
   ASSUMPTIONS.md
+  STATUS.md
   artifacts/
     author-intent.md
     taste-profile.md
@@ -67,6 +74,7 @@ Default project layout:
     continuity-ledger.md
     reader-promise-tracker.md
     drift-loop-alarm.md
+    expansion-integrity.md
     human-specificity-ledger.md
     narrative-fingerprint-audit.md
     ai-tell-mitigation-audit.md
@@ -84,9 +92,31 @@ Default project layout:
   evaluations/
     chapter-scorecards.md
   delivery/
+  research/
+    reference-inventory.md
+    notes/
+    sources/
 ```
 
 ## Canonical Pipeline
+
+Template references for high-friction artifacts live under `references/templates/`. Use them when creating or repairing `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `argument-spine.md`, `certification-blueprint-map.md`, `study-guide-objectives.md`, `evidence-map.md`, `research/reference-inventory.md`, and similar artifacts that benefit from a stable structure.
+
+## Workflow Modes
+
+Choose and record a workflow mode during intake. Common modes include:
+
+- novel
+- memoir
+- narrative nonfiction
+- prescriptive nonfiction
+- study guide
+- certification prep
+- series installment
+- other custom mode named explicitly in project files
+
+Mode affects which artifacts are mandatory in practice. Narrative fiction defaults to the full subplot/scene/continuity contract. Nonfiction may replace some plot pressure with argument flow, evidence, case studies, and reader transformation. Study guides and certification books should prioritize blueprint coverage, objective tracking, and reference integrity. Series installments should maintain both book-level and series-level continuity.
+
 
 Load `references/pipeline/manifest.yaml` before starting or advancing phases.
 
@@ -120,7 +150,10 @@ Read only the prompt for the active phase:
 2. Ensure Git is initialized, running `git init` when the project is not already in a work tree.
 3. Read `PROJECT_STATE.yaml` if it exists. If not, initialize it from the manifest phases and user idea.
 4. Read `ASSUMPTIONS.md` if it exists. If not, create it and mark inferred assumptions clearly.
+4a. Read `STATUS.md` when it exists for a quick resume dashboard, but treat project files such as `PROJECT_STATE.yaml`, artifact files, and manuscript files as the source of truth.
+4b. Identify and record the workflow mode early: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, or another explicitly named mode.
 5. Load the current phase prompt and produce only that phase's required outputs.
+5a. When creating a supported artifact from scratch, check `references/templates/` first and use the matching template unless the project clearly needs a different structure.
 6. Commit one file per commit after every artifact, chapter, state, evaluation, or delivery file update.
 7. Update `PROJECT_STATE.yaml` after every phase, chapter block, audit, score, or blocker-clearing pass.
 8. Do not skip Phase 4. Audit before final scoring.
@@ -133,37 +166,45 @@ Read only the prompt for the active phase:
 15. Convert audit and scoring problems into `artifacts/revision-tickets.md` entries with issue, evidence, affected files, severity, repair type, owner phase, and status.
 16. Track every major reader promise in `artifacts/reader-promise-tracker.md`, including premise, genre, emotional, mystery, subplot, and opening promises.
 17. Maintain `evaluations/chapter-scorecards.md` after chapter blocks so each chapter has a compact diagnostic record.
-18. Maintain `artifacts/drift-loop-alarm.md` as the hard stop system for repeated structure, no-state-change chapters, reopened tickets, local-model drift, phase-output mismatch, and false productivity.
-19. Maintain `artifacts/causality-chain.md` so scenes connect by therefore/but causality, not loose and-then sequence.
-20. Maintain `artifacts/review-personas.md` during research as a small set of high-signal reader and reviewer personas who will notice false notes, genre betrayal, sentimentality, flattening, overwritten prose, or fake specificity; use them as pressure tests during drafting and audit.
-21. Maintain `artifacts/voice-bible.md` with voice rules and anti-voice constraints: diction, rhythm, metaphor rules, POV noticing, dialogue compression, taboo phrases, and generic cadences to avoid.
-22. Maintain `artifacts/author-voice-fingerprint.md` from author samples or stated taste: sentence habits, paragraph rhythm, punctuation tolerance, humor, lyricism, dialogue behavior, emotional restraint, taboo phrasing, recurring obsessions, and productive imperfections to preserve.
-23. Maintain `artifacts/human-source-bank.md` as optional writer-supplied lived material: memories, overheard phrases, known places, occupational details, embarrassing behavior, family sayings, sensory facts, private annoyances, objects, jokes, and things the writer refuses to sentimentalize.
-24. Maintain `artifacts/author-intent.md`, `artifacts/taste-profile.md`, and `artifacts/risk-budget.md` as the creative sovereignty layer: why the book matters, what must not be changed, the author's taste, intentional risks, acceptable reader costs, and what the system must not optimize away.
-25. Maintain `artifacts/discarded-choices.md` so rejected openings, endings, names, plot turns, character choices, and tonal directions remain visible and are not accidentally reintroduced.
-26. Maintain `artifacts/name-collision-audit.md` as a web-backed audit of character, place, faction, institution, object, and invented-term names before they are finalized.
-27. Maintain `artifacts/name-entity-filter.md` as an internal originality filter for character names, place names, institutions, companies, agencies, cults, factions, recurring objects, named artifacts, and invented terminology; include world-fit logic, AI-default risk, rejected alternatives, and bans on hyper-symbolic surnames, overly smooth YA/fantasy names, cool but empty faction names, invented words without phonetic logic, repeated soft consonant patterns, and placeholder TV drama names.
-28. Maintain `artifacts/human-specificity-ledger.md` during drafting so each chapter gets a few precise details with restraint: petty contradictions, dumb object attachments, bad jokes, bodily inconvenience, texture, social awkwardness, silence, uneven competence, and small consequences of fatigue, hunger, weather, money, or shame.
-29. Maintain `artifacts/narrative-fingerprint-audit.md` during Phase 4 as a StoryScope-informed whole-book audit of AI-shaped narrative choices: thematic over-determination, moralizing dialogue, tidy single-track plots, overly clean causality, embodied emotion overuse, setting-as-psychological-mirror, external character description, thin subplot integration, and lesson-shaped endings.
-30. Maintain `artifacts/ai-tell-mitigation-audit.md` during Phase 4 as a source-informed audit of visible AI tells: em dash excess, semicolon swaps, not X; Y contrast, not only/but also, lists of three, stock triads, AI vocabulary clusters, cliches, placeholder or tool leakage, markdown artifacts, fake citations, abstraction trap, subtext vacuum, forced sass, exhaustive qualifiers, purple metaphor stacks, blocky dialogue/exposition/narration, weak callbacks, weak segues, and over-explained jokes.
-31. Maintain `artifacts/subtext-audit.md` to catch places where characters say exactly what they mean, narration explains the scene's meaning, symbols are interpreted for the reader, jokes are explained, conflict is too cleanly articulated, or miscommunication/evasion would create more human pressure.
-32. Maintain `artifacts/ear-pass.md` as a read-aloud rhythm audit: repeated sentence shapes, too-smooth paragraphs, unnatural dialogue, assistant-like exposition, dead segues, and paragraphs that need to become rougher, shorter, stranger, or more character-shaped.
-33. Maintain `artifacts/over-polish-audit.md` to protect productive awkwardness, asymmetry, silence, contradiction, abruptness, and character-shaped roughness from being polished into generic competence.
-34. Maintain `artifacts/scene-embodiment-map.md` so major scenes contain physical action, objects, spatial pressure, interruption, practical stakes, and behavior beyond people explaining themselves.
-35. Maintain `artifacts/negative-capability-audit.md` to protect unresolved tension, moral ambiguity, contradiction, opacity, images that do not reduce to a single theme, and endings with residue.
-36. Maintain `artifacts/revision-philosophy.md`, `artifacts/reader-response-plan.md`, `artifacts/beta-feedback-log.md`, and `artifacts/positioning-strategy.md` when revision, outside response, or packaging begins.
+18. Maintain `artifacts/drift-loop-alarm.md` as the hard stop system for repeated structure, no-state-change chapters, reopened tickets, local-model drift, phase-output mismatch, false productivity, and padding attempts.
+19. Maintain `artifacts/expansion-integrity.md` whenever target length, pacing, or scope creates pressure to expand. Record why expansion is needed, which subplot or pressure line justifies it, what each added scene changes, and which filler patterns are forbidden.
+20. For series work, maintain `artifacts/series-bible.md`, and when needed `artifacts/series-arc-map.md` and `artifacts/installment-promise-tracker.md`, so recurring continuity, cross-book escalation, and installment obligations remain visible.
+21. For nonfiction and study-guide work, maintain argument and research artifacts such as `artifacts/argument-spine.md`, `artifacts/evidence-map.md`, `artifacts/reader-transformation-map.md`, `artifacts/certification-blueprint-map.md`, `artifacts/study-guide-objectives.md`, and `research/reference-inventory.md` when relevant.
+22. Maintain `artifacts/causality-chain.md` so scenes connect by therefore/but causality, not loose and-then sequence.
+23. Maintain `artifacts/review-personas.md` during research as a small set of high-signal reader and reviewer personas who will notice false notes, genre betrayal, sentimentality, flattening, overwritten prose, or fake specificity; use them as pressure tests during drafting and audit.
+24. Maintain `artifacts/voice-bible.md` with voice rules and anti-voice constraints: diction, rhythm, metaphor rules, POV noticing, dialogue compression, taboo phrases, and generic cadences to avoid.
+25. Maintain `artifacts/author-voice-fingerprint.md` from author samples or stated taste: sentence habits, paragraph rhythm, punctuation tolerance, humor, lyricism, dialogue behavior, emotional restraint, taboo phrasing, recurring obsessions, and productive imperfections to preserve.
+26. Maintain `artifacts/human-source-bank.md` as optional writer-supplied lived material: memories, overheard phrases, known places, occupational details, embarrassing behavior, family sayings, sensory facts, private annoyances, objects, jokes, and things the writer refuses to sentimentalize.
+27. Maintain `artifacts/author-intent.md`, `artifacts/taste-profile.md`, and `artifacts/risk-budget.md` as the creative sovereignty layer: why the book matters, what must not be changed, the author's taste, intentional risks, acceptable reader costs, and what the system must not optimize away.
+28. Maintain `artifacts/discarded-choices.md` so rejected openings, endings, names, plot turns, character choices, tonal directions, argument paths, and content structures remain visible and are not accidentally reintroduced.
+29. Maintain `artifacts/name-collision-audit.md` as a web-backed audit of character, place, faction, institution, object, and invented-term names before they are finalized.
+30. Maintain `artifacts/name-entity-filter.md` as an internal originality filter for character names, place names, institutions, companies, agencies, cults, factions, recurring objects, named artifacts, and invented terminology; include world-fit logic, AI-default risk, rejected alternatives, and bans on hyper-symbolic surnames, overly smooth YA/fantasy names, cool but empty faction names, invented words without phonetic logic, repeated soft consonant patterns, and placeholder TV drama names.
+31. Maintain `artifacts/human-specificity-ledger.md` during drafting so each chapter gets a few precise details with restraint: petty contradictions, dumb object attachments, bad jokes, bodily inconvenience, texture, social awkwardness, silence, uneven competence, and small consequences of fatigue, hunger, weather, money, or shame.
+32. Maintain `artifacts/narrative-fingerprint-audit.md` during Phase 4 as a StoryScope-informed whole-book audit of AI-shaped narrative choices: thematic over-determination, moralizing dialogue, tidy single-track plots, overly clean causality, embodied emotion overuse, setting-as-psychological-mirror, external character description, thin subplot integration, lesson-shaped endings, and suspiciously frictionless length expansion.
+33. Maintain `artifacts/ai-tell-mitigation-audit.md` during Phase 4 as a source-informed audit of visible AI tells: em dash excess, semicolon swaps, not X; Y contrast, not only/but also, lists of three, stock triads, AI vocabulary clusters, cliches, placeholder or tool leakage, markdown artifacts, fake citations, abstraction trap, subtext vacuum, forced sass, exhaustive qualifiers, purple metaphor stacks, blocky dialogue/exposition/narration, weak callbacks, weak segues, and over-explained jokes.
+34. Maintain `artifacts/subtext-audit.md` to catch places where characters say exactly what they mean, narration explains the scene's meaning, symbols are interpreted for the reader, jokes are explained, conflict is too cleanly articulated, or miscommunication/evasion would create more human pressure.
+35. Maintain `artifacts/ear-pass.md` as a read-aloud rhythm audit: repeated sentence shapes, too-smooth paragraphs, unnatural dialogue, assistant-like exposition, dead segues, and paragraphs that need to become rougher, shorter, stranger, or more character-shaped.
+36. Maintain `artifacts/over-polish-audit.md` to protect productive awkwardness, asymmetry, silence, contradiction, abruptness, and character-shaped roughness from being polished into generic competence.
+37. Maintain `artifacts/scene-embodiment-map.md` so major scenes contain physical action, objects, spatial pressure, interruption, practical stakes, and behavior beyond people explaining themselves.
+38. Maintain `artifacts/negative-capability-audit.md` to protect unresolved tension, moral ambiguity, contradiction, opacity, images that do not reduce to a single theme, and endings with residue.
+39. Maintain `artifacts/revision-philosophy.md`, `artifacts/reader-response-plan.md`, `artifacts/beta-feedback-log.md`, and `artifacts/positioning-strategy.md` when revision, outside response, or packaging begins.
 
 ## Quality Policy
 
 - Prefer fewer constraints during drafting; evaluate and repair afterward.
 - Separate drafting, audit, scoring, and editorial judgment in the workflow.
-- Require every subplot to pressure the main plot, expose character contradiction, sharpen theme, or alter the ending; decorative side business should be cut or merged.
+- Treat word-count padding as a structural failure; if the manuscript needs to be longer, add consequence rather than volume.
+- In nonfiction, let argument, evidence, case sequencing, and reader transformation perform structural work that plot and subplot perform in fiction.
+- In study guides and certification books, treat blueprint coverage, factual accuracy, source organization, and objective mapping as structural requirements, not packaging details.
+- In series work, protect both installment payoff and series-level continuity; do not solve one by breaking the other.
+- Require every subplot to pressure the main plot, expose character contradiction, sharpen theme, alter the ending, or materially increase pressure on an existing promise; decorative side business should be cut or merged.
 - Treat continuity drift as a structural defect, not a copy-editing issue; repair or flag contradictions before final scoring.
 - Treat open high-severity revision tickets as blockers; do not approve the manuscript until they are fixed, deferred with rationale, or accepted as deliberate risk.
 - Treat broken reader promises as structural failures unless the manuscript clearly transforms or deliberately denies them with payoff.
 - Use chapter scorecards to make revision surgical instead of rewriting broad sections without evidence.
 - Treat any triggered `artifacts/drift-loop-alarm.md` hard stop as a pause point; stop drafting or revision and ask for direction before generating more manuscript.
-- Treat broken therefore/but causality as a structural failure; every major scene should cause, constrain, complicate, or pay off something.
+- Treat unresolved `artifacts/expansion-integrity.md` padding risk as a blocker when the project is expanding to meet a target length, trim count, or pacing requirement.
+- Treat broken therefore/but causality as a structural failure; every major scene should cause, constrain, complicate, pay off something, or justify a necessary expansion with new pressure.
 - Treat anti-voice violations as evidence of prose drift, especially when local models become generic after revision passes.
 - Treat unresolved web-backed name collision risk as a blocker; do not finalize names that are overused, strongly associated with existing books/media/IP, too trope-coded, or too AI-default.
 - Treat unresolved name-entity-filter.md failures as blockers; do not finalize names that feel generic, over-symbolic, fantasy-random, thriller-cliche, AI-default, cool but empty, phonetically mushy, or like placeholder TV drama names without a deliberate accepted-risk rationale.

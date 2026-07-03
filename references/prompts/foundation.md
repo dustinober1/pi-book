@@ -32,15 +32,15 @@ Create and update:
 - define conscious desire and unconscious need
 - define the lie they believe
 - define contradictions and relationship pressure
-- identify 2-3 potential subplot engines for book-length work
-- make every subplot candidate serve character contradiction, theme, main-plot pressure, or ending payoff
-- define a voice bible with concrete voice rules and anti-voice rules before drafting
+- identify 2-3 potential subplot engines for book-length work, or the nonfiction equivalent: case-study lines, recurring questions, domain threads, or instructional pressure lines
+- make every subplot candidate or nonfiction thread serve character contradiction, theme, main-plot pressure, argument progression, reader transformation, or ending payoff
+- define a voice bible with concrete voice rules and anti-voice rules before drafting; use `references/templates/voice-bible.md` unless the project clearly needs a different structure
 - create an author voice fingerprint from author samples or stated taste; if no samples are available, ask once, then record assumptions and provisional voice risks
 - pause for writer approval after the first author voice fingerprint unless the user explicitly asks to continue without a gate
 - create a human source bank for optional lived material the writer wants available; do not invent fake personal memories, and do not use private material without permission
 - complete a web-backed name collision audit before finalizing character, place, faction, institution, object, or invented-term names
 - complete a name and entity originality filter before drafting so names feel discovered from the world, not generated from a vibe
-- build an emotional curve with peaks and valleys
+- build an emotional curve with peaks and valleys, or for study guides and prescriptive nonfiction build a difficulty/clarity/confidence curve that keeps the reader moving
 - preserve author intent and taste when defining theme, character arcs, voice, and market framing
 - update `artifacts/review-personas.md` when foundation work reveals sharper voice-risk, sentimentality-risk, or genre-betrayal triggers
 - classify creative risks as intentional, accidental, reduced, heightened, or accepted
@@ -48,7 +48,7 @@ Create and update:
 
 ## Character Requirements
 
-`03-characters.md` must include:
+`03-characters.md` must include for fiction and memoir projects:
 
 - main characters
 - supporting characters with subplot potential
@@ -59,6 +59,8 @@ Create and update:
 - contradictions
 - relationship pressure that can carry a subplot
 - voice notes
+
+For nonfiction, study guides, or certification books, replace or supplement character emphasis with key reader avatars, instructor voice, case-study roles, or stakeholder types when those are more structurally relevant.
 
 ## Theme Requirements
 
@@ -163,8 +165,8 @@ Explicitly reject hyper-symbolic surnames that announce theme, overly smooth YA/
 `06-emotional-curve.md` must include:
 
 - chapter or block progression
-- start emotion
-- end emotion
-- where subplot pressure should enter, escalate, converge, or resolve
+- start emotion, confidence state, or reader-friction state
+- end emotion, clarity state, or confidence shift
+- where subplot pressure, argument pressure, or objective difficulty should enter, escalate, converge, or resolve
 - abandonment risk
-- high-impact beats
+- high-impact beats or breakthroughs
