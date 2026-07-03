@@ -1,0 +1,41 @@
+{
+  "name": "genesis-for-pi",
+  "version": "0.1.0",
+  "description": "Genesis for Pi: an extension-first Book Genesis workflow with blocker-clearing commands, voice protection, audits, Genesis Score, and editorial packaging.",
+  "private": true,
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi-skill",
+    "agent-skill",
+    "book-genesis",
+    "genesis",
+    "book-writing",
+    "writing"
+  ],
+  "license": "UNLICENSED",
+  "pi": {
+    "skills": [
+      "."
+    ],
+    "prompts": [
+      "prompts"
+    ],
+    "extensions": [
+      "extensions"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "files": [
+    "SKILL.md",
+    "book-genesis-codex.md",
+    "agents/",
+    "references/",
+    "prompts/",
+    "extensions/",
+    "README.md"
+  ]
+}
