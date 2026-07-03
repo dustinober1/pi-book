@@ -22,7 +22,14 @@ pi -e /Users/dustinober/.codex/skills/genesis-for-pi
 
 ## Use
 
-In Pi:
+Genesis for Pi can be used in two ways:
+
+1. **Extension-first** — recommended for normal use in Pi
+2. **Skill-first** — useful when you want to explicitly load the workflow contract
+
+### Skill commands
+
+Primary skill:
 
 ```text
 /skill:genesis-for-pi
@@ -34,7 +41,13 @@ Legacy alias:
 /skill:book-genesis-codex
 ```
 
-Or ask naturally for the Genesis for Pi workflow.
+You can also ask naturally, for example:
+
+```text
+Start a Genesis for Pi book project from this idea.
+Continue my Genesis project.
+Run the next Genesis phase.
+```
 
 ### Pi extension commands
 
@@ -80,6 +93,201 @@ Fallback prompt templates are also available as:
 /genesis-next-prompt
 /bg-next-prompt
 ```
+
+## Recommended workflow
+
+### 1. Create a new project
+
+From the directory where you want the project folder to be created:
+
+```text
+/genesis-init
+```
+
+What happens:
+
+- you are prompted for a project name
+- a new project directory is created
+- the standard Genesis folders are created
+- starter files such as `PROJECT_STATE.yaml`, `ASSUMPTIONS.md`, and intake artifacts are scaffolded
+- `git init` runs automatically if needed
+- you can immediately kick off Phase 0 intake
+
+You can also use the legacy alias:
+
+```text
+/bg-init
+```
+
+### 2. Open an existing project
+
+If you already have one or more Genesis projects under your current working directory:
+
+```text
+/genesis-open
+```
+
+This lets you pick a project and then:
+
+- show status
+- inspect blockers
+- continue the next step
+
+Legacy alias:
+
+```text
+/bg-open
+```
+
+### 3. Check project status
+
+```text
+/genesis-status
+```
+
+Use this when you want a quick read on:
+
+- detected current phase
+- likely blocker files
+- missing expected outputs
+
+Legacy alias:
+
+```text
+/bg-status
+```
+
+### 4. Advance the project
+
+```text
+/genesis-next
+```
+
+This is the main working command.
+
+What it does:
+
+- reads the current project state
+- checks for blockers
+- tries to clear blockers first when possible
+- advances only the next required pipeline step
+- preserves the human-voice rules and artifact contract
+
+Useful examples:
+
+```text
+/genesis-next main checkpoints only
+/genesis-next do not draft prose yet
+/genesis-next careful mode
+/genesis-next clear blockers first
+```
+
+Legacy alias:
+
+```text
+/bg-next
+```
+
+### 5. Inspect blockers directly
+
+```text
+/genesis-blockers
+```
+
+Use this when you want targeted triage before advancing. The command lets you:
+
+- inspect blocker evidence
+- see suggested repair actions
+- queue a focused blocker-fix turn
+
+Legacy alias:
+
+```text
+/bg-blockers
+```
+
+## Typical ways to work
+
+### Start from scratch
+
+1. `cd` into the parent directory where you want your book project stored
+2. run `/genesis-init`
+3. provide the seed idea
+4. allow Genesis to start Phase 0 intake
+5. keep using `/genesis-next` until the phase is complete
+6. repeat `/genesis-next` as the project moves through the pipeline
+
+### Resume existing work
+
+1. `cd` into the directory that contains your Genesis projects
+2. run `/genesis-open` or `/genesis-status`
+3. if blockers appear, use `/genesis-blockers`
+4. run `/genesis-next` to continue safely
+
+### Force explicit skill usage
+
+If you want the agent to operate with the full workflow contract explicitly loaded first:
+
+1. run `/skill:genesis-for-pi`
+2. then ask for the exact phase or task you want
+3. or follow with `/genesis-next`
+
+Example:
+
+```text
+/skill:genesis-for-pi
+Continue this project from the current phase and preserve the author's voice.
+```
+
+## Pipeline overview
+
+Genesis for Pi uses this sequence:
+
+1. **Phase 0: Intake**
+   - idea capture
+   - assumptions
+   - brief
+   - market map
+   - story engine
+   - creative sovereignty files
+   - review personas
+2. **Phase 1: Foundation**
+   - characters
+   - theme
+   - voice bible
+   - author voice fingerprint
+   - human source bank
+   - name audits
+3. **Phase 2: Architecture**
+   - outline
+   - subplot map
+   - causality chain
+   - continuity ledger
+   - reader promise tracker
+4. **Phase 3: Drafting**
+   - chapter drafting
+   - chapter scorecards
+   - specificity, subtext, ear-pass, and over-polish tracking
+5. **Phase 4: Adversarial Audit**
+   - narrative fingerprint audit
+   - AI-tell mitigation audit
+   - revision tickets
+6. **Phase 5: Final Score**
+   - Genesis Score evaluation
+7. **Phase 6: Editorial Package**
+   - editorial and delivery assets
+
+## Human-voice guidance
+
+Genesis for Pi is designed to avoid generic AI-clean prose.
+
+In practice, that means:
+
+- preserve the writer's rhythm, taste, roughness, and obsessions
+- use `review-personas.md` to catch false notes early
+- use `author-voice-fingerprint.md` and `voice-bible.md` during drafting and revision
+- clear blockers by repairing the underlying prose or structure, not by cosmetic word swaps
+- avoid over-smoothing scenes that should stay strange, awkward, withheld, or human
 
 ## Multi-machine use
 
