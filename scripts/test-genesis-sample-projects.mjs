@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 
 async function loadGenesisHelpers() {
   const source = readFileSync(join(process.cwd(), "extensions", "genesis.ts"), "utf8");
-  const augmented = `${source}\nexport { detectPhase, findProjectRoot, missingExpectedForPhase, renderValidationReport, renderStatusDashboard, detectWorkflowMode, missingModeArtifacts, getModeTemplateEntries, getGitState };`;
+  const augmented = `${source}\nexport { detectPhase, findProjectRoot, missingExpectedForPhase, renderValidationReport, renderStatusDashboard, renderResume, renderDoctorReport, detectWorkflowMode, missingModeArtifacts, getModeTemplateEntries, getModeBundleEntries, collectLintFindings, getGitState, migrateProject };`;
   const helperModulePath = join(process.cwd(), "scripts", ".genesis-test-module.mjs");
   writeFileSync(helperModulePath, augmented, "utf8");
   return { module: await import(pathToFileURL(helperModulePath).href), helperModulePath };
@@ -46,6 +46,7 @@ try {
   assert.deepEqual(modeMissing.sort(), [
     "artifacts/certification-blueprint-map.md",
     "artifacts/evidence-map.md",
+    "artifacts/reader-promise-tracker.md",
     "artifacts/study-guide-objectives.md",
     "research/reference-inventory.md",
   ]);
@@ -67,12 +68,34 @@ try {
   assert.deepEqual(planTemplates, [
     "artifacts/certification-blueprint-map.md",
     "artifacts/evidence-map.md",
+    "artifacts/reader-promise-tracker.md",
     "artifacts/study-guide-objectives.md",
     "research/reference-inventory.md",
   ]);
 
+  const bundleTemplates = helpers.getModeBundleEntries("certification prep").map((item) => item.destination).sort();
+  assert.ok(bundleTemplates.includes("artifacts/drift-loop-alarm.md"), "mode bundle should include drift-loop alarm");
+  assert.ok(bundleTemplates.includes("artifacts/reader-promise-tracker.md"), "mode bundle should include reader-promise-tracker");
+
   const validation = helpers.renderValidationReport(cert);
-  assert.ok(validation.includes("Mode-specific missing artifacts: 4"), "validation should count missing mode artifacts");
+  assert.ok(validation.includes("Mode-specific missing artifacts: 5"), "validation should count missing mode artifacts");
+
+  writeFileSync(join(cert, "artifacts", "review-personas.md"), "# Review Personas\n\nunknown\n", "utf8");
+  const lintFindings = helpers.collectLintFindings(cert, "Phase 1: Foundation");
+  assert.ok(lintFindings.some((item) => item.file === "artifacts/review-personas.md"), "lint should catch placeholder-heavy artifacts");
+
+  const resume = helpers.renderResume(cert);
+  assert.ok(resume.includes("# Genesis Resume"), "resume report should render");
+
+  const migrated = join(tempRoot, "migrate-me");
+  mkdirSync(join(migrated, "artifacts"), { recursive: true });
+  writeFileSync(join(migrated, "ASSUMPTIONS.md"), "# Assumptions\n", "utf8");
+  const migratedResult = helpers.migrateProject(migrated);
+  assert.equal(existsSync(join(migrated, "PROJECT_STATE.yaml")), true, "migrate should create PROJECT_STATE.yaml when missing");
+  assert.ok(migratedResult.phase.startsWith("Phase"), "migrate should infer or assign a phase");
+
+  const doctor = helpers.renderDoctorReport(cert);
+  assert.ok(doctor.includes("# Genesis Doctor"), "doctor report should render");
 
   const nonGenesisParent = join(tempRoot, "non-genesis");
   mkdirSync(join(nonGenesisParent, "artifacts"), { recursive: true });

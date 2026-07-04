@@ -64,6 +64,12 @@ const templatePaths = [
   "references/templates/reference-inventory.md",
   "references/templates/evidence-map.md",
   "references/templates/study-guide-objectives.md",
+  "references/templates/author-intent.md",
+  "references/templates/taste-profile.md",
+  "references/templates/risk-budget.md",
+  "references/templates/review-personas.md",
+  "references/templates/reader-promise-tracker.md",
+  "references/templates/drift-loop-alarm.md",
 ];
 for (const templatePath of templatePaths) {
   assert.ok(existsSync(join(root, templatePath)), `missing scaffold template: ${templatePath}`);
@@ -71,18 +77,31 @@ for (const templatePath of templatePaths) {
 
 const readme = readFileSync(join(root, "README.md"), "utf8");
 assert.ok(readme.includes("/genesis-plan"), "README should document /genesis-plan");
+assert.ok(readme.includes("/genesis-doctor"), "README should document /genesis-doctor");
+assert.ok(readme.includes("/genesis-start"), "README should document /genesis-start");
 assert.ok(readme.includes("/bg-plan"), "README should document /bg-plan");
 
 const alias = readFileSync(join(root, "book-genesis-codex.md"), "utf8");
 assert.ok(alias.includes("load `./SKILL.md`"), "legacy alias should point to SKILL.md");
 assert.ok(alias.includes("/genesis-plan"), "legacy alias should mention /genesis-plan");
+assert.ok(alias.includes("/genesis-doctor"), "legacy alias should mention /genesis-doctor");
 
 const extension = readFileSync(join(root, "extensions", "genesis.ts"), "utf8");
 assert.ok(extension.includes("const PHASE_DEFINITIONS = loadPhaseDefinitions();"), "extension should load phase definitions from manifest");
 assert.ok(extension.includes("resolve(PACKAGE_ROOT, templatePath)"), "template scaffolding should resolve from package root");
 assert.ok(extension.includes("function getModeTemplateEntries(mode)"), "extension should expose mode-template mapping helper");
-assert.ok(extension.includes("scaffoldModeArtifacts(root, mode, false)"), "set-mode should offer mode-specific scaffolding");
+assert.ok(extension.includes("function getModeBundleEntries(mode)"), "extension should expose mode-bundle helper");
+assert.ok(extension.includes("function renderDoctorReport(root)"), "extension should expose doctor report helper");
+assert.ok(extension.includes("function renderResume(root)"), "extension should expose resume helper");
+assert.ok(extension.includes("function collectLintFindings(root, phase)"), "extension should expose lint helper");
 assert.ok(extension.includes('registerPlanCommand("genesis-plan"'), "extension should register /genesis-plan");
+assert.ok(extension.includes('registerDoctorCommand("genesis-doctor"'), "extension should register /genesis-doctor");
+assert.ok(extension.includes('registerStartCommand("genesis-start"'), "extension should register /genesis-start");
+assert.ok(extension.includes('registerMigrateCommand("genesis-migrate"'), "extension should register /genesis-migrate");
 assert.ok(existsSync(join(root, "scripts", "test-genesis-sample-projects.mjs")), "sample-project test script should exist");
+assert.ok(existsSync(join(root, "docs", "best-practices.md")), "best-practices doc should exist");
+assert.ok(existsSync(join(root, "docs", "troubleshooting.md")), "troubleshooting doc should exist");
+assert.ok(existsSync(join(root, "examples", "novel-project", "PROJECT_STATE.yaml")), "novel example project should exist");
+assert.ok(existsSync(join(root, "examples", "certification-prep-project", "PROJECT_STATE.yaml")), "certification example project should exist");
 
 console.log("Genesis package validation passed.");

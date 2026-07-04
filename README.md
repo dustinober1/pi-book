@@ -22,6 +22,12 @@ For one-off use without installing:
 pi -e /Users/dustinober/.codex/skills/genesis-for-pi
 ```
 
+From git:
+
+```bash
+pi install git:github.com/dustinober1/pi-book@main
+```
+
 ## Use
 
 Genesis for Pi can be used in two ways:
@@ -53,35 +59,70 @@ Run the next Genesis phase.
 
 ### Pi extension commands
 
+#### Quick command guide
+
+| command | use it for |
+| --- | --- |
+| `/genesis-start` | one-command bootstrap |
+| `/genesis-init` | manual project creation |
+| `/genesis-open` | pick an existing project |
+| `/genesis-status` | current dashboard |
+| `/genesis-plan` | dry-run next step |
+| `/genesis-resume` | smart resume summary |
+| `/genesis-doctor` | install/project health checks |
+| `/genesis-lint` | placeholder/quality lint |
+| `/genesis-next` | advance the workflow |
+| `/genesis-validate` | phase-contract validation |
+| `/genesis-migrate` | repair older project trees |
+| `/genesis-set-mode` | set workflow mode + scaffold bundle |
+| `/genesis-blockers` | inspect blockers interactively |
+| `/genesis-scaffold-templates` | copy starter artifacts |
+| `/genesis-score-to-tickets` | turn score findings into tickets |
+| `/genesis-audit-fluff` | anti-padding audit |
+
 This package provides Pi-native extension commands:
 
 ```text
+/genesis-start
 /genesis-init
 /genesis-open
 /genesis-status
 /genesis-plan
+/genesis-resume
+/genesis-doctor
+/genesis-lint
 /genesis-next
 /genesis-validate
+/genesis-migrate
 /genesis-set-mode
 /genesis-blockers
 /genesis-scaffold-templates
+/genesis-score-to-tickets
 /genesis-audit-fluff
 ```
 
 Legacy aliases remain available:
 
 ```text
+/bg-start
 /bg-init
 /bg-open
 /bg-status
 /bg-plan
+/bg-resume
+/bg-doctor
+/bg-lint
 /bg-next
 /bg-validate
+/bg-migrate
 /bg-set-mode
 /bg-blockers
 /bg-scaffold-templates
+/bg-score-to-tickets
 /bg-audit-fluff
 ```
+
+Use `/genesis-start` to create a fresh Genesis project, choose the workflow mode, scaffold the recommended mode bundle, initialize git, and kick off intake in one step.
 
 Use `/genesis-init` to create a fresh Genesis project tree, initialize git when needed, scaffold research folders, and optionally kick off Phase 0 intake.
 
@@ -91,15 +132,25 @@ Use `/genesis-status` to inspect the current Genesis project root, detected phas
 
 Use `/genesis-plan` for a dry-run summary of what Genesis would do next before any agent turn is queued.
 
+Use `/genesis-resume` to see where a project stalled, the most recently touched files, and the best next command.
+
+Use `/genesis-doctor` for package-health, project-health, git, blocker, directory, and lint checks.
+
+Use `/genesis-lint` to flag placeholder-heavy artifacts, empty sections, and weak scaffolds that file-existence checks miss.
+
 Use `/genesis-next` to clear blockers when possible, then advance the current Genesis project to the next incomplete pipeline step. It bypasses optional approval pauses for that turn, but it does not bypass hard blockers such as active drift alarms, open blocker/high revision tickets, unresolved AI-tell or author-voice blockers, missing required phase outputs, phase contract mismatches, or missing git initialization.
 
-Use `/genesis-validate` to run a stricter phase-contract check for the current project before advancing. It also checks mode-specific artifacts for series, nonfiction, study-guide, and certification-prep workflows.
+Use `/genesis-validate` to run a stricter phase-contract check for the current project before advancing. It also checks mode-specific artifacts and artifact-quality lint findings.
+
+Use `/genesis-migrate` to repair or upgrade partial/older Genesis project trees to the current layout.
 
 Use `/genesis-set-mode` to explicitly set the workflow mode, update `PROJECT_STATE.yaml`, `ASSUMPTIONS.md`, and `artifacts/00-brief.md`, and offer mode-specific scaffold files when templates exist.
 
 Use `/genesis-blockers` for interactive blocker triage. It lets you inspect blocker evidence and queue a targeted fix turn from the UI.
 
-Use `/genesis-scaffold-templates` to copy core artifact templates such as `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `argument-spine.md`, `certification-blueprint-map.md`, and `research/reference-inventory.md` into the active project.
+Use `/genesis-scaffold-templates` to copy core artifact templates such as `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `argument-spine.md`, `certification-blueprint-map.md`, `research/reference-inventory.md`, `author-intent.md`, `taste-profile.md`, `risk-budget.md`, `review-personas.md`, `reader-promise-tracker.md`, and `drift-loop-alarm.md` into the active project.
+
+Use `/genesis-score-to-tickets` to convert score and audit findings into structured revision tickets.
 
 Use `/genesis-audit-fluff` to run a focused anti-padding audit when a draft feels thin, repetitive, or suspiciously long for how little it changes.
 
@@ -118,7 +169,30 @@ Fallback prompt templates are also available as:
 
 ## Recommended workflow
 
-### 1. Create a new project
+### 1. Fast bootstrap
+
+From the directory where you want the project folder to be created:
+
+```text
+/genesis-start
+```
+
+What happens:
+
+- you are prompted for a project name
+- you choose a workflow mode
+- a project tree is created
+- the recommended mode bundle is scaffolded when templates exist
+- git is initialized when possible
+- intake can begin immediately
+
+Legacy alias:
+
+```text
+/bg-start
+```
+
+### 2. Create a new project manually
 
 From the directory where you want the project folder to be created:
 
@@ -142,7 +216,7 @@ You can also use the legacy alias:
 /bg-init
 ```
 
-### 2. Open an existing project
+### 3. Open an existing project
 
 If you already have one or more Genesis projects under your current working directory:
 
@@ -163,7 +237,7 @@ Legacy alias:
 /bg-open
 ```
 
-### 3. Check project status
+### 4. Check project status
 
 ```text
 /genesis-status
@@ -182,7 +256,7 @@ Legacy alias:
 /bg-status
 ```
 
-### 4. Preview the next step
+### 5. Preview the next step
 
 ```text
 /genesis-plan
@@ -200,7 +274,7 @@ Legacy alias:
 /bg-plan
 ```
 
-### 5. Advance the project
+### 6. Advance the project
 
 ```text
 /genesis-next
@@ -231,7 +305,58 @@ Legacy alias:
 /bg-next
 ```
 
-### 6. Validate the current phase contract
+### 7. Resume an existing project intelligently
+
+```text
+/genesis-resume
+```
+
+Use this when you want:
+
+- the most recently touched project files
+- a summary of where the work stalled
+- the best next command
+
+Legacy alias:
+
+```text
+/bg-resume
+```
+
+### 8. Run project doctor
+
+```text
+/genesis-doctor
+```
+
+Use this when you want:
+
+- install-health checks
+- missing directory checks
+- blocker summary
+- artifact-quality lint summary
+
+Legacy alias:
+
+```text
+/bg-doctor
+```
+
+### 9. Lint artifact quality
+
+```text
+/genesis-lint
+```
+
+Use this when files exist but may still be half-scaffolded or placeholder-heavy.
+
+Legacy alias:
+
+```text
+/bg-lint
+```
+
+### 10. Validate the current phase contract
 
 ```text
 /genesis-validate
@@ -251,7 +376,21 @@ Legacy alias:
 /bg-validate
 ```
 
-### 7. Set the workflow mode
+### 11. Migrate an older or partial project
+
+```text
+/genesis-migrate
+```
+
+Use this when you want to repair or upgrade a project tree so it matches the current Genesis layout more closely.
+
+Legacy alias:
+
+```text
+/bg-migrate
+```
+
+### 12. Set the workflow mode
 
 ```text
 /genesis-set-mode
@@ -276,7 +415,7 @@ Legacy alias:
 /bg-set-mode
 ```
 
-### 8. Inspect blockers directly
+### 13. Inspect blockers directly
 
 ```text
 /genesis-blockers
@@ -294,7 +433,7 @@ Legacy alias:
 /bg-blockers
 ```
 
-### 9. Scaffold core templates
+### 14. Scaffold core templates
 
 ```text
 /genesis-scaffold-templates
@@ -319,7 +458,21 @@ Legacy alias:
 /bg-scaffold-templates
 ```
 
-### 10. Audit fluff directly
+### 15. Convert score findings into tickets
+
+```text
+/genesis-score-to-tickets
+```
+
+Use this when you want to turn score and audit findings into structured revision tickets.
+
+Legacy alias:
+
+```text
+/bg-score-to-tickets
+```
+
+### 16. Audit fluff directly
 
 ```text
 /genesis-audit-fluff
@@ -344,19 +497,32 @@ Legacy alias:
 
 ### Start from scratch
 
+Fast path:
+
+1. `cd` into the parent directory where you want your book project stored
+2. run `/genesis-start`
+3. choose the workflow mode
+4. provide the seed idea
+5. let Genesis kick off intake
+6. keep using `/genesis-next` as the project advances
+
+Manual path:
+
 1. `cd` into the parent directory where you want your book project stored
 2. run `/genesis-init`
 3. provide the seed idea
-4. allow Genesis to start Phase 0 intake
-5. keep using `/genesis-next` until the phase is complete
-6. repeat `/genesis-next` as the project moves through the pipeline
+4. optionally run `/genesis-set-mode`
+5. allow Genesis to start Phase 0 intake
+6. keep using `/genesis-next` until the phase is complete
 
 ### Resume existing work
 
 1. `cd` into the directory that contains your Genesis projects
-2. run `/genesis-open` or `/genesis-status`
-3. if blockers appear, use `/genesis-blockers`
-4. run `/genesis-next` to continue safely
+2. run `/genesis-resume`, `/genesis-open`, or `/genesis-status`
+3. if health looks suspicious, run `/genesis-doctor`
+4. if blockers appear, use `/genesis-blockers`
+5. run `/genesis-plan` if you want a dry run
+6. run `/genesis-next` to continue safely
 
 ### Workflow modes
 
@@ -461,8 +627,10 @@ Use tags or commit refs to keep machines pinned to the same version.
 
 - `SKILL.md` — primary `genesis-for-pi` skill entrypoint and workflow contract
 - `book-genesis-codex.md` — legacy compatibility alias skill
-- `references/` — pipeline prompts, scoring contract, and reference docs
-- `extensions/genesis.ts` — Pi-native `/genesis-init`, `/genesis-open`, `/genesis-status`, `/genesis-plan`, `/genesis-next`, `/genesis-validate`, `/genesis-set-mode`, `/genesis-blockers`, `/genesis-scaffold-templates`, `/genesis-audit-fluff`, `/bg-init`, `/bg-open`, `/bg-status`, `/bg-plan`, `/bg-next`, `/bg-validate`, `/bg-set-mode`, `/bg-blockers`, `/bg-scaffold-templates`, and `/bg-audit-fluff` commands plus the `genesis_blocker_triage` tool
-- `references/templates/` — starter templates for high-friction artifacts such as `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `argument-spine.md`, `certification-blueprint-map.md`, `study-guide-objectives.md`, `evidence-map.md`, and `research/reference-inventory.md`
+- `extensions/genesis.ts` — Pi-native commands including start, resume, doctor, lint, migrate, score-to-tickets, blockers, scaffolding, and next-step orchestration plus the `genesis_blocker_triage` tool
+- `references/` — pipeline prompts, scoring contract, reference docs, and templates
+- `references/templates/` — starter templates for voice, continuity, tickets, expansion integrity, author intent, taste, risk, review personas, reader promises, drift alarms, series, nonfiction, study-guide, and certification artifacts
+- `docs/` — best practices and troubleshooting notes
+- `examples/` — sample Genesis project trees for different workflow modes
 - `prompts/genesis-next-prompt.md` and `prompts/bg-next-prompt.md` — fallback prompt-template versions of `/genesis-next`
 - `agents/openai.yaml` — adapter metadata

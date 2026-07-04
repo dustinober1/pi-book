@@ -1,8 +1,16 @@
 {
   "name": "genesis-for-pi",
   "version": "0.1.0",
-  "description": "Genesis for Pi: an extension-first Book Genesis workflow with blocker-clearing commands, voice protection, audits, Genesis Score, and editorial packaging.",
+  "description": "Genesis for Pi: an extension-first Book Genesis workflow with doctor, resume, migration, linting, scoring utilities, blocker-clearing commands, voice protection, audits, Genesis Score, and editorial packaging.",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dustinober1/pi-book.git"
+  },
+  "homepage": "https://github.com/dustinober1/pi-book",
+  "bugs": {
+    "url": "https://github.com/dustinober1/pi-book/issues"
+  },
   "type": "module",
   "keywords": [
     "pi-package",
@@ -39,6 +47,8 @@
     "references/",
     "prompts/",
     "extensions/",
+    "docs/",
+    "examples/",
     "README.md"
   ],
   "devDependencies": {

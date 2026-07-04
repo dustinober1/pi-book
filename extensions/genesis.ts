@@ -1,6 +1,6 @@
 import { Type } from "typebox";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, copyFileSync, statSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -132,72 +132,96 @@ const WORKFLOW_MODES = [
   "other",
 ];
 
-const CORE_PROJECT_FILES = ["PROJECT_STATE.yaml", "ASSUMPTIONS.md"];
+const CORE_PROJECT_FILES = ["PROJECT_STATE.yaml", "ASSUMPTIONS.md", "STATUS.md"];
+const PROJECT_ROOT_DIRS = ["artifacts", "manuscript/chapters", "evaluations", "delivery", "research/notes", "research/sources"];
 
 const MODE_ARTIFACTS = {
-  "series installment": ["artifacts/series-bible.md"],
-  "narrative nonfiction": ["artifacts/argument-spine.md", "research/reference-inventory.md"],
-  "prescriptive nonfiction": ["artifacts/argument-spine.md", "research/reference-inventory.md"],
-  "study guide": ["artifacts/study-guide-objectives.md", "research/reference-inventory.md"],
+  novel: ["artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md"],
+  memoir: ["artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md"],
+  "series installment": ["artifacts/series-bible.md", "artifacts/reader-promise-tracker.md"],
+  "narrative nonfiction": ["artifacts/argument-spine.md", "research/reference-inventory.md", "artifacts/reader-promise-tracker.md"],
+  "prescriptive nonfiction": ["artifacts/argument-spine.md", "research/reference-inventory.md", "artifacts/reader-promise-tracker.md"],
+  "study guide": ["artifacts/study-guide-objectives.md", "research/reference-inventory.md", "artifacts/reader-promise-tracker.md"],
   "certification prep": [
     "artifacts/certification-blueprint-map.md",
     "artifacts/study-guide-objectives.md",
     "artifacts/evidence-map.md",
     "research/reference-inventory.md",
+    "artifacts/reader-promise-tracker.md",
   ],
+  other: ["artifacts/reader-promise-tracker.md"],
+};
+
+const MODE_SCAFFOLD_BUNDLES = {
+  novel: [
+    "artifacts/voice-bible.md",
+    "artifacts/review-personas.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/drift-loop-alarm.md",
+    "artifacts/continuity-ledger.md",
+  ],
+  memoir: [
+    "artifacts/voice-bible.md",
+    "artifacts/review-personas.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/drift-loop-alarm.md",
+    "artifacts/human-source-bank.md",
+  ],
+  "narrative nonfiction": [
+    "artifacts/argument-spine.md",
+    "artifacts/evidence-map.md",
+    "research/reference-inventory.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/review-personas.md",
+  ],
+  "prescriptive nonfiction": [
+    "artifacts/argument-spine.md",
+    "artifacts/evidence-map.md",
+    "research/reference-inventory.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/review-personas.md",
+  ],
+  "study guide": [
+    "artifacts/study-guide-objectives.md",
+    "research/reference-inventory.md",
+    "artifacts/evidence-map.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/drift-loop-alarm.md",
+  ],
+  "certification prep": [
+    "artifacts/certification-blueprint-map.md",
+    "artifacts/study-guide-objectives.md",
+    "artifacts/evidence-map.md",
+    "research/reference-inventory.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/drift-loop-alarm.md",
+  ],
+  "series installment": [
+    "artifacts/series-bible.md",
+    "artifacts/continuity-ledger.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/drift-loop-alarm.md",
+  ],
+  other: ["artifacts/review-personas.md", "artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md"],
 };
 
 const TEMPLATE_SCAFFOLDS = [
-  {
-    label: "voice-bible.md",
-    template: "references/templates/voice-bible.md",
-    destination: "artifacts/voice-bible.md",
-  },
-  {
-    label: "continuity-ledger.md",
-    template: "references/templates/continuity-ledger.md",
-    destination: "artifacts/continuity-ledger.md",
-  },
-  {
-    label: "revision-tickets.md",
-    template: "references/templates/revision-tickets.md",
-    destination: "artifacts/revision-tickets.md",
-  },
-  {
-    label: "expansion-integrity.md",
-    template: "references/templates/expansion-integrity.md",
-    destination: "artifacts/expansion-integrity.md",
-  },
-  {
-    label: "series-bible.md",
-    template: "references/templates/series-bible.md",
-    destination: "artifacts/series-bible.md",
-  },
-  {
-    label: "argument-spine.md",
-    template: "references/templates/argument-spine.md",
-    destination: "artifacts/argument-spine.md",
-  },
-  {
-    label: "certification-blueprint-map.md",
-    template: "references/templates/certification-blueprint-map.md",
-    destination: "artifacts/certification-blueprint-map.md",
-  },
-  {
-    label: "reference-inventory.md",
-    template: "references/templates/reference-inventory.md",
-    destination: "research/reference-inventory.md",
-  },
-  {
-    label: "evidence-map.md",
-    template: "references/templates/evidence-map.md",
-    destination: "artifacts/evidence-map.md",
-  },
-  {
-    label: "study-guide-objectives.md",
-    template: "references/templates/study-guide-objectives.md",
-    destination: "artifacts/study-guide-objectives.md",
-  },
+  { label: "voice-bible.md", template: "references/templates/voice-bible.md", destination: "artifacts/voice-bible.md" },
+  { label: "continuity-ledger.md", template: "references/templates/continuity-ledger.md", destination: "artifacts/continuity-ledger.md" },
+  { label: "revision-tickets.md", template: "references/templates/revision-tickets.md", destination: "artifacts/revision-tickets.md" },
+  { label: "expansion-integrity.md", template: "references/templates/expansion-integrity.md", destination: "artifacts/expansion-integrity.md" },
+  { label: "series-bible.md", template: "references/templates/series-bible.md", destination: "artifacts/series-bible.md" },
+  { label: "argument-spine.md", template: "references/templates/argument-spine.md", destination: "artifacts/argument-spine.md" },
+  { label: "certification-blueprint-map.md", template: "references/templates/certification-blueprint-map.md", destination: "artifacts/certification-blueprint-map.md" },
+  { label: "reference-inventory.md", template: "references/templates/reference-inventory.md", destination: "research/reference-inventory.md" },
+  { label: "evidence-map.md", template: "references/templates/evidence-map.md", destination: "artifacts/evidence-map.md" },
+  { label: "study-guide-objectives.md", template: "references/templates/study-guide-objectives.md", destination: "artifacts/study-guide-objectives.md" },
+  { label: "author-intent.md", template: "references/templates/author-intent.md", destination: "artifacts/author-intent.md" },
+  { label: "taste-profile.md", template: "references/templates/taste-profile.md", destination: "artifacts/taste-profile.md" },
+  { label: "risk-budget.md", template: "references/templates/risk-budget.md", destination: "artifacts/risk-budget.md" },
+  { label: "review-personas.md", template: "references/templates/review-personas.md", destination: "artifacts/review-personas.md" },
+  { label: "reader-promise-tracker.md", template: "references/templates/reader-promise-tracker.md", destination: "artifacts/reader-promise-tracker.md" },
+  { label: "drift-loop-alarm.md", template: "references/templates/drift-loop-alarm.md", destination: "artifacts/drift-loop-alarm.md" },
 ];
 
 const BLOCKER_CHECKS = [
@@ -276,8 +300,58 @@ const BLOCKER_CHECKS = [
   },
 ];
 
+const PLACEHOLDER_PATTERNS = [
+  { label: "placeholder unknown", pattern: /\bunknown\b/i },
+  { label: "placeholder TODO", pattern: /\bTODO\b|\bTBD\b/i },
+  { label: "starter prompt text", pattern: /Add the writer's seed idea here|Describe the book idea|Track rejected openings/i },
+  { label: "empty bullet scaffold", pattern: /^-\s*$/m },
+  { label: "waiting scaffold", pattern: /to be filled|fill this in later|not provided yet/i },
+];
+
 function unquote(value) {
-  return value.replace(/^['"]|['"]$/g, "");
+  return String(value || "").replace(/^['"]|['"]$/g, "");
+}
+
+function parseSimpleYaml(text) {
+  const result = {};
+  if (!text) return result;
+  const lines = text.split(/\r?\n/);
+  let currentListKey = null;
+
+  for (const rawLine of lines) {
+    if (!rawLine.trim() || rawLine.trimStart().startsWith("#")) continue;
+    const listItem = rawLine.match(/^\s{2}-\s*(.*)$/);
+    if (listItem && currentListKey) {
+      if (!Array.isArray(result[currentListKey])) result[currentListKey] = [];
+      result[currentListKey].push(unquote(listItem[1].trim()));
+      continue;
+    }
+
+    currentListKey = null;
+    const pair = rawLine.match(/^([A-Za-z0-9_]+)\s*:\s*(.*)$/);
+    if (!pair) continue;
+    const [, key, rawValue] = pair;
+    const value = rawValue.trim();
+
+    if (!value) {
+      currentListKey = key;
+      result[key] = [];
+      continue;
+    }
+
+    if (value === "[]") {
+      result[key] = [];
+      continue;
+    }
+
+    result[key] = unquote(value);
+  }
+
+  return result;
+}
+
+function stringifyScalar(value) {
+  return JSON.stringify(String(value));
 }
 
 function parseManifest(text) {
@@ -309,9 +383,7 @@ function parseManifest(text) {
     }
 
     const outputMatch = line.match(/^\s{4}-\s*(.*)$/);
-    if (outputMatch && inOutputs) {
-      current.outputs.push(unquote(outputMatch[1].trim()));
-    }
+    if (outputMatch && inOutputs) current.outputs.push(unquote(outputMatch[1].trim()));
   }
 
   return phases.filter((phase) => phase.label);
@@ -323,7 +395,7 @@ function loadPhaseDefinitions() {
     const parsed = parseManifest(text);
     if (parsed.length) return parsed;
   } catch {
-    // fall through to defaults
+    // fall through
   }
   return DEFAULT_PHASE_DEFINITIONS;
 }
@@ -346,25 +418,16 @@ function normalizePhaseLabel(value) {
   return PHASES.find((phase) => phase.toLowerCase() === normalized) || "";
 }
 
-function parseYamlScalar(state, keys) {
-  if (!state) return "";
-  for (const key of keys) {
-    const match = state.match(new RegExp(`^${key}\\s*:\\s*([^\\r\\n]+)$`, "im"));
-    if (match?.[1]) return unquote(match[1].trim());
-  }
-  return "";
+function parseProjectState(state) {
+  return parseSimpleYaml(state || "");
 }
 
 function detectPhase(state) {
   if (!state) return "unknown: PROJECT_STATE.yaml not found";
-
-  const direct = normalizePhaseLabel(parseYamlScalar(state, ["current_phase", "phase", "label"]));
+  const parsed = parseProjectState(state);
+  const direct = normalizePhaseLabel(parsed.current_phase || parsed.phase || parsed.label);
   if (direct) return direct;
-
-  for (const phase of PHASES) {
-    if (state.includes(phase)) return phase;
-  }
-
+  for (const phase of PHASES) if (state.includes(phase)) return phase;
   return "unknown: could not detect phase from PROJECT_STATE.yaml";
 }
 
@@ -388,31 +451,37 @@ function findProjectRoot(cwd) {
 function detectWorkflowMode(root) {
   const state = readIfExists(join(root, "PROJECT_STATE.yaml")) || "";
   const assumptions = readIfExists(join(root, "ASSUMPTIONS.md")) || "";
-  const direct = parseYamlScalar(state, ["workflow_mode"]);
-  if (direct) return direct.trim().toLowerCase();
-  const combined = `${state}\n${assumptions}`;
-  const match = combined.match(/workflow mode\s*:\s*([^\n]+)/i);
+  const parsed = parseProjectState(state);
+  if (parsed.workflow_mode) return String(parsed.workflow_mode).trim().toLowerCase();
+  const match = `${state}\n${assumptions}`.match(/workflow mode\s*:\s*([^\n]+)/i);
   return (match?.[1] || "unknown").trim().toLowerCase();
 }
 
-function setWorkflowModeInState(state, mode) {
-  const next = state || "";
-  if (/^workflow_mode\s*:/im.test(next)) {
-    return next.replace(/^workflow_mode\s*:.*$/im, `workflow_mode: ${JSON.stringify(mode)}`);
+function setYamlScalar(text, key, value) {
+  const next = text || "";
+  if (new RegExp(`^${key}\\s*:`, "im").test(next)) {
+    return next.replace(new RegExp(`^${key}\\s*:.*$`, "im"), `${key}: ${stringifyScalar(value)}`);
   }
-  return `${next.trimEnd()}\nworkflow_mode: ${JSON.stringify(mode)}\n`;
+  return `${next.trimEnd()}\n${key}: ${stringifyScalar(value)}\n`;
+}
+
+function setWorkflowModeInState(state, mode) {
+  return setYamlScalar(state, "workflow_mode", mode);
 }
 
 function setWorkflowModeInAssumptions(assumptions, mode) {
   const next = assumptions || "# Assumptions\n";
-  if (/^- Workflow mode:/im.test(next)) {
-    return next.replace(/^- Workflow mode:.*$/im, `- Workflow mode: ${mode}`);
-  }
+  if (/^- Workflow mode:/im.test(next)) return next.replace(/^- Workflow mode:.*$/im, `- Workflow mode: ${mode}`);
   const marker = "## Inferred assumptions";
-  if (next.includes(marker)) {
-    return next.replace(marker, `${marker}\n\n- Workflow mode: ${mode}`);
-  }
+  if (next.includes(marker)) return next.replace(marker, `${marker}\n\n- Workflow mode: ${mode}`);
   return `${next.trimEnd()}\n\n- Workflow mode: ${mode}\n`;
+}
+
+function updateBriefWorkflowMode(brief, mode) {
+  if (!brief) return brief;
+  return /- Workflow mode:/i.test(brief)
+    ? brief.replace(/- Workflow mode:.*$/im, `- Workflow mode: ${mode}`)
+    : `${brief.trimEnd()}\n- Workflow mode: ${mode}\n`;
 }
 
 function getPhaseIndex(phase) {
@@ -423,11 +492,7 @@ function getExpectedFilesForPhase(phase) {
   const index = getPhaseIndex(phase);
   const expected = [...CORE_PROJECT_FILES];
   if (index < 0) return expected;
-
-  for (let i = 0; i <= index; i += 1) {
-    expected.push(...(PHASE_DEFINITIONS[i]?.outputs || []));
-  }
-
+  for (let i = 0; i <= index; i += 1) expected.push(...(PHASE_DEFINITIONS[i]?.outputs || []));
   return [...new Set(expected)];
 }
 
@@ -455,18 +520,82 @@ function extractEvidence(text, pattern) {
 
 function getGitState(root) {
   try {
-    const inside = execSync("git rev-parse --is-inside-work-tree", { cwd: root, stdio: ["ignore", "pipe", "ignore"] })
-      .toString()
-      .trim();
-    if (inside !== "true") return { initialized: false, dirty: 0 };
-    const dirty = execSync("git status --porcelain", { cwd: root, stdio: ["ignore", "pipe", "ignore"] })
-      .toString()
-      .split(/\r?\n/)
-      .filter(Boolean).length;
-    return { initialized: true, dirty };
+    const inside = execSync("git rev-parse --is-inside-work-tree", { cwd: root, stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+    if (inside !== "true") return { initialized: false, dirty: 0, branch: "" };
+    const dirty = execSync("git status --porcelain", { cwd: root, stdio: ["ignore", "pipe", "ignore"] }).toString().split(/\r?\n/).filter(Boolean).length;
+    const branch = execSync("git branch --show-current", { cwd: root, stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+    return { initialized: true, dirty, branch };
   } catch {
-    return { initialized: false, dirty: 0 };
+    return { initialized: false, dirty: 0, branch: "" };
   }
+}
+
+function formatRelativeTime(ms) {
+  const seconds = Math.max(1, Math.floor((Date.now() - ms) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function listRecentProjectFiles(root, limit = 5) {
+  const files = [];
+  function walk(dir, depth) {
+    if (depth > 4) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full, depth + 1);
+      } else {
+        const relative = full.startsWith(root) ? full.slice(root.length + 1) : full;
+        files.push({ path: relative, mtimeMs: statSync(full).mtimeMs });
+      }
+    }
+  }
+  try {
+    walk(root, 0);
+  } catch {
+    return [];
+  }
+  return files.sort((a, b) => b.mtimeMs - a.mtimeMs).slice(0, limit);
+}
+
+function lintArtifactFile(relativePath, text) {
+  const findings = [];
+  if (!text?.trim()) {
+    findings.push({ file: relativePath, label: "empty file", evidence: `${relativePath} is empty.` });
+    return findings;
+  }
+
+  for (const item of PLACEHOLDER_PATTERNS) {
+    if (item.pattern.test(text)) findings.push({ file: relativePath, label: item.label, evidence: extractEvidence(text, item.pattern) });
+  }
+
+  const headings = [...text.matchAll(/^(#{1,3}\s.+)$/gm)];
+  for (let i = 0; i < headings.length; i += 1) {
+    const start = headings[i].index + headings[i][0].length;
+    const end = headings[i + 1]?.index ?? text.length;
+    const body = text.slice(start, end).replace(/^\s+|\s+$/g, "");
+    if (!body || /^[-*]\s*$/.test(body)) findings.push({ file: relativePath, label: "empty section", evidence: headings[i][0] });
+  }
+
+  const tableOnlySkeleton = text.match(/\|.*\|\n\|\s*---[\s|:-]*\n?$/m);
+  if (tableOnlySkeleton) findings.push({ file: relativePath, label: "empty table scaffold", evidence: tableOnlySkeleton[0].trim() });
+  return findings;
+}
+
+function collectLintFindings(root, phase) {
+  const expected = [...new Set([...getExpectedFilesForPhase(phase), ...(MODE_ARTIFACTS[detectWorkflowMode(root)] || [])])];
+  const findings = [];
+  for (const relativePath of expected) {
+    const full = join(root, relativePath);
+    if (!existsSync(full) || statSync(full).isDirectory()) continue;
+    findings.push(...lintArtifactFile(relativePath, readIfExists(full) || ""));
+  }
+  return findings;
 }
 
 function collectBlockers(root, includeMissing = true) {
@@ -496,7 +625,6 @@ function collectBlockers(root, includeMissing = true) {
         severity: file === "PROJECT_STATE.yaml" || file === "ASSUMPTIONS.md" ? "blocker" : "warning",
       });
     }
-
     for (const file of missingModeArtifacts(root, workflowMode)) {
       blockers.push({
         file,
@@ -537,30 +665,20 @@ function blockerSummary(root) {
 function renderBlockers(root, includeMissing = true) {
   const blockers = collectBlockers(root, includeMissing);
   if (!blockers.length) return "No blockers detected by Genesis triage.";
-
-  return blockers
-    .map(
-      (blocker, index) =>
-        `${index + 1}. [${blocker.severity}] ${blocker.label}\n   file: ${blocker.file}\n   evidence: ${blocker.evidence}\n   suggested action: ${blocker.suggestion}`,
-    )
-    .join("\n\n");
+  return blockers.map((blocker, index) => `${index + 1}. [${blocker.severity}] ${blocker.label}\n   file: ${blocker.file}\n   evidence: ${blocker.evidence}\n   suggested action: ${blocker.suggestion}`).join("\n\n");
 }
 
 function nextMissingOutput(root, phase) {
-  const currentMissing = missingExpectedForPhase(root, phase);
-  return currentMissing[0] || null;
+  return missingExpectedForPhase(root, phase)[0] || null;
 }
 
 function nextRecommendedAction(root) {
   const blockers = collectBlockers(root, true);
-  const hardBlocker = blockers.find((blocker) => blocker.severity === "blocker");
-  if (hardBlocker) return `Clear ${hardBlocker.file}: ${hardBlocker.suggestion}`;
-
-  const state = readIfExists(join(root, "PROJECT_STATE.yaml"));
-  const phase = detectPhase(state);
+  const hard = blockers.find((blocker) => blocker.severity === "blocker");
+  if (hard) return `Clear ${hard.file}: ${hard.suggestion}`;
+  const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
   const missing = nextMissingOutput(root, phase);
   if (missing) return `Create ${missing} for ${phase}.`;
-
   return `Advance the next required ${phase} output with /genesis-next.`;
 }
 
@@ -572,6 +690,7 @@ function renderValidationReport(root) {
   const phaseMissing = missingPhaseOutputs(root, phase);
   const modeMissing = missingModeArtifacts(root, workflowMode);
   const blockers = collectBlockers(root, true);
+  const lintFindings = collectLintFindings(root, phase);
   const git = getGitState(root);
   const phaseKnown = Boolean(PHASE_OUTPUTS[phase]);
   const phaseMismatch = phaseKnown && phaseMissing.length > 0;
@@ -588,37 +707,23 @@ function renderValidationReport(root) {
     `- Missing expected files through current phase: ${expectedMissing.length}`,
     `- Phase output mismatches: ${phaseMissing.length}`,
     `- Mode-specific missing artifacts: ${modeMissing.length}`,
+    `- Lint findings: ${lintFindings.length}`,
     `- Blockers/warnings detected: ${blockers.length}`,
     "",
     "## Missing expected files through current phase",
     "",
     ...(expectedMissing.length ? expectedMissing.map((file) => `- ${file}`) : ["- none"]),
     "",
-    "## Missing outputs for detected phase",
+    "## Lint findings",
     "",
-    ...(phaseKnown ? (phaseMissing.length ? phaseMissing.map((file) => `- ${file}`) : ["- none"]) : ["- unknown phase; cannot validate outputs"]),
-    "",
-    "## Missing mode-specific artifacts",
-    "",
-    ...(MODE_ARTIFACTS[workflowMode]?.length ? (modeMissing.length ? modeMissing.map((file) => `- ${file}`) : ["- none"]) : ["- no extra mode-specific artifacts configured"]),
-    "",
-    "## Blockers and warnings",
-    "",
-    ...(blockers.length
-      ? blockers.slice(0, 12).map((blocker, index) => `${index + 1}. [${blocker.severity}] ${blocker.label} — ${blocker.file}`)
-      : ["- none"]),
+    ...(lintFindings.length ? lintFindings.slice(0, 12).map((item) => `- ${item.file}: ${item.label}`) : ["- none"]),
     "",
     "## Verdict",
     "",
-    phaseMismatch
-      ? "- Phase contract mismatch detected. Repair missing outputs or correct PROJECT_STATE.yaml before advancing."
-      : "- No phase-contract mismatch detected by lightweight validation.",
-    modeMissing.length
-      ? "- Mode-specific artifacts are missing. Scaffold or create them before relying on that workflow mode."
-      : "- No mode-specific artifact gap detected by lightweight validation.",
-    blockers.length
-      ? "- Blockers or warnings exist. Review blocker files before advancing."
-      : "- No blockers detected by lightweight validation.",
+    phaseMismatch ? "- Phase contract mismatch detected. Repair missing outputs or correct PROJECT_STATE.yaml before advancing." : "- No phase-contract mismatch detected.",
+    modeMissing.length ? "- Mode-specific artifacts are missing." : "- No mode-specific artifact gap detected.",
+    lintFindings.length ? "- Artifact-quality lint findings exist; repair placeholder-heavy files before trusting them." : "- No placeholder-heavy artifact issues detected.",
+    blockers.length ? "- Blockers or warnings exist. Review blocker files before advancing." : "- No blockers detected.",
     "",
   ].join("\n");
 }
@@ -629,6 +734,7 @@ function renderStatusDashboard(root) {
   const workflowMode = detectWorkflowMode(root);
   const missing = missingExpectedForPhase(root, phase);
   const blockers = collectBlockers(root, true);
+  const lintFindings = collectLintFindings(root, phase);
   const git = getGitState(root);
   const expansion = readIfExists(join(root, "artifacts", "expansion-integrity.md")) || "";
   const expansionRisk = /blocker|unresolved|padding|filler|ornamental subplot|no-state-change/i.test(expansion)
@@ -636,6 +742,7 @@ function renderStatusDashboard(root) {
     : existsSync(join(root, "artifacts", "expansion-integrity.md"))
       ? "no active risk detected"
       : "file not required yet or missing";
+  const recent = listRecentProjectFiles(root, 5);
 
   return [
     "# Genesis Status",
@@ -644,17 +751,21 @@ function renderStatusDashboard(root) {
     `- Current phase: ${phase}`,
     `- Workflow mode: ${workflowMode}`,
     `- Git initialized: ${git.initialized ? "yes" : "no"}`,
+    `- Git branch: ${git.branch || "n/a"}`,
     `- Uncommitted changes: ${git.initialized ? git.dirty : "n/a"}`,
-    `- Blockers: ${blockers.length ? blockers.length : "none detected"}`,
+    `- Blockers: ${blockers.length || "none detected"}`,
+    `- Lint findings: ${lintFindings.length}`,
     `- Missing expected files through current phase: ${missing.length}`,
     `- Expansion integrity: ${expansionRisk}`,
     `- Next recommended action: ${nextRecommendedAction(root)}`,
     "",
     "## Top blockers",
     "",
-    ...(blockers.length
-      ? blockers.slice(0, 8).map((blocker, index) => `${index + 1}. ${blocker.label} — ${blocker.file}`)
-      : ["- none"]),
+    ...(blockers.length ? blockers.slice(0, 8).map((blocker, index) => `${index + 1}. ${blocker.label} — ${blocker.file}`) : ["- none"]),
+    "",
+    "## Recent project files",
+    "",
+    ...(recent.length ? recent.map((file) => `- ${file.path} (${formatRelativeTime(file.mtimeMs)})`) : ["- none"]),
     "",
     "## First missing expected files",
     "",
@@ -663,9 +774,9 @@ function renderStatusDashboard(root) {
     "## Notes",
     "",
     "- Regenerate this file with /genesis-status.",
+    "- Use /genesis-resume for a smart resume summary.",
     "- Use /genesis-plan for a dry-run summary before /genesis-next.",
-    "- Use /genesis-blockers for interactive blocker triage.",
-    "- Use /genesis-audit-fluff to inspect padding and subplot-integrity risk.",
+    "- Use /genesis-doctor for install, lint, and project-health checks.",
     "",
   ].join("\n");
 }
@@ -675,6 +786,7 @@ function renderPlan(root) {
   const phase = detectPhase(state);
   const workflowMode = detectWorkflowMode(root);
   const blockers = collectBlockers(root, true);
+  const lintFindings = collectLintFindings(root, phase);
   const missing = missingExpectedForPhase(root, phase);
   const nextFile = nextMissingOutput(root, phase);
   const nextPhase = PHASE_DEFINITIONS[getPhaseIndex(phase)]?.next || "unknown";
@@ -687,16 +799,14 @@ function renderPlan(root) {
     `- Workflow mode: ${workflowMode}`,
     `- Hard blockers: ${blockers.filter((blocker) => blocker.severity === "blocker").length}`,
     `- Warnings: ${blockers.filter((blocker) => blocker.severity === "warning").length}`,
+    `- Lint findings: ${lintFindings.length}`,
     `- Next expected file: ${nextFile || "none missing in current phase"}`,
     `- Next pipeline phase after this one: ${nextPhase || "none"}`,
     "",
     "## What /genesis-next would do",
     "",
     ...(blockers.length
-      ? [
-          "- Clear hard blockers first when possible.",
-          ...blockers.slice(0, 6).map((blocker) => `- ${blocker.label}: ${blocker.suggestion}`),
-        ]
+      ? ["- Clear hard blockers first when possible.", ...blockers.slice(0, 6).map((blocker) => `- ${blocker.label}: ${blocker.suggestion}`)]
       : nextFile
         ? [`- Create or repair ${nextFile}.`, "- Update PROJECT_STATE.yaml and STATUS.md to match reality."]
         : ["- Advance the next incomplete pipeline step.", "- Update PROJECT_STATE.yaml and STATUS.md to match reality."]),
@@ -708,37 +818,111 @@ function renderPlan(root) {
   ].join("\n");
 }
 
+function renderResume(root) {
+  const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
+  const workflowMode = detectWorkflowMode(root);
+  const blockers = collectBlockers(root, true);
+  const recent = listRecentProjectFiles(root, 8);
+  const nextFile = nextMissingOutput(root, phase);
+
+  return [
+    "# Genesis Resume",
+    "",
+    `- Project root: ${root}`,
+    `- Current phase: ${phase}`,
+    `- Workflow mode: ${workflowMode}`,
+    `- Next expected file: ${nextFile || "none"}`,
+    `- Suggested command: ${blockers.length ? "/genesis-blockers or /genesis-plan" : "/genesis-next"}`,
+    "",
+    "## Where you left off",
+    "",
+    ...(recent.length ? recent.map((file) => `- ${file.path} (${formatRelativeTime(file.mtimeMs)})`) : ["- no recent project files found"]),
+    "",
+    "## Immediate risks",
+    "",
+    ...(blockers.length ? blockers.slice(0, 6).map((blocker) => `- ${blocker.label} — ${blocker.file}`) : ["- none detected"]),
+    "",
+  ].join("\n");
+}
+
+function renderDoctorReport(root) {
+  const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
+  const workflowMode = detectWorkflowMode(root);
+  const blockers = collectBlockers(root, true);
+  const lintFindings = collectLintFindings(root, phase);
+  const git = getGitState(root);
+  const packageChecks = [MANIFEST_PATH, join(PACKAGE_ROOT, "SKILL.md"), join(PACKAGE_ROOT, "README.md")];
+  const installIssues = packageChecks.filter((path) => !existsSync(path));
+  const missingCoreDirs = PROJECT_ROOT_DIRS.filter((dir) => !pathExists(root, dir));
+
+  return [
+    "# Genesis Doctor",
+    "",
+    `- Package root: ${PACKAGE_ROOT}`,
+    `- Project root: ${root}`,
+    `- Current phase: ${phase}`,
+    `- Workflow mode: ${workflowMode}`,
+    `- Package file issues: ${installIssues.length}`,
+    `- Missing project directories: ${missingCoreDirs.length}`,
+    `- Git initialized: ${git.initialized ? "yes" : "no"}`,
+    `- Blockers/warnings: ${blockers.length}`,
+    `- Lint findings: ${lintFindings.length}`,
+    "",
+    "## Install health",
+    "",
+    ...(installIssues.length ? installIssues.map((path) => `- missing package file: ${path}`) : ["- package looks structurally complete"]),
+    "",
+    "## Project directory health",
+    "",
+    ...(missingCoreDirs.length ? missingCoreDirs.map((dir) => `- missing directory: ${dir}`) : ["- core directories look present"]),
+    "",
+    "## Lint findings",
+    "",
+    ...(lintFindings.length ? lintFindings.slice(0, 12).map((item) => `- ${item.file}: ${item.label}`) : ["- none"]),
+    "",
+    "## Blockers",
+    "",
+    ...(blockers.length ? blockers.slice(0, 12).map((item) => `- [${item.severity}] ${item.label} — ${item.file}`) : ["- none"]),
+    "",
+  ].join("\n");
+}
+
+function renderLintReport(root) {
+  const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
+  const findings = collectLintFindings(root, phase);
+  return [
+    "# Genesis Lint",
+    "",
+    `- Project root: ${root}`,
+    `- Current phase: ${phase}`,
+    `- Findings: ${findings.length}`,
+    "",
+    ...(findings.length ? findings.map((item, index) => `${index + 1}. ${item.file} — ${item.label}\n   evidence: ${item.evidence}`) : ["No artifact-quality lint findings detected."]),
+    "",
+  ].join("\n");
+}
+
 function findGenesisProjects(startDir, maxDepth = 3) {
   const found = new Set();
-
   function walk(dir, depth) {
     if (existsSync(join(dir, "PROJECT_STATE.yaml"))) found.add(dir);
     if (depth >= maxDepth) return;
-
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
       if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
       walk(join(dir, entry.name), depth + 1);
     }
   }
-
   try {
     walk(startDir, 0);
   } catch {
     return [];
   }
-
   return [...found].sort();
 }
 
 function slugifyProjectName(name) {
-  return (
-    name
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "genesis-project"
-  );
+  return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "genesis-project";
 }
 
 function ensureDir(path) {
@@ -754,17 +938,26 @@ function scaffoldTemplate(projectRoot, templatePath, destinationPath, overwrite 
   return "written";
 }
 
+function findTemplateEntryByDestination(destination) {
+  return TEMPLATE_SCAFFOLDS.find((item) => item.destination === destination) || null;
+}
+
 function getModeTemplateEntries(mode) {
   const destinations = new Set(MODE_ARTIFACTS[mode] || []);
   return TEMPLATE_SCAFFOLDS.filter((item) => destinations.has(item.destination));
 }
 
+function getModeBundleEntries(mode) {
+  const destinations = new Set(MODE_SCAFFOLD_BUNDLES[mode] || []);
+  return TEMPLATE_SCAFFOLDS.filter((item) => destinations.has(item.destination));
+}
+
 function scaffoldModeArtifacts(projectRoot, mode, overwrite = false) {
-  return getModeTemplateEntries(mode).map((item) => ({
-    label: item.label,
-    destination: item.destination,
-    status: scaffoldTemplate(projectRoot, item.template, item.destination, overwrite),
-  }));
+  return getModeTemplateEntries(mode).map((item) => ({ label: item.label, destination: item.destination, status: scaffoldTemplate(projectRoot, item.template, item.destination, overwrite) }));
+}
+
+function scaffoldModeBundle(projectRoot, mode, overwrite = false) {
+  return getModeBundleEntries(mode).map((item) => ({ label: item.label, destination: item.destination, status: scaffoldTemplate(projectRoot, item.template, item.destination, overwrite) }));
 }
 
 function writeIfMissing(path, content) {
@@ -773,18 +966,13 @@ function writeIfMissing(path, content) {
 
 function initializeProject(root, projectName, idea) {
   ensureDir(root);
-  ensureDir(join(root, "artifacts"));
-  ensureDir(join(root, "manuscript", "chapters"));
-  ensureDir(join(root, "evaluations"));
-  ensureDir(join(root, "delivery"));
-  ensureDir(join(root, "research", "sources"));
-  ensureDir(join(root, "research", "notes"));
+  for (const dir of PROJECT_ROOT_DIRS) ensureDir(join(root, dir));
 
   writeIfMissing(
     join(root, "PROJECT_STATE.yaml"),
     [
-      `project_name: ${JSON.stringify(projectName)}`,
-      `current_phase: ${JSON.stringify("Phase 0: Intake")}`,
+      `project_name: ${stringifyScalar(projectName)}`,
+      `current_phase: ${stringifyScalar("Phase 0: Intake")}`,
       'phase_gate: "intake"',
       'status: "initialized"',
       'language: "unknown"',
@@ -810,25 +998,19 @@ function initializeProject(root, projectName, idea) {
     `# Assumptions\n\n## Explicit user input\n\n- Project: ${projectName}\n- Seed idea: ${idea || "Not provided yet."}\n\n## Inferred assumptions\n\n- Language: unknown\n- Genre: unknown\n- Audience: unknown\n- Target length: unknown\n- Narrative mode: unknown\n- Workflow mode: unknown (novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, other)\n\nMark each assumption as confirmed, provisional, or rejected during Phase 0.\n`,
   );
 
-  writeIfMissing(
-    join(root, "artifacts", "00-brief.md"),
-    `# Brief\n\n## Original idea\n\n${idea || "Add the writer's seed idea here."}\n\n## Intake scaffold\n\n- Language:\n- Genre:\n- Audience:\n- Target length:\n- Narrative mode:\n- Workflow mode:\n- Reader promise:\n`,
-  );
-
+  writeIfMissing(join(root, "artifacts", "00-brief.md"), `# Brief\n\n## Original idea\n\n${idea || "Add the writer's seed idea here."}\n\n## Intake scaffold\n\n- Language:\n- Genre:\n- Audience:\n- Target length:\n- Narrative mode:\n- Workflow mode:\n- Reader promise:\n`);
   writeIfMissing(join(root, "artifacts", "01-market-map.md"), "# Market Map\n\n- market signals\n- comp titles\n- recurring patterns\n- whitespace opportunity\n");
+  writeIfMissing(join(root, "artifacts", "02-story-engine.md"), "# Story Engine\n\n- premise expansion\n- central conflict\n- escalation logic\n- differentiation strategy\n");
   writeIfMissing(join(root, "research", "reference-inventory.md"), "# Reference Inventory\n\n## Source index\n\n| id | source type | title | author / org | date | status | location | notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n");
   writeIfMissing(join(root, "research", "notes", "README.md"), "# Research Notes\n\nUse this folder for study notes, source summaries, interview notes, certification objective breakdowns, and working research memos.\n");
   writeIfMissing(join(root, "research", "sources", "README.md"), "# Research Sources\n\nStore downloaded PDFs, copied standards, exam blueprints, article captures, transcripts, and other raw reference material here when permitted.\n");
-  writeIfMissing(join(root, "artifacts", "02-story-engine.md"), "# Story Engine\n\n- premise expansion\n- central conflict\n- escalation logic\n- differentiation strategy\n");
-  writeIfMissing(join(root, "artifacts", "author-intent.md"), "# Author Intent\n\n- why this book matters\n- what must not be changed\n- reader experience goals\n- intentional risks\n");
-  writeIfMissing(join(root, "artifacts", "taste-profile.md"), "# Taste Profile\n\n- what the writer loves\n- what the writer rejects\n- safe but wrong choices\n");
-  writeIfMissing(join(root, "artifacts", "risk-budget.md"), "# Risk Budget\n\n| risk | intentional? | reader cost | payoff | verdict |\n| --- | --- | --- | --- | --- |\n");
+
+  for (const destination of ["artifacts/author-intent.md", "artifacts/taste-profile.md", "artifacts/risk-budget.md", "artifacts/review-personas.md", "artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md", "artifacts/expansion-integrity.md"]) {
+    const item = findTemplateEntryByDestination(destination);
+    if (item) scaffoldTemplate(root, item.template, item.destination, false);
+  }
+
   writeIfMissing(join(root, "artifacts", "discarded-choices.md"), "# Discarded Choices\n\nTrack rejected openings, names, tones, premises, and turns here.\n");
-  writeIfMissing(join(root, "artifacts", "review-personas.md"), "# Review Personas\n\n- ideal reader\n- skeptical but persuadable reader\n- genre-native reviewer\n- voice-sensitive craft reader\n- optional hostile or misaligned reader\n");
-  writeIfMissing(
-    join(root, "artifacts", "expansion-integrity.md"),
-    "# Expansion Integrity\n\n## Current scope pressure\n\n- target length: unknown\n- expansion needed?: unknown\n- why: \n\n## Approved expansion paths\n\n- real subplot escalation\n- stronger aftermath or consequence\n- reversals or new constraints\n- relational conflict\n- materially new scene work\n\n## Forbidden filler patterns\n\n- repeated introspection\n- duplicate exposition\n- low-stakes banter\n- atmospheric drift\n- decorative worldbuilding\n- no-state-change scenes\n\n## Proposed additions and what they change\n\n| addition | why it exists | what changes | keep/cut verdict |\n| --- | --- | --- | --- |\n",
-  );
   writeIfMissing(join(root, "STATUS.md"), renderStatusDashboard(root));
 }
 
@@ -838,9 +1020,62 @@ function maybeInitGit(root) {
   return true;
 }
 
+function applyWorkflowModeToProject(root, mode) {
+  const statePath = join(root, "PROJECT_STATE.yaml");
+  const assumptionsPath = join(root, "ASSUMPTIONS.md");
+  const briefPath = join(root, "artifacts", "00-brief.md");
+  writeFileSync(statePath, setWorkflowModeInState(readIfExists(statePath), mode), "utf8");
+  writeFileSync(assumptionsPath, setWorkflowModeInAssumptions(readIfExists(assumptionsPath), mode), "utf8");
+  const brief = readIfExists(briefPath);
+  if (brief) writeFileSync(briefPath, updateBriefWorkflowMode(brief, mode), "utf8");
+}
+
+function inferPhaseFromFiles(root) {
+  let phase = "Phase 0: Intake";
+  for (const item of PHASE_DEFINITIONS) {
+    const total = item.outputs.length || 1;
+    const present = item.outputs.filter((file) => pathExists(root, file)).length;
+    if (present > 0 && present >= Math.ceil(total / 3)) phase = item.label;
+  }
+  return phase;
+}
+
+function migrateProject(root) {
+  ensureDir(root);
+  for (const dir of PROJECT_ROOT_DIRS) ensureDir(join(root, dir));
+  if (!existsSync(join(root, "PROJECT_STATE.yaml"))) {
+    const inferredPhase = inferPhaseFromFiles(root);
+    const projectName = basename(root);
+    writeFileSync(
+      join(root, "PROJECT_STATE.yaml"),
+      [
+        `project_name: ${stringifyScalar(projectName)}`,
+        `current_phase: ${stringifyScalar(inferredPhase)}`,
+        `workflow_mode: ${stringifyScalar("unknown")}`,
+        `status: ${stringifyScalar("migrated")}`,
+        `migration_note: ${stringifyScalar("PROJECT_STATE.yaml created by genesis-migrate")}`,
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+  }
+  writeIfMissing(join(root, "ASSUMPTIONS.md"), "# Assumptions\n\n## Inferred assumptions\n\n- Workflow mode: unknown\n");
+  writeIfMissing(join(root, "artifacts", "00-brief.md"), "# Brief\n\nRecovered by /genesis-migrate. Fill in the original idea and reader promise.\n");
+  const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
+  for (const expected of getExpectedFilesForPhase(phase)) {
+    const template = findTemplateEntryByDestination(expected);
+    if (template) scaffoldTemplate(root, template.template, template.destination, false);
+    else if (expected.endsWith("/") || expected === "manuscript/chapters") ensureDir(join(root, expected));
+  }
+  const mode = detectWorkflowMode(root);
+  scaffoldModeArtifacts(root, mode, false);
+  const gitInitialized = maybeInitGit(root);
+  writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+  return { root, phase, mode, gitInitialized, missing: missingExpectedForPhase(root, phase) };
+}
+
 function buildNextPrompt(root, args, commandName = "genesis-next") {
-  const state = readIfExists(join(root, "PROJECT_STATE.yaml"));
-  const phase = detectPhase(state);
+  const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
   const missing = missingExpectedForPhase(root, phase).slice(0, 12);
   const blockers = blockerSummary(root);
   const nextFile = nextMissingOutput(root, phase);
@@ -855,21 +1090,35 @@ First missing expected files through the current phase: ${missing.length ? missi
 Next expected file by phase-aware precheck: ${nextFile || "none"}
 
 Rules:
-
 1. Load \`PROJECT_STATE.yaml\`, \`ASSUMPTIONS.md\`, and \`references/pipeline/manifest.yaml\` from the skill package before doing anything else.
 2. Identify the current phase, the next incomplete required output, and any active blocker that prevents safe advancement.
 3. Continue from the current state; do not restart unless state is missing or explicitly invalid.
 4. Bypass optional writer approval gates for this turn unless the user explicitly asks for a check-in.
 5. Do not bypass hard blockers: active drift-loop hard stops, open blocker/high revision tickets, unresolved name-collision blockers, unresolved AI-tell blockers, unresolved author-voice blockers, unresolved subtext/ear/over-polish blockers, unresolved expansion-integrity blockers, missing required phase outputs, or phase contract mismatches.
-6. If blockers exist, clear them first when possible by updating the relevant blocker files, repair artifacts, revision tickets, and manuscript/project files with concrete evidence-based fixes. Do not merely report blockers if they can be actively resolved this turn.
-7. If a blocker cannot be cleared safely in this turn, report the blocker, the exact file/evidence needed to unblock, and stop after updating any files that clarify the blockage.
-8. Once blockers are cleared or none exist, produce only the next required pipeline step's outputs, update \`PROJECT_STATE.yaml\`, and commit each changed file separately.
-9. Preserve the Human Voice Rule: optimize for reader trust, author fingerprint, subtext, rhythm, sensory authority, and controlled imperfection rather than AI-detector evasion.
-10. Preserve the Expansion Integrity Rule: if the manuscript needs to grow, add real pressure, consequence, aftermath, or subplot movement rather than filler.
-11. Use \`artifacts/review-personas.md\`, \`artifacts/author-voice-fingerprint.md\`, \`artifacts/voice-bible.md\`, \`artifacts/human-source-bank.md\`, and \`artifacts/expansion-integrity.md\` to protect voice and structural density when revising or unblocking.
-12. Do not skip Phase 4. Do not run Final Score before Adversarial Audit is complete.
+6. If blockers exist, clear them first when possible by updating the relevant blocker files, repair artifacts, revision tickets, and manuscript/project files with concrete evidence-based fixes.
+7. Once blockers are cleared or none exist, produce only the next required pipeline step's outputs, update \`PROJECT_STATE.yaml\`, and commit each changed file separately.
+8. Preserve the Human Voice Rule and the Expansion Integrity Rule.
+9. Do not skip Phase 4. Do not run Final Score before Adversarial Audit is complete.
 
 Proceed now.`;
+}
+
+function buildScoreToTicketsPrompt(root) {
+  return [
+    "Use the `genesis-for-pi` skill and convert current scoring/audit findings into actionable revision tickets.",
+    "",
+    `Project root: ${root}`,
+    "",
+    "Inspect these files first:",
+    "- artifacts/09-genesis-score.md",
+    "- artifacts/08-adversarial-audit.md",
+    "- artifacts/revision-tickets.md",
+    "- evaluations/chapter-scorecards.md",
+    "",
+    "Required outputs:",
+    "- update artifacts/revision-tickets.md with issue, evidence, affected files, severity, repair type, owner phase, and status",
+    "- if scoring evidence is weak, note that explicitly instead of inventing certainty",
+  ].join("\n");
 }
 
 export default function (pi) {
@@ -878,9 +1127,7 @@ export default function (pi) {
     label: "Genesis Blocker Triage",
     description: "Inspect a Genesis for Pi project for blocker files, evidence snippets, and suggested repair actions.",
     promptSnippet: "Inspect Genesis blocker files and missing required outputs with evidence snippets.",
-    promptGuidelines: [
-      "Use genesis_blocker_triage before or during Genesis advancement when you need a fast blocker summary with evidence and suggested actions.",
-    ],
+    promptGuidelines: ["Use genesis_blocker_triage before or during Genesis advancement when you need a fast blocker summary with evidence and suggested actions."],
     parameters: Type.Object({
       project_root: Type.Optional(Type.String({ description: "Optional project root. Defaults to current working directory." })),
       include_missing: Type.Optional(Type.Boolean({ description: "Include missing required outputs in the report for the current phase." })),
@@ -890,394 +1137,280 @@ export default function (pi) {
       const root = findProjectRoot(params.project_root || ctx.cwd);
       const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
       let blockers = collectBlockers(root, params.include_missing ?? true);
-
       if (params.focus_file) blockers = blockers.filter((blocker) => blocker.file === params.focus_file);
-
       const text = blockers.length
-        ? [
-            `Genesis root: ${root}`,
-            `Current phase: ${phase}`,
-            "",
-            ...blockers.map(
-              (blocker, index) =>
-                `${index + 1}. ${blocker.label} (${blocker.file})\nEvidence: ${blocker.evidence}\nSuggested action: ${blocker.suggestion}`,
-            ),
-          ].join("\n")
+        ? [`Genesis root: ${root}`, `Current phase: ${phase}`, "", ...blockers.map((blocker, index) => `${index + 1}. ${blocker.label} (${blocker.file})\nEvidence: ${blocker.evidence}\nSuggested action: ${blocker.suggestion}`)].join("\n")
         : `Genesis root: ${root}\nCurrent phase: ${phase}\n\nNo blockers detected by Genesis triage.`;
-
-      return {
-        content: [{ type: "text", text }],
-        details: { root, phase, blockers },
-      };
+      return { content: [{ type: "text", text }], details: { root, phase, blockers } };
     },
   });
 
-  const registerStatusCommand = (name, description) => {
-    pi.registerCommand(name, {
-      description,
-      handler: async (_args, ctx) => {
-        const root = findProjectRoot(ctx.cwd);
-        const state = readIfExists(join(root, "PROJECT_STATE.yaml"));
-        const phase = detectPhase(state);
-        const missing = missingExpectedForPhase(root, phase);
-        const blockers = blockerSummary(root);
-        const git = getGitState(root);
+  const registerStatusCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    ctx.ui.notify(`${renderStatusDashboard(root)}\nSTATUS.md updated.`, "info");
+  } });
 
-        const lines = [
-          `Genesis root: ${root}`,
-          `Current phase: ${phase}`,
-          `Potential blocker files: ${blockers.length ? blockers.join(", ") : "none detected"}`,
-          `Missing expected files through current phase: ${missing.length ? missing.slice(0, 10).join(", ") + (missing.length > 10 ? `, +${missing.length - 10} more` : "") : "none"}`,
-          `Git status: ${git.initialized ? `${git.dirty} uncommitted change(s)` : "not initialized"}`,
-        ];
+  const registerPlanCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    ctx.ui.notify(`${renderPlan(root)}\nSTATUS.md updated.`, "info");
+  } });
 
-        writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
-        ctx.ui.notify(`${lines.join("\n")}\nSTATUS.md updated.`, blockers.length ? "warning" : "info");
-      },
+  const registerResumeCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    ctx.ui.notify(`${renderResume(root)}\nSTATUS.md updated.`, "info");
+  } });
+
+  const registerValidateCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    const report = renderValidationReport(root);
+    ctx.ui.notify(`${report}\nSTATUS.md updated.`, /mismatch|blockers|lint findings: [1-9]/i.test(report) ? "warning" : "info");
+  } });
+
+  const registerDoctorCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    ctx.ui.notify(`${renderDoctorReport(root)}\nSTATUS.md updated.`, "info");
+  } });
+
+  const registerLintCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    ctx.ui.notify(renderLintReport(root), /Findings: 0/.test(renderLintReport(root)) ? "info" : "warning");
+  } });
+
+  const registerSetModeCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const requested = args.trim().toLowerCase();
+    const mode = WORKFLOW_MODES.includes(requested) ? requested : await ctx.ui.select("Choose a workflow mode:", [...WORKFLOW_MODES]);
+    if (!mode) return;
+    applyWorkflowModeToProject(root, mode);
+    const bundleEntries = getModeBundleEntries(mode);
+    let bundleResults = [];
+    if (bundleEntries.length) {
+      const shouldScaffold = await ctx.ui.confirm("Scaffold recommended mode bundle?", `Create starter files for ${mode}?\n\n${bundleEntries.map((item) => `- ${item.destination}`).join("\n")}`);
+      if (shouldScaffold) bundleResults = scaffoldModeBundle(root, mode, false);
+    }
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    ctx.ui.notify(`Workflow mode set to ${mode}. STATUS.md updated.${bundleResults.length ? `\nMode bundle:\n${bundleResults.map((item) => `- ${item.destination}: ${item.status}`).join("\n")}` : ""}`, "info");
+  } });
+
+  const registerNextCommand = (name, description) => pi.registerCommand(name, { description, getArgumentCompletions: (prefix) => {
+    const items = ["main checkpoints only", "careful mode", "fast mode", "do not draft prose yet", "continue without optional approval gates", "clear blockers first"].map((value) => ({ value, label: value }));
+    const filtered = items.filter((item) => item.value.startsWith(prefix));
+    return filtered.length ? filtered : null;
+  }, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    if (!ctx.isIdle()) {
+      ctx.ui.notify(`Agent is busy. Queueing /${name} as a follow-up.`, "info");
+      pi.sendUserMessage(buildNextPrompt(root, args, name), { deliverAs: "followUp" });
+      return;
+    }
+    pi.sendUserMessage(buildNextPrompt(root, args, name));
+  } });
+
+  const registerTemplateCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const labels = TEMPLATE_SCAFFOLDS.map((item) => item.label);
+    const selected = await ctx.ui.multiSelect?.("Choose templates to scaffold:", labels);
+    const chosen = selected?.length ? selected : [await ctx.ui.select("Choose a template to scaffold:", labels)].filter(Boolean);
+    if (!chosen.length) return;
+    const overwrite = await ctx.ui.confirm("Overwrite existing files?", "If yes, existing artifact files for the selected templates will be replaced.");
+    const results = chosen.map((label) => {
+      const item = TEMPLATE_SCAFFOLDS.find((entry) => entry.label === label);
+      return `${label}: ${scaffoldTemplate(root, item.template, item.destination, overwrite)}`;
     });
-  };
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    ctx.ui.notify(`Scaffolded templates in ${root}\n${results.join("\n")}`, "info");
+  } });
 
-  const registerValidateCommand = (name, description) => {
-    pi.registerCommand(name, {
-      description,
-      handler: async (_args, ctx) => {
-        const root = findProjectRoot(ctx.cwd);
-        const report = renderValidationReport(root);
-        writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
-        ctx.ui.notify(`${report}\nSTATUS.md updated.`, /mismatch|warning|blockers\/warnings detected: [1-9]/i.test(report) ? "warning" : "info");
-      },
-    });
-  };
+  const registerFluffAuditCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const message = [
+      "Use the `genesis-for-pi` skill and run a focused fluff audit.",
+      "",
+      `Project root: ${root}`,
+      "",
+      "Audit for padding, ornamental subplots, duplicate beats, atmospheric drift, repeated introspection, duplicate exposition, low-stakes banter, and no-state-change scenes.",
+      "Update artifacts/expansion-integrity.md, artifacts/revision-tickets.md, and artifacts/drift-loop-alarm.md as needed.",
+    ].join("\n");
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
 
-  const registerPlanCommand = (name, description) => {
-    pi.registerCommand(name, {
-      description,
-      handler: async (_args, ctx) => {
-        const root = findProjectRoot(ctx.cwd);
-        writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
-        ctx.ui.notify(`${renderPlan(root)}\nSTATUS.md updated.`, "info");
-      },
-    });
-  };
+  const registerScoreToTicketsCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const message = buildScoreToTicketsPrompt(root);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
 
-  const registerSetModeCommand = (name, description) => {
-    pi.registerCommand(name, {
-      description,
-      handler: async (args, ctx) => {
-        const root = findProjectRoot(ctx.cwd);
-        const requested = args.trim().toLowerCase();
-        const mode = WORKFLOW_MODES.includes(requested)
-          ? requested
-          : await ctx.ui.select("Choose a workflow mode:", [...WORKFLOW_MODES]);
-        if (!mode) return;
+  const registerBlockerCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const blockers = collectBlockers(root, true);
+    if (!blockers.length) {
+      ctx.ui.notify("No Genesis blockers detected.", "info");
+      return;
+    }
+    const options = blockers.map((blocker) => `${blocker.label} — ${blocker.file}`);
+    const selected = await ctx.ui.select("Choose a Genesis blocker to inspect:", options);
+    if (!selected) return;
+    const blocker = blockers[options.indexOf(selected)];
+    if (!blocker) return;
+    ctx.ui.notify([`${blocker.label}`, `file: ${blocker.file}`, `evidence: ${blocker.evidence}`, `suggested action: ${blocker.suggestion}`].join("\n"), blocker.severity === "blocker" ? "warning" : "info");
+    const shouldQueueFix = await ctx.ui.confirm("Queue Genesis fix?", `Ask Genesis to clear this blocker now?\n\n${blocker.file}`);
+    if (!shouldQueueFix) return;
+    const message = `${buildNextPrompt(root, `Focus first on blocker file ${blocker.file}. Evidence: ${blocker.evidence}. Suggested action: ${blocker.suggestion}.`, name)}\n\nStart by clearing ${blocker.file}.`;
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued blocker-fix follow-up for ${blocker.file}.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
 
-        const statePath = join(root, "PROJECT_STATE.yaml");
-        const assumptionsPath = join(root, "ASSUMPTIONS.md");
-        const briefPath = join(root, "artifacts", "00-brief.md");
+  const registerInitCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const typedName = args.trim() || (await ctx.ui.input("Genesis project name:", "my-book"));
+    if (!typedName) return;
+    const projectRoot = resolve(ctx.cwd, slugifyProjectName(typedName));
+    if (existsSync(projectRoot) && existsSync(join(projectRoot, "PROJECT_STATE.yaml"))) {
+      ctx.ui.notify(`Genesis project already exists: ${projectRoot}`, "warning");
+      return;
+    }
+    const idea = (await ctx.ui.editor("Seed idea:", "Describe the book idea, tone, genre pressure, reader promise, and anything that must not be smoothed away.")) || "";
+    initializeProject(projectRoot, typedName, idea);
+    let gitInitialized = false;
+    try { gitInitialized = maybeInitGit(projectRoot); } catch { ctx.ui.notify("Project created, but git init failed. Initialize git manually if needed.", "warning"); }
+    writeFileSync(join(projectRoot, "STATUS.md"), renderStatusDashboard(projectRoot), "utf8");
+    ctx.ui.notify(`Initialized Genesis project at ${projectRoot}${gitInitialized ? "\nGit repository initialized." : ""}`, "info");
+    const shouldStart = await ctx.ui.confirm("Start intake now?", "Queue Genesis to begin Phase 0 intake in the new project?");
+    if (!shouldStart) return;
+    const kickoff = `${buildNextPrompt(projectRoot, `Project root: ${projectRoot}. Start with Phase 0 intake using this seed idea: ${idea || "No idea captured yet."}`, name)}\n\nThe project tree already exists. Fill in the Phase 0 outputs now.`;
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(kickoff, { deliverAs: "followUp" });
+      return;
+    }
+    pi.sendUserMessage(kickoff);
+  } });
 
-        writeFileSync(statePath, setWorkflowModeInState(readIfExists(statePath), mode), "utf8");
-        writeFileSync(assumptionsPath, setWorkflowModeInAssumptions(readIfExists(assumptionsPath), mode), "utf8");
+  const registerStartCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const typedName = args.trim() || (await ctx.ui.input("Genesis project name:", "my-book"));
+    if (!typedName) return;
+    const projectRoot = resolve(ctx.cwd, slugifyProjectName(typedName));
+    if (existsSync(projectRoot) && existsSync(join(projectRoot, "PROJECT_STATE.yaml"))) {
+      ctx.ui.notify(`Genesis project already exists: ${projectRoot}`, "warning");
+      return;
+    }
+    const idea = (await ctx.ui.editor("Seed idea:", "Describe the book idea, tone, genre pressure, reader promise, and anything that must not be smoothed away.")) || "";
+    const mode = await ctx.ui.select("Choose a workflow mode:", [...WORKFLOW_MODES]);
+    if (!mode) return;
+    initializeProject(projectRoot, typedName, idea);
+    try { maybeInitGit(projectRoot); } catch { ctx.ui.notify("Project created, but git init failed. Initialize git manually if needed.", "warning"); }
+    applyWorkflowModeToProject(projectRoot, mode);
+    const bundleResults = scaffoldModeBundle(projectRoot, mode, false);
+    writeFileSync(join(projectRoot, "STATUS.md"), renderStatusDashboard(projectRoot), "utf8");
+    ctx.ui.notify(`Initialized Genesis project at ${projectRoot}\nWorkflow mode: ${mode}${bundleResults.length ? `\nMode bundle:\n${bundleResults.map((item) => `- ${item.destination}: ${item.status}`).join("\n")}` : ""}`, "info");
+    const kickoff = `${buildNextPrompt(projectRoot, `Project root: ${projectRoot}. Workflow mode: ${mode}. Start with Phase 0 intake using this seed idea: ${idea || "No idea captured yet."}`, name)}\n\nThe project tree already exists. Fill in the Phase 0 outputs now.`;
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(kickoff, { deliverAs: "followUp" });
+      return;
+    }
+    pi.sendUserMessage(kickoff);
+  } });
 
-        const brief = readIfExists(briefPath);
-        if (brief) {
-          const nextBrief = /- Workflow mode:/i.test(brief)
-            ? brief.replace(/- Workflow mode:.*$/im, `- Workflow mode: ${mode}`)
-            : `${brief.trimEnd()}\n- Workflow mode: ${mode}\n`;
-          writeFileSync(briefPath, nextBrief, "utf8");
-        }
+  const registerMigrateCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const result = migrateProject(root);
+    ctx.ui.notify(`Migrated Genesis project at ${result.root}\nPhase: ${result.phase}\nWorkflow mode: ${result.mode}\nRemaining missing files: ${result.missing.length}`, result.missing.length ? "warning" : "info");
+  } });
 
-        const modeTemplates = getModeTemplateEntries(mode);
-        let scaffolded = [];
-        if (modeTemplates.length) {
-          const shouldScaffold = await ctx.ui.confirm(
-            "Scaffold mode-specific artifacts?",
-            `Create starter files for ${mode}?\n\n${modeTemplates.map((item) => `- ${item.destination}`).join("\n")}`,
-          );
-          if (shouldScaffold) scaffolded = scaffoldModeArtifacts(root, mode, false);
-        }
-
-        writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
-        const scaffoldSummary = scaffolded.length
-          ? `\nMode scaffolds:\n${scaffolded.map((item) => `- ${item.destination}: ${item.status}`).join("\n")}`
-          : "";
-        ctx.ui.notify(`Workflow mode set to ${mode}. STATUS.md updated.${scaffoldSummary}`, "info");
-      },
-    });
-  };
-
-  const registerNextCommand = (name, description) => {
-    pi.registerCommand(name, {
-      description,
-      getArgumentCompletions: (prefix) => {
-        const items = [
-          "main checkpoints only",
-          "careful mode",
-          "fast mode",
-          "do not draft prose yet",
-          "continue without optional approval gates",
-          "clear blockers first",
-        ].map((value) => ({ value, label: value }));
-        const filtered = items.filter((item) => item.value.startsWith(prefix));
-        return filtered.length ? filtered : null;
-      },
-      handler: async (args, ctx) => {
-        if (!ctx.isIdle()) {
-          ctx.ui.notify(`Agent is busy. Queueing /${name} as a follow-up.`, "info");
-          pi.sendUserMessage(buildNextPrompt(findProjectRoot(ctx.cwd), args, name), { deliverAs: "followUp" });
-          return;
-        }
-
-        pi.sendUserMessage(buildNextPrompt(findProjectRoot(ctx.cwd), args, name));
-      },
-    });
-  };
-
-  const registerTemplateCommand = (name, description) => {
-    pi.registerCommand(name, {
-      description,
-      handler: async (_args, ctx) => {
-        const root = findProjectRoot(ctx.cwd);
-        const labels = TEMPLATE_SCAFFOLDS.map((item) => item.label);
-        const selected = await ctx.ui.multiSelect?.("Choose templates to scaffold:", labels);
-        const chosen = selected?.length ? selected : [await ctx.ui.select("Choose a template to scaffold:", labels)].filter(Boolean);
-        if (!chosen.length) return;
-
-        const overwrite = await ctx.ui.confirm(
-          "Overwrite existing files?",
-          "If yes, existing artifact files for the selected templates will be replaced.",
-        );
-
-        const results = chosen.map((label) => {
-          const item = TEMPLATE_SCAFFOLDS.find((entry) => entry.label === label);
-          const status = scaffoldTemplate(root, item.template, item.destination, overwrite);
-          return `${label}: ${status}`;
-        });
-
-        writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
-        ctx.ui.notify(`Scaffolded templates in ${root}\n${results.join("\n")}`, "info");
-      },
-    });
-  };
-
-  const registerFluffAuditCommand = (name, description) => {
-    pi.registerCommand(name, {
-      description,
-      handler: async (_args, ctx) => {
-        const root = findProjectRoot(ctx.cwd);
-        const targets = [
-          "artifacts/expansion-integrity.md",
-          "artifacts/05-subplot-map.md",
-          "artifacts/drift-loop-alarm.md",
-          "evaluations/chapter-scorecards.md",
-          "artifacts/revision-tickets.md",
-        ];
-
-        const message = [
-          "Use the `genesis-for-pi` skill and run a focused fluff audit.",
-          "",
-          `Project root: ${root}`,
-          "",
-          "Audit for padding, ornamental subplots, duplicate beats, atmospheric drift, repeated introspection, duplicate exposition, low-stakes banter, and no-state-change scenes.",
-          "If target length pressure exists, enforce the Expansion Integrity Rule: longer must mean denser with consequence.",
-          "Inspect these files first:",
-          ...targets.map((file) => `- ${file}`),
-          "",
-          "Required outputs:",
-          "- update artifacts/expansion-integrity.md with any active padding risk",
-          "- update artifacts/revision-tickets.md with concrete cut/merge/rebuild tickets when needed",
-          "- update artifacts/drift-loop-alarm.md if a padding hard stop should trigger",
-          "- if no issue exists, state that clearly with evidence",
-        ].join("\n");
-
-        if (!ctx.isIdle()) {
-          pi.sendUserMessage(message, { deliverAs: "followUp" });
-          ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
-          return;
-        }
-
-        pi.sendUserMessage(message);
-      },
-    });
-  };
-
-  const registerBlockerCommand = (name, description) => {
-    pi.registerCommand(name, {
-      description,
-      handler: async (_args, ctx) => {
-        const root = findProjectRoot(ctx.cwd);
-        const blockers = collectBlockers(root, true);
-
-        if (!blockers.length) {
-          ctx.ui.notify("No Genesis blockers detected.", "info");
-          return;
-        }
-
-        const options = blockers.map((blocker) => `${blocker.label} — ${blocker.file}`);
-        const selected = await ctx.ui.select("Choose a Genesis blocker to inspect:", options);
-        if (!selected) return;
-
-        const blocker = blockers[options.indexOf(selected)];
-        if (!blocker) return;
-
-        ctx.ui.notify(
-          [`${blocker.label}`, `file: ${blocker.file}`, `evidence: ${blocker.evidence}`, `suggested action: ${blocker.suggestion}`].join("\n"),
-          blocker.severity === "blocker" ? "warning" : "info",
-        );
-
-        const shouldQueueFix = await ctx.ui.confirm(
-          "Queue Genesis fix?",
-          `Ask Genesis to clear this blocker now?\n\n${blocker.file}`,
-        );
-
-        if (!shouldQueueFix) return;
-
-        const message = `${buildNextPrompt(root, `Focus first on blocker file ${blocker.file}. Evidence: ${blocker.evidence}. Suggested action: ${blocker.suggestion}.`, name)}\n\nStart by clearing ${blocker.file}.`;
-
-        if (!ctx.isIdle()) {
-          pi.sendUserMessage(message, { deliverAs: "followUp" });
-          ctx.ui.notify(`Queued blocker-fix follow-up for ${blocker.file}.`, "info");
-          return;
-        }
-
-        pi.sendUserMessage(message);
-      },
-    });
-  };
-
-  const registerInitCommand = (name, description) => {
-    pi.registerCommand(name, {
-      description,
-      handler: async (args, ctx) => {
-        const typedName = args.trim() || (await ctx.ui.input("Genesis project name:", "my-book"));
-        if (!typedName) return;
-
-        const projectDirName = slugifyProjectName(typedName);
-        const baseDir = ctx.cwd;
-        const projectRoot = resolve(baseDir, projectDirName);
-
-        if (existsSync(projectRoot) && existsSync(join(projectRoot, "PROJECT_STATE.yaml"))) {
-          ctx.ui.notify(`Genesis project already exists: ${projectRoot}`, "warning");
-          return;
-        }
-
-        const idea =
-          (await ctx.ui.editor(
-            "Seed idea:",
-            "Describe the book idea, tone, genre pressure, reader promise, and anything that must not be smoothed away.",
-          )) || "";
-
-        initializeProject(projectRoot, typedName, idea);
-
-        let gitInitialized = false;
-        try {
-          gitInitialized = maybeInitGit(projectRoot);
-        } catch {
-          ctx.ui.notify("Project created, but git init failed. Initialize git manually if needed.", "warning");
-        }
-
-        writeFileSync(join(projectRoot, "STATUS.md"), renderStatusDashboard(projectRoot), "utf8");
-        ctx.ui.notify(
-          `Initialized Genesis project at ${projectRoot}${gitInitialized ? "\nGit repository initialized." : ""}`,
-          "info",
-        );
-
-        const shouldStart = await ctx.ui.confirm(
-          "Start intake now?",
-          "Queue Genesis to begin Phase 0 intake in the new project?",
-        );
-
-        if (!shouldStart) return;
-
-        const kickoff = `${buildNextPrompt(projectRoot, `Project root: ${projectRoot}. Start with Phase 0 intake using this seed idea: ${idea || "No idea captured yet."}`, name)}\n\nThe project tree already exists. Fill in the Phase 0 outputs now.`;
-
-        if (!ctx.isIdle()) {
-          pi.sendUserMessage(kickoff, { deliverAs: "followUp" });
-          return;
-        }
-
-        pi.sendUserMessage(kickoff);
-      },
-    });
-  };
-
-  const registerOpenCommand = (name, description) => {
-    pi.registerCommand(name, {
-      description,
-      handler: async (_args, ctx) => {
-        const projects = findGenesisProjects(ctx.cwd, 3);
-        if (!projects.length) {
-          ctx.ui.notify("No Genesis projects found under the current working directory.", "warning");
-          return;
-        }
-
-        const selectedProject = await ctx.ui.select("Choose a Genesis project:", projects);
-        if (!selectedProject) return;
-
-        const action = await ctx.ui.select("What should Genesis do with this project?", [
-          "Show status",
-          "Show plan",
-          "Inspect blockers",
-          "Advance next step",
-        ]);
-        if (!action) return;
-
-        if (action === "Show status") {
-          const phase = detectPhase(readIfExists(join(selectedProject, "PROJECT_STATE.yaml")));
-          const blockers = renderBlockers(selectedProject, true);
-          writeFileSync(join(selectedProject, "STATUS.md"), renderStatusDashboard(selectedProject), "utf8");
-          ctx.ui.notify(`Genesis root: ${selectedProject}\nCurrent phase: ${phase}\n\n${blockers}\n\nSTATUS.md updated.`, "info");
-          return;
-        }
-
-        if (action === "Show plan") {
-          writeFileSync(join(selectedProject, "STATUS.md"), renderStatusDashboard(selectedProject), "utf8");
-          ctx.ui.notify(`${renderPlan(selectedProject)}\nSTATUS.md updated.`, "info");
-          return;
-        }
-
-        if (action === "Inspect blockers") {
-          const blockerReport = renderBlockers(selectedProject, true);
-          ctx.ui.notify(`Genesis root: ${selectedProject}\n\n${blockerReport}`, "info");
-          return;
-        }
-
-        const kickoff = `${buildNextPrompt(selectedProject, `Project root: ${selectedProject}. Continue this project from its current state.`, name)}\n\nUse ${selectedProject} as the active project root.`;
-        if (!ctx.isIdle()) {
-          pi.sendUserMessage(kickoff, { deliverAs: "followUp" });
-          return;
-        }
-        pi.sendUserMessage(kickoff);
-      },
-    });
-  };
+  const registerOpenCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const projects = findGenesisProjects(ctx.cwd, 3);
+    if (!projects.length) {
+      ctx.ui.notify("No Genesis projects found under the current working directory.", "warning");
+      return;
+    }
+    const selectedProject = await ctx.ui.select("Choose a Genesis project:", projects);
+    if (!selectedProject) return;
+    const action = await ctx.ui.select("What should Genesis do with this project?", ["Show status", "Show plan", "Show resume", "Run doctor", "Inspect blockers", "Migrate project", "Advance next step"]);
+    if (!action) return;
+    if (action === "Show status") {
+      writeFileSync(join(selectedProject, "STATUS.md"), renderStatusDashboard(selectedProject), "utf8");
+      ctx.ui.notify(`${renderStatusDashboard(selectedProject)}\nSTATUS.md updated.`, "info");
+      return;
+    }
+    if (action === "Show plan") {
+      writeFileSync(join(selectedProject, "STATUS.md"), renderStatusDashboard(selectedProject), "utf8");
+      ctx.ui.notify(`${renderPlan(selectedProject)}\nSTATUS.md updated.`, "info");
+      return;
+    }
+    if (action === "Show resume") {
+      writeFileSync(join(selectedProject, "STATUS.md"), renderStatusDashboard(selectedProject), "utf8");
+      ctx.ui.notify(`${renderResume(selectedProject)}\nSTATUS.md updated.`, "info");
+      return;
+    }
+    if (action === "Run doctor") {
+      writeFileSync(join(selectedProject, "STATUS.md"), renderStatusDashboard(selectedProject), "utf8");
+      ctx.ui.notify(`${renderDoctorReport(selectedProject)}\nSTATUS.md updated.`, "info");
+      return;
+    }
+    if (action === "Inspect blockers") {
+      ctx.ui.notify(`Genesis root: ${selectedProject}\n\n${renderBlockers(selectedProject, true)}`, "info");
+      return;
+    }
+    if (action === "Migrate project") {
+      const result = migrateProject(selectedProject);
+      ctx.ui.notify(`Migrated Genesis project at ${result.root}\nRemaining missing files: ${result.missing.length}`, result.missing.length ? "warning" : "info");
+      return;
+    }
+    const kickoff = `${buildNextPrompt(selectedProject, `Project root: ${selectedProject}. Continue this project from its current state.`, name)}\n\nUse ${selectedProject} as the active project root.`;
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(kickoff, { deliverAs: "followUp" });
+      return;
+    }
+    pi.sendUserMessage(kickoff);
+  } });
 
   registerStatusCommand("genesis-status", "Show Genesis for Pi project status from PROJECT_STATE and artifact files");
   registerStatusCommand("bg-status", "Legacy alias for /genesis-status");
-
   registerPlanCommand("genesis-plan", "Show a dry-run summary of what Genesis would do next");
   registerPlanCommand("bg-plan", "Legacy alias for /genesis-plan");
-
+  registerResumeCommand("genesis-resume", "Summarize where a Genesis project left off and what should happen next");
+  registerResumeCommand("bg-resume", "Legacy alias for /genesis-resume");
+  registerDoctorCommand("genesis-doctor", "Check install health, project health, blockers, and lint findings");
+  registerDoctorCommand("bg-doctor", "Legacy alias for /genesis-doctor");
+  registerLintCommand("genesis-lint", "Lint Genesis artifacts for placeholders, empty sections, and weak scaffolds");
+  registerLintCommand("bg-lint", "Legacy alias for /genesis-lint");
   registerInitCommand("genesis-init", "Create a fresh Genesis for Pi project tree and optionally start intake");
   registerInitCommand("bg-init", "Legacy alias for /genesis-init");
-
+  registerStartCommand("genesis-start", "Bootstrap a new Genesis project with mode selection, scaffolds, and intake kickoff");
+  registerStartCommand("bg-start", "Legacy alias for /genesis-start");
   registerOpenCommand("genesis-open", "Pick an existing Genesis project, then inspect or continue it");
   registerOpenCommand("bg-open", "Legacy alias for /genesis-open");
-
   registerNextCommand("genesis-next", "Clear blockers when possible, then advance Genesis for Pi to the next incomplete pipeline step");
   registerNextCommand("bg-next", "Legacy alias for /genesis-next");
-
   registerValidateCommand("genesis-validate", "Validate the current Genesis phase contract, missing outputs, and blocker state");
   registerValidateCommand("bg-validate", "Legacy alias for /genesis-validate");
-
+  registerMigrateCommand("genesis-migrate", "Repair or upgrade an older Genesis project tree to the current layout");
+  registerMigrateCommand("bg-migrate", "Legacy alias for /genesis-migrate");
   registerSetModeCommand("genesis-set-mode", "Set the active Genesis workflow mode and update project files");
   registerSetModeCommand("bg-set-mode", "Legacy alias for /genesis-set-mode");
-
   registerBlockerCommand("genesis-blockers", "Interactively inspect Genesis blockers and optionally queue a blocker-fix turn");
   registerBlockerCommand("bg-blockers", "Legacy alias for /genesis-blockers");
-
   registerTemplateCommand("genesis-scaffold-templates", "Scaffold core Genesis artifact templates into the current project");
   registerTemplateCommand("bg-scaffold-templates", "Legacy alias for /genesis-scaffold-templates");
-
+  registerScoreToTicketsCommand("genesis-score-to-tickets", "Convert Genesis score and audit findings into revision tickets");
+  registerScoreToTicketsCommand("bg-score-to-tickets", "Legacy alias for /genesis-score-to-tickets");
   registerFluffAuditCommand("genesis-audit-fluff", "Run a focused anti-padding audit for fluff, filler scenes, and ornamental subplots");
   registerFluffAuditCommand("bg-audit-fluff", "Legacy alias for /genesis-audit-fluff");
 }
