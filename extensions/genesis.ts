@@ -1,11 +1,12 @@
 import { Type } from "typebox";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, copyFileSync, statSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST_PATH = join(PACKAGE_ROOT, "references", "pipeline", "manifest.yaml");
+const GENESIS_SCHEMA_VERSION = "0.2.0";
 
 const DEFAULT_PHASE_DEFINITIONS = [
   {
@@ -583,6 +584,251 @@ function listRecentProjectFiles(root, limit = 5) {
   return files.sort((a, b) => b.mtimeMs - a.mtimeMs).slice(0, limit);
 }
 
+function listMarkdownFiles(dir, root = dir, depth = 0) {
+  if (!existsSync(dir) || depth > 4) return [];
+  const files = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...listMarkdownFiles(full, root, depth + 1));
+    else if (/\.md$/i.test(entry.name)) files.push(full.slice(root.length + 1));
+  }
+  return files.sort(new Intl.Collator(undefined, { numeric: true, sensitivity: "base" }).compare);
+}
+
+function stripMarkdownForWordCount(text) {
+  return String(text || "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/^#{1,6}\s+/gm, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/[>*_~|#\-]/g, " ");
+}
+
+function countWords(text) {
+  const words = stripMarkdownForWordCount(text).match(/[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu);
+  return words ? words.length : 0;
+}
+
+function chapterTitleFromPath(relativePath, text) {
+  const heading = String(text || "").match(/^#\s+(.+)$/m)?.[1]?.trim();
+  if (heading) return heading;
+  return basename(relativePath, ".md").replace(/^\d+[-_\s]*/, "").replace(/[-_]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()) || relativePath;
+}
+
+function collectManuscriptChapters(root) {
+  const chaptersRoot = join(root, "manuscript", "chapters");
+  return listMarkdownFiles(chaptersRoot, chaptersRoot).map((relativePath) => {
+    const fullPath = join(chaptersRoot, relativePath);
+    const text = readIfExists(fullPath) || "";
+    return {
+      path: `manuscript/chapters/${relativePath}`,
+      title: chapterTitleFromPath(relativePath, text),
+      text,
+      words: countWords(text),
+    };
+  });
+}
+
+function manuscriptStats(root) {
+  const chapters = collectManuscriptChapters(root);
+  return {
+    chapters: chapters.length,
+    words: chapters.reduce((total, chapter) => total + chapter.words, 0),
+    files: chapters.map((chapter) => chapter.path),
+  };
+}
+
+function compileManuscript(root) {
+  ensureDir(join(root, "delivery"));
+  const state = parseProjectState(readIfExists(join(root, "PROJECT_STATE.yaml")) || "");
+  const title = state.project_name || basename(root);
+  const chapters = collectManuscriptChapters(root);
+  const generatedAt = new Date().toISOString();
+  const manuscriptPath = join(root, "delivery", "manuscript-full.md");
+  const reportPath = join(root, "delivery", "manuscript-compile-report.md");
+  const body = chapters.length
+    ? chapters.map((chapter) => {
+      const trimmed = chapter.text.trim();
+      return /^#\s+/m.test(trimmed) ? trimmed : `# ${chapter.title}\n\n${trimmed}`;
+    }).join("\n\n---\n\n")
+    : "_No chapter Markdown files were found under `manuscript/chapters/`._";
+  const compiled = [`# ${title}`, "", `_Compiled by Genesis for Pi on ${generatedAt}._`, "", body, ""].join("\n");
+  writeFileSync(manuscriptPath, compiled, "utf8");
+  const totalWords = chapters.reduce((total, chapter) => total + chapter.words, 0);
+  const report = [
+    "# Manuscript Compile Report",
+    "",
+    `- Project root: ${root}`,
+    `- Output: delivery/manuscript-full.md`,
+    `- Generated: ${generatedAt}`,
+    `- Chapter files: ${chapters.length}`,
+    `- Estimated manuscript words: ${totalWords}`,
+    "",
+    "## Included chapters",
+    "",
+    ...(chapters.length ? chapters.map((chapter, index) => `${index + 1}. ${chapter.path} — ${chapter.words} words`) : ["- none"]),
+    "",
+  ].join("\n");
+  writeFileSync(reportPath, report, "utf8");
+  return { manuscriptPath, reportPath, chapters: chapters.length, words: totalWords };
+}
+
+function progressBar(currentIndex, total, width = 12) {
+  const safeTotal = Math.max(1, total);
+  const filled = Math.max(0, Math.min(width, Math.round(((currentIndex + 1) / safeTotal) * width)));
+  return `${"█".repeat(filled)}${"░".repeat(width - filled)}`;
+}
+
+function renderDashboard(root) {
+  const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
+  const phaseIndex = Math.max(0, getPhaseIndex(phase));
+  const workflowMode = detectWorkflowMode(root);
+  const blockers = collectBlockers(root, true);
+  const hardBlockers = blockers.filter((blocker) => blocker.severity === "blocker");
+  const warnings = blockers.filter((blocker) => blocker.severity === "warning");
+  const lintFindings = collectLintFindings(root, phase);
+  const missing = missingExpectedForPhase(root, phase);
+  const git = getGitState(root);
+  const stats = manuscriptStats(root);
+  const recent = listRecentProjectFiles(root, 6);
+  return [
+    "# Genesis Dashboard",
+    "",
+    `Project: ${root}`,
+    `Mode: ${workflowMode}`,
+    `Phase: ${phase}`,
+    `Progress: ${progressBar(phaseIndex, PHASE_DEFINITIONS.length)} ${phaseIndex + 1}/${PHASE_DEFINITIONS.length}`,
+    "",
+    "## Signals",
+    "",
+    `- Hard blockers: ${hardBlockers.length}`,
+    `- Warnings: ${warnings.length}`,
+    `- Lint findings: ${lintFindings.length}`,
+    `- Missing expected files: ${missing.length}`,
+    `- Manuscript: ${stats.chapters} chapter file(s), ${stats.words} estimated words`,
+    `- Git: ${git.initialized ? `${git.dirty} uncommitted change(s)${git.branch ? ` on ${git.branch}` : ""}` : "not initialized"}`,
+    `- Next best action: ${nextRecommendedAction(root)}`,
+    "",
+    "## Top issues",
+    "",
+    ...(blockers.length ? blockers.slice(0, 8).map((blocker) => `- [${blocker.severity}] ${blocker.label} — ${blocker.file}`) : ["- none"]),
+    "",
+    "## Recent files",
+    "",
+    ...(recent.length ? recent.map((file) => `- ${file.path} (${formatRelativeTime(file.mtimeMs)})`) : ["- none"]),
+    "",
+  ].join("\n");
+}
+
+function isGenesisProjectPath(relativePath) {
+  return /^(PROJECT_STATE\.yaml|ASSUMPTIONS\.md|STATUS\.md)$/.test(relativePath)
+    || /^(artifacts|manuscript|evaluations|delivery|research)\//.test(relativePath);
+}
+
+function parseGitStatus(root) {
+  try {
+    return execFileSync("git", ["status", "--porcelain", "-uall"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => {
+        const status = line.slice(0, 2);
+        let path = line.slice(3).trim();
+        if (path.includes(" -> ")) path = path.split(" -> ").pop().trim();
+        return { status, path: path.replace(/^\"|\"$/g, "") };
+      });
+  } catch {
+    return [];
+  }
+}
+
+function checkpointGenesisFiles(root, args = "") {
+  if (!getGitState(root).initialized) execFileSync("git", ["init"], { cwd: root, stdio: "ignore" });
+  const requested = args.trim();
+  const explicitPaths = requested && requested.toLowerCase() !== "all"
+    ? new Set(requested.split(/[\s,]+/).map((item) => item.trim()).filter(Boolean))
+    : null;
+  const changes = parseGitStatus(root).filter((change) => isGenesisProjectPath(change.path));
+  const selected = explicitPaths
+    ? [...explicitPaths].filter((path) => isGenesisProjectPath(path)).map((path) => changes.find((change) => change.path === path) || { status: existsSync(join(root, path)) ? "??" : " D", path })
+    : changes;
+  const results = [];
+  for (const change of selected) {
+    const action = change.status.includes("D") ? "remove" : change.status.includes("?") ? "add" : "update";
+    const message = `Genesis: ${action} ${change.path}`;
+    try {
+      execFileSync("git", ["add", "--", change.path], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+      execFileSync("git", ["commit", "-m", message, "--", change.path], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+      results.push({ file: change.path, status: "committed", message });
+    } catch (error) {
+      results.push({ file: change.path, status: "failed", message: error?.stderr?.toString?.().trim() || error?.message || "git commit failed" });
+    }
+  }
+  return { root, requested: explicitPaths ? [...explicitPaths] : null, changed: changes.length, attempted: selected.length, results };
+}
+
+function createEditorialExport(root) {
+  ensureDir(join(root, "delivery"));
+  const compile = compileManuscript(root);
+  const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
+  const workflowMode = detectWorkflowMode(root);
+  const blockers = collectBlockers(root, true);
+  const stats = manuscriptStats(root);
+  const revisionTickets = readIfExists(join(root, "artifacts", "revision-tickets.md")) || "No revision-tickets.md file exists yet.";
+  const readerPromises = readIfExists(join(root, "artifacts", "reader-promise-tracker.md")) || "No reader-promise-tracker.md file exists yet.";
+  const handoffPath = join(root, "delivery", "editorial-handoff.md");
+  const boardPath = join(root, "delivery", "revision-board.md");
+  const betaPath = join(root, "delivery", "beta-reader-packet.md");
+  const manifestPath = join(root, "delivery", "genesis-export-manifest.md");
+  writeFileSync(handoffPath, [
+    "# Editorial Handoff",
+    "",
+    `- Project root: ${root}`,
+    `- Phase: ${phase}`,
+    `- Workflow mode: ${workflowMode}`,
+    `- Manuscript: ${stats.chapters} chapter file(s), ${stats.words} estimated words`,
+    `- Compiled manuscript: delivery/manuscript-full.md`,
+    `- Open blockers/warnings: ${blockers.length}`,
+    "",
+    "## Current risks",
+    "",
+    ...(blockers.length ? blockers.map((blocker) => `- [${blocker.severity}] ${blocker.label} — ${blocker.file}`) : ["- none detected"]),
+    "",
+    "## High-value project files",
+    "",
+    "- PROJECT_STATE.yaml",
+    "- STATUS.md",
+    "- artifacts/continuity-ledger.md",
+    "- artifacts/reader-promise-tracker.md",
+    "- artifacts/revision-tickets.md",
+    "- evaluations/chapter-scorecards.md",
+    "",
+  ].join("\n"), "utf8");
+  writeFileSync(boardPath, `# Revision Board\n\nSource: artifacts/revision-tickets.md\n\n${revisionTickets.trim()}\n`, "utf8");
+  writeFileSync(betaPath, [
+    "# Beta Reader Packet",
+    "",
+    "Use this packet with the compiled manuscript when asking for outside reader response.",
+    "",
+    "## Reader promises to watch",
+    "",
+    readerPromises.trim(),
+    "",
+    "## Feedback prompts",
+    "",
+    "- Where did attention drop? Name the chapter or scene.",
+    "- Which promise felt underpaid, over-explained, or abandoned?",
+    "- Which character, argument, or system rule felt false?",
+    "- Where did the prose sound too smooth, generic, or unlike the author?",
+    "- What residue stayed with you after the ending?",
+    "",
+  ].join("\n"), "utf8");
+  const files = ["delivery/manuscript-full.md", "delivery/manuscript-compile-report.md", "delivery/editorial-handoff.md", "delivery/revision-board.md", "delivery/beta-reader-packet.md"];
+  writeFileSync(manifestPath, ["# Genesis Export Manifest", "", `Generated: ${new Date().toISOString()}`, "", ...files.map((file) => `- ${file}`), ""].join("\n"), "utf8");
+  return { ...compile, files: [...files, "delivery/genesis-export-manifest.md"] };
+}
+
 function lintArtifactFile(relativePath, text) {
   const findings = [];
   if (!text?.trim()) {
@@ -992,6 +1238,7 @@ function initializeProject(root, projectName, idea) {
     join(root, "PROJECT_STATE.yaml"),
     [
       `project_name: ${stringifyScalar(projectName)}`,
+      `genesis_schema_version: ${stringifyScalar(GENESIS_SCHEMA_VERSION)}`,
       `current_phase: ${stringifyScalar("Phase 0: Intake")}`,
       'phase_gate: "intake"',
       'status: "initialized"',
@@ -1070,6 +1317,7 @@ function migrateProject(root) {
       join(root, "PROJECT_STATE.yaml"),
       [
         `project_name: ${stringifyScalar(projectName)}`,
+        `genesis_schema_version: ${stringifyScalar(GENESIS_SCHEMA_VERSION)}`,
         `current_phase: ${stringifyScalar(inferredPhase)}`,
         `workflow_mode: ${stringifyScalar("unknown")}`,
         `status: ${stringifyScalar("migrated")}`,
@@ -1078,6 +1326,10 @@ function migrateProject(root) {
       ].join("\n"),
       "utf8",
     );
+  } else {
+    const statePath = join(root, "PROJECT_STATE.yaml");
+    const state = readIfExists(statePath) || "";
+    if (!/^genesis_schema_version\s*:/im.test(state)) writeFileSync(statePath, setYamlScalar(state, "genesis_schema_version", GENESIS_SCHEMA_VERSION), "utf8");
   }
   writeIfMissing(join(root, "ASSUMPTIONS.md"), "# Assumptions\n\n## Inferred assumptions\n\n- Workflow mode: unknown\n");
   writeIfMissing(join(root, "artifacts", "00-brief.md"), "# Brief\n\nRecovered by /genesis-migrate. Fill in the original idea and reader promise.\n");
@@ -1226,6 +1478,75 @@ function buildAiThrillerFixPrompt(root, args = "") {
   ].join("\n");
 }
 
+function buildIngestPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and ingest existing manuscript, notes, research, or canon material into this Genesis project.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `Material or instructions: ${args.trim()}` : "Material or instructions: ask the user what file, folder, or manuscript material should be ingested.",
+    "",
+    "Goals:",
+    "- do not restart the project unless the user explicitly asks",
+    "- identify source files before drawing conclusions",
+    "- populate or update durable artifacts rather than leaving the ingestion only in chat",
+    "- preserve uncertainty with evidence notes when source material is incomplete",
+    "",
+    "Possible outputs depending on source material:",
+    "- artifacts/continuity-ledger.md",
+    "- artifacts/voice-bible.md",
+    "- artifacts/author-voice-fingerprint.md",
+    "- artifacts/reader-promise-tracker.md",
+    "- artifacts/revision-tickets.md",
+    "- artifacts/canon-lock.md for series repair",
+    "- PROJECT_STATE.yaml and STATUS.md updates",
+  ].join("\n");
+}
+
+function buildVoiceIngestPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and ingest author voice samples for this project.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `Voice sample paths or instructions: ${args.trim()}` : "Voice sample paths or instructions: ask the user for sample files or pasted samples.",
+    "",
+    "Required outputs:",
+    "- update artifacts/author-voice-fingerprint.md with sentence habits, rhythm, punctuation tolerance, humor, lyricism, emotional restraint, taboo phrasing, obsessions, and productive imperfections",
+    "- update artifacts/voice-bible.md with voice rules and anti-voice constraints",
+    "- update artifacts/over-polish-audit.md if sample evidence shows productive roughness that must be protected",
+    "- update PROJECT_STATE.yaml and STATUS.md if the approval gate or voice state changes",
+    "",
+    "Do not make the voice cleaner than the samples. Preserve specificity, asymmetry, and controlled awkwardness where present.",
+  ].join("\n");
+}
+
+function buildVoiceDriftPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run a voice-drift audit against the current manuscript.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Read these first when present:",
+    "- artifacts/author-voice-fingerprint.md",
+    "- artifacts/voice-bible.md",
+    "- artifacts/over-polish-audit.md",
+    "- artifacts/ear-pass.md",
+    "- manuscript/chapters/",
+    "",
+    "Audit for:",
+    "- generic competence replacing author rhythm",
+    "- too-smooth revision polish",
+    "- repeated assistant-like sentence shapes",
+    "- dialogue that violates the voice bible",
+    "- loss of productive imperfection, omission, humor, or restraint",
+    "",
+    "Required outputs:",
+    "- update artifacts/ear-pass.md",
+    "- update artifacts/over-polish-audit.md",
+    "- create or update artifacts/revision-tickets.md for concrete voice-drift repairs",
+  ].join("\n");
+}
+
 export default function (pi) {
   pi.registerTool({
     name: "genesis_blocker_triage",
@@ -1284,6 +1605,45 @@ export default function (pi) {
   const registerLintCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
     const root = findProjectRoot(ctx.cwd);
     ctx.ui.notify(renderLintReport(root), /Findings: 0/.test(renderLintReport(root)) ? "info" : "warning");
+  } });
+
+  const registerDashboardCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const dashboard = renderDashboard(root);
+    writeFileSync(join(root, "STATUS.md"), dashboard, "utf8");
+    ctx.ui.notify(`${dashboard}\nSTATUS.md updated.`, "info");
+  } });
+
+  const registerCompileCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const result = compileManuscript(root);
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    ctx.ui.notify(`Compiled manuscript.\n- delivery/manuscript-full.md\n- delivery/manuscript-compile-report.md\nChapters: ${result.chapters}\nWords: ${result.words}\nSTATUS.md updated.`, result.chapters ? "info" : "warning");
+  } });
+
+  const registerExportCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const result = createEditorialExport(root);
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    ctx.ui.notify(`Created Genesis delivery package files:\n${result.files.map((file) => `- ${file}`).join("\n")}\nChapters: ${result.chapters}\nWords: ${result.words}\nSTATUS.md updated.`, "info");
+  } });
+
+  const registerCheckpointCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const result = checkpointGenesisFiles(root, args);
+    const lines = result.results.length ? result.results.map((item) => `- ${item.file}: ${item.status}${item.status === "committed" ? ` (${item.message})` : ` — ${item.message}`}`) : ["- no changed Genesis files matched the checkpoint request"];
+    ctx.ui.notify(`Genesis checkpoint\nProject: ${root}\nChanged Genesis files: ${result.changed}\nAttempted commits: ${result.attempted}\n${lines.join("\n")}`, result.results.some((item) => item.status === "failed") ? "warning" : "info");
+  } });
+
+  const queuePromptCommand = (name, description, buildPrompt) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const message = buildPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
   } });
 
   const registerSetModeCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
@@ -1469,8 +1829,14 @@ export default function (pi) {
     }
     const selectedProject = await ctx.ui.select("Choose a Genesis project:", projects);
     if (!selectedProject) return;
-    const action = await ctx.ui.select("What should Genesis do with this project?", ["Show status", "Show plan", "Show resume", "Run doctor", "Inspect blockers", "Migrate project", "Advance next step"]);
+    const action = await ctx.ui.select("What should Genesis do with this project?", ["Show dashboard", "Show status", "Show plan", "Show resume", "Run doctor", "Inspect blockers", "Compile manuscript", "Export delivery package", "Migrate project", "Advance next step"]);
     if (!action) return;
+    if (action === "Show dashboard") {
+      const dashboard = renderDashboard(selectedProject);
+      writeFileSync(join(selectedProject, "STATUS.md"), dashboard, "utf8");
+      ctx.ui.notify(`${dashboard}\nSTATUS.md updated.`, "info");
+      return;
+    }
     if (action === "Show status") {
       writeFileSync(join(selectedProject, "STATUS.md"), renderStatusDashboard(selectedProject), "utf8");
       ctx.ui.notify(`${renderStatusDashboard(selectedProject)}\nSTATUS.md updated.`, "info");
@@ -1493,6 +1859,18 @@ export default function (pi) {
     }
     if (action === "Inspect blockers") {
       ctx.ui.notify(`Genesis root: ${selectedProject}\n\n${renderBlockers(selectedProject, true)}`, "info");
+      return;
+    }
+    if (action === "Compile manuscript") {
+      const result = compileManuscript(selectedProject);
+      writeFileSync(join(selectedProject, "STATUS.md"), renderStatusDashboard(selectedProject), "utf8");
+      ctx.ui.notify(`Compiled delivery/manuscript-full.md (${result.chapters} chapter file(s), ${result.words} words).`, result.chapters ? "info" : "warning");
+      return;
+    }
+    if (action === "Export delivery package") {
+      const result = createEditorialExport(selectedProject);
+      writeFileSync(join(selectedProject, "STATUS.md"), renderStatusDashboard(selectedProject), "utf8");
+      ctx.ui.notify(`Exported delivery package files:\n${result.files.map((file) => `- ${file}`).join("\n")}`, "info");
       return;
     }
     if (action === "Migrate project") {
@@ -1518,6 +1896,20 @@ export default function (pi) {
   registerDoctorCommand("bg-doctor", "Legacy alias for /genesis-doctor");
   registerLintCommand("genesis-lint", "Lint Genesis artifacts for placeholders, empty sections, and weak scaffolds");
   registerLintCommand("bg-lint", "Legacy alias for /genesis-lint");
+  registerDashboardCommand("genesis-dashboard", "Show a richer Genesis project dashboard and write it to STATUS.md");
+  registerDashboardCommand("bg-dashboard", "Legacy alias for /genesis-dashboard");
+  registerCompileCommand("genesis-compile", "Compile manuscript chapters into delivery/manuscript-full.md");
+  registerCompileCommand("bg-compile", "Legacy alias for /genesis-compile");
+  registerExportCommand("genesis-export", "Create editorial handoff, beta packet, revision board, and export manifest files");
+  registerExportCommand("bg-export", "Legacy alias for /genesis-export");
+  registerCheckpointCommand("genesis-checkpoint", "Commit changed Genesis project files one file at a time");
+  registerCheckpointCommand("bg-checkpoint", "Legacy alias for /genesis-checkpoint");
+  queuePromptCommand("genesis-ingest", "Ingest an existing manuscript, notes folder, research, or canon material into Genesis artifacts", buildIngestPrompt);
+  queuePromptCommand("bg-ingest", "Legacy alias for /genesis-ingest", buildIngestPrompt);
+  queuePromptCommand("genesis-voice-ingest", "Ingest author voice samples into the voice fingerprint and voice bible", buildVoiceIngestPrompt);
+  queuePromptCommand("bg-voice-ingest", "Legacy alias for /genesis-voice-ingest", buildVoiceIngestPrompt);
+  queuePromptCommand("genesis-voice-drift", "Audit manuscript chapters against the author voice fingerprint and voice bible", buildVoiceDriftPrompt);
+  queuePromptCommand("bg-voice-drift", "Legacy alias for /genesis-voice-drift", buildVoiceDriftPrompt);
   registerInitCommand("genesis-init", "Create a fresh Genesis for Pi project tree and optionally start intake");
   registerInitCommand("bg-init", "Legacy alias for /genesis-init");
   registerStartCommand("genesis-start", "Bootstrap a new Genesis project with mode selection, scaffolds, and intake kickoff");

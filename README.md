@@ -75,6 +75,13 @@ Run the next Genesis phase.
 | `/genesis-resume` | smart resume summary |
 | `/genesis-doctor` | install/project health checks |
 | `/genesis-lint` | placeholder/quality lint |
+| `/genesis-dashboard` | richer project dashboard |
+| `/genesis-compile` | compile chapter files into a full manuscript |
+| `/genesis-export` | create editorial/beta handoff files |
+| `/genesis-checkpoint` | commit Genesis files one file at a time |
+| `/genesis-ingest` | ingest existing drafts, notes, research, or canon |
+| `/genesis-voice-ingest` | build voice artifacts from author samples |
+| `/genesis-voice-drift` | audit manuscript voice drift |
 | `/genesis-next` | advance the workflow |
 | `/genesis-validate` | phase-contract validation |
 | `/genesis-migrate` | repair older project trees |
@@ -97,6 +104,13 @@ This package provides Pi-native extension commands:
 /genesis-resume
 /genesis-doctor
 /genesis-lint
+/genesis-dashboard
+/genesis-compile
+/genesis-export
+/genesis-checkpoint
+/genesis-ingest
+/genesis-voice-ingest
+/genesis-voice-drift
 /genesis-next
 /genesis-validate
 /genesis-migrate
@@ -120,6 +134,13 @@ Legacy aliases remain available:
 /bg-resume
 /bg-doctor
 /bg-lint
+/bg-dashboard
+/bg-compile
+/bg-export
+/bg-checkpoint
+/bg-ingest
+/bg-voice-ingest
+/bg-voice-drift
 /bg-next
 /bg-validate
 /bg-migrate
@@ -147,6 +168,20 @@ Use `/genesis-resume` to see where a project stalled, the most recently touched 
 Use `/genesis-doctor` for package-health, project-health, git, blocker, directory, and lint checks.
 
 Use `/genesis-lint` to flag placeholder-heavy artifacts, empty sections, and weak scaffolds that file-existence checks miss.
+
+Use `/genesis-dashboard` for a richer progress dashboard with phase progress, blocker counts, manuscript stats, recent files, git state, and next best action. It writes the dashboard to `STATUS.md`.
+
+Use `/genesis-compile` to concatenate `manuscript/chapters/*.md` into `delivery/manuscript-full.md` and write `delivery/manuscript-compile-report.md` with chapter and word-count diagnostics.
+
+Use `/genesis-export` to create delivery handoff files: compiled manuscript, compile report, editorial handoff, revision board, beta-reader packet, and export manifest.
+
+Use `/genesis-checkpoint` to commit changed Genesis project files one file at a time. Pass a relative path to commit only one file, or use no argument/`all` for all changed Genesis files.
+
+Use `/genesis-ingest` to queue an agent pass that converts existing manuscripts, notes, research, or canon material into durable Genesis artifacts without restarting the project.
+
+Use `/genesis-voice-ingest` to queue a voice-sample ingestion pass that updates `author-voice-fingerprint.md`, `voice-bible.md`, and related voice-protection artifacts.
+
+Use `/genesis-voice-drift` to queue an audit comparing manuscript chapters against the author voice fingerprint and voice bible.
 
 Use `/genesis-next` to clear blockers when possible, then advance the current Genesis project to the next incomplete pipeline step. It bypasses optional approval pauses for that turn, but it does not bypass hard blockers such as active drift alarms, open blocker/high revision tickets, unresolved AI-tell or author-voice blockers, missing required phase outputs, phase contract mismatches, or missing git initialization.
 
@@ -509,6 +544,105 @@ Legacy alias:
 
 ```text
 /bg-audit-fluff
+```
+
+### 17. Compile the manuscript
+
+```text
+/genesis-compile
+```
+
+Concatenates chapter Markdown files under `manuscript/chapters/` into `delivery/manuscript-full.md` and writes a compile report with chapter counts and estimated word count.
+
+Legacy alias:
+
+```text
+/bg-compile
+```
+
+### 18. Export editorial handoff files
+
+```text
+/genesis-export
+```
+
+Creates delivery files for handoff: compiled manuscript, compile report, editorial handoff, revision board, beta-reader packet, and export manifest.
+
+Legacy alias:
+
+```text
+/bg-export
+```
+
+### 19. Create git checkpoints
+
+```text
+/genesis-checkpoint
+/genesis-checkpoint artifacts/voice-bible.md
+```
+
+Commits changed Genesis project files one file at a time with normalized messages such as `Genesis: update artifacts/voice-bible.md`.
+
+Legacy alias:
+
+```text
+/bg-checkpoint
+```
+
+### 20. Ingest existing material
+
+```text
+/genesis-ingest manuscript.md
+```
+
+Queues an agent pass to convert existing drafts, notes, research, or canon material into durable Genesis artifacts.
+
+Legacy alias:
+
+```text
+/bg-ingest
+```
+
+### 21. Ingest author voice samples
+
+```text
+/genesis-voice-ingest samples/*.md
+```
+
+Queues a voice-ingestion pass that updates `author-voice-fingerprint.md`, `voice-bible.md`, and related protection artifacts.
+
+Legacy alias:
+
+```text
+/bg-voice-ingest
+```
+
+### 22. Audit voice drift
+
+```text
+/genesis-voice-drift
+```
+
+Queues an audit comparing current manuscript chapters against the author voice fingerprint and voice bible.
+
+Legacy alias:
+
+```text
+/bg-voice-drift
+```
+
+### 23. Show the rich dashboard
+
+```text
+/genesis-dashboard
+```
+
+Writes a richer progress dashboard to `STATUS.md`: phase progress, blockers, warnings, lint count, manuscript stats, git state, recent files, and next best action.
+
+Legacy alias:
+
+```text
+/bg-dashboard
 ```
 
 ## Typical ways to work

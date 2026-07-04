@@ -44,7 +44,9 @@ function parseManifest(text) {
 }
 
 const manifestPath = join(root, "references", "pipeline", "manifest.yaml");
-const manifest = parseManifest(readFileSync(manifestPath, "utf8"));
+const manifestText = readFileSync(manifestPath, "utf8");
+assert.ok(/^schema_version:\s*["']?0\.2\.0["']?/m.test(manifestText), "manifest should declare schema_version 0.2.0");
+const manifest = parseManifest(manifestText);
 assert.equal(manifest.length, 7, "manifest should define 7 phases");
 
 for (const phase of manifest) {
@@ -82,6 +84,9 @@ const readme = readFileSync(join(root, "README.md"), "utf8");
 assert.ok(readme.includes("/genesis-plan"), "README should document /genesis-plan");
 assert.ok(readme.includes("/genesis-doctor"), "README should document /genesis-doctor");
 assert.ok(readme.includes("/genesis-start"), "README should document /genesis-start");
+assert.ok(readme.includes("/genesis-compile"), "README should document /genesis-compile");
+assert.ok(readme.includes("/genesis-checkpoint"), "README should document /genesis-checkpoint");
+assert.ok(readme.includes("/genesis-ingest"), "README should document /genesis-ingest");
 assert.ok(readme.includes("/bg-plan"), "README should document /bg-plan");
 
 const alias = readFileSync(join(root, "book-genesis-codex.md"), "utf8");
@@ -90,6 +95,7 @@ assert.ok(alias.includes("/genesis-plan"), "legacy alias should mention /genesis
 assert.ok(alias.includes("/genesis-doctor"), "legacy alias should mention /genesis-doctor");
 
 const extension = readFileSync(join(root, "extensions", "genesis.ts"), "utf8");
+assert.ok(extension.includes('const GENESIS_SCHEMA_VERSION = "0.2.0";'), "extension should expose current schema version");
 assert.ok(extension.includes("const PHASE_DEFINITIONS = loadPhaseDefinitions();"), "extension should load phase definitions from manifest");
 assert.ok(extension.includes("resolve(PACKAGE_ROOT, templatePath)"), "template scaffolding should resolve from package root");
 assert.ok(extension.includes("function getModeTemplateEntries(mode)"), "extension should expose mode-template mapping helper");
@@ -101,6 +107,9 @@ assert.ok(extension.includes('registerPlanCommand("genesis-plan"'), "extension s
 assert.ok(extension.includes('registerDoctorCommand("genesis-doctor"'), "extension should register /genesis-doctor");
 assert.ok(extension.includes('registerStartCommand("genesis-start"'), "extension should register /genesis-start");
 assert.ok(extension.includes('registerMigrateCommand("genesis-migrate"'), "extension should register /genesis-migrate");
+assert.ok(extension.includes('registerCompileCommand("genesis-compile"'), "extension should register /genesis-compile");
+assert.ok(extension.includes('registerCheckpointCommand("genesis-checkpoint"'), "extension should register /genesis-checkpoint");
+assert.ok(extension.includes('queuePromptCommand("genesis-ingest"'), "extension should register /genesis-ingest");
 assert.ok(existsSync(join(root, "scripts", "test-genesis-sample-projects.mjs")), "sample-project test script should exist");
 assert.ok(existsSync(join(root, "docs", "best-practices.md")), "best-practices doc should exist");
 assert.ok(existsSync(join(root, "docs", "troubleshooting.md")), "troubleshooting doc should exist");
@@ -108,5 +117,6 @@ assert.ok(existsSync(join(root, "docs", "series-repair-service.md")), "series-re
 assert.ok(existsSync(join(root, "examples", "novel-project", "PROJECT_STATE.yaml")), "novel example project should exist");
 assert.ok(existsSync(join(root, "examples", "certification-prep-project", "PROJECT_STATE.yaml")), "certification example project should exist");
 assert.ok(existsSync(join(root, "examples", "series-repair-project", "PROJECT_STATE.yaml")), "series-repair example project should exist");
+assert.ok(existsSync(join(root, ".github", "workflows", "test.yml")), "GitHub Actions test workflow should exist");
 
 console.log("Genesis package validation passed.");

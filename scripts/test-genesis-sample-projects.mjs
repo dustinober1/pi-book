@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 
 async function loadGenesisHelpers() {
   const source = readFileSync(join(process.cwd(), "extensions", "genesis.ts"), "utf8");
-  const augmented = `${source}\nexport { detectPhase, findProjectRoot, missingExpectedForPhase, renderValidationReport, renderStatusDashboard, renderResume, renderDoctorReport, detectWorkflowMode, missingModeArtifacts, getModeTemplateEntries, getModeBundleEntries, collectLintFindings, getGitState, migrateProject };`;
+  const augmented = `${source}\nexport { detectPhase, findProjectRoot, missingExpectedForPhase, renderValidationReport, renderStatusDashboard, renderDashboard, renderResume, renderDoctorReport, detectWorkflowMode, missingModeArtifacts, getModeTemplateEntries, getModeBundleEntries, collectLintFindings, getGitState, migrateProject, compileManuscript, createEditorialExport, manuscriptStats, checkpointGenesisFiles };`;
   const helperModulePath = join(process.cwd(), "scripts", ".genesis-test-module.mjs");
   writeFileSync(helperModulePath, augmented, "utf8");
   return { module: await import(pathToFileURL(helperModulePath).href), helperModulePath };
@@ -109,6 +109,27 @@ try {
 
   const doctor = helpers.renderDoctorReport(cert);
   assert.ok(doctor.includes("# Genesis Doctor"), "doctor report should render");
+
+  mkdirSync(join(cert, "manuscript", "chapters"), { recursive: true });
+  writeFileSync(join(cert, "manuscript", "chapters", "01-opening.md"), "# Opening\n\nThe first chapter changes something important.", "utf8");
+  writeFileSync(join(cert, "manuscript", "chapters", "02-next.md"), "# Next\n\nThe next chapter escalates the pressure.", "utf8");
+  const stats = helpers.manuscriptStats(cert);
+  assert.equal(stats.chapters, 2, "manuscript stats should count chapter files");
+  const compiled = helpers.compileManuscript(cert);
+  assert.equal(existsSync(join(cert, "delivery", "manuscript-full.md")), true, "compile should write manuscript-full.md");
+  assert.equal(compiled.chapters, 2, "compile should report chapter count");
+  const dashboard = helpers.renderDashboard(cert);
+  assert.ok(dashboard.includes("# Genesis Dashboard"), "dashboard report should render");
+  assert.ok(dashboard.includes("Manuscript: 2 chapter"), "dashboard should include manuscript stats");
+  const exported = helpers.createEditorialExport(cert);
+  assert.ok(exported.files.includes("delivery/editorial-handoff.md"), "export should create handoff file");
+  assert.equal(existsSync(join(cert, "delivery", "beta-reader-packet.md")), true, "export should write beta packet");
+
+  execSync("git config user.email genesis-test@example.com", { cwd: cert });
+  execSync("git config user.name Genesis Test", { cwd: cert });
+  const checkpoint = helpers.checkpointGenesisFiles(cert, "manuscript/chapters/01-opening.md");
+  assert.equal(checkpoint.attempted, 1, "checkpoint should attempt explicit changed Genesis file");
+  assert.equal(checkpoint.results[0].status, "committed", "checkpoint should commit one file");
 
   const nonGenesisParent = join(tempRoot, "non-genesis");
   mkdirSync(join(nonGenesisParent, "artifacts"), { recursive: true });
