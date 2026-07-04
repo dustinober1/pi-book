@@ -12,7 +12,7 @@ Mandatory rules:
 - write every important decision to files
 - keep `PROJECT_STATE.yaml` synchronized with reality
 - keep `ASSUMPTIONS.md` explicit
-- record and respect the project's workflow mode: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, or another explicitly named mode
+- record and respect the project's workflow mode: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, series repair, or another explicitly named mode
 - keep `artifacts/continuity-ledger.md` synchronized with manuscript facts, timeline, promises, clues, reveals, subplot status, or nonfiction/study-guide continuity facts when those replace plot continuity
 - keep `artifacts/reader-promise-tracker.md` synchronized with premise, genre/use-case, emotional/learning, mystery/argument/competency, subplot/pressure-line, and opening promises
 - keep `artifacts/drift-loop-alarm.md` synchronized with repeated structure, loop, contradiction, reopened-ticket, no-state-change, and phase-boundary hard stop conditions
@@ -33,8 +33,12 @@ Mandatory rules:
 - keep `artifacts/negative-capability-audit.md` synchronized with unresolved tension, moral ambiguity, contradiction, opacity, residue, and false-opacity risks
 - keep `artifacts/revision-philosophy.md` synchronized with revision priorities, preservation rules, order of operations, and acceptable intermediate messiness
 - keep `artifacts/reader-response-plan.md`, `artifacts/beta-feedback-log.md`, and `artifacts/positioning-strategy.md` synchronized when packaging or outside feedback begins
+- keep `artifacts/recurring-formal-device-tracker.md` synchronized when the manuscript uses distinctive structural devices; track each occurrence's function, escalation, and compression
+- keep `artifacts/technical-seed-map.md` synchronized for speculative fiction and thrillers; track when key concepts for the final mechanism are introduced, deepened, and made operational
+- keep `artifacts/domain-plausibility-audit.md` synchronized for fiction with technical dependencies; flag plot-critical domain claims needing expert review
 - keep `artifacts/revision-tickets.md` synchronized with audit/scoring issues, severity, repair type, owner phase, and status
 - for series work, keep `artifacts/series-bible.md` and related series continuity artifacts synchronized when used
+- for series repair work, keep `artifacts/canon-lock.md`, `artifacts/installment-promise-tracker.md`, and `artifacts/series-verification-matrix.md` synchronized when used so locked canon and repair scope stay visible
 - for nonfiction, study-guide, or certification work, keep `artifacts/argument-spine.md`, `artifacts/certification-blueprint-map.md`, and `research/reference-inventory.md` synchronized when used
 - keep `evaluations/chapter-scorecards.md` synchronized after chapter blocks
 - use `intake.md` for Phase 0 and `foundation.md` for Phase 1

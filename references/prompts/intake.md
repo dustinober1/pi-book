@@ -21,19 +21,23 @@ Create and update:
 - `artifacts/risk-budget.md`
 - `artifacts/discarded-choices.md`
 - `artifacts/review-personas.md`
+- `artifacts/publication-shape.md`
 - `PROJECT_STATE.yaml`
 
 ## Intake Rules
 
 - Treat the user's basic idea as the seed, not as a full brief.
-- Identify and record the workflow mode early: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, or another explicitly named mode.
+- Identify and record the workflow mode early: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, series repair, or another explicitly named mode.
 - For study guides, certification books, and research-heavy nonfiction, initialize a research plan and source-storage habit using `research/reference-inventory.md`, `research/notes/`, and `research/sources/`.
-- For series work, capture whether this project is book one, a later installment, or a series-level planning pass.
+- For series work, capture whether this project is book one, a later installment, a series-level planning pass, or a series-repair pass.
+- For series repair work, identify which books are locked canon, which books are editable, what source material exists for each installment, and whether the goal is verification-only, surgical revision, or full rewrite.
+- For series repair work, initialize `artifacts/canon-lock.md`, `artifacts/series-bible.md`, and `artifacts/series-verification-matrix.md` early so published-book constraints become durable before revision starts.
 - Convert hidden assumptions into explicit assumptions.
 - Identify 2-4 comp titles.
 - Record market gaps and reader promise.
 - Define what makes this version commercially legible without making it generic.
 - Capture author intent, taste, and risk before optimizing the idea.
+- Lock publication shape early in `artifacts/publication-shape.md`: standalone vs series, commercial vs literary weighting, closure target, residue tolerance, and ending promise.
 - Generate a compact review-personas file during early research so the project has concrete readers/reviewers who can detect false voice, generic smoothing, fake specificity, comp-chasing, sentimentality, and genre betrayal.
 - Start a discarded choices ledger immediately; rejected assumptions are useful creative memory.
 
@@ -50,6 +54,8 @@ Create and update:
 - narrative mode
 - workflow mode
 - reader promise
+- publication shape: standalone / series, commercial / literary balance, closure target
+- canon status when relevant: locked canon, editable installments, and verification scope
 
 ## Market Map Requirements
 

@@ -26,6 +26,8 @@ Save the over-polish audit to `artifacts/over-polish-audit.md`.
 
 Save the negative capability audit to `artifacts/negative-capability-audit.md`.
 
+Save the domain plausibility audit to `artifacts/domain-plausibility-audit.md` for fiction that depends on technical, medical, legal, or institutional credibility.
+
 Create or update `artifacts/revision-philosophy.md`.
 
 Create or update `artifacts/revision-tickets.md` with every actionable repair found during the audit. Use `references/templates/revision-tickets.md` unless the project clearly needs a different structure.
@@ -65,15 +67,24 @@ Audit `artifacts/continuity-ledger.md` against the manuscript.
 
 - verify character facts, relationships, timeline, locations, objects, clues, reveals, promises, and subplot status
 - flag contradictions, timeline impossibilities, renamed or merged facts, forgotten promises, and unsupported payoffs
+- for series repair work, also audit `artifacts/canon-lock.md`, `artifacts/series-bible.md`, and `artifacts/series-verification-matrix.md` against the manuscript so later-book fixes do not break locked published canon
 - if the ledger is stale, incomplete, or contradicted by multiple chapters, require repair before final scoring
 
-### Pass 5: Over-Explanation
+### Pass 5: Over-Explanation and Thematic Restatement
 
 Find where the manuscript explains what it already dramatized.
 
 - image explained after the image lands
 - theme stated after the scene already carried it
 - dialogue that repeats narration
+- the same central paradox, thesis statement, or insight restated in near-identical terms across multiple chapters without escalation or new evidence
+- repeated formulations such as "the system is not malicious," "the math is correct," "the proof is a body" after the pattern is established
+- explanatory commentary around strong images or objects that already landed without interpretation
+- repeated character processing beats (hand-to-pocket, counting, not sleeping, looking at screens) after the motif is established
+
+For each flagged passage, ask: if the previous scene already made the reader feel this, cut or compress the paragraph.
+
+Apply the trust-the-reader test: the best version of the manuscript does not explain its own brilliance. Cut 8-12% by trimming repeated thematic restatements while preserving the motif and cutting the explanatory commentary around it.
 
 ### Pass 6: Reader Promise Audit
 
@@ -149,12 +160,21 @@ Audit `artifacts/name-entity-filter.md` against the manuscript.
 Find where important plans or beats succeed too easily.
 
 - if success arrives too cleanly, recommend complication
+- if the manuscript relies on repeated protagonist withholding or delayed disclosure to prolong tension, flag the affected chapters as structural stall rather than character depth
+- after the second major withholding beat, require either irreversible consequence or a reveal that changes the story shape
 
-### Pass 13: Structural Repetition
+### Pass 13: Structural Repetition and Recurring Device Fatigue
 
 Check whether too many consecutive chapters repeat the same internal template.
 
 - if repetition becomes predictive, recommend restructuring
+
+Audit the recurring formal device tracker if the manuscript uses distinctive structural devices (logs, epistolary sections, data dumps, alternate POV chapters, in-world documents):
+
+- verify each occurrence does substantively new work
+- verify later occurrences are more compressed and more chilling/revealing than earlier ones
+- if any occurrence repeats a function already established, flag it for cut or merge
+- verify the device voice escalates rather than remaining static
 
 ### Pass 14: Expansion Integrity Audit
 
@@ -204,15 +224,26 @@ Reward human-leaning structural choices when they are earned:
 
 Create revision tickets for blocker or high-severity narrative fingerprint risks. Do not recommend random complexity; every proposed complication must serve character, theme, causality, reader promise, or ending pressure.
 
-### Pass 17: Agent Pitch Test
+### Pass 17: Locked-Canon Verification
+
+For series repair work, verify that every major rewrite still respects the locked books.
+
+- compare repaired installment beats against `artifacts/canon-lock.md`
+- verify recurring character behavior, relationship status, world rules, chronology, and unresolved promises still line up with the locked books
+- flag retcons that solve a local problem by silently breaking earlier canon
+- create revision tickets for every canon break, false escalation, or carryover promise that no longer lands
+
+### Pass 18: Agent Pitch Test
 
 Read the opening promise, the ending, and the pitch logic as a skeptical literary agent.
 
 - would page 1 survive?
 - would page 5 survive?
 - does the ending repay the opening promise?
+- is the book's publication shape clear: standalone, series opener, literary thriller, commercial thriller, or hybrid?
+- if the ending is thematically right but commercially under-resolved, create a revision ticket against `artifacts/publication-shape.md`
 
-### Pass 18: AI Tell Mitigation Audit
+### Pass 19: AI Tell Mitigation Audit
 
 Write `artifacts/ai-tell-mitigation-audit.md` as a source-informed prose and formatting audit.
 
@@ -231,7 +262,7 @@ Flag visible AI tells:
 
 Do not treat any single sign as proof. The audit should identify clusters, context, and reader-trust risk, then repair the underlying prose habit rather than merely removing a flagged word or punctuation mark. Do not create anti-AI prose that is just as artificial; the goal is reader trust, not detector evasion.
 
-### Pass 19: Subtext Audit
+### Pass 20: Subtext Audit
 
 Write `artifacts/subtext-audit.md` as a scene-level check for over-explicit meaning.
 
@@ -246,7 +277,7 @@ Flag:
 
 Create revision tickets for subtext failures that damage reader trust, character believability, voice, or tension.
 
-### Pass 20: Read-Aloud Ear Pass
+### Pass 21: Read-Aloud Ear Pass
 
 Write `artifacts/ear-pass.md` as a rhythm and dialogue audit.
 
@@ -261,7 +292,7 @@ For each chapter or representative sample, flag:
 
 Create revision tickets only when rhythm problems are clustered or reader-facing.
 
-### Pass 21: Over-Polish Audit
+### Pass 22: Over-Polish Audit
 
 Write `artifacts/over-polish-audit.md` to protect productive imperfection.
 
@@ -275,7 +306,7 @@ Flag where revision has made or may make the prose:
 
 Name the roughness that should be preserved. Do not protect sloppiness by default; protect only roughness that serves voice, character, tension, humor, subtext, or truth.
 
-### Pass 22: Creative Sovereignty Audit
+### Pass 23: Creative Sovereignty Audit
 
 Audit `artifacts/author-intent.md`, `artifacts/taste-profile.md`, `artifacts/risk-budget.md`, and `artifacts/discarded-choices.md` against the manuscript.
 
@@ -289,15 +320,19 @@ Flag:
 
 Do not treat every risk as a defect. Classify each as keep, reduce, heighten, explain in packaging, defer, or accepted risk.
 
-### Pass 23: Scene Embodiment Audit
+### Pass 24: Scene Embodiment and Static Scene Audit
 
 Audit `artifacts/scene-embodiment-map.md` against the manuscript.
 
 Flag scenes where characters mainly explain feelings, backstory, theme, or plot without enough physical action, objects, task pressure, interruption, spatial friction, bodily inconvenience, money/time/weather pressure, or behavior that carries subtext.
 
-Create revision tickets for disembodied scenes that damage credibility, tension, subtext, pacing, or voice.
+Flag static scenes: scenes where the only action is characters discussing, analyzing, or debating the premise without external pressure, physical consequence, interruption, or irreversible turn. These are especially dangerous in middle acts, where the book can feel like "smart people in rooms explaining the problem to each other."
 
-### Pass 24: Negative Capability Audit
+For each static scene, recommend: add external pressure, physical consequence, cost to a character, interruption by the outside world, or rebuild as a scene where every attempt to act costs someone something.
+
+Create revision tickets for disembodied or static scenes that damage credibility, tension, subtext, pacing, or voice.
+
+### Pass 25: Negative Capability Audit
 
 Write `artifacts/negative-capability-audit.md` as a counterweight to excessive coherence.
 
@@ -313,7 +348,7 @@ Flag where the manuscript wrongly explains, resolves, moralizes, or thematizes:
 
 Also flag false opacity: confusion, evasive vagueness, missing setup, or incoherence disguised as ambiguity.
 
-### Pass 25: Revision Philosophy
+### Pass 26: Revision Philosophy
 
 Create or update `artifacts/revision-philosophy.md` before extracting tickets.
 
@@ -326,7 +361,62 @@ Define:
 - acceptable messiness during intermediate drafts
 - risks that should be protected rather than repaired
 
-### Pass 26: Revision Ticket Extraction
+### Pass 27: Domain Plausibility Audit
+
+For fiction that depends on technical, medical, legal, scientific, or institutional credibility:
+
+- audit `references/templates/domain-plausibility-audit.md` against the manuscript
+- flag any plot-critical claim that depends on specific medication interactions, dosage timing, physiological responses, legal provisions, infrastructure integration, hospital workflow, access control, or other domain-specific mechanisms
+- verify that a technically literate reader would not have their trust broken by an implausible detail
+- if no expert review has been conducted for plot-critical domain claims, create a high-severity revision ticket
+- the goal is not realism for its own sake; it is preventing avoidable disbelief
+
+### Pass 28: Setting Variety and Ordinary-Life Audit
+
+Audit whether the manuscript contains enough scenes set in ordinary, non-high-stakes environments.
+
+- check whether the book's settings are predominantly operations centers, hospitals, apartments at night, and core facilities — all high-stakes analytical spaces
+- flag if ordinary life appears only in brief flashes that are immediately swallowed by interpretation
+- recommend adding or preserving concrete human scenes that do not immediately become thesis: a conversation at a bus stop, a mistake by a minor character, an argument about an ordinary inconvenience, a city resident reacting to a mundane change
+- the final claim of the book — that inefficiency and variance are part of humanity — should feel socially lived, not only philosophically asserted
+
+### Pass 29: System And Authority Clarity Audit
+
+Audit `artifacts/system-rule-sheet.md` and `artifacts/authority-chain-map.md` against the manuscript.
+
+- verify the system's direct capabilities, indirect capabilities, delegated-trust paths, legacy permissions, and shutdown constraints are seeded early enough
+- flag plot-critical surfaces that appear only when the story needs a new escalation
+- verify every institutional intervention has a visible authority chain: who saw what, who decided what, and why they were allowed to
+- verify organizational status is clear when the manuscript involves investors, boards, counsel, commercialization exposure, or product/governance language
+- if the company or institution structure remains blurry, create a high-severity revision ticket
+
+### Pass 30: Opposition Positive-Case Audit
+
+Audit `artifacts/opposition-case.md` against the manuscript.
+
+- verify each major antagonist or foil has a coherent positive case, not merely a defensive or villainous one
+- verify the opposition is right about something that materially pressures the protagonist and the book
+- flag opposition figures who only protect themselves, reframe blame, or deliver pressure without protecting any real value
+- if defeating the opposition costs nothing of value, the opposition is too weak
+
+### Pass 31: Agency-Before-Cost Audit
+
+Audit the manuscript for characters who primarily function as the bodily, social, or moral proof of the system's harm.
+
+- verify those characters have pre-cost agency, endgame agency, and at least one decision that changes evidence, system state, or public narrative
+- flag characters whose suffering mainly exists to teach the protagonist the next layer of harm
+- pressure characters should not be single-function devices
+
+### Pass 32: Publication Shape Audit
+
+Audit `artifacts/publication-shape.md` against the ending.
+
+- if standalone, require at least one irreversible external consequence
+- if series opener, verify one battle closes and a larger conflict clearly remains
+- containment alone is not enough; pair containment with sacrifice, exposure, testimony, publication, legal record, destroyed defense, or institutional fracture
+- if the ending is intellectually honest but publication-soft, create a high-severity revision ticket
+
+### Pass 33: Revision Ticket Extraction
 
 Convert the audit into a repair queue in `artifacts/revision-tickets.md`.
 

@@ -4,7 +4,11 @@
 
 Genesis for Pi is the Pi-native packaging of Book Genesis Universal Core.
 
-It can be used for novels, memoir, narrative nonfiction, prescriptive nonfiction, study guides, certification-prep books, and installments within a larger series.
+It can be used for novels, memoir, narrative nonfiction, prescriptive nonfiction, study guides, certification-prep books, installments within a larger series, and published-series verification/repair where earlier books are locked canon.
+
+For AI thrillers and other system-driven fiction, the package now also includes:
+- a reusable QA pass in `docs/ai-thriller-qa-checklist.md`
+- a reusable developmental review prompt in `docs/ai-thriller-review-prompt.md`
 
 This package is now extension-first: it exposes Pi commands, blocker-triage UI/tooling, the primary `genesis-for-pi` skill, and the `book-genesis-codex` compatibility alias for durable intake, foundation, architecture, drafting, adversarial audit, Genesis Score, and editorial package generation.
 
@@ -78,6 +82,8 @@ Run the next Genesis phase.
 | `/genesis-blockers` | inspect blockers interactively |
 | `/genesis-scaffold-templates` | copy starter artifacts |
 | `/genesis-score-to-tickets` | turn score findings into tickets |
+| `/genesis-ai-thriller-review` | publication-facing developmental review for AI/system thrillers |
+| `/genesis-ai-thriller-fix` | prioritized repair pass for AI/system thrillers |
 | `/genesis-audit-fluff` | anti-padding audit |
 
 This package provides Pi-native extension commands:
@@ -98,6 +104,8 @@ This package provides Pi-native extension commands:
 /genesis-blockers
 /genesis-scaffold-templates
 /genesis-score-to-tickets
+/genesis-ai-thriller-review
+/genesis-ai-thriller-fix
 /genesis-audit-fluff
 ```
 
@@ -119,6 +127,8 @@ Legacy aliases remain available:
 /bg-blockers
 /bg-scaffold-templates
 /bg-score-to-tickets
+/bg-ai-thriller-review
+/bg-ai-thriller-fix
 /bg-audit-fluff
 ```
 
@@ -148,9 +158,13 @@ Use `/genesis-set-mode` to explicitly set the workflow mode, update `PROJECT_STA
 
 Use `/genesis-blockers` for interactive blocker triage. It lets you inspect blocker evidence and queue a targeted fix turn from the UI.
 
-Use `/genesis-scaffold-templates` to copy core artifact templates such as `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `argument-spine.md`, `certification-blueprint-map.md`, `research/reference-inventory.md`, `author-intent.md`, `taste-profile.md`, `risk-budget.md`, `review-personas.md`, `reader-promise-tracker.md`, and `drift-loop-alarm.md` into the active project.
+Use `/genesis-scaffold-templates` to copy core artifact templates such as `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-verification-matrix.md`, `argument-spine.md`, `certification-blueprint-map.md`, `research/reference-inventory.md`, `author-intent.md`, `taste-profile.md`, `risk-budget.md`, `review-personas.md`, `reader-promise-tracker.md`, and `drift-loop-alarm.md` into the active project.
 
 Use `/genesis-score-to-tickets` to convert score and audit findings into structured revision tickets.
+
+Use `/genesis-ai-thriller-review` to run a reusable publication-facing developmental review for AI thrillers, system thrillers, and near-future governance/automation novels. It uses `docs/ai-thriller-review-prompt.md` and `docs/ai-thriller-qa-checklist.md`, and writes the review to `artifacts/ai-thriller-review.md`.
+
+Use `/genesis-ai-thriller-fix` to run a prioritized repair pass after that review. It targets the highest-leverage issues first: middle-act stall, reveal fatigue, embodied consequence, system/authority clarity, character agency, opposition strength, ending shape, and continuity.
 
 Use `/genesis-audit-fluff` to run a focused anti-padding audit when a draft feels thin, repetitive, or suspiciously long for how little it changes.
 
@@ -405,6 +419,7 @@ Use this when you want to explicitly mark a project as:
 - study guide
 - certification prep
 - series installment
+- series repair
 - other
 
 When templates are available for the selected mode, Genesis can also scaffold those mode-specific starter files immediately.
@@ -446,6 +461,9 @@ Use this when you want to quickly create or replace structured starter files for
 - `revision-tickets.md`
 - `expansion-integrity.md`
 - `series-bible.md`
+- `canon-lock.md`
+- `installment-promise-tracker.md`
+- `series-verification-matrix.md`
 - `argument-spine.md`
 - `certification-blueprint-map.md`
 - `study-guide-objectives.md`
@@ -535,8 +553,33 @@ During intake, Genesis should record a workflow mode such as:
 - study guide
 - certification prep
 - series installment
+- series repair
 
-This helps the system decide whether to emphasize subplots, argument flow, reference integrity, objective coverage, or series continuity.
+This helps the system decide whether to emphasize subplots, argument flow, reference integrity, objective coverage, series continuity, or locked-canon verification and rewrite planning.
+
+### Offer this as a service
+
+Genesis also supports a **series repair** service model.
+
+Use it when:
+
+- Book 1 or another earlier installment is already published and cannot change
+- later books need verification, continuity repair, or full rewrites
+- you want a durable canon record before touching later manuscripts
+
+Recommended service flow:
+
+1. ingest the locked book(s)
+2. extract canon into `artifacts/series-bible.md` and `artifacts/canon-lock.md`
+3. reverse-outline the editable books
+4. track inherited obligations in `artifacts/installment-promise-tracker.md`
+5. compare each later book in `artifacts/series-verification-matrix.md`
+6. convert failures into `artifacts/revision-tickets.md`
+7. revise or rewrite only the editable installments
+
+This lets you sell verification, continuity cleanup, and rewrite planning without pretending every series starts from scratch.
+
+For a client-facing service outline, see `docs/series-repair-service.md`.
 
 ### Force explicit skill usage
 
@@ -629,8 +672,8 @@ Use tags or commit refs to keep machines pinned to the same version.
 - `book-genesis-codex.md` — legacy compatibility alias skill
 - `extensions/genesis.ts` — Pi-native commands including start, resume, doctor, lint, migrate, score-to-tickets, blockers, scaffolding, and next-step orchestration plus the `genesis_blocker_triage` tool
 - `references/` — pipeline prompts, scoring contract, reference docs, and templates
-- `references/templates/` — starter templates for voice, continuity, tickets, expansion integrity, author intent, taste, risk, review personas, reader promises, drift alarms, series, nonfiction, study-guide, and certification artifacts
-- `docs/` — best practices and troubleshooting notes
+- `references/templates/` — starter templates for voice, continuity, tickets, expansion integrity, author intent, taste, risk, review personas, reader promises, drift alarms, series, canon-lock, verification, nonfiction, study-guide, and certification artifacts
+- `docs/` — best practices, troubleshooting notes, service packaging guidance, and AI-thriller review aids
 - `examples/` — sample Genesis project trees for different workflow modes
 - `prompts/genesis-next-prompt.md` and `prompts/bg-next-prompt.md` — fallback prompt-template versions of `/genesis-next`
 - `agents/openai.yaml` — adapter metadata

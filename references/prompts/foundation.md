@@ -22,6 +22,7 @@ Create and update:
 - `artifacts/human-source-bank.md`
 - `artifacts/name-collision-audit.md`
 - `artifacts/name-entity-filter.md`
+- `artifacts/opposition-case.md`
 - `artifacts/06-emotional-curve.md`
 - `PROJECT_STATE.yaml`
 
@@ -34,6 +35,8 @@ Create and update:
 - define contradictions and relationship pressure
 - identify 2-3 potential subplot engines for book-length work, or the nonfiction equivalent: case-study lines, recurring questions, domain threads, or instructional pressure lines
 - make every subplot candidate or nonfiction thread serve character contradiction, theme, main-plot pressure, argument progression, reader transformation, or ending payoff
+- define the strongest good-faith case for each major antagonist, institutional foil, or opposition force in `artifacts/opposition-case.md`; the opposition should be partially right in a way that pressures the book
+- prevent pressure characters from becoming single-function devices; every major secondary character should have a private stake, a costly choice, and at least one scene not centered on correcting the protagonist
 - define a voice bible with concrete voice rules and anti-voice rules before drafting; use `references/templates/voice-bible.md` unless the project clearly needs a different structure
 - create an author voice fingerprint from author samples or stated taste; if no samples are available, ask once, then record assumptions and provisional voice risks
 - pause for writer approval after the first author voice fingerprint unless the user explicitly asks to continue without a gate
@@ -59,6 +62,9 @@ Create and update:
 - contradictions
 - relationship pressure that can carry a subplot
 - voice notes
+- private stake
+- costly choice potential
+- agency-before-cost note when a character may become the bodily or social proof of the system's harm
 
 For nonfiction, study guides, or certification books, replace or supplement character emphasis with key reader avatars, instructor voice, case-study roles, or stakeholder types when those are more structurally relevant.
 

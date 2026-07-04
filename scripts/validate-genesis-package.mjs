@@ -59,6 +59,9 @@ const templatePaths = [
   "references/templates/revision-tickets.md",
   "references/templates/expansion-integrity.md",
   "references/templates/series-bible.md",
+  "references/templates/canon-lock.md",
+  "references/templates/installment-promise-tracker.md",
+  "references/templates/series-verification-matrix.md",
   "references/templates/argument-spine.md",
   "references/templates/certification-blueprint-map.md",
   "references/templates/reference-inventory.md",
@@ -101,7 +104,9 @@ assert.ok(extension.includes('registerMigrateCommand("genesis-migrate"'), "exten
 assert.ok(existsSync(join(root, "scripts", "test-genesis-sample-projects.mjs")), "sample-project test script should exist");
 assert.ok(existsSync(join(root, "docs", "best-practices.md")), "best-practices doc should exist");
 assert.ok(existsSync(join(root, "docs", "troubleshooting.md")), "troubleshooting doc should exist");
+assert.ok(existsSync(join(root, "docs", "series-repair-service.md")), "series-repair service doc should exist");
 assert.ok(existsSync(join(root, "examples", "novel-project", "PROJECT_STATE.yaml")), "novel example project should exist");
 assert.ok(existsSync(join(root, "examples", "certification-prep-project", "PROJECT_STATE.yaml")), "certification example project should exist");
+assert.ok(existsSync(join(root, "examples", "series-repair-project", "PROJECT_STATE.yaml")), "series-repair example project should exist");
 
 console.log("Genesis package validation passed.");

@@ -77,6 +77,19 @@ try {
   assert.ok(bundleTemplates.includes("artifacts/drift-loop-alarm.md"), "mode bundle should include drift-loop alarm");
   assert.ok(bundleTemplates.includes("artifacts/reader-promise-tracker.md"), "mode bundle should include reader-promise-tracker");
 
+  const seriesRepairTemplates = helpers.getModeTemplateEntries("series repair").map((item) => item.destination).sort();
+  assert.deepEqual(seriesRepairTemplates, [
+    "artifacts/canon-lock.md",
+    "artifacts/installment-promise-tracker.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/series-bible.md",
+    "artifacts/series-verification-matrix.md",
+  ]);
+
+  const seriesRepairBundle = helpers.getModeBundleEntries("series repair").map((item) => item.destination).sort();
+  assert.ok(seriesRepairBundle.includes("artifacts/canon-lock.md"), "series repair bundle should include canon-lock");
+  assert.ok(seriesRepairBundle.includes("artifacts/series-verification-matrix.md"), "series repair bundle should include verification matrix");
+
   const validation = helpers.renderValidationReport(cert);
   assert.ok(validation.includes("Mode-specific missing artifacts: 5"), "validation should count missing mode artifacts");
 

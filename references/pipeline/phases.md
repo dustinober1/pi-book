@@ -34,6 +34,12 @@
 - emotional curve
 - opening strategy
 - ending promise
+- recurring formal device tracker (if applicable)
+- technical seed map (for speculative fiction / thrillers)
+- system rule sheet (for speculative fiction / techno-thrillers)
+- authority chain map (for institutional intervention plausibility)
+- opposition case (for major foils / antagonists)
+- domain plausibility audit (for fiction with technical dependencies)
 
 ## Phase 3: Drafting
 
@@ -56,6 +62,12 @@
 - run subtext, read-aloud ear, and over-polish audits to protect author fingerprint and reader trust
 - pressure-test the manuscript against review personas so false notes and workshop-clean generic prose get caught before scoring
 - run creative sovereignty, scene embodiment, negative capability, expansion integrity, and revision philosophy passes
+- run domain plausibility audit for fiction with technical, medical, legal, or institutional dependencies
+- run system and authority clarity audit for late-appearing capabilities, unclear access, unclear governance, and unclear intervention chains
+- run opposition positive-case audit so major foils protect something real and are right about something costly
+- run agency-before-cost audit so harmed characters are not reduced to proof devices
+- run publication-shape audit so endings are not only morally right but structurally right for standalone vs series and commercial vs literary balance
+- run setting variety and ordinary-life audit to ensure grounding scenes outside high-stakes analytical spaces
 - convert findings into revision tickets
 - cut, merge, reorder, or rewrite when needed
 
@@ -69,6 +81,6 @@
 
 - synopses
 - cover brief
-- formatting package
+- formatting package with manuscript formatting checklist and word count verification
 - positioning strategy
 - reader response plan and beta feedback log

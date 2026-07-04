@@ -129,6 +129,7 @@ const WORKFLOW_MODES = [
   "study guide",
   "certification prep",
   "series installment",
+  "series repair",
   "other",
 ];
 
@@ -139,6 +140,13 @@ const MODE_ARTIFACTS = {
   novel: ["artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md"],
   memoir: ["artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md"],
   "series installment": ["artifacts/series-bible.md", "artifacts/reader-promise-tracker.md"],
+  "series repair": [
+    "artifacts/series-bible.md",
+    "artifacts/canon-lock.md",
+    "artifacts/installment-promise-tracker.md",
+    "artifacts/series-verification-matrix.md",
+    "artifacts/reader-promise-tracker.md",
+  ],
   "narrative nonfiction": ["artifacts/argument-spine.md", "research/reference-inventory.md", "artifacts/reader-promise-tracker.md"],
   "prescriptive nonfiction": ["artifacts/argument-spine.md", "research/reference-inventory.md", "artifacts/reader-promise-tracker.md"],
   "study guide": ["artifacts/study-guide-objectives.md", "research/reference-inventory.md", "artifacts/reader-promise-tracker.md"],
@@ -202,6 +210,15 @@ const MODE_SCAFFOLD_BUNDLES = {
     "artifacts/reader-promise-tracker.md",
     "artifacts/drift-loop-alarm.md",
   ],
+  "series repair": [
+    "artifacts/series-bible.md",
+    "artifacts/canon-lock.md",
+    "artifacts/installment-promise-tracker.md",
+    "artifacts/series-verification-matrix.md",
+    "artifacts/continuity-ledger.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/drift-loop-alarm.md",
+  ],
   other: ["artifacts/review-personas.md", "artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md"],
 };
 
@@ -211,6 +228,9 @@ const TEMPLATE_SCAFFOLDS = [
   { label: "revision-tickets.md", template: "references/templates/revision-tickets.md", destination: "artifacts/revision-tickets.md" },
   { label: "expansion-integrity.md", template: "references/templates/expansion-integrity.md", destination: "artifacts/expansion-integrity.md" },
   { label: "series-bible.md", template: "references/templates/series-bible.md", destination: "artifacts/series-bible.md" },
+  { label: "canon-lock.md", template: "references/templates/canon-lock.md", destination: "artifacts/canon-lock.md" },
+  { label: "installment-promise-tracker.md", template: "references/templates/installment-promise-tracker.md", destination: "artifacts/installment-promise-tracker.md" },
+  { label: "series-verification-matrix.md", template: "references/templates/series-verification-matrix.md", destination: "artifacts/series-verification-matrix.md" },
   { label: "argument-spine.md", template: "references/templates/argument-spine.md", destination: "artifacts/argument-spine.md" },
   { label: "certification-blueprint-map.md", template: "references/templates/certification-blueprint-map.md", destination: "artifacts/certification-blueprint-map.md" },
   { label: "reference-inventory.md", template: "references/templates/reference-inventory.md", destination: "research/reference-inventory.md" },
@@ -995,7 +1015,7 @@ function initializeProject(root, projectName, idea) {
 
   writeIfMissing(
     join(root, "ASSUMPTIONS.md"),
-    `# Assumptions\n\n## Explicit user input\n\n- Project: ${projectName}\n- Seed idea: ${idea || "Not provided yet."}\n\n## Inferred assumptions\n\n- Language: unknown\n- Genre: unknown\n- Audience: unknown\n- Target length: unknown\n- Narrative mode: unknown\n- Workflow mode: unknown (novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, other)\n\nMark each assumption as confirmed, provisional, or rejected during Phase 0.\n`,
+    `# Assumptions\n\n## Explicit user input\n\n- Project: ${projectName}\n- Seed idea: ${idea || "Not provided yet."}\n\n## Inferred assumptions\n\n- Language: unknown\n- Genre: unknown\n- Audience: unknown\n- Target length: unknown\n- Narrative mode: unknown\n- Workflow mode: unknown (novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, series repair, other)\n\nMark each assumption as confirmed, provisional, or rejected during Phase 0.\n`,
   );
 
   writeIfMissing(join(root, "artifacts", "00-brief.md"), `# Brief\n\n## Original idea\n\n${idea || "Add the writer's seed idea here."}\n\n## Intake scaffold\n\n- Language:\n- Genre:\n- Audience:\n- Target length:\n- Narrative mode:\n- Workflow mode:\n- Reader promise:\n`);
@@ -1118,6 +1138,91 @@ function buildScoreToTicketsPrompt(root) {
     "Required outputs:",
     "- update artifacts/revision-tickets.md with issue, evidence, affected files, severity, repair type, owner phase, and status",
     "- if scoring evidence is weak, note that explicitly instead of inventing certainty",
+  ].join("\n");
+}
+
+function buildAiThrillerReviewPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run a publication-facing developmental review for an AI thriller, system thriller, or near-future governance/automation novel.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Read these first when present:",
+    "- docs/ai-thriller-review-prompt.md",
+    "- docs/ai-thriller-qa-checklist.md",
+    "- manuscript/chapters/",
+    "- artifacts/publication-shape.md",
+    "- artifacts/system-rule-sheet.md",
+    "- artifacts/authority-chain-map.md",
+    "- artifacts/opposition-case.md",
+    "- artifacts/continuity-ledger.md",
+    "- artifacts/revision-tickets.md",
+    "",
+    "Focus the review on:",
+    "- middle-act repetition or stall",
+    "- protagonist withholding as a plot engine",
+    "- reveal fatigue / too many hidden layers",
+    "- embodied consequence versus screen-based diagnosis",
+    "- system-rule clarity",
+    "- authority-chain plausibility",
+    "- governance / organizational clarity",
+    "- character voice differentiation",
+    "- agency-before-cost for harmed or beneficiary characters",
+    "- opposition positive-case strength",
+    "- prose over-concentration and repeated verdict lines",
+    "- climax technical clarity",
+    "- ending shape: standalone vs series, moral resolution vs publication-strength closure",
+    "- continuity and domain plausibility risks",
+    "",
+    "Required outputs:",
+    "- write the review to artifacts/ai-thriller-review.md",
+    "- create or update artifacts/revision-tickets.md for any concrete high-leverage fixes",
+    "- if the review finds publication-shape or authority/system clarity problems, reflect them in the matching artifacts instead of leaving them only in prose",
+    "",
+    "Use the structure and standards in docs/ai-thriller-review-prompt.md.",
+  ].join("\n");
+}
+
+function buildAiThrillerFixPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run a prioritized repair pass for an AI thriller, system thriller, or near-future governance/automation novel.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Read these first when present:",
+    "- artifacts/ai-thriller-review.md",
+    "- docs/ai-thriller-review-prompt.md",
+    "- docs/ai-thriller-qa-checklist.md",
+    "- artifacts/revision-tickets.md",
+    "- artifacts/publication-shape.md",
+    "- artifacts/system-rule-sheet.md",
+    "- artifacts/authority-chain-map.md",
+    "- artifacts/opposition-case.md",
+    "- artifacts/continuity-ledger.md",
+    "- artifacts/expansion-integrity.md",
+    "- manuscript/chapters/",
+    "",
+    "Repair priorities:",
+    "1. middle-act repetition and withholding-stall",
+    "2. reveal consolidation and embodied consequence",
+    "3. system-rule and authority-chain clarity",
+    "4. character voice differentiation and agency-before-cost",
+    "5. opposition positive-case and ending publication shape",
+    "6. continuity and domain plausibility fixes",
+    "",
+    "Rules:",
+    "- make the highest-leverage fixes first; do not do cosmetic cleanup before structural repair",
+    "- update artifacts/revision-tickets.md as tickets are fixed, deferred, or split",
+    "- update matching artifacts when a repair changes system rules, authority logic, opposition framing, publication shape, or continuity",
+    "- if the fix scope is too large for one pass, complete the most important repair cluster and leave the next cluster as explicit open tickets",
+    "- preserve the morally difficult parts that make the book distinct; do not flatten the system into a generic evil AI",
+    "",
+    "Required outputs:",
+    "- repair the manuscript and supporting artifacts where the fixes are clear and high-leverage",
+    "- update artifacts/revision-tickets.md with current statuses",
+    "- update PROJECT_STATE.yaml and STATUS.md to reflect the repair pass",
   ].join("\n");
 }
 
@@ -1247,6 +1352,28 @@ export default function (pi) {
   const registerScoreToTicketsCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
     const root = findProjectRoot(ctx.cwd);
     const message = buildScoreToTicketsPrompt(root);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerAiThrillerReviewCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const message = buildAiThrillerReviewPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerAiThrillerFixCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const message = buildAiThrillerFixPrompt(root, args);
     if (!ctx.isIdle()) {
       pi.sendUserMessage(message, { deliverAs: "followUp" });
       ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
@@ -1411,6 +1538,10 @@ export default function (pi) {
   registerTemplateCommand("bg-scaffold-templates", "Legacy alias for /genesis-scaffold-templates");
   registerScoreToTicketsCommand("genesis-score-to-tickets", "Convert Genesis score and audit findings into revision tickets");
   registerScoreToTicketsCommand("bg-score-to-tickets", "Legacy alias for /genesis-score-to-tickets");
+  registerAiThrillerReviewCommand("genesis-ai-thriller-review", "Run a publication-facing developmental review for an AI thriller or system-driven novel");
+  registerAiThrillerReviewCommand("bg-ai-thriller-review", "Legacy alias for /genesis-ai-thriller-review");
+  registerAiThrillerFixCommand("genesis-ai-thriller-fix", "Run a prioritized repair pass for an AI thriller or system-driven novel");
+  registerAiThrillerFixCommand("bg-ai-thriller-fix", "Legacy alias for /genesis-ai-thriller-fix");
   registerFluffAuditCommand("genesis-audit-fluff", "Run a focused anti-padding audit for fluff, filler scenes, and ornamental subplots");
   registerFluffAuditCommand("bg-audit-fluff", "Legacy alias for /genesis-audit-fluff");
 }

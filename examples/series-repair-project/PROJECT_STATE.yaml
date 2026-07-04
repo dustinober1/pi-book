@@ -1,0 +1,4 @@
+project_name: "Example Series Repair"
+current_phase: "Phase 2: Architecture"
+workflow_mode: "series repair"
+status: "example"

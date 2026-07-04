@@ -70,4 +70,6 @@ Save everything to `artifacts/10-editorial-package.md`.
 - positioning strategy must separate the book itself from the sales story: author positioning, audience promise, comparable shelf, memorable one-sentence hook, taboo claims to avoid, and what not to over-market
 - the cover brief must communicate genre, tone, and audience quickly
 - formatting notes must cover ebook and print readiness
+- manuscript formatting checklist must verify word count accuracy, title page correctness, formatting consistency, metadata scrub, and code-fence/log formatting using `references/templates/manuscript-formatting-checklist.md`
+- domain plausibility audit summary must report `artifacts/domain-plausibility-audit.md` findings for any fiction with technical, medical, legal, or institutional dependencies, including flagged claims, review status, and unverified risks
 - query strategy must identify how to pitch the book without inflated claims

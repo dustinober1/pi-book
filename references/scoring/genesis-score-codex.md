@@ -33,7 +33,7 @@ Before approval, read `artifacts/author-voice-fingerprint.md`. Missing or ignore
 
 Before approval, read `artifacts/subtext-audit.md`, `artifacts/ear-pass.md`, and `artifacts/over-polish-audit.md`. Unresolved over-explanation, too-direct dialogue, unnatural rhythm, assistant-like exposition, or over-polishing that erases author voice prevents approval unless fixed, deferred with rationale, or accepted as deliberate risk.
 
-Before approval, read `artifacts/author-intent.md`, `artifacts/taste-profile.md`, `artifacts/risk-budget.md`, `artifacts/discarded-choices.md`, `artifacts/scene-embodiment-map.md`, `artifacts/negative-capability-audit.md`, and `artifacts/revision-philosophy.md`. Unresolved creative sovereignty failures, erased author intent, ignored taste constraints, accidental risk, disembodied scenes, false opacity, or over-explained ambiguity prevent approval unless fixed, deferred with rationale, or accepted as deliberate risk.
+Before approval, read `artifacts/author-intent.md`, `artifacts/taste-profile.md`, `artifacts/risk-budget.md`, `artifacts/discarded-choices.md`, `artifacts/scene-embodiment-map.md`, `artifacts/negative-capability-audit.md`, `artifacts/revision-philosophy.md`, `artifacts/system-rule-sheet.md`, `artifacts/authority-chain-map.md`, `artifacts/opposition-case.md`, and `artifacts/publication-shape.md`. Unresolved creative sovereignty failures, erased author intent, ignored taste constraints, accidental risk, disembodied scenes, false opacity, over-soft publication shape, unclear system rules, unclear authority chains, or weak opposition positive-case prevent approval unless fixed, deferred with rationale, or accepted as deliberate risk.
 
 ## Dimensions
 
@@ -195,8 +195,8 @@ Approval requires all of the following:
 - evidence present for every dimension
 - adversarial audit not marked `MAJOR REWRITE`
 - causality-chain.md has no major and-then gaps or removable scenes without consequence
-- voice-bible.md has no unresolved anti-voice violations in core prose samples
-- continuity-ledger.md is current and not contradicted by the manuscript
+- voice-bible.md has no unresolved anti-voice violations in core prose samples, and per-character pressure language is established for all major characters
+- continuity-ledger.md is current, not contradicted by the manuscript, and its canonical-name-lock table is verified against all manuscript occurrences
 - reader-promise-tracker.md has no broken or abandoned major promise
 - evaluations/chapter-scorecards.md covers every chapter
 - drift-loop-alarm.md has no active hard stop without rationale
@@ -207,8 +207,13 @@ Approval requires all of the following:
 - ear-pass.md has no unresolved blocker for clustered repeated sentence shapes, unnatural dialogue, assistant-like exposition, or too-smooth rhythm
 - over-polish-audit.md has no unresolved blocker where revision erased author fingerprint or replaced AI tells with anti-AI tells
 - author-intent.md, taste-profile.md, risk-budget.md, and discarded-choices.md have no unresolved creative sovereignty blocker where the process erased authorial intent, ignored taste, flattened intentional risk, or reintroduced rejected choices without rationale
-- scene-embodiment-map.md has no unresolved blocker for disembodied scenes
+- scene-embodiment-map.md has no unresolved blocker for disembodied or static scenes
+- domain-plausibility-audit.md has no unresolved blocker for plot-critical domain claims without expert review
 - negative-capability-audit.md has no unresolved blocker for over-explained ambiguity, false opacity, or lesson-shaped reduction of residue
+- system-rule-sheet.md has no unresolved blocker for late-appearing capabilities, unclear limits, unclear shutdown logic, or emergency exceptions without prior seeding
+- authority-chain-map.md has no unresolved blocker for institutional intervention plausibility, unclear access, or unclear human decision points
+- opposition-case.md has no unresolved blocker where a major foil lacks a coherent positive case
+- publication-shape.md has no unresolved blocker for ending softness, unclear standalone-vs-series promise, or containment without irreversible external consequence when required
 - revision-philosophy.md defines what must be preserved and the order of operations for any required revision
 - name-collision-audit.md has no unresolved web-backed collision risk, finalized `web_blocked` names, high-risk IP overlap, or rejected names still present in prose
 - name-entity-filter.md has no unresolved AI-default, generic, over-symbolic, fantasy-random, thriller-cliche, placeholder TV drama, cool-but-empty, phonetic-logic, or rejected alternatives failure
@@ -250,8 +255,13 @@ The final report saved to `artifacts/09-genesis-score.md` must include:
 - over-polish audit verdict
 - creative sovereignty verdict
 - scene embodiment verdict
+- domain plausibility verdict
 - negative capability verdict
 - revision philosophy verdict
+- system rule sheet verdict
+- authority chain verdict
+- opposition case verdict
+- publication shape verdict
 - name collision audit verdict
 - name entity filter verdict
 - human specificity ledger verdict

@@ -18,6 +18,8 @@ Create and update:
 - `artifacts/reader-promise-tracker.md`
 - `artifacts/drift-loop-alarm.md`
 - `artifacts/expansion-integrity.md`
+- `artifacts/authority-chain-map.md`
+- `artifacts/system-rule-sheet.md`
 - `artifacts/07-opening-strategy.md`
 - `PROJECT_STATE.yaml`
 
@@ -32,13 +34,20 @@ Create and update:
 - give each subplot a dramatic question, escalation path, convergence point, and payoff before drafting begins
 - ensure each subplot changes the main plot, character choice, thematic pressure, or ending; cut or merge ornamental subplots
 - initialize `artifacts/continuity-ledger.md` with every fact the drafting phase must preserve; use `references/templates/continuity-ledger.md` unless the project clearly needs a different structure
+- for series repair work, reverse-outline the locked and editable books before major rewriting, then initialize `artifacts/canon-lock.md`, `artifacts/installment-promise-tracker.md`, and `artifacts/series-verification-matrix.md` so architecture changes can be tested against published canon
 - initialize `artifacts/reader-promise-tracker.md` with every promise the book is making to the reader, including learning, transformation, exam-readiness, or series-continuity promises when relevant
 - initialize `artifacts/drift-loop-alarm.md` with hard stop conditions for drift, loops, no-state-change chapters, reopened tickets, phase mismatch, false productivity, and filler expansion
 - create `artifacts/expansion-integrity.md` whenever target length, trim pressure, or pacing concerns suggest the manuscript may need expansion; use `references/templates/expansion-integrity.md` unless the project clearly needs a different structure, and ensure expansion comes from consequence, not padding
+- create `artifacts/recurring-formal-device-tracker.md` if the manuscript uses distinctive structural devices (logs, epistolary sections, data dumps, alternate POV chapters, in-world documents); use `references/templates/recurring-formal-device-tracker.md` and track each occurrence's function, escalation, and compression
+- create `artifacts/technical-seed-map.md` for speculative fiction, thrillers, or any book whose climax depends on a specific technical or conceptual mechanism; use `references/templates/technical-seed-map.md` and plan when key concepts are introduced, deepened, and made operational
+- create `artifacts/domain-plausibility-audit.md` for fiction that depends on technical, medical, legal, scientific, or institutional credibility; use `references/templates/domain-plausibility-audit.md` and flag plot-critical claims that will need expert review
+- create `artifacts/system-rule-sheet.md` for speculative fiction and techno-thrillers so the system's capabilities, limits, authority surfaces, legacy exceptions, and shutdown logic are defined before drafting
+- create `artifacts/authority-chain-map.md` for books involving institutional interventions, platforms, healthcare, welfare checks, moderation, compliance, or crisis escalation so every major intervention has a visible authority chain
 - include a visible tension map, learning-pressure map, or argument-pressure map
 - define an opening strategy that promises what the book will actually deliver
 - map physical scene embodiment before drafting so scenes are not only conversations about meaning
 - preserve intentional ambiguity, weirdness, and residue from `artifacts/risk-budget.md` rather than forcing every beat into clean explanation
+- consolidate reveal architecture: do not build the middle around endless sequential subsystem reveals; group reveals into fewer, more powerful turns that change the game rather than merely deepen the file
 
 ## Outline Requirements
 
@@ -51,6 +60,7 @@ Create and update:
 - central conflict
 - ending turn
 - tension map
+- for series repair work, a clear distinction between inherited canon beats, preserved beats, rebuilt beats, and newly proposed replacement beats
 
 ## Scene Embodiment Map Requirements
 
@@ -109,6 +119,8 @@ For study guides and certification books, those recurring pressure lines may be 
 - open continuity risks that need attention during drafting
 
 Keep the ledger concise enough to update after every chapter block.
+
+For series repair work, split continuity into at least two layers: immutable canon inherited from locked books and mutable continuity inside the current installment repair.
 
 ## Reader Promise Tracker Requirements
 

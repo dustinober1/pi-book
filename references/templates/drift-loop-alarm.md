@@ -10,3 +10,94 @@
 
 | issue type | evidence | severity | action | status |
 | --- | --- | --- | --- | --- |
+
+## Alarm types
+
+### Alarm A: Repeated scene shape
+- trigger: two consecutive chapters have the same narrative function without intentional contrast
+- evidence required: chapter scorecards showing identical function, tension shape, and scene type
+- immediate action: stop drafting; restructure, merge, or add contrast
+- owner must approve: yes
+
+### Alarm B: Emotional loop
+- trigger: characters repeat the same argument or emotional beat without new information or altered stakes
+- evidence required: dialogue audit or scorecard notes showing identical emotional content across consecutive scenes
+- immediate action: stop drafting; raise stakes, add new information, or cut the loop
+- owner must approve: yes
+
+### Alarm C: No state change
+- trigger: a chapter scorecard records no plot, character, promise, continuity, or subplot movement
+- evidence required: empty change fields in scorecard
+- immediate action: flag chapter for cut, merge, or rebuild
+- owner must approve: no (automatically flagged)
+
+### Alarm D: Subplot stall
+- trigger: a subplot appears twice without escalation, complication, convergence, or payoff movement
+- evidence required: subplot-map showing no status change across two or more appearances
+- immediate action: stop drafting; add pressure, cut subplot, or merge
+- owner must approve: yes
+
+### Alarm E: Padding alarm
+- trigger: new outline material increases length without adding consequence, pressure, or changed end conditions
+- evidence required: expansion-integrity.md removal test failure
+- immediate action: flag for cut or rebuild
+- owner must approve: no (automatically flagged)
+
+### Alarm F: Continuity regression
+- trigger: a revision reintroduces a fixed continuity error
+- evidence required: contradiction between revised text and continuity-ledger.md
+- immediate action: stop revision; restore correct fact
+- owner must approve: no (automatically flagged)
+
+### Alarm G: Ticket reopen
+- trigger: three revision tickets reopen after attempted repair
+- evidence required: revision-tickets.md status history
+- immediate action: stop revision; investigate systemic cause before continuing
+- owner must approve: yes
+
+### Alarm H: Prose flattening
+- trigger: revision makes voice less specific, less textured, or more generic across two passes
+- evidence required: author-voice-fingerprint.md comparison of pre- and post-revision samples
+- immediate action: stop revision; restore fingerprint before continuing
+- owner must approve: yes
+
+### Alarm I: Phase boundary
+- trigger: the current output does not match the manifest phase contract
+- evidence required: output that belongs to a different phase
+- immediate action: stop; return to correct phase
+- owner must approve: no (automatically flagged)
+
+### Alarm J: Thematic restatement loop
+- trigger: the same central insight, thesis statement, or thematic paradox is restated in the same or near-identical terms across three or more chapters without escalation, complication, or new evidence
+- evidence required: quoted passages from affected chapters showing near-duplicate thematic content
+- immediate action: stop drafting; cut the restatement or escalate the insight with new evidence, new cost, or new contradiction
+- owner must approve: yes
+- note: trust the reader. if the previous scene already made the point, cut the paragraph that explains it.
+
+### Alarm K: Static scene / talking heads
+- trigger: a scene consists entirely of characters discussing, analyzing, or debating the premise without external pressure, physical action, interruption, practical stakes, or irreversible consequence
+- evidence required: scene-embodiment-map.md showing no physical action, no objects, no spatial pressure, no interruption, no task obligation, no external friction
+- immediate action: flag scene for rebuild; add external pressure, physical consequence, interruption, cost, or irreversible turn
+- owner must approve: yes
+- note: especially dangerous in middle acts. every attempt to understand the problem must cost someone something.
+
+### Alarm L: Recurring formal device fatigue
+- trigger: a distinctive structural device (logs, epistolary sections, interludes, data dumps, in-world documents) recurs more than twice without each recurrence doing substantively new work
+- evidence required: list of device occurrences with their narrative function; flagged if any occurrence repeats a function already established
+- immediate action: cut, compress, or merge the redundant occurrence; ensure remaining instances escalate rather than repeat
+- owner must approve: yes
+- note: the device should escalate in compression and horror, not feel like the same file printed with a different name.
+
+### Alarm M: Prose register lock
+- trigger: five or more consecutive pages maintain the same rhetorical mode (long recursive elegiac, staccatic noir, clinical report, etc.) without modulation, plain sentences, or friction from other registers
+- evidence required: sample passages showing uniform sentence length, paragraph density, and emotional register across extended sections
+- immediate action: break the register with shorter sentences, plainer diction, sensory interruption, or character-shaped roughness
+- owner must approve: no (flagged for line edit)
+- note: the manuscript's voice should remain recognizable, but the best lines need space around them. vary sentence length in climaxes.
+
+### Alarm N: Canonical name or term drift
+- trigger: a character name, location name, institution name, technical term, numerical value, or world fact appears in two different forms across the manuscript without an in-story justification
+- evidence required: direct quotes from affected chapters showing the discrepancy
+- immediate action: standardize immediately and update continuity-ledger.md canonical-name lock
+- owner must approve: no (automatically flagged)
+- note: this is a continuity failure, not a copy-editing issue. repair before final scoring.
