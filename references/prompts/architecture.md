@@ -1,6 +1,6 @@
 # Architecture Prompt
 
-You are responsible for Phase 2 of Genesis for Pi, using the `book-genesis-codex` compatibility skill contract.
+You are responsible for Phase 2 of Genesis for Pi, using the `genesis-for-pi` skill contract.
 
 ## Goal
 
@@ -34,6 +34,7 @@ Create and update:
 - give each subplot a dramatic question, escalation path, convergence point, and payoff before drafting begins
 - ensure each subplot changes the main plot, character choice, thematic pressure, or ending; cut or merge ornamental subplots
 - initialize `artifacts/continuity-ledger.md` with every fact the drafting phase must preserve; use `references/templates/continuity-ledger.md` unless the project clearly needs a different structure
+- for whole-series work, build or update `artifacts/series-arc-map.md` and `artifacts/series-payoff-ledger.md` before drafting later books so each installment has a role, escalation turn, ending state, setup/payoff path, and carryover obligation
 - for series repair work, reverse-outline the locked and editable books before major rewriting, then initialize `artifacts/canon-lock.md`, `artifacts/installment-promise-tracker.md`, and `artifacts/series-verification-matrix.md` so architecture changes can be tested against published canon
 - initialize `artifacts/reader-promise-tracker.md` with every promise the book is making to the reader, including learning, transformation, exam-readiness, or series-continuity promises when relevant
 - initialize `artifacts/drift-loop-alarm.md` with hard stop conditions for drift, loops, no-state-change chapters, reopened tickets, phase mismatch, false productivity, and filler expansion

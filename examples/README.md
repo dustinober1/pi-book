@@ -2,6 +2,7 @@
 
 These example trees show the expected shape of Genesis for Pi projects.
 
+- `prd-first-project/` — a golden PRD-first writer-automation fixture with PRD score, gap report, writer questions, persona panel, stress test, and regression check
 - `novel-project/` — a fiction-oriented starter tree
 - `certification-prep-project/` — a study/certification-oriented starter tree
 - `series-repair-project/` — a locked-canon series verification and rewrite-planning starter tree

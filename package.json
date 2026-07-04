@@ -1,7 +1,7 @@
 {
   "name": "genesis-for-pi",
-  "version": "0.2.0",
-  "description": "Genesis for Pi: an extension-first Book Genesis workflow with doctor, resume, migration, linting, scoring utilities, blocker-clearing commands, voice protection, audits, Genesis Score, and editorial packaging.",
+  "version": "0.4.0",
+  "description": "Genesis for Pi: an extension-first Book Genesis workflow with PRD-first intake, writer-gated automation, single-book and whole-series commands, blocker clearing, voice protection, audits, Genesis Score, and editorial packaging.",
   "private": true,
   "repository": {
     "type": "git",
@@ -42,7 +42,6 @@
   },
   "files": [
     "SKILL.md",
-    "book-genesis-codex.md",
     "agents/",
     "references/",
     "prompts/",

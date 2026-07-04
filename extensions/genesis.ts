@@ -102,7 +102,7 @@ const DEFAULT_PHASE_DEFINITIONS = [
   {
     key: "phase_5_final_score",
     label: "Phase 5: Final Score",
-    prompt: "references/scoring/genesis-score-codex.md",
+    prompt: "references/scoring/genesis-score.md",
     gate: "final_score",
     outputs: ["artifacts/09-genesis-score.md"],
     next: "Phase 6: Editorial Package",
@@ -136,16 +136,53 @@ const WORKFLOW_MODES = [
 
 const CORE_PROJECT_FILES = ["PROJECT_STATE.yaml", "ASSUMPTIONS.md", "STATUS.md"];
 const PROJECT_ROOT_DIRS = ["artifacts", "manuscript/chapters", "evaluations", "delivery", "research/notes", "research/sources"];
+const SERIES_ROOT_DIRS = ["artifacts", "books", "evaluations", "delivery", "research/notes", "research/sources"];
+const SERIES_ARTIFACTS = [
+  "artifacts/series-bible.md",
+  "artifacts/series-arc-map.md",
+  "artifacts/series-timeline.md",
+  "artifacts/character-state-matrix.md",
+  "artifacts/reveal-spoiler-matrix.md",
+  "artifacts/canon-lock.md",
+  "artifacts/installment-promise-tracker.md",
+  "artifacts/series-payoff-ledger.md",
+  "artifacts/series-verification-matrix.md",
+  "artifacts/retcon-log.md",
+  "artifacts/series-repetition-radar.md",
+  "artifacts/continuity-ledger.md",
+  "artifacts/reader-promise-tracker.md",
+  "artifacts/drift-loop-alarm.md",
+];
 
 const MODE_ARTIFACTS = {
   novel: ["artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md"],
   memoir: ["artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md"],
-  "series installment": ["artifacts/series-bible.md", "artifacts/reader-promise-tracker.md"],
+  "series installment": [
+    "artifacts/series-bible.md",
+    "artifacts/series-arc-map.md",
+    "artifacts/series-timeline.md",
+    "artifacts/character-state-matrix.md",
+    "artifacts/reveal-spoiler-matrix.md",
+    "artifacts/installment-promise-tracker.md",
+    "artifacts/series-payoff-ledger.md",
+    "artifacts/retcon-log.md",
+    "artifacts/series-repetition-radar.md",
+    "artifacts/book-handoff-packet.md",
+    "artifacts/reader-promise-tracker.md",
+  ],
   "series repair": [
     "artifacts/series-bible.md",
+    "artifacts/series-arc-map.md",
+    "artifacts/series-timeline.md",
+    "artifacts/character-state-matrix.md",
+    "artifacts/reveal-spoiler-matrix.md",
     "artifacts/canon-lock.md",
     "artifacts/installment-promise-tracker.md",
+    "artifacts/series-payoff-ledger.md",
     "artifacts/series-verification-matrix.md",
+    "artifacts/retcon-log.md",
+    "artifacts/series-repetition-radar.md",
+    "artifacts/book-handoff-packet.md",
     "artifacts/reader-promise-tracker.md",
   ],
   "narrative nonfiction": ["artifacts/argument-spine.md", "research/reference-inventory.md", "artifacts/reader-promise-tracker.md"],
@@ -207,15 +244,32 @@ const MODE_SCAFFOLD_BUNDLES = {
   ],
   "series installment": [
     "artifacts/series-bible.md",
+    "artifacts/series-arc-map.md",
+    "artifacts/series-timeline.md",
+    "artifacts/character-state-matrix.md",
+    "artifacts/reveal-spoiler-matrix.md",
+    "artifacts/installment-promise-tracker.md",
+    "artifacts/series-payoff-ledger.md",
+    "artifacts/retcon-log.md",
+    "artifacts/series-repetition-radar.md",
+    "artifacts/book-handoff-packet.md",
     "artifacts/continuity-ledger.md",
     "artifacts/reader-promise-tracker.md",
     "artifacts/drift-loop-alarm.md",
   ],
   "series repair": [
     "artifacts/series-bible.md",
+    "artifacts/series-arc-map.md",
+    "artifacts/series-timeline.md",
+    "artifacts/character-state-matrix.md",
+    "artifacts/reveal-spoiler-matrix.md",
     "artifacts/canon-lock.md",
     "artifacts/installment-promise-tracker.md",
+    "artifacts/series-payoff-ledger.md",
     "artifacts/series-verification-matrix.md",
+    "artifacts/retcon-log.md",
+    "artifacts/series-repetition-radar.md",
+    "artifacts/book-handoff-packet.md",
     "artifacts/continuity-ledger.md",
     "artifacts/reader-promise-tracker.md",
     "artifacts/drift-loop-alarm.md",
@@ -229,9 +283,18 @@ const TEMPLATE_SCAFFOLDS = [
   { label: "revision-tickets.md", template: "references/templates/revision-tickets.md", destination: "artifacts/revision-tickets.md" },
   { label: "expansion-integrity.md", template: "references/templates/expansion-integrity.md", destination: "artifacts/expansion-integrity.md" },
   { label: "series-bible.md", template: "references/templates/series-bible.md", destination: "artifacts/series-bible.md" },
+  { label: "series-arc-map.md", template: "references/templates/series-arc-map.md", destination: "artifacts/series-arc-map.md" },
+  { label: "series-timeline.md", template: "references/templates/series-timeline.md", destination: "artifacts/series-timeline.md" },
+  { label: "character-state-matrix.md", template: "references/templates/character-state-matrix.md", destination: "artifacts/character-state-matrix.md" },
+  { label: "reveal-spoiler-matrix.md", template: "references/templates/reveal-spoiler-matrix.md", destination: "artifacts/reveal-spoiler-matrix.md" },
   { label: "canon-lock.md", template: "references/templates/canon-lock.md", destination: "artifacts/canon-lock.md" },
   { label: "installment-promise-tracker.md", template: "references/templates/installment-promise-tracker.md", destination: "artifacts/installment-promise-tracker.md" },
+  { label: "series-payoff-ledger.md", template: "references/templates/series-payoff-ledger.md", destination: "artifacts/series-payoff-ledger.md" },
   { label: "series-verification-matrix.md", template: "references/templates/series-verification-matrix.md", destination: "artifacts/series-verification-matrix.md" },
+  { label: "retcon-log.md", template: "references/templates/retcon-log.md", destination: "artifacts/retcon-log.md" },
+  { label: "series-repetition-radar.md", template: "references/templates/series-repetition-radar.md", destination: "artifacts/series-repetition-radar.md" },
+  { label: "book-handoff-packet.md", template: "references/templates/book-handoff-packet.md", destination: "artifacts/book-handoff-packet.md" },
+  { label: "series-regression-check.md", template: "references/templates/series-regression-check.md", destination: "evaluations/series-regression-check.md" },
   { label: "argument-spine.md", template: "references/templates/argument-spine.md", destination: "artifacts/argument-spine.md" },
   { label: "certification-blueprint-map.md", template: "references/templates/certification-blueprint-map.md", destination: "artifacts/certification-blueprint-map.md" },
   { label: "reference-inventory.md", template: "references/templates/reference-inventory.md", destination: "research/reference-inventory.md" },
@@ -243,6 +306,22 @@ const TEMPLATE_SCAFFOLDS = [
   { label: "review-personas.md", template: "references/templates/review-personas.md", destination: "artifacts/review-personas.md" },
   { label: "reader-promise-tracker.md", template: "references/templates/reader-promise-tracker.md", destination: "artifacts/reader-promise-tracker.md" },
   { label: "drift-loop-alarm.md", template: "references/templates/drift-loop-alarm.md", destination: "artifacts/drift-loop-alarm.md" },
+  { label: "publication-shape.md", template: "references/templates/publication-shape.md", destination: "artifacts/publication-shape.md" },
+  { label: "book-prd.md", template: "references/templates/book-prd.md", destination: "artifacts/book-prd.md" },
+  { label: "prd-gap-report.md", template: "references/templates/prd-gap-report.md", destination: "artifacts/prd-gap-report.md" },
+  { label: "prd-traceability-map.md", template: "references/templates/prd-traceability-map.md", destination: "artifacts/prd-traceability-map.md" },
+  { label: "prd-completeness-score.md", template: "references/templates/prd-completeness-score.md", destination: "artifacts/prd-completeness-score.md" },
+  { label: "quality-gates.md", template: "references/templates/quality-gates.md", destination: "artifacts/quality-gates.md" },
+  { label: "writer-cockpit.md", template: "references/templates/writer-cockpit.md", destination: "artifacts/writer-cockpit.md" },
+  { label: "chapter-production-queue.md", template: "references/templates/chapter-production-queue.md", destination: "artifacts/chapter-production-queue.md" },
+  { label: "taste-lock.md", template: "references/templates/taste-lock.md", destination: "artifacts/taste-lock.md" },
+  { label: "decision-ledger.md", template: "references/templates/decision-ledger.md", destination: "artifacts/decision-ledger.md" },
+  { label: "prd-change-log.md", template: "references/templates/prd-change-log.md", destination: "artifacts/prd-change-log.md" },
+  { label: "decision-impact-report.md", template: "references/templates/decision-impact-report.md", destination: "artifacts/decision-impact-report.md" },
+  { label: "writer-questions.md", template: "references/templates/writer-questions.md", destination: "artifacts/writer-questions.md" },
+  { label: "outline-stress-test.md", template: "references/templates/outline-stress-test.md", destination: "evaluations/outline-stress-test.md" },
+  { label: "persona-review.md", template: "references/templates/persona-review.md", destination: "evaluations/persona-review.md" },
+  { label: "regression-check.md", template: "references/templates/regression-check.md", destination: "evaluations/regression-check.md" },
 ];
 
 const BLOCKER_CHECKS = [
@@ -251,6 +330,12 @@ const BLOCKER_CHECKS = [
     label: "Active drift-loop hard stop",
     pattern: /active hard stop|hard stop\s*:\s*active|status\s*:\s*active/i,
     suggestion: "Resolve the repeated-shape or no-state-change evidence before advancing.",
+  },
+  {
+    file: "artifacts/quality-gates.md",
+    label: "Quality gate blocks automation",
+    pattern: /gate_status\s*:\s*(blocked|needs_writer_approval)|status\s*:\s*(blocked|needs_writer_approval)|hard stop|do not advance/i,
+    suggestion: "Resolve the named writer approval or quality gate before running autopilot or advancing phases.",
   },
   {
     file: "artifacts/revision-tickets.md",
@@ -1002,6 +1087,8 @@ function renderStatusDashboard(root) {
   const blockers = collectBlockers(root, true);
   const lintFindings = collectLintFindings(root, phase);
   const git = getGitState(root);
+  const prdScore = readIfExists(join(root, "artifacts", "prd-completeness-score.md"))?.match(/Score:\s*(\d+)\/100/i)?.[1] || "unknown";
+  const gateStatus = readIfExists(join(root, "artifacts", "quality-gates.md"))?.match(/gate_status:\s*([^\n]+)/i)?.[1]?.trim() || "unknown";
   const expansion = readIfExists(join(root, "artifacts", "expansion-integrity.md")) || "";
   const expansionRisk = /blocker|unresolved|padding|filler|ornamental subplot|no-state-change/i.test(expansion)
     ? "active risk"
@@ -1016,6 +1103,8 @@ function renderStatusDashboard(root) {
     `- Project root: ${root}`,
     `- Current phase: ${phase}`,
     `- Workflow mode: ${workflowMode}`,
+    `- PRD completeness: ${prdScore}${prdScore !== "unknown" ? "/100" : ""}`,
+    `- Quality gate status: ${gateStatus}`,
     `- Git initialized: ${git.initialized ? "yes" : "no"}`,
     `- Git branch: ${git.branch || "n/a"}`,
     `- Uncommitted changes: ${git.initialized ? git.dirty : "n/a"}`,
@@ -1307,6 +1396,466 @@ function inferPhaseFromFiles(root) {
   return phase;
 }
 
+function seriesBookDirName(index) {
+  return `book-${String(index).padStart(2, "0")}`;
+}
+
+function findSeriesRoot(cwd) {
+  let dir = cwd;
+  let fallback = null;
+
+  while (true) {
+    if (existsSync(join(dir, "SERIES_STATE.yaml"))) return dir;
+    if (!fallback && existsSync(join(dir, "artifacts", "series-bible.md")) && existsSync(join(dir, "books"))) fallback = dir;
+    const parent = dirname(dir);
+    if (parent === dir) return fallback || cwd;
+    dir = parent;
+  }
+}
+
+function findSeriesWorkspaces(startDir, maxDepth = 3) {
+  const found = new Set();
+  function walk(dir, depth) {
+    if (existsSync(join(dir, "SERIES_STATE.yaml"))) found.add(dir);
+    if (depth >= maxDepth) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+      walk(join(dir, entry.name), depth + 1);
+    }
+  }
+  try {
+    walk(startDir, 0);
+  } catch {
+    return [];
+  }
+  return [...found].sort();
+}
+
+function seriesArtifactMissing(root) {
+  return SERIES_ARTIFACTS.filter((file) => !pathExists(root, file));
+}
+
+function listSeriesBookProjects(seriesRoot) {
+  const booksRoot = join(seriesRoot, "books");
+  if (!existsSync(booksRoot)) return [];
+  return readdirSync(booksRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => join(booksRoot, entry.name))
+    .filter((bookRoot) => existsSync(join(bookRoot, "PROJECT_STATE.yaml")))
+    .sort(new Intl.Collator(undefined, { numeric: true, sensitivity: "base" }).compare);
+}
+
+function initializeSeriesBookProject(seriesRoot, seriesName, index, total, premise) {
+  const bookRoot = join(seriesRoot, "books", seriesBookDirName(index));
+  initializeProject(bookRoot, `${seriesName} Book ${index}`, [`Series: ${seriesName}`, `Book position: ${index} of ${total}`, premise ? `Series premise: ${premise}` : ""].filter(Boolean).join("\n"));
+  applyWorkflowModeToProject(bookRoot, "series installment");
+  scaffoldModeBundle(bookRoot, "series installment", false);
+
+  const statePath = join(bookRoot, "PROJECT_STATE.yaml");
+  let state = readIfExists(statePath) || "";
+  state = setYamlScalar(state, "series_root", "../..");
+  state = setYamlScalar(state, "series_position", String(index));
+  state = setYamlScalar(state, "series_total_books", String(total));
+  writeFileSync(statePath, state, "utf8");
+
+  const assumptionsPath = join(bookRoot, "ASSUMPTIONS.md");
+  writeFileSync(assumptionsPath, `${readIfExists(assumptionsPath).trimEnd()}\n\n## Series context\n\n- Series root: ../..\n- Series position: ${index} of ${total}\n- Parent source of truth: ../../artifacts/series-bible.md and ../../artifacts/series-arc-map.md\n`, "utf8");
+  writeFileSync(join(bookRoot, "STATUS.md"), renderStatusDashboard(bookRoot), "utf8");
+  return bookRoot;
+}
+
+function initializeSeriesWorkspace(root, seriesName, premise = "", plannedBooks = 3) {
+  ensureDir(root);
+  for (const dir of SERIES_ROOT_DIRS) ensureDir(join(root, dir));
+
+  const total = Math.max(1, Math.min(20, Number.parseInt(plannedBooks, 10) || 3));
+  writeIfMissing(
+    join(root, "SERIES_STATE.yaml"),
+    [
+      `series_name: ${stringifyScalar(seriesName)}`,
+      `genesis_schema_version: ${stringifyScalar(GENESIS_SCHEMA_VERSION)}`,
+      `status: ${stringifyScalar("initialized")}`,
+      `workflow_mode: ${stringifyScalar("series")}`,
+      `planned_books: ${stringifyScalar(String(total))}`,
+      `current_book: ${stringifyScalar("1")}`,
+      `series_root_initialized_by: ${stringifyScalar("genesis-series-start")}`,
+      "book_roots:",
+      ...Array.from({ length: total }, (_, index) => `  - ${stringifyScalar(`books/${seriesBookDirName(index + 1)}`)}`),
+      "",
+    ].join("\n"),
+  );
+
+  writeIfMissing(join(root, "ASSUMPTIONS.md"), `# Series Assumptions\n\n## Explicit user input\n\n- Series: ${seriesName}\n- Premise: ${premise || "Not provided yet."}\n- Planned books: ${total}\n\n## Inferred assumptions\n\n- Genre: unknown\n- Audience: unknown\n- Series promise: unknown\n- Final destination: unknown\n\nMark each assumption as confirmed, provisional, or rejected during series intake.\n`);
+
+  for (const destination of SERIES_ARTIFACTS) {
+    const item = findTemplateEntryByDestination(destination);
+    if (item) scaffoldTemplate(root, item.template, item.destination, false);
+  }
+
+  for (let index = 1; index <= total; index += 1) initializeSeriesBookProject(root, seriesName, index, total, premise);
+  writeFileSync(join(root, "SERIES_STATUS.md"), renderSeriesStatus(root), "utf8");
+  return { root, seriesName, plannedBooks: total, bookRoots: listSeriesBookProjects(root), missing: seriesArtifactMissing(root) };
+}
+
+function renderSeriesStatus(root) {
+  const state = parseSimpleYaml(readIfExists(join(root, "SERIES_STATE.yaml")) || "");
+  const books = listSeriesBookProjects(root);
+  const missing = seriesArtifactMissing(root);
+  const rows = books.map((bookRoot, index) => {
+    const relative = bookRoot.startsWith(root) ? bookRoot.slice(root.length + 1) : bookRoot;
+    const phase = detectPhase(readIfExists(join(bookRoot, "PROJECT_STATE.yaml")));
+    const mode = detectWorkflowMode(bookRoot);
+    const stats = manuscriptStats(bookRoot);
+    const blockers = collectBlockers(bookRoot, true).filter((blocker) => blocker.severity === "blocker").length;
+    return `| ${index + 1} | ${relative} | ${phase} | ${mode} | ${stats.chapters} | ${stats.words} | ${blockers} |`;
+  });
+
+  return [
+    "# Genesis Series Status",
+    "",
+    `- Series root: ${root}`,
+    `- Series name: ${state.series_name || basename(root)}`,
+    `- Planned books: ${state.planned_books || books.length || "unknown"}`,
+    `- Current book: ${state.current_book || "unknown"}`,
+    `- Series-level missing artifacts: ${missing.length}`,
+    `- Book projects: ${books.length}`,
+    "",
+    "## Series artifacts",
+    "",
+    ...(SERIES_ARTIFACTS.map((file) => `- ${existsSync(join(root, file)) ? "present" : "missing"}: ${file}`)),
+    "",
+    "## Books",
+    "",
+    "| # | project | phase | mode | chapters | words | hard blockers |",
+    "| --- | --- | --- | --- | ---: | ---: | ---: |",
+    ...(rows.length ? rows : ["| - | no book projects found | - | - | 0 | 0 | 0 |"]),
+    "",
+    "## Next best action",
+    "",
+    missing.length ? `- Fill or repair ${missing[0]} before relying on book-level drafting.` : "- Run `/genesis-series-next` to advance the series-level plan or the next incomplete book.",
+    "",
+  ].join("\n");
+}
+
+function buildSeriesNextPrompt(root, args = "") {
+  const state = parseSimpleYaml(readIfExists(join(root, "SERIES_STATE.yaml")) || "");
+  const books = listSeriesBookProjects(root);
+  const missing = seriesArtifactMissing(root);
+  const bookSummaries = books.map((bookRoot, index) => {
+    const relative = bookRoot.startsWith(root) ? bookRoot.slice(root.length + 1) : bookRoot;
+    const phase = detectPhase(readIfExists(join(bookRoot, "PROJECT_STATE.yaml")));
+    const firstMissing = nextMissingOutput(bookRoot, phase) || "none";
+    return `- Book ${index + 1}: ${relative}; phase=${phase}; next_missing=${firstMissing}`;
+  });
+
+  return [
+    "Use the `genesis-for-pi` skill and advance this whole-series Genesis workspace.",
+    "",
+    `Series root: ${root}`,
+    `Series name: ${state.series_name || basename(root)}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Read these first:",
+    "- SERIES_STATE.yaml",
+    "- SERIES_STATUS.md when present",
+    "- artifacts/series-bible.md",
+    "- artifacts/series-arc-map.md",
+    "- artifacts/series-timeline.md",
+    "- artifacts/character-state-matrix.md",
+    "- artifacts/reveal-spoiler-matrix.md",
+    "- artifacts/canon-lock.md",
+    "- artifacts/installment-promise-tracker.md",
+    "- artifacts/series-payoff-ledger.md",
+    "- artifacts/series-verification-matrix.md",
+    "- artifacts/retcon-log.md",
+    "- artifacts/series-repetition-radar.md",
+    "- predecessor books' artifacts/book-handoff-packet.md when present",
+    "- each book's PROJECT_STATE.yaml and STATUS.md",
+    "",
+    `Series-level missing artifacts: ${missing.length ? missing.join(", ") : "none"}`,
+    "Book states:",
+    ...(bookSummaries.length ? bookSummaries : ["- no book projects found"]),
+    "",
+    "Rules:",
+    "1. Treat the series root as the source of truth for cross-book canon, escalation, and promises, but separate locked canon from provisional future plans.",
+    "2. If series-level files are empty or placeholder-heavy, fill only the next useful series-level planning artifact before drafting more chapters.",
+    "3. Advance one book/project step at a time; do not draft multiple installments in one turn unless explicitly asked.",
+    "4. Do not over-plan all books at scene-level detail. Capture roles, pressures, payoff windows, and constraints; leave later-book specifics flexible until their active project reaches architecture.",
+    "5. Do not invent definitive book endings prematurely. If a future ending is useful, mark it as planned/provisional, not canon.",
+    "6. Do not let later-book improvements contradict locked canon or promises established by earlier books.",
+    "7. Do not lock canon unless the user invoked a lock command or explicitly approved locking; otherwise mark candidate facts as planned, provisional, or ready-for-review.",
+    "8. After changing any book-level canon or planned series obligation, synchronize artifacts/series-bible.md, artifacts/series-arc-map.md, artifacts/series-timeline.md, artifacts/character-state-matrix.md, artifacts/reveal-spoiler-matrix.md, artifacts/installment-promise-tracker.md, artifacts/series-payoff-ledger.md, artifacts/retcon-log.md, artifacts/series-repetition-radar.md, and artifacts/series-verification-matrix.md as needed.",
+    "9. Update SERIES_STATUS.md and the active book's STATUS.md before stopping.",
+    "10. Commit changed files separately when inside a Git work tree.",
+    "",
+    "Proceed with the next safest series-level or book-level step now.",
+  ].join("\n");
+}
+
+function buildSeriesVerifyPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run cross-book series verification.",
+    "",
+    `Series root: ${root}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Compare all book projects under `books/` against:",
+    "- artifacts/series-bible.md",
+    "- artifacts/series-arc-map.md",
+    "- artifacts/series-timeline.md",
+    "- artifacts/character-state-matrix.md",
+    "- artifacts/reveal-spoiler-matrix.md",
+    "- artifacts/canon-lock.md",
+    "- artifacts/installment-promise-tracker.md",
+    "- artifacts/series-payoff-ledger.md",
+    "- artifacts/retcon-log.md",
+    "- artifacts/series-repetition-radar.md",
+    "- predecessor books' artifacts/book-handoff-packet.md when present",
+    "- artifacts/continuity-ledger.md",
+    "",
+    "Required outputs:",
+    "- update artifacts/series-verification-matrix.md with canon, voice, escalation, and promise alignment by book",
+    "- update artifacts/series-timeline.md, artifacts/character-state-matrix.md, and artifacts/reveal-spoiler-matrix.md for any chronology, state, or knowledge-order failures",
+    "- update artifacts/retcon-log.md and artifacts/series-repetition-radar.md when verification finds canon bending or repeated-book structure risk",
+    "- update artifacts/continuity-ledger.md for cross-book continuity issues",
+    "- create or update book-level artifacts/revision-tickets.md for concrete repairs",
+    "- update SERIES_STATUS.md with verification summary",
+    "",
+    "Verification rules:",
+    "- A book does not pass verification if it improves locally while breaking earlier canon, recurring character logic, series escalation, or inherited promises.",
+    "- Treat canon-lock.md as stronger than series-arc-map.md when they disagree.",
+    "- Treat future-book entries as planned/provisional unless they have been locked by /genesis-series-lock-book or explicit user approval.",
+    "- Do not solve verification failures by inventing new unapproved endings for later books; create revision tickets or provisional options instead.",
+  ].join("\n");
+}
+
+function buildSeriesLockBookPrompt(root, bookRoot, args = "") {
+  const relative = bookRoot && bookRoot.startsWith(root) ? bookRoot.slice(root.length + 1) : bookRoot;
+  return [
+    "Use the `genesis-for-pi` skill and lock one series installment into canon.",
+    "",
+    `Series root: ${root}`,
+    `Book to lock: ${relative || args.trim() || "ask user"}`,
+    "",
+    "Read the book's manuscript, PROJECT_STATE.yaml, STATUS.md, delivery files, and major artifacts.",
+    "",
+    "Required outputs:",
+    "- update artifacts/canon-lock.md with immutable facts, relationship states, chronology anchors, revealed secrets, and promises created by this book",
+    "- update artifacts/series-bible.md with durable character, world, relationship, object, and location facts",
+    "- update artifacts/series-arc-map.md with the book's ending state and carryover pressure",
+    "- update artifacts/series-timeline.md, artifacts/character-state-matrix.md, and artifacts/reveal-spoiler-matrix.md with any locked chronology, state, or knowledge-order changes",
+    "- update artifacts/installment-promise-tracker.md with promises paid, preserved, or newly created",
+    "- update artifacts/series-payoff-ledger.md with setups created, paid off, preserved, or orphaned by this book",
+    "- update the selected book's artifacts/book-handoff-packet.md with what the next installment must inherit",
+    "- update artifacts/series-verification-matrix.md and artifacts/retcon-log.md to mark this book locked, ready-for-lock-review, or blocked by contradiction",
+    "- update SERIES_STATE.yaml and SERIES_STATUS.md to reflect the locked installment",
+    "",
+    "Locking rules:",
+    "- Only facts evidenced by the selected book's manuscript/artifacts may become locked canon.",
+    "- Planned future-book material remains planned/provisional unless the user explicitly approves it as canon.",
+    "- Do not invent missing endings, secrets, relationship states, or sequel setup to make the lock feel complete.",
+    "- Do not silently retcon previous locked facts. If a contradiction exists, create a revision ticket or mark the lock as blocked.",
+    "- If the book is incomplete, internally contradictory, or not user-approved as final enough, mark it ready-for-lock-review rather than locked.",
+  ].join("\n");
+}
+
+function rewriteSeriesState(root, overrides = {}) {
+  const previous = parseSimpleYaml(readIfExists(join(root, "SERIES_STATE.yaml")) || "");
+  const books = listSeriesBookProjects(root);
+  const plannedBooks = String(overrides.planned_books || previous.planned_books || books.length || 1);
+  const seriesName = overrides.series_name || previous.series_name || basename(root);
+  const currentBook = overrides.current_book || previous.current_book || "1";
+  writeFileSync(join(root, "SERIES_STATE.yaml"), [
+    `series_name: ${stringifyScalar(seriesName)}`,
+    `genesis_schema_version: ${stringifyScalar(GENESIS_SCHEMA_VERSION)}`,
+    `status: ${stringifyScalar(overrides.status || previous.status || "active")}`,
+    `workflow_mode: ${stringifyScalar("series")}`,
+    `planned_books: ${stringifyScalar(plannedBooks)}`,
+    `current_book: ${stringifyScalar(currentBook)}`,
+    `series_root_initialized_by: ${stringifyScalar(previous.series_root_initialized_by || "genesis-series-start")}`,
+    "book_roots:",
+    ...books.map((bookRoot) => `  - ${stringifyScalar(bookRoot.startsWith(root) ? bookRoot.slice(root.length + 1) : bookRoot)}`),
+    "",
+  ].join("\n"), "utf8");
+}
+
+function addSeriesBookToWorkspace(root, premise = "") {
+  const state = parseSimpleYaml(readIfExists(join(root, "SERIES_STATE.yaml")) || "");
+  const books = listSeriesBookProjects(root);
+  const nextIndex = books.length + 1;
+  const plannedBooks = Math.max(nextIndex, Number.parseInt(state.planned_books, 10) || nextIndex);
+  const bookRoot = initializeSeriesBookProject(root, state.series_name || basename(root), nextIndex, plannedBooks, premise);
+  rewriteSeriesState(root, { planned_books: String(plannedBooks), current_book: String(nextIndex), status: "active" });
+  writeFileSync(join(root, "SERIES_STATUS.md"), renderSeriesStatus(root), "utf8");
+  return { root, bookRoot, index: nextIndex, plannedBooks };
+}
+
+function collectSeriesBlockers(root) {
+  const blockers = [];
+  for (const file of seriesArtifactMissing(root)) {
+    blockers.push({ file, label: "Missing series artifact", evidence: `${file} does not exist.`, suggestion: "Scaffold or create this series-level source-of-truth file before relying on later books.", severity: "warning" });
+  }
+
+  for (const file of SERIES_ARTIFACTS) {
+    const text = readIfExists(join(root, file));
+    if (!text) continue;
+    for (const finding of lintArtifactFile(file, text)) {
+      blockers.push({ file, label: `Series artifact quality: ${finding.label}`, evidence: finding.evidence, suggestion: "Replace placeholders with concrete series decisions, evidence, or accepted-risk notes.", severity: "warning" });
+    }
+  }
+
+  const retconLog = readIfExists(join(root, "artifacts", "retcon-log.md")) || "";
+  const openRetconPattern = /\b(pending|proposed|open)\b/i;
+  if (openRetconPattern.test(retconLog)) {
+    blockers.push({
+      file: "artifacts/retcon-log.md",
+      label: "Open retcon or canon-bend decision",
+      evidence: extractEvidence(retconLog, openRetconPattern),
+      suggestion: "Resolve or explicitly defer open retcons before trusting downstream continuity.",
+      severity: "warning",
+    });
+  }
+
+  const seriesRegression = readIfExists(join(root, "evaluations", "series-regression-check.md")) || "";
+  if (/status\s*:\s*(blocked|fail)|\b(blocker|failed|blocked)\b/i.test(seriesRegression)) {
+    blockers.push({
+      file: "evaluations/series-regression-check.md",
+      label: "Series regression hard stop",
+      evidence: extractEvidence(seriesRegression, /status\s*:\s*(blocked|fail)|\b(blocker|failed|blocked)\b/i),
+      suggestion: "Repair the named cross-book regression before advancing later books.",
+      severity: "blocker",
+    });
+  }
+
+  const books = listSeriesBookProjects(root);
+  if (!books.length) blockers.push({ file: "books/", label: "No book projects", evidence: "No Genesis book projects were found under books/.", suggestion: "Run /genesis-series-add-book or /genesis-series-start to create installment projects.", severity: "blocker" });
+
+  books.forEach((bookRoot, index) => {
+    const relative = bookRoot.startsWith(root) ? bookRoot.slice(root.length + 1) : bookRoot;
+    for (const blocker of collectBlockers(bookRoot, true).filter((item) => item.severity === "blocker")) {
+      blockers.push({ file: `${relative}/${blocker.file}`, label: `Book ${index + 1}: ${blocker.label}`, evidence: blocker.evidence, suggestion: blocker.suggestion, severity: "blocker" });
+    }
+    const stats = manuscriptStats(bookRoot);
+    if (index > 0 && stats.chapters > 0) {
+      const canon = readIfExists(join(root, "artifacts", "canon-lock.md")) || "";
+      const previous = seriesBookDirName(index);
+      if (!canon.includes(previous) && !canon.includes(`Book ${index}`)) {
+        blockers.push({ file: "artifacts/canon-lock.md", label: `Book ${index + 1} may depend on unlocked predecessor`, evidence: `${relative} has manuscript chapters, but ${previous}/Book ${index} is not obviously recorded in canon-lock.md.`, suggestion: "Lock or explicitly defer the predecessor before finalizing later-book canon.", severity: "warning" });
+      }
+      const predecessorHandoff = join(root, "books", previous, "artifacts", "book-handoff-packet.md");
+      if (!existsSync(predecessorHandoff)) {
+        blockers.push({ file: `books/${previous}/artifacts/book-handoff-packet.md`, label: `Book ${index + 1} is missing predecessor handoff packet`, evidence: `${relative} has manuscript chapters, but ${previous} does not have artifacts/book-handoff-packet.md.`, suggestion: "Generate the predecessor handoff packet when locking or approving the earlier book so later books inherit cleanly.", severity: "warning" });
+      }
+    }
+  });
+  return blockers;
+}
+
+function renderSeriesBlockers(root) {
+  const blockers = collectSeriesBlockers(root);
+  if (!blockers.length) return "No series blockers detected by Genesis triage.";
+  return blockers.map((blocker, index) => `${index + 1}. [${blocker.severity}] ${blocker.label}\n   file: ${blocker.file}\n   evidence: ${blocker.evidence}\n   suggested action: ${blocker.suggestion}`).join("\n\n");
+}
+
+function buildSeriesScorePrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and produce a whole-series score.",
+    "",
+    `Series root: ${root}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Read shared series files and each book project under `books/`. Keep locked canon, draft facts, and planned future material separate while scoring.",
+    "",
+    "Score these dimensions from 0-100 with evidence:",
+    "- canon stability",
+    "- timeline / chronology coherence",
+    "- series arc escalation",
+    "- promise/payoff integrity",
+    "- recurring character continuity",
+    "- reveal-order / spoiler integrity",
+    "- repetition and reader-fatigue risk",
+    "- book-to-book onboarding clarity",
+    "- final-book obligation readiness",
+    "- commercial series cohesion",
+    "",
+    "Required outputs:",
+    "- write artifacts/series-score.md",
+    "- update artifacts/series-payoff-ledger.md for orphaned or underpaid promises",
+    "- update artifacts/series-verification-matrix.md with score-relevant risks",
+    "- create or update revision tickets in affected book projects for concrete fixes",
+    "- update SERIES_STATUS.md with the score summary",
+  ].join("\n");
+}
+
+function createSeriesExport(root) {
+  ensureDir(join(root, "delivery"));
+  const books = listSeriesBookProjects(root);
+  const files = [];
+  const combined = [];
+  for (const bookRoot of books) {
+    const relative = bookRoot.startsWith(root) ? bookRoot.slice(root.length + 1) : bookRoot;
+    const result = compileManuscript(bookRoot);
+    const compiled = readIfExists(join(bookRoot, "delivery", "manuscript-full.md")) || "";
+    const destinationName = `${basename(bookRoot)}-manuscript.md`;
+    writeFileSync(join(root, "delivery", destinationName), compiled, "utf8");
+    files.push(`delivery/${destinationName}`);
+    combined.push(`# ${relative}\n\n${compiled.trim()}`);
+    writeFileSync(join(bookRoot, "STATUS.md"), renderStatusDashboard(bookRoot), "utf8");
+  }
+  writeFileSync(join(root, "delivery", "full-series-manuscript.md"), combined.length ? combined.join("\n\n---\n\n") + "\n" : "# Full Series Manuscript\n\n_No book manuscripts found._\n", "utf8");
+  files.push("delivery/full-series-manuscript.md");
+
+  const status = renderSeriesStatus(root);
+  writeFileSync(join(root, "SERIES_STATUS.md"), status, "utf8");
+  writeFileSync(join(root, "delivery", "series-status-report.md"), status, "utf8");
+  const handoffSections = books.map((bookRoot) => {
+    const relative = bookRoot.startsWith(root) ? bookRoot.slice(root.length + 1) : bookRoot;
+    const handoff = readIfExists(join(bookRoot, "artifacts", "book-handoff-packet.md"));
+    return handoff ? `# ${relative} — Book Handoff Packet\n\n${handoff.trim()}` : null;
+  }).filter(Boolean);
+  writeFileSync(join(root, "delivery", "series-bible-export.md"), [
+    readIfExists(join(root, "artifacts", "series-bible.md")) || "# Series Bible\n\n_missing_",
+    "\n---\n",
+    readIfExists(join(root, "artifacts", "series-arc-map.md")) || "# Series Arc Map\n\n_missing_",
+    "\n---\n",
+    readIfExists(join(root, "artifacts", "series-timeline.md")) || "# Series Timeline\n\n_missing_",
+    "\n---\n",
+    readIfExists(join(root, "artifacts", "character-state-matrix.md")) || "# Character State Matrix\n\n_missing_",
+    "\n---\n",
+    readIfExists(join(root, "artifacts", "reveal-spoiler-matrix.md")) || "# Reveal / Spoiler Matrix\n\n_missing_",
+    "\n---\n",
+    readIfExists(join(root, "artifacts", "series-payoff-ledger.md")) || "# Series Payoff Ledger\n\n_missing_",
+    "\n---\n",
+    readIfExists(join(root, "artifacts", "series-verification-matrix.md")) || "# Series Verification Matrix\n\n_missing_",
+    "\n---\n",
+    readIfExists(join(root, "artifacts", "retcon-log.md")) || "# Retcon Log\n\n_missing_",
+    "\n---\n",
+    readIfExists(join(root, "artifacts", "series-repetition-radar.md")) || "# Series Repetition Radar\n\n_missing_",
+    readIfExists(join(root, "evaluations", "series-regression-check.md")) ? `\n---\n\n${readIfExists(join(root, "evaluations", "series-regression-check.md")).trim()}` : "",
+    ...(handoffSections.length ? ["\n---\n", ...handoffSections] : []),
+  ].join("\n"), "utf8");
+  files.push("delivery/series-status-report.md", "delivery/series-bible-export.md");
+
+  writeFileSync(join(root, "delivery", "series-editorial-handoff.md"), [
+    "# Series Editorial Handoff",
+    "",
+    `- Series root: ${root}`,
+    `- Book projects: ${books.length}`,
+    `- Series blockers/warnings: ${collectSeriesBlockers(root).length}`,
+    "- Full series manuscript: delivery/full-series-manuscript.md",
+    "- Series bible export: delivery/series-bible-export.md",
+    "",
+    "## Book projects",
+    "",
+    ...books.map((bookRoot, index) => `- Book ${index + 1}: ${bookRoot.startsWith(root) ? bookRoot.slice(root.length + 1) : bookRoot}`),
+    "",
+  ].join("\n"), "utf8");
+  writeFileSync(join(root, "delivery", "series-export-manifest.md"), ["# Series Export Manifest", "", `Generated: ${new Date().toISOString()}`, "", ...files.map((file) => `- ${file}`), "- delivery/series-editorial-handoff.md", ""].join("\n"), "utf8");
+  files.push("delivery/series-editorial-handoff.md", "delivery/series-export-manifest.md");
+  return { root, books: books.length, files };
+}
+
 function migrateProject(root) {
   ensureDir(root);
   for (const dir of PROJECT_ROOT_DIRS) ensureDir(join(root, dir));
@@ -1344,6 +1893,846 @@ function migrateProject(root) {
   const gitInitialized = maybeInitGit(root);
   writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
   return { root, phase, mode, gitInitialized, missing: missingExpectedForPhase(root, phase) };
+}
+
+
+function extractTitleFromText(text, fallback) {
+  const heading = String(text || "").match(/^#\s+(.+)$/m)?.[1]?.trim();
+  return heading || fallback;
+}
+
+function collectTextFiles(root, maxDepth = 3) {
+  const files = [];
+  function walk(dir, depth) {
+    if (!existsSync(dir) || depth > maxDepth) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full, depth + 1);
+      else if (/\.(md|markdown|txt)$/i.test(entry.name)) files.push(full);
+    }
+  }
+  try {
+    const stat = statSync(root);
+    if (stat.isDirectory()) walk(root, 0);
+    else files.push(root);
+  } catch {
+    return [];
+  }
+  return files.sort(new Intl.Collator(undefined, { numeric: true, sensitivity: "base" }).compare);
+}
+
+function readPrdSource(sourcePath) {
+  const files = collectTextFiles(sourcePath, 4);
+  const parts = [];
+  for (const file of files) {
+    const text = readIfExists(file) || "";
+    if (!text.trim()) continue;
+    parts.push({ file, text });
+  }
+  return { files, firstText: parts[0]?.text || "", text: parts.map((part) => `# Source: ${part.file}\n\n${part.text.trim()}`).join("\n\n---\n\n") };
+}
+
+function inferWorkflowModeFromPrd(text) {
+  const lower = String(text || "").toLowerCase();
+  if (/certification|exam|blueprint|objectives|practice questions|domain/.test(lower)) return "certification prep";
+  if (/study guide|lesson|learning objective|quiz|chapter objectives/.test(lower)) return "study guide";
+  if (/memoir|personal essay|lived experience|my story/.test(lower)) return "memoir";
+  if (/series|book\s*[1-9]|installment|trilogy|saga/.test(lower)) return "series installment";
+  if (/nonfiction|argument|framework|prescriptive|reader transformation|case stud/.test(lower)) return "prescriptive nonfiction";
+  return "novel";
+}
+
+const PRD_COMPLETENESS_DIMENSIONS = [
+  { key: "reader", label: "Target reader / audience", patterns: [/audience/i, /target reader/i, /reader persona/i, /market/i], question: "Who is the exact reader and what do they already want, fear, or believe?" },
+  { key: "promise", label: "Reader promise", patterns: [/reader promise/i, /promise/i, /hook/i, /premise/i, /value proposition/i], question: "What promise does the book make in the first pages and on the sales page?" },
+  { key: "voice", label: "Voice and taste", patterns: [/voice/i, /tone/i, /style/i, /taste/i, /sounds like/i], question: "What should the prose sound like, and what must it never sound like?" },
+  { key: "structure", label: "Structure / architecture", patterns: [/outline/i, /structure/i, /chapters?/i, /acts?/i, /table of contents/i], question: "What is the intended structure, act shape, or chapter sequence?" },
+  { key: "scope", label: "Scope and length", patterns: [/word count/i, /length/i, /scope/i, /deliverables?/i, /page count/i], question: "What target length and scope boundaries should Genesis protect?" },
+  { key: "success", label: "Success criteria", patterns: [/success criteria/i, /definition of done/i, /acceptance criteria/i, /quality bar/i], question: "How will you know the book is good enough to draft, revise, and package?" },
+  { key: "risk", label: "Risk budget", patterns: [/risk/i, /controvers/i, /must not/i, /non-negotiable/i, /avoid/i], question: "Which risks are intentional, and which failures are unacceptable?" },
+  { key: "market", label: "Positioning / comps", patterns: [/comps?/i, /positioning/i, /category/i, /genre/i, /competitive/i], question: "What shelf/category, comp set, or market expectation should shape the publication target?" },
+  { key: "research", label: "Research / evidence", patterns: [/research/i, /sources?/i, /evidence/i, /references?/i, /interview/i], question: "What sources, domain checks, interviews, or canon files are authoritative?" },
+];
+
+function analyzePrdCompleteness(text) {
+  const results = PRD_COMPLETENESS_DIMENSIONS.map((dimension) => {
+    const matched = dimension.patterns.filter((pattern) => pattern.test(text || ""));
+    const confidence = matched.length >= 2 ? "high" : matched.length === 1 ? "medium" : "missing";
+    const points = matched.length >= 2 ? 12 : matched.length === 1 ? 7 : 0;
+    return { ...dimension, matched: matched.length, confidence, points };
+  });
+  const total = results.reduce((sum, item) => sum + item.points, 0);
+  const max = PRD_COMPLETENESS_DIMENSIONS.length * 12;
+  const score = Math.round((total / max) * 100);
+  const missing = results.filter((item) => item.confidence === "missing");
+  const weak = results.filter((item) => item.confidence === "medium");
+  const readiness = score >= 80 && !missing.length ? "ready_with_minor_gaps" : score >= 60 ? "usable_but_gap_interview_required" : "not_ready_without_writer_answers";
+  return { score, readiness, results, missing, weak };
+}
+
+function renderPrdCompletenessScore(root, sourceLabel, analysis) {
+  return [
+    "# PRD Completeness Score",
+    "",
+    `- Project root: ${root}`,
+    `- Source: ${sourceLabel}`,
+    `- Score: ${analysis.score}/100`,
+    `- Readiness: ${analysis.readiness}`,
+    `- Generated: ${new Date().toISOString()}`,
+    "",
+    "## Dimension results",
+    "",
+    "| Dimension | Confidence | Points | Gap question |",
+    "| --- | --- | ---: | --- |",
+    ...analysis.results.map((item) => `| ${item.label} | ${item.confidence} | ${item.points} | ${item.confidence === "high" ? "—" : item.question} |`),
+    "",
+    "## Gate policy",
+    "",
+    "- 80+ with no missing dimensions: Genesis may proceed into Foundation after writer approval.",
+    "- 60-79 or any missing dimension: run gap-only interview before trusting extracted artifacts.",
+    "- Below 60: do not draft prose; repair the PRD or answer the gap report first.",
+    "",
+  ].join("\n");
+}
+
+function renderPrdGapReport(sourceLabel, analysis) {
+  return [
+    "# PRD Gap Report",
+    "",
+    `Source: ${sourceLabel}`,
+    `Readiness: ${analysis.readiness}`,
+    "",
+    "## Gap-only interview",
+    "",
+    ...(analysis.missing.length || analysis.weak.length
+      ? [...analysis.missing, ...analysis.weak].map((item, index) => `${index + 1}. ${item.question} _(dimension: ${item.label}; confidence: ${item.confidence})_`)
+      : ["No major PRD gaps detected by the lightweight importer. Writer approval is still required before autopilot drafting."]),
+    "",
+    "## Extraction rule",
+    "",
+    "Only fill Genesis artifacts from claims supported by the PRD. Anything inferred must be recorded in ASSUMPTIONS.md and traced here or in prd-traceability-map.md.",
+    "",
+  ].join("\n");
+}
+
+function renderPrdTraceabilityMap(sourceLabel, analysis) {
+  return [
+    "# PRD Traceability Map",
+    "",
+    `Source: ${sourceLabel}`,
+    "",
+    "## How to use this map",
+    "",
+    "Every Genesis decision imported from the PRD should be traced to a section, quote, or source file. Do not treat unsupported ideas as facts.",
+    "",
+    "| Genesis artifact / decision | PRD source evidence | Confidence | Open questions |",
+    "| --- | --- | --- | --- |",
+    "| artifacts/00-brief.md | pending agent extraction from PRD | pending | confirm premise, reader promise, workflow mode |",
+    "| artifacts/author-intent.md | pending agent extraction from PRD | pending | confirm why this book must exist |",
+    "| artifacts/taste-profile.md | pending agent extraction from PRD | pending | confirm what should not be smoothed away |",
+    "| artifacts/risk-budget.md | pending agent extraction from PRD | pending | separate intentional risks from unacceptable failures |",
+    "| artifacts/publication-shape.md | pending agent extraction from PRD | pending | confirm standalone vs series, ending obligation, commercial promise |",
+    "| artifacts/reader-promise-tracker.md | pending agent extraction from PRD | pending | identify opening, genre, emotional, nonfiction, or study-guide promises |",
+    "",
+    "## Lightweight importer findings",
+    "",
+    ...analysis.results.map((item) => `- ${item.label}: ${item.confidence}`),
+    "",
+  ].join("\n");
+}
+
+function renderQualityGates(root, analysis = null) {
+  const blockers = collectBlockers(root, false).filter((item) => item.file !== "artifacts/quality-gates.md");
+  const prdScore = analysis?.score ?? null;
+  const prdBlocked = typeof prdScore === "number" && prdScore < 80;
+  return [
+    "# Quality Gates",
+    "",
+    "gate_status: " + (prdBlocked || blockers.some((item) => item.severity === "blocker") ? "blocked" : "open_for_next_safe_step"),
+    "",
+    "## Hard gates",
+    "",
+    `- PRD readiness: ${typeof prdScore === "number" ? `${prdScore}/100` : "unknown"}${prdBlocked ? " — blocked until gap-only interview is answered or accepted" : ""}`,
+    `- Active hard blockers: ${blockers.filter((item) => item.severity === "blocker").length}`,
+    "- Writer approval required after PRD import, voice fingerprint, first-page/sample draft, chapter one, pre-full-drafting, and final polish.",
+    "- Autopilot may not change premise, audience, voice, ending, POV, genre promise, risk budget, or major structure without explicit writer approval.",
+    "",
+    "## Approval gate statuses",
+    "",
+    "| Gate | Status | Evidence / next action |",
+    "| --- | --- | --- |",
+    `| PRD import | ${prdBlocked ? "needs_writer_approval" : "ready_for_review"} | Review prd-gap-report.md and prd-traceability-map.md |`,
+    "| Voice fingerprint | pending | Run /genesis-voice-ingest or fill author-voice-fingerprint.md |",
+    "| First-page sample | pending | Draft and approve a sample before full drafting |",
+    "| Chapter one | pending | Approve or repair Chapter 1 before chapter autopilot |",
+    "| Pre-full-drafting | pending | Approve outline, queue, continuity, and quality gates |",
+    "| Final polish | pending | Run adversarial audit and Genesis Score first |",
+    "",
+  ].join("\n");
+}
+
+function renderTasteLock() {
+  return [
+    "# Taste Lock",
+    "",
+    "Purpose: protect the writer's actual taste from being optimized away by automation.",
+    "",
+    "## Locked taste constraints",
+    "",
+    "- pending PRD/voice extraction",
+    "",
+    "## Things automation may not smooth away",
+    "",
+    "- productive roughness: pending",
+    "- intentional opacity: pending",
+    "- moral or emotional risk: pending",
+    "- taboo phrases / generic cadences to avoid: pending",
+    "",
+    "## Approval policy",
+    "",
+    "Any proposed change to voice, weirdness, ending shape, reader cost, darkness, humor, restraint, or risk budget requires writer approval and a decision-ledger entry.",
+    "",
+  ].join("\n");
+}
+
+function renderDecisionLedger() {
+  return [
+    "# Decision Ledger",
+    "",
+    "Track approved pivots, rejected ideas, unresolved choices, and decisions that automation must not silently reverse.",
+    "",
+    "| Date | Decision | Source / evidence | Status | Do-not-reintroduce notes |",
+    "| --- | --- | --- | --- | --- |",
+    `| ${new Date().toISOString().slice(0, 10)} | PRD-first Genesis workflow initialized | /genesis-prd-start | active | Do not replace PRD-backed decisions with generic genre defaults |`,
+    "",
+  ].join("\n");
+}
+
+function renderChapterProductionQueue(root) {
+  const outline = readIfExists(join(root, "artifacts", "05-outline.md")) || "";
+  const chapters = collectManuscriptChapters(root);
+  const outlineHeadings = [...outline.matchAll(/^#{2,3}\s+(.+)$/gm)].slice(0, 40).map((match) => match[1].trim());
+  const queueRows = outlineHeadings.length
+    ? outlineHeadings.map((title, index) => `| ${index + 1} | ${title} | queued | define scene goal, reader promise, continuity constraints, taste lock checks |`)
+    : ["| 1 | pending outline | blocked | Create or approve artifacts/05-outline.md before chapter autopilot |"];
+  return [
+    "# Chapter Production Queue",
+    "",
+    `- Existing chapter files: ${chapters.length}`,
+    `- Generated: ${new Date().toISOString()}`,
+    "",
+    "## Queue",
+    "",
+    "| # | Chapter / packet | Status | Draft packet requirements |",
+    "| ---: | --- | --- | --- |",
+    ...queueRows,
+    "",
+    "## Per-chapter packet contract",
+    "",
+    "Each chapter packet must include: chapter purpose, scene/section list, reader promise touched, causality link, subplot/argument pressure, continuity constraints, human-specificity seeds, voice/taste-lock notes, forbidden filler, and post-draft ledger updates.",
+    "",
+  ].join("\n");
+}
+
+function renderWriterCockpit(root) {
+  const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
+  const mode = detectWorkflowMode(root);
+  const blockers = collectBlockers(root, true);
+  const hard = blockers.filter((item) => item.severity === "blocker");
+  const stats = manuscriptStats(root);
+  const prdScore = readIfExists(join(root, "artifacts", "prd-completeness-score.md"))?.match(/Score:\s*(\d+)\/100/i)?.[1] || "unknown";
+  const gates = readIfExists(join(root, "artifacts", "quality-gates.md")) || "";
+  const gateStatus = gates.match(/gate_status:\s*([^\n]+)/i)?.[1]?.trim() || "unknown";
+  const nextDecisions = [];
+  if (prdScore === "unknown" || Number(prdScore) < 80) nextDecisions.push("Answer or accept PRD gap report before trusting automation.");
+  if (!existsSync(join(root, "artifacts", "author-voice-fingerprint.md"))) nextDecisions.push("Provide voice samples or approve a generated voice fingerprint.");
+  if (!existsSync(join(root, "artifacts", "05-outline.md"))) nextDecisions.push("Approve architecture/outline before chapter queue autopilot.");
+  if (hard.length) nextDecisions.push(`Clear hard blocker: ${hard[0].file}`);
+  return [
+    "# Writer Cockpit",
+    "",
+    `- Project root: ${root}`,
+    `- Phase: ${phase}`,
+    `- Workflow mode: ${mode}`,
+    `- PRD completeness: ${prdScore}${prdScore !== "unknown" ? "/100" : ""}`,
+    `- Gate status: ${gateStatus}`,
+    `- Manuscript: ${stats.chapters} chapter file(s), ${stats.words} words`,
+    `- Hard blockers: ${hard.length}`,
+    `- Next best action: ${nextRecommendedAction(root)}`,
+    "",
+    "## Writer decisions needed next",
+    "",
+    ...(nextDecisions.length ? nextDecisions.map((item) => `- ${item}`) : ["- none detected by lightweight cockpit; review quality-gates.md before autopilot."]),
+    "",
+    "## Automation allowed now",
+    "",
+    hard.length || /blocked|needs_writer_approval/i.test(gateStatus)
+      ? "- No ungated autopilot. Use /genesis-blockers, answer gap questions, or explicitly update quality-gates.md."
+      : "- Safe to run /genesis-autopilot for the next bounded phase or /genesis-chapter-queue if architecture is approved.",
+    "",
+    "## Top blockers / warnings",
+    "",
+    ...(blockers.length ? blockers.slice(0, 6).map((item) => `- [${item.severity}] ${item.label} — ${item.file}`) : ["- none"]),
+    "",
+  ].join("\n");
+}
+
+function createPrdAutomationArtifacts(root, sourceLabel, analysis) {
+  ensureDir(join(root, "artifacts"));
+  writeFileSync(join(root, "artifacts", "prd-completeness-score.md"), renderPrdCompletenessScore(root, sourceLabel, analysis), "utf8");
+  writeFileSync(join(root, "artifacts", "prd-gap-report.md"), renderPrdGapReport(sourceLabel, analysis), "utf8");
+  writeFileSync(join(root, "artifacts", "prd-traceability-map.md"), renderPrdTraceabilityMap(sourceLabel, analysis), "utf8");
+  writeFileSync(join(root, "artifacts", "quality-gates.md"), renderQualityGates(root, analysis), "utf8");
+  writeFileSync(join(root, "artifacts", "taste-lock.md"), renderTasteLock(), "utf8");
+  writeFileSync(join(root, "artifacts", "decision-ledger.md"), renderDecisionLedger(), "utf8");
+  writeFileSync(join(root, "artifacts", "writer-questions.md"), renderWriterQuestions(root), "utf8");
+  writeFileSync(join(root, "artifacts", "chapter-production-queue.md"), renderChapterProductionQueue(root), "utf8");
+  writeFileSync(join(root, "artifacts", "writer-cockpit.md"), renderWriterCockpit(root), "utf8");
+}
+
+function buildPrdExtractionPrompt(root, sourceLabel, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run PRD-first intake automation.",
+    "",
+    `Project root: ${root}`,
+    `PRD source: ${sourceLabel}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Read first:",
+    "- artifacts/book-prd.md",
+    "- research/notes/source-prd.md",
+    "- artifacts/prd-completeness-score.md",
+    "- artifacts/prd-gap-report.md",
+    "- artifacts/prd-traceability-map.md",
+    "- PROJECT_STATE.yaml",
+    "- ASSUMPTIONS.md",
+    "",
+    "Required outputs:",
+    "- update artifacts/00-brief.md from PRD-supported facts only",
+    "- update artifacts/author-intent.md, artifacts/taste-profile.md, artifacts/risk-budget.md, and artifacts/publication-shape.md",
+    "- update artifacts/reader-promise-tracker.md and artifacts/review-personas.md",
+    "- update artifacts/prd-traceability-map.md so every imported decision cites PRD section/file evidence and confidence",
+    "- update artifacts/prd-gap-report.md with a gap-only interview: ask only missing questions not answered by the PRD",
+    "- update artifacts/quality-gates.md with gate_status blocked if writer approval or missing PRD evidence is required",
+    "- update artifacts/taste-lock.md and artifacts/decision-ledger.md for non-negotiables, rejected ideas, and automation boundaries",
+    "- update artifacts/writer-cockpit.md as the one-page writer dashboard",
+    "- update PROJECT_STATE.yaml, ASSUMPTIONS.md, and STATUS.md",
+    "",
+    "Rules:",
+    "1. The PRD is upstream source material, not a license to hallucinate. Extract only what it supports.",
+    "2. Anything inferred goes in ASSUMPTIONS.md as provisional and in prd-traceability-map.md with low confidence.",
+    "3. If the PRD lacks reader promise, audience, voice/taste, structure, scope, success criteria, or risk budget, stop with gap questions instead of drafting.",
+    "4. Do not draft manuscript prose in this pass.",
+    "5. Preserve creative sovereignty: do not optimize away intentional risk, weirdness, opacity, or taste to satisfy the PRD score.",
+    "6. Commit each changed file separately when inside a Git work tree.",
+    "",
+    "Proceed with PRD import and gap-only interview now.",
+  ].join("\n");
+}
+
+function buildAutopilotPrompt(root, args = "") {
+  const blockers = collectBlockers(root, true).filter((item) => item.severity === "blocker");
+  return [
+    "Use the `genesis-for-pi` skill and run gated writer-safe autopilot.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `Autopilot target/instructions: ${args.trim()}` : "Autopilot target/instructions: next safe bounded step only",
+    `Known hard blockers: ${blockers.length ? blockers.map((item) => item.file).join(", ") : "none from lightweight precheck"}`,
+    "",
+    "Read first:",
+    "- artifacts/quality-gates.md",
+    "- artifacts/writer-cockpit.md",
+    "- artifacts/prd-gap-report.md and artifacts/prd-traceability-map.md when present",
+    "- artifacts/taste-lock.md and artifacts/decision-ledger.md",
+    "- PROJECT_STATE.yaml and STATUS.md",
+    "",
+    "Autopilot rules:",
+    "1. Advance only one bounded step: foundation, architecture, chapter queue, one chapter packet, one chapter draft, or one post-chapter ledger update.",
+    "2. Stop at writer approval gates: PRD import, voice fingerprint, first page/sample, chapter one, pre-full-drafting, final polish.",
+    "3. Do not change premise, reader, voice, ending, POV, genre promise, risk budget, or major structure without explicit writer approval recorded in decision-ledger.md.",
+    "4. Do not draft around quality gates. If gate_status is blocked or needs_writer_approval, update writer-cockpit.md with what the writer must decide and stop.",
+    "5. Use PRD traceability and taste lock as constraints; do not replace them with generic best practices.",
+    "6. Update quality-gates.md, writer-cockpit.md, decision-ledger.md, PROJECT_STATE.yaml, and STATUS.md before stopping.",
+    "7. Commit each changed file separately when inside a Git work tree.",
+    "",
+    "Proceed only if gates allow it; otherwise explain the blocked gate in project files.",
+  ].join("\n");
+}
+
+function buildChapterQueuePrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and build or advance the chapter/scene production queue.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Read first:",
+    "- artifacts/05-outline.md",
+    "- artifacts/causality-chain.md",
+    "- artifacts/05-subplot-map.md or artifacts/argument-spine.md",
+    "- artifacts/reader-promise-tracker.md",
+    "- artifacts/continuity-ledger.md",
+    "- artifacts/taste-lock.md",
+    "- artifacts/quality-gates.md",
+    "",
+    "Required output:",
+    "- update artifacts/chapter-production-queue.md with draftable packets",
+    "- each packet must name chapter goal, scene/section beats, therefore/but link, promise touched, pressure added, continuity constraints, human-specificity seeds, voice/taste constraints, forbidden filler, and post-draft ledger tasks",
+    "- mark packets blocked when outline, voice, or quality gates are not approved",
+    "- update artifacts/writer-cockpit.md and STATUS.md",
+    "",
+    "Do not draft chapter prose unless the user explicitly asks. Build the queue so drafting can be automated safely later.",
+  ].join("\n");
+}
+
+function buildPostChapterUpdatePrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run automatic post-chapter ledger updates.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `Chapter selection/instructions: ${args.trim()}` : "Chapter selection/instructions: latest changed chapter(s) or ask if unclear",
+    "",
+    "Read manuscript chapter files and update only evidence-backed project memory:",
+    "- artifacts/continuity-ledger.md: names, timeline, objects, locations, facts, unresolved questions, clues, reveals",
+    "- artifacts/reader-promise-tracker.md: promises touched, paid, delayed, or newly opened",
+    "- artifacts/causality-chain.md: therefore/but links created or broken",
+    "- artifacts/scene-embodiment-map.md: physical action, objects, interruption, spatial pressure, practical stakes",
+    "- artifacts/human-specificity-ledger.md: restrained lived details actually present or needed",
+    "- evaluations/chapter-scorecards.md: compact diagnostic for the chapter",
+    "- artifacts/chapter-production-queue.md: packet status and next packet",
+    "- artifacts/revision-tickets.md: concrete issues only, with evidence and affected files",
+    "- artifacts/writer-cockpit.md and STATUS.md",
+    "",
+    "Rules:",
+    "- Do not invent continuity facts not present in chapters or artifacts.",
+    "- Do not polish prose in this pass unless the user explicitly asks; this is memory and QA automation.",
+    "- If the chapter violates taste-lock, quality-gates, or reader promise, create revision tickets instead of silently fixing the book's direction.",
+  ].join("\n");
+}
+
+function buildTasteLockPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and update the project taste lock.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `Taste/voice/risk instructions: ${args.trim()}` : "Taste/voice/risk instructions: derive from PRD, voice samples, author-intent, taste-profile, and risk-budget; ask only missing questions",
+    "",
+    "Required outputs:",
+    "- update artifacts/taste-lock.md with locked taste constraints and automation boundaries",
+    "- update artifacts/taste-profile.md, artifacts/risk-budget.md, artifacts/author-voice-fingerprint.md, and artifacts/voice-bible.md when supported by evidence",
+    "- update artifacts/decision-ledger.md with approved non-negotiables and rejected smoothing moves",
+    "- update artifacts/quality-gates.md if writer approval is needed",
+    "- update artifacts/writer-cockpit.md and STATUS.md",
+    "",
+    "Do not make the book safer, smoother, cleaner, or more generically marketable unless the writer explicitly approves that tradeoff.",
+  ].join("\n");
+}
+
+function canRunAutopilot(root) {
+  const hard = collectBlockers(root, true).filter((item) => item.severity === "blocker");
+  return { ok: hard.length === 0, hard };
+}
+
+
+function extractMarkdownHeadings(text, limit = 20) {
+  return [...String(text || "").matchAll(/^#{1,3}\s+(.+)$/gm)].map((match) => match[1].trim()).slice(0, limit);
+}
+
+function renderPrdChangeLog(root, candidateSource, oldText, newText) {
+  const oldWords = countWords(oldText || "");
+  const newWords = countWords(newText || "");
+  const oldHeadings = extractMarkdownHeadings(oldText, 30);
+  const newHeadings = extractMarkdownHeadings(newText, 30);
+  const addedHeadings = newHeadings.filter((heading) => !oldHeadings.includes(heading));
+  const removedHeadings = oldHeadings.filter((heading) => !newHeadings.includes(heading));
+  return [
+    "# PRD Change Log",
+    "",
+    `- Project root: ${root}`,
+    `- Candidate PRD source: ${candidateSource}`,
+    `- Generated: ${new Date().toISOString()}`,
+    `- Previous PRD words: ${oldWords}`,
+    `- Candidate PRD words: ${newWords}`,
+    `- Word-count delta: ${newWords - oldWords}`,
+    "",
+    "## Lightweight structural changes",
+    "",
+    "### Added headings",
+    "",
+    ...(addedHeadings.length ? addedHeadings.map((item) => `- ${item}`) : ["- none detected by lightweight precheck"]),
+    "",
+    "### Removed headings",
+    "",
+    ...(removedHeadings.length ? removedHeadings.map((item) => `- ${item}`) : ["- none detected by lightweight precheck"]),
+    "",
+    "## Required agent review",
+    "",
+    "Classify semantic changes to audience, promise, voice, structure, scope, ending/publication shape, success criteria, risk budget, research/canon, and constraints. Update this file with evidence before accepting the new PRD as source of truth.",
+    "",
+  ].join("\n");
+}
+
+function renderDecisionImpactReport(root, candidateSource) {
+  return [
+    "# Decision Impact Report",
+    "",
+    `- Project root: ${root}`,
+    `- Candidate PRD source: ${candidateSource}`,
+    `- Generated: ${new Date().toISOString()}`,
+    "",
+    "## Impact matrix",
+    "",
+    "| Area | Impact | Evidence | Required action |",
+    "| --- | --- | --- | --- |",
+    "| Audience / target reader | pending semantic diff | pending | confirm before updating artifacts |",
+    "| Reader promise / hook | pending semantic diff | pending | confirm before updating brief and promise tracker |",
+    "| Voice / taste | pending semantic diff | pending | update taste-lock only with writer approval |",
+    "| Structure / outline | pending semantic diff | pending | run outline stress test after changes |",
+    "| Scope / target length | pending semantic diff | pending | update expansion-integrity and quality gates |",
+    "| Ending / publication shape | pending semantic diff | pending | writer approval required |",
+    "| Risk budget | pending semantic diff | pending | update risk-budget and decision-ledger |",
+    "| Research / canon | pending semantic diff | pending | update reference inventory, canon, or assumptions |",
+    "",
+    "## Gate",
+    "",
+    "Do not replace `artifacts/book-prd.md` with the candidate PRD until the writer accepts the impacted decisions or the changes are classified as non-substantive.",
+    "",
+  ].join("\n");
+}
+
+function renderWriterQuestions(root) {
+  const questions = [];
+  const gap = readIfExists(join(root, "artifacts", "prd-gap-report.md")) || "";
+  for (const match of gap.matchAll(/^\d+\.\s+(.+)$/gm)) questions.push(match[1].trim());
+  const gates = readIfExists(join(root, "artifacts", "quality-gates.md")) || "";
+  if (/needs_writer_approval|blocked/i.test(gates)) questions.push("Which blocked quality gate should be approved, revised, or kept blocked?");
+  if (!existsSync(join(root, "artifacts", "author-voice-fingerprint.md"))) questions.push("Can you provide or approve voice samples so Genesis can lock author voice before full drafting?");
+  if (!existsSync(join(root, "artifacts", "publication-shape.md"))) questions.push("Should this book resolve as standalone, series-open, literary-residue, commercial-closure, or another publication shape?");
+  if (!existsSync(join(root, "artifacts", "05-outline.md"))) questions.push("Should Genesis build architecture now, or do you want to supply/approve an outline first?");
+  const unique = [...new Set(questions)].slice(0, 30);
+  return [
+    "# Writer Questions",
+    "",
+    `- Project root: ${root}`,
+    `- Generated: ${new Date().toISOString()}`,
+    "",
+    "## Must answer before safe automation",
+    "",
+    ...(unique.length ? unique.map((item, index) => `${index + 1}. ${item}`) : ["- none detected by lightweight precheck"]),
+    "",
+    "## Can defer unless relevant",
+    "",
+    "- Final title, unless market positioning depends on it.",
+    "- Epigraph, appendix, acknowledgments, and front/back matter preferences.",
+    "- Fine-grained chapter titles until the outline is approved.",
+    "",
+  ].join("\n");
+}
+
+function renderOutlineStressTest(root) {
+  const outline = readIfExists(join(root, "artifacts", "05-outline.md")) || "";
+  const headings = extractMarkdownHeadings(outline, 60);
+  return [
+    "# Outline Stress Test",
+    "",
+    `- Project root: ${root}`,
+    `- Generated: ${new Date().toISOString()}`,
+    `- Outline headings detected: ${headings.length}`,
+    "",
+    "## Lightweight precheck",
+    "",
+    ...(headings.length ? headings.map((heading, index) => `- ${index + 1}. ${heading}`) : ["- No outline headings detected. Create or repair `artifacts/05-outline.md` before drafting."]),
+    "",
+    "## Stress-test dimensions for agent review",
+    "",
+    "| Dimension | Risk to check | Verdict | Evidence | Required repair |",
+    "| --- | --- | --- | --- | --- |",
+    "| Middle movement | sag, repetition, no-state-change chapters | pending | pending | pending |",
+    "| Causality | and-then sequence instead of therefore/but | pending | pending | pending |",
+    "| Reversals | missing option-changing turns | pending | pending | pending |",
+    "| Subplot / argument pressure | decorative thread or weak integration | pending | pending | pending |",
+    "| Reader promises | setup without payoff or genre betrayal | pending | pending | pending |",
+    "| Climax / final proof | false climax or underpowered final argument | pending | pending | pending |",
+    "| Ending shape | mismatch with publication-shape.md | pending | pending | pending |",
+    "| Expansion integrity | chapters that only add volume | pending | pending | pending |",
+    "",
+  ].join("\n");
+}
+
+function buildPrdDiffPrompt(root, candidateSource, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run a PRD diff / impact review.",
+    "",
+    `Project root: ${root}`,
+    `Candidate PRD source: ${candidateSource}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Read first:",
+    "- artifacts/book-prd.md (current accepted PRD)",
+    "- research/notes/source-prd-candidate.md (candidate PRD)",
+    "- artifacts/prd-change-log.md",
+    "- artifacts/decision-impact-report.md",
+    "- artifacts/prd-traceability-map.md",
+    "- artifacts/quality-gates.md",
+    "- artifacts/decision-ledger.md",
+    "- artifacts/writer-cockpit.md",
+    "",
+    "Required outputs:",
+    "- update artifacts/prd-change-log.md with semantic changes, not just wording changes",
+    "- update artifacts/decision-impact-report.md with impact on audience, promise, voice, structure, scope, publication shape, risk, research/canon, and current draft/artifacts",
+    "- update artifacts/writer-questions.md with only decisions the writer must answer",
+    "- update artifacts/quality-gates.md with blocked/needs_writer_approval if changes affect protected decisions",
+    "- update artifacts/writer-cockpit.md and STATUS.md",
+    "- do not replace artifacts/book-prd.md unless the user explicitly says to accept the candidate PRD",
+    "",
+    "Rules:",
+    "1. Treat changed premise, audience, ending, voice/taste, risk budget, POV, genre promise, target length, or structure as protected decisions requiring writer approval.",
+    "2. Separate wording-only PRD edits from decision-changing edits.",
+    "3. Create revision tickets only when the candidate PRD conflicts with existing outline/manuscript/artifacts and the repair is clear.",
+  ].join("\n");
+}
+
+function buildQuestionsPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and generate writer-only questions.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Read project state, PRD gap report, quality gates, writer cockpit, decision ledger, taste lock, outline, reader promises, revision tickets, and blockers.",
+    "",
+    "Required outputs:",
+    "- update artifacts/writer-questions.md",
+    "- group questions as must-answer-before-drafting, must-answer-before-revision, approval-needed, can-defer, and ignore/noise",
+    "- remove questions already answered by PRD, decision-ledger, taste-lock, or explicit writer approval",
+    "- update artifacts/writer-cockpit.md and STATUS.md",
+    "",
+    "Question policy: ask only decisions that require the writer's judgment. Do not ask the writer to do artifact maintenance the agent can do safely.",
+  ].join("\n");
+}
+
+function buildOutlineStressTestPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run an outline stress test before drafting.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Read first:",
+    "- artifacts/05-outline.md",
+    "- artifacts/causality-chain.md",
+    "- artifacts/05-subplot-map.md or artifacts/argument-spine.md",
+    "- artifacts/reader-promise-tracker.md",
+    "- artifacts/publication-shape.md",
+    "- artifacts/expansion-integrity.md",
+    "- artifacts/taste-lock.md",
+    "- artifacts/prd-traceability-map.md when present",
+    "",
+    "Required outputs:",
+    "- update evaluations/outline-stress-test.md with dimension verdicts and evidence",
+    "- create or update artifacts/revision-tickets.md for concrete structural repairs",
+    "- update artifacts/chapter-production-queue.md only if the outline passes or specific packets can be safely queued",
+    "- update artifacts/writer-questions.md for decisions only the writer can answer",
+    "- update artifacts/quality-gates.md, artifacts/writer-cockpit.md, and STATUS.md",
+    "",
+    "Stress dimensions: middle sag, repeated scene shapes, weak therefore/but causality, missing reversals, decorative subplots, broken promises, false climax, ending underpayment, nonfiction argument gaps, study-guide objective gaps, and padding risk.",
+    "Do not draft prose in this pass.",
+  ].join("\n");
+}
+
+function buildReviewPersonasPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and generate or refresh the reader/reviewer persona panel.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: none",
+    "",
+    "Read PRD, brief, market map, reader-promise-tracker, taste-profile, risk-budget, publication-shape, comps, and manuscript/outline if present.",
+    "",
+    "Required output:",
+    "- update artifacts/review-personas.md with 4-7 concrete personas",
+    "- include ideal core reader, genre-native reviewer, voice-sensitive craft reader, skeptical-but-persuadable reader, and hostile/misaligned reader unless the project needs different roles",
+    "- for each persona include why they picked up the book, what they need from page one, what they forgive, what they will not forgive, what they will praise, what makes them DNF, what criticism to ignore, useful signal they may still provide, and review questions",
+    "- update artifacts/writer-cockpit.md and STATUS.md",
+    "",
+    "Personas should protect reader experience and author voice. Do not let a hostile persona become the target reader.",
+  ].join("\n");
+}
+
+function buildPersonaReviewPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run a persona-based review panel.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `Review target/instructions: ${args.trim()}` : "Review target/instructions: choose outline if no manuscript exists, otherwise review the current manuscript at the safest scope",
+    "",
+    "Read first:",
+    "- artifacts/review-personas.md",
+    "- artifacts/reader-promise-tracker.md",
+    "- artifacts/taste-lock.md",
+    "- artifacts/publication-shape.md",
+    "- artifacts/05-outline.md and/or manuscript/chapters/ depending on target",
+    "- artifacts/revision-tickets.md when present",
+    "",
+    "Required outputs:",
+    "- write or update evaluations/persona-review.md",
+    "- for each persona, provide likely praise, likely complaint, DNF trigger, promise/payoff concern, voice/taste concern, and actionable repair",
+    "- separate wrong-reader complaints from useful signal",
+    "- create or update artifacts/revision-tickets.md only for concrete repairs supported by evidence",
+    "- update artifacts/writer-questions.md if the review exposes decisions only the writer can make",
+    "- update artifacts/writer-cockpit.md and STATUS.md",
+    "",
+    "Do not revise the manuscript in this pass unless explicitly asked. Review first, ticket second.",
+  ].join("\n");
+}
+
+
+function renderRegressionCheck(root) {
+  const tickets = readIfExists(join(root, "artifacts", "revision-tickets.md")) || "";
+  const promises = readIfExists(join(root, "artifacts", "reader-promise-tracker.md")) || "";
+  const gates = readIfExists(join(root, "artifacts", "quality-gates.md")) || "";
+  const chapters = collectManuscriptChapters(root);
+  const openTicketCount = (tickets.match(/status\s*:\s*open|\|\s*open\s*\|/gi) || []).length;
+  const gateStatus = gates.match(/gate_status:\s*([^\n]+)/i)?.[1]?.trim() || "unknown";
+  return [
+    "# Regression Check",
+    "",
+    `- Project root: ${root}`,
+    `- Generated: ${new Date().toISOString()}`,
+    `- Chapter files: ${chapters.length}`,
+    `- Open-ticket signals: ${openTicketCount}`,
+    `- Quality gate status: ${gateStatus}`,
+    `- Reader-promise tracker present: ${promises.trim() ? "yes" : "no"}`,
+    "",
+    "## Regression dimensions",
+    "",
+    "| Dimension | Verdict | Evidence | Required action |",
+    "| --- | --- | --- | --- |",
+    "| PRD / accepted decisions | pending | pending | check against book-prd, prd-traceability-map, decision-ledger |",
+    "| Reader promise | pending | pending | verify promises remain opened, developed, and paid/managed |",
+    "| Publication shape / ending | pending | pending | verify ending still matches publication-shape.md |",
+    "| Continuity | pending | pending | verify names, facts, timeline, objects, locations, canon |",
+    "| Voice / taste lock | pending | pending | verify author voice and non-smoothing constraints survived revision |",
+    "| Causality / outline | pending | pending | verify revisions did not break therefore/but logic |",
+    "| Revision tickets | pending | pending | verify fixed tickets stayed fixed and no resolved issue reopened |",
+    "| Expansion integrity | pending | pending | verify no padding, duplicated beats, or ornamental expansion appeared |",
+    "| Persona panel signal | pending | pending | verify target-reader concerns improved without obeying wrong-reader noise |",
+    "",
+    "## Reopened risks",
+    "",
+    "- pending",
+    "",
+    "## Gate recommendation",
+    "",
+    "- pending",
+    "",
+  ].join("\n");
+}
+
+function buildRegressionCheckPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run a regression check after revision or PRD changes.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `User instructions / revision scope: ${args.trim()}` : "User instructions / revision scope: current project changes since last checkpoint or ask if unclear",
+    "",
+    "Read first:",
+    "- artifacts/book-prd.md and artifacts/prd-traceability-map.md when present",
+    "- artifacts/decision-ledger.md",
+    "- artifacts/quality-gates.md and artifacts/writer-cockpit.md",
+    "- artifacts/reader-promise-tracker.md",
+    "- artifacts/publication-shape.md",
+    "- artifacts/continuity-ledger.md",
+    "- artifacts/taste-lock.md, artifacts/voice-bible.md, and artifacts/author-voice-fingerprint.md",
+    "- artifacts/causality-chain.md and artifacts/05-outline.md",
+    "- artifacts/revision-tickets.md",
+    "- evaluations/persona-review.md and evaluations/outline-stress-test.md when present",
+    "- manuscript/chapters/",
+    "",
+    "Required outputs:",
+    "- update evaluations/regression-check.md with verdicts, evidence, and required actions",
+    "- mark reopened or newly introduced failures in artifacts/revision-tickets.md",
+    "- update artifacts/writer-questions.md for decisions only the writer can make",
+    "- update artifacts/quality-gates.md if regression creates a hard stop or approval gate",
+    "- update artifacts/writer-cockpit.md and STATUS.md",
+    "",
+    "Check whether the revision broke: PRD-backed decisions, reader promise, ending/publication shape, continuity, voice/taste lock, causality, resolved tickets, expansion integrity, or useful persona-panel signal.",
+    "Do not rewrite the manuscript in this pass unless explicitly asked; diagnose and ticket first.",
+  ].join("\n");
+}
+
+function renderSeriesRegressionCheck(root) {
+  const books = listSeriesBookProjects(root);
+  const openRetcons = (readIfExists(join(root, "artifacts", "retcon-log.md"))?.match(/\b(proposed|pending|open)\b/gi) || []).length;
+  const verification = readIfExists(join(root, "artifacts", "series-verification-matrix.md")) || "";
+  const failedBooks = (verification.match(/\b(fail|failed|blocked)\b/gi) || []).length;
+  return [
+    "# Series Regression Check",
+    "",
+    `- Series root: ${root}`,
+    `- Generated: ${new Date().toISOString()}`,
+    `- Book projects: ${books.length}`,
+    `- Open retcon signals: ${openRetcons}`,
+    `- Failed / blocked verification signals: ${failedBooks}`,
+    "",
+    "## Regression dimensions",
+    "",
+    "| Dimension | Verdict | Evidence | Required action |",
+    "| --- | --- | --- | --- |",
+    "| Locked canon | pending | pending | verify canon-lock.md and series-bible.md still match the books |",
+    "| Timeline / chronology | pending | pending | verify series-timeline.md anchors, elapsed time, ages, and recovery windows |",
+    "| Character state continuity | pending | pending | verify character-state-matrix.md still matches relationship, goal, and power-state changes |",
+    "| Reveal / spoiler order | pending | pending | verify reveal-spoiler-matrix.md still fits reader and character knowledge timing |",
+    "| Promise / payoff integrity | pending | pending | verify installment and series promises remain paid, preserved, or intentionally deferred |",
+    "| Retcon safety | pending | pending | verify retcon-log.md is explicit and all downstream fixes were applied |",
+    "| Repetition / escalation | pending | pending | verify series-repetition-radar.md shows growth instead of recycled structure |",
+    "| Book handoff integrity | pending | pending | verify predecessor book-handoff-packet.md files still hand off cleanly to later books |",
+    "",
+    "## Reopened cross-book risks",
+    "",
+    "- pending",
+    "",
+    "## Gate recommendation",
+    "",
+    "- pending",
+    "",
+  ].join("\n");
+}
+
+function buildSeriesRegressionCheckPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run a series regression check after draft changes, rewrites, book locks, or PRD shifts.",
+    "",
+    `Series root: ${root}`,
+    args.trim() ? `User instructions / revision scope: ${args.trim()}` : "User instructions / revision scope: current cross-book changes since the last checkpoint or ask if unclear",
+    "",
+    "Read first:",
+    "- SERIES_STATE.yaml and SERIES_STATUS.md",
+    "- artifacts/series-bible.md",
+    "- artifacts/series-arc-map.md",
+    "- artifacts/series-timeline.md",
+    "- artifacts/character-state-matrix.md",
+    "- artifacts/reveal-spoiler-matrix.md",
+    "- artifacts/canon-lock.md",
+    "- artifacts/installment-promise-tracker.md",
+    "- artifacts/series-payoff-ledger.md",
+    "- artifacts/series-verification-matrix.md",
+    "- artifacts/retcon-log.md",
+    "- artifacts/series-repetition-radar.md",
+    "- each completed predecessor book's artifacts/book-handoff-packet.md when present",
+    "- book PROJECT_STATE.yaml, STATUS.md, revision tickets, and manuscript chapters for touched books",
+    "",
+    "Required outputs:",
+    "- update evaluations/series-regression-check.md with verdicts, evidence, and required actions",
+    "- update artifacts/series-verification-matrix.md for any reopened cross-book failures",
+    "- update artifacts/series-timeline.md, artifacts/character-state-matrix.md, artifacts/reveal-spoiler-matrix.md, artifacts/retcon-log.md, and artifacts/series-repetition-radar.md when the revision changed cross-book truth",
+    "- create or update affected book-level artifacts/revision-tickets.md for concrete repairs",
+    "- update SERIES_STATUS.md and touched book STATUS.md files",
+    "",
+    "Check whether the revision broke locked canon, chronology, character-state continuity, reveal order, promise/payoff integrity, retcon safety, repetition/escalation shape, or predecessor-to-successor handoff logic.",
+    "Do not rewrite multiple books in this pass unless explicitly asked; diagnose, synchronize artifacts, and ticket first.",
+  ].join("\n");
 }
 
 function buildNextPrompt(root, args, commandName = "genesis-next") {
@@ -1815,10 +3204,510 @@ export default function (pi) {
     pi.sendUserMessage(kickoff);
   } });
 
+
+  const registerWriterCockpitCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    ensureDir(join(root, "artifacts"));
+    writeFileSync(join(root, "artifacts", "chapter-production-queue.md"), existsSync(join(root, "artifacts", "chapter-production-queue.md")) ? (readIfExists(join(root, "artifacts", "chapter-production-queue.md")) || renderChapterProductionQueue(root)) : renderChapterProductionQueue(root), "utf8");
+    writeFileSync(join(root, "artifacts", "writer-cockpit.md"), renderWriterCockpit(root), "utf8");
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    ctx.ui.notify(`${renderWriterCockpit(root)}\nartifacts/writer-cockpit.md and STATUS.md updated.`, "info");
+  } });
+
+  const registerPrdStartCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const sourceInput = args.trim() || (await ctx.ui.input("PRD file or folder:", "book-prd.md"));
+    if (!sourceInput) return;
+    const sourcePath = resolve(ctx.cwd, sourceInput);
+    if (!existsSync(sourcePath)) {
+      ctx.ui.notify(`PRD source not found: ${sourcePath}`, "warning");
+      return;
+    }
+    const prd = readPrdSource(sourcePath);
+    if (!prd.text.trim()) {
+      ctx.ui.notify(`No Markdown/text PRD content found in ${sourcePath}`, "warning");
+      return;
+    }
+    const inferredName = extractTitleFromText(prd.firstText || prd.text, basename(sourcePath, ".md"));
+    const typedName = (await ctx.ui.input("Genesis project name:", inferredName)) || inferredName;
+    const projectRoot = resolve(ctx.cwd, slugifyProjectName(typedName));
+    if (existsSync(projectRoot) && existsSync(join(projectRoot, "PROJECT_STATE.yaml"))) {
+      ctx.ui.notify(`Genesis project already exists: ${projectRoot}`, "warning");
+      return;
+    }
+    const mode = inferWorkflowModeFromPrd(prd.text);
+    const analysis = analyzePrdCompleteness(prd.text);
+    initializeProject(projectRoot, typedName, `Imported from PRD source: ${sourcePath}`);
+    try { maybeInitGit(projectRoot); } catch { ctx.ui.notify("Project created, but git init failed. Initialize git manually if needed.", "warning"); }
+    applyWorkflowModeToProject(projectRoot, mode);
+    scaffoldModeBundle(projectRoot, mode, false);
+    const publicationShape = findTemplateEntryByDestination("artifacts/publication-shape.md");
+    if (publicationShape) scaffoldTemplate(projectRoot, publicationShape.template, publicationShape.destination, false);
+    ensureDir(join(projectRoot, "research", "notes"));
+    writeFileSync(join(projectRoot, "artifacts", "book-prd.md"), prd.text + "\n", "utf8");
+    writeFileSync(join(projectRoot, "research", "notes", "source-prd.md"), prd.text + "\n", "utf8");
+    writeFileSync(join(projectRoot, "research", "notes", "source-prd-manifest.md"), [
+      "# Source PRD Manifest",
+      "",
+      `- Imported from: ${sourcePath}`,
+      `- Files: ${prd.files.length}`,
+      `- Inferred workflow mode: ${mode}`,
+      `- PRD completeness score: ${analysis.score}/100`,
+      "",
+      ...prd.files.map((file) => `- ${file}`),
+      "",
+    ].join("\n"), "utf8");
+    createPrdAutomationArtifacts(projectRoot, sourcePath, analysis);
+    writeFileSync(join(projectRoot, "STATUS.md"), renderStatusDashboard(projectRoot), "utf8");
+    ctx.ui.notify(`Initialized PRD-first Genesis project at ${projectRoot}\nWorkflow mode: ${mode}\nPRD completeness: ${analysis.score}/100\nGap questions: ${analysis.missing.length + analysis.weak.length}\nWriter cockpit: artifacts/writer-cockpit.md`, analysis.score >= 80 ? "info" : "warning");
+    const shouldQueue = await ctx.ui.confirm("Run PRD import agent pass now?", "Genesis will map PRD-supported claims into artifacts, update traceability, and ask only gap questions. It will not draft prose.");
+    if (!shouldQueue) return;
+    const message = buildPrdExtractionPrompt(projectRoot, sourcePath, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerPrdIngestCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const sourceInput = args.trim() || (await ctx.ui.input("PRD file or folder to ingest:", "book-prd.md"));
+    if (!sourceInput) return;
+    const sourcePath = resolve(ctx.cwd, sourceInput);
+    if (!existsSync(sourcePath)) {
+      ctx.ui.notify(`PRD source not found: ${sourcePath}`, "warning");
+      return;
+    }
+    const prd = readPrdSource(sourcePath);
+    if (!prd.text.trim()) {
+      ctx.ui.notify(`No Markdown/text PRD content found in ${sourcePath}`, "warning");
+      return;
+    }
+    const analysis = analyzePrdCompleteness(prd.text);
+    ensureDir(join(root, "artifacts"));
+    ensureDir(join(root, "research", "notes"));
+    writeFileSync(join(root, "artifacts", "book-prd.md"), prd.text + "\n", "utf8");
+    writeFileSync(join(root, "research", "notes", "source-prd.md"), prd.text + "\n", "utf8");
+    writeFileSync(join(root, "research", "notes", "source-prd-manifest.md"), [
+      "# Source PRD Manifest",
+      "",
+      `- Imported from: ${sourcePath}`,
+      `- Files: ${prd.files.length}`,
+      `- PRD completeness score: ${analysis.score}/100`,
+      "",
+      ...prd.files.map((file) => `- ${file}`),
+      "",
+    ].join("\n"), "utf8");
+    createPrdAutomationArtifacts(root, sourcePath, analysis);
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    const message = buildPrdExtractionPrompt(root, sourcePath, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`PRD ingested and import pass queued. Score: ${analysis.score}/100`, analysis.score >= 80 ? "info" : "warning");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerAutopilotCommand = (name, description) => pi.registerCommand(name, { description, getArgumentCompletions: (prefix) => {
+    const items = ["foundation", "architecture", "chapter-queue", "one chapter packet", "one chapter draft", "post-chapter-update", "status only"].map((value) => ({ value, label: value }));
+    const filtered = items.filter((item) => item.value.startsWith(prefix));
+    return filtered.length ? filtered : null;
+  }, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    ensureDir(join(root, "artifacts"));
+    writeFileSync(join(root, "artifacts", "writer-cockpit.md"), renderWriterCockpit(root), "utf8");
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    const gate = canRunAutopilot(root);
+    if (!gate.ok) {
+      ctx.ui.notify(`Autopilot blocked by ${gate.hard.length} hard gate(s):\n${gate.hard.slice(0, 6).map((item) => `- ${item.file}: ${item.label}`).join("\n")}\n\nUpdated artifacts/writer-cockpit.md and STATUS.md.`, "warning");
+      return;
+    }
+    const message = buildAutopilotPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerChapterQueueCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    ensureDir(join(root, "artifacts"));
+    writeFileSync(join(root, "artifacts", "chapter-production-queue.md"), renderChapterProductionQueue(root), "utf8");
+    writeFileSync(join(root, "artifacts", "writer-cockpit.md"), renderWriterCockpit(root), "utf8");
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    const message = buildChapterQueuePrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Created lightweight chapter queue and queued agent refinement.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerPostChapterUpdateCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const message = buildPostChapterUpdatePrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerTasteLockCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    ensureDir(join(root, "artifacts"));
+    if (!existsSync(join(root, "artifacts", "taste-lock.md"))) writeFileSync(join(root, "artifacts", "taste-lock.md"), renderTasteLock(), "utf8");
+    if (!existsSync(join(root, "artifacts", "decision-ledger.md"))) writeFileSync(join(root, "artifacts", "decision-ledger.md"), renderDecisionLedger(), "utf8");
+    writeFileSync(join(root, "artifacts", "writer-cockpit.md"), renderWriterCockpit(root), "utf8");
+    const message = buildTasteLockPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+
+  const registerPrdDiffCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    const sourceInput = args.trim() || (await ctx.ui.input("Candidate PRD file or folder:", "book-prd.md"));
+    if (!sourceInput) return;
+    const sourcePath = resolve(ctx.cwd, sourceInput);
+    if (!existsSync(sourcePath)) {
+      ctx.ui.notify(`Candidate PRD source not found: ${sourcePath}`, "warning");
+      return;
+    }
+    const candidate = readPrdSource(sourcePath);
+    if (!candidate.text.trim()) {
+      ctx.ui.notify(`No Markdown/text PRD content found in ${sourcePath}`, "warning");
+      return;
+    }
+    ensureDir(join(root, "artifacts"));
+    ensureDir(join(root, "research", "notes"));
+    const current = readIfExists(join(root, "artifacts", "book-prd.md")) || readIfExists(join(root, "research", "notes", "source-prd.md")) || "";
+    writeFileSync(join(root, "research", "notes", "source-prd-candidate.md"), candidate.text + "\n", "utf8");
+    writeFileSync(join(root, "artifacts", "prd-change-log.md"), renderPrdChangeLog(root, sourcePath, current, candidate.text), "utf8");
+    writeFileSync(join(root, "artifacts", "decision-impact-report.md"), renderDecisionImpactReport(root, sourcePath), "utf8");
+    writeFileSync(join(root, "artifacts", "writer-questions.md"), renderWriterQuestions(root), "utf8");
+    writeFileSync(join(root, "artifacts", "writer-cockpit.md"), renderWriterCockpit(root), "utf8");
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    const message = buildPrdDiffPrompt(root, sourcePath, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Created PRD diff scaffolds and queued impact review.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerQuestionsCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    ensureDir(join(root, "artifacts"));
+    writeFileSync(join(root, "artifacts", "writer-questions.md"), renderWriterQuestions(root), "utf8");
+    writeFileSync(join(root, "artifacts", "writer-cockpit.md"), renderWriterCockpit(root), "utf8");
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    const message = buildQuestionsPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Created lightweight writer questions and queued refinement.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerOutlineStressTestCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    ensureDir(join(root, "evaluations"));
+    ensureDir(join(root, "artifacts"));
+    writeFileSync(join(root, "evaluations", "outline-stress-test.md"), renderOutlineStressTest(root), "utf8");
+    writeFileSync(join(root, "artifacts", "writer-questions.md"), renderWriterQuestions(root), "utf8");
+    writeFileSync(join(root, "artifacts", "writer-cockpit.md"), renderWriterCockpit(root), "utf8");
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    const message = buildOutlineStressTestPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Created outline stress-test scaffold and queued review.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerReviewPersonasCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    ensureDir(join(root, "artifacts"));
+    const template = findTemplateEntryByDestination("artifacts/review-personas.md");
+    if (template && !existsSync(join(root, "artifacts", "review-personas.md"))) scaffoldTemplate(root, template.template, template.destination, false);
+    writeFileSync(join(root, "artifacts", "writer-cockpit.md"), renderWriterCockpit(root), "utf8");
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    const message = buildReviewPersonasPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued review-persona generation.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerPersonaReviewCommand = (name, description) => pi.registerCommand(name, { description, getArgumentCompletions: (prefix) => {
+    const items = ["outline", "chapter-01", "latest chapter", "manuscript", "opening", "ending"].map((value) => ({ value, label: value }));
+    const filtered = items.filter((item) => item.value.startsWith(prefix));
+    return filtered.length ? filtered : null;
+  }, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    ensureDir(join(root, "evaluations"));
+    ensureDir(join(root, "artifacts"));
+    if (!existsSync(join(root, "evaluations", "persona-review.md"))) {
+      const template = findTemplateEntryByDestination("evaluations/persona-review.md");
+      if (template) scaffoldTemplate(root, template.template, template.destination, false);
+    }
+    writeFileSync(join(root, "artifacts", "writer-cockpit.md"), renderWriterCockpit(root), "utf8");
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    const message = buildPersonaReviewPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued persona-based review.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+
+  const registerRegressionCheckCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    ensureDir(join(root, "evaluations"));
+    ensureDir(join(root, "artifacts"));
+    writeFileSync(join(root, "evaluations", "regression-check.md"), renderRegressionCheck(root), "utf8");
+    writeFileSync(join(root, "artifacts", "writer-questions.md"), renderWriterQuestions(root), "utf8");
+    writeFileSync(join(root, "artifacts", "writer-cockpit.md"), renderWriterCockpit(root), "utf8");
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    const message = buildRegressionCheckPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Created regression-check scaffold and queued analysis.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
   const registerMigrateCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
     const root = findProjectRoot(ctx.cwd);
     const result = migrateProject(root);
     ctx.ui.notify(`Migrated Genesis project at ${result.root}\nPhase: ${result.phase}\nWorkflow mode: ${result.mode}\nRemaining missing files: ${result.missing.length}`, result.missing.length ? "warning" : "info");
+  } });
+
+  const registerSeriesStartCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const typedName = args.trim() || (await ctx.ui.input("Series name:", "my-series"));
+    if (!typedName) return;
+    const seriesRoot = resolve(ctx.cwd, slugifyProjectName(typedName));
+    if (existsSync(seriesRoot) && existsSync(join(seriesRoot, "SERIES_STATE.yaml"))) {
+      ctx.ui.notify(`Genesis series already exists: ${seriesRoot}`, "warning");
+      return;
+    }
+    const plannedRaw = await ctx.ui.input("How many books should Genesis scaffold?", "3");
+    const plannedBooks = Math.max(1, Math.min(20, Number.parseInt(plannedRaw, 10) || 3));
+    const premise = (await ctx.ui.editor("Series premise:", "Describe the whole-series premise, genre pressure, recurring promise, planned endpoint, and anything that must not drift across books.")) || "";
+    const result = initializeSeriesWorkspace(seriesRoot, typedName, premise, plannedBooks);
+    try { maybeInitGit(seriesRoot); } catch { ctx.ui.notify("Series workspace created, but git init failed. Initialize git manually if needed.", "warning"); }
+    writeFileSync(join(seriesRoot, "SERIES_STATUS.md"), renderSeriesStatus(seriesRoot), "utf8");
+    ctx.ui.notify(`Initialized Genesis series at ${seriesRoot}\nBooks scaffolded: ${result.bookRoots.length}\nSERIES_STATUS.md updated.`, "info");
+    const shouldStart = await ctx.ui.confirm("Start series planning now?", "Queue Genesis to fill the series bible, arc map, and book ladder before drafting?");
+    if (!shouldStart) return;
+    const message = buildSeriesNextPrompt(seriesRoot, `Start whole-series planning from this premise: ${premise || "No premise captured yet."}`);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerSeriesStatusCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findSeriesRoot(ctx.cwd);
+    if (!existsSync(join(root, "SERIES_STATE.yaml"))) {
+      ctx.ui.notify(`No Genesis series workspace found from ${ctx.cwd}. Run /genesis-series-start first.`, "warning");
+      return;
+    }
+    const status = renderSeriesStatus(root);
+    writeFileSync(join(root, "SERIES_STATUS.md"), status, "utf8");
+    ctx.ui.notify(`${status}\nSERIES_STATUS.md updated.`, "info");
+  } });
+
+  const registerSeriesOpenCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const workspaces = findSeriesWorkspaces(ctx.cwd, 4);
+    if (!workspaces.length) {
+      ctx.ui.notify("No Genesis series workspaces found under the current working directory.", "warning");
+      return;
+    }
+    const selectedSeries = await ctx.ui.select("Choose a Genesis series workspace:", workspaces);
+    if (!selectedSeries) return;
+    const action = await ctx.ui.select("What should Genesis do with this series?", ["Show status", "Advance next step", "Verify series", "Run series regression check", "Inspect blockers", "Export series package"]);
+    if (!action) return;
+    if (action === "Show status") {
+      const status = renderSeriesStatus(selectedSeries);
+      writeFileSync(join(selectedSeries, "SERIES_STATUS.md"), status, "utf8");
+      ctx.ui.notify(`${status}\nSERIES_STATUS.md updated.`, "info");
+      return;
+    }
+    if (action === "Inspect blockers") {
+      writeFileSync(join(selectedSeries, "SERIES_STATUS.md"), renderSeriesStatus(selectedSeries), "utf8");
+      ctx.ui.notify(`Genesis series: ${selectedSeries}\n\n${renderSeriesBlockers(selectedSeries)}`, "info");
+      return;
+    }
+    if (action === "Export series package") {
+      const result = createSeriesExport(selectedSeries);
+      ctx.ui.notify(`Created Genesis series export for ${selectedSeries}.\nBooks: ${result.books}\n${result.files.map((file) => `- ${file}`).join("\n")}`, result.books ? "info" : "warning");
+      return;
+    }
+    if (action === "Run series regression check") {
+      ensureDir(join(selectedSeries, "evaluations"));
+      writeFileSync(join(selectedSeries, "evaluations", "series-regression-check.md"), renderSeriesRegressionCheck(selectedSeries), "utf8");
+      writeFileSync(join(selectedSeries, "SERIES_STATUS.md"), renderSeriesStatus(selectedSeries), "utf8");
+      const message = buildSeriesRegressionCheckPrompt(selectedSeries, `Series root: ${selectedSeries}. Run a regression check for this selected series workspace.`);
+      if (!ctx.isIdle()) {
+        pi.sendUserMessage(message, { deliverAs: "followUp" });
+        ctx.ui.notify(`Queued /${name} run series regression check as a follow-up.`, "info");
+        return;
+      }
+      pi.sendUserMessage(message);
+      return;
+    }
+    const message = action === "Verify series"
+      ? buildSeriesVerifyPrompt(selectedSeries, `Series root: ${selectedSeries}. Verify this selected series workspace.`)
+      : buildSeriesNextPrompt(selectedSeries, `Series root: ${selectedSeries}. Continue this selected series workspace from its current state.`);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} ${action.toLowerCase()} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerSeriesNextCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findSeriesRoot(ctx.cwd);
+    if (!existsSync(join(root, "SERIES_STATE.yaml"))) {
+      ctx.ui.notify(`No Genesis series workspace found from ${ctx.cwd}. Run /genesis-series-start first.`, "warning");
+      return;
+    }
+    const message = buildSeriesNextPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerSeriesVerifyCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findSeriesRoot(ctx.cwd);
+    if (!existsSync(join(root, "SERIES_STATE.yaml"))) {
+      ctx.ui.notify(`No Genesis series workspace found from ${ctx.cwd}. Run /genesis-series-start first.`, "warning");
+      return;
+    }
+    const message = buildSeriesVerifyPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerSeriesRegressionCheckCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findSeriesRoot(ctx.cwd);
+    if (!existsSync(join(root, "SERIES_STATE.yaml"))) {
+      ctx.ui.notify(`No Genesis series workspace found from ${ctx.cwd}. Run /genesis-series-start first.`, "warning");
+      return;
+    }
+    ensureDir(join(root, "evaluations"));
+    writeFileSync(join(root, "evaluations", "series-regression-check.md"), renderSeriesRegressionCheck(root), "utf8");
+    writeFileSync(join(root, "SERIES_STATUS.md"), renderSeriesStatus(root), "utf8");
+    const message = buildSeriesRegressionCheckPrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Created series-regression-check scaffold and queued analysis.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerSeriesAddBookCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findSeriesRoot(ctx.cwd);
+    if (!existsSync(join(root, "SERIES_STATE.yaml"))) {
+      ctx.ui.notify(`No Genesis series workspace found from ${ctx.cwd}. Run /genesis-series-start first.`, "warning");
+      return;
+    }
+    const premise = args.trim() || (await ctx.ui.editor("New book setup:", "Describe this installment's role, inherited promises, ending state, and any new pressure it adds.")) || "";
+    const result = addSeriesBookToWorkspace(root, premise);
+    ctx.ui.notify(`Added ${result.bookRoot.startsWith(root) ? result.bookRoot.slice(root.length + 1) : result.bookRoot}\nPlanned books: ${result.plannedBooks}\nSERIES_STATUS.md updated.`, "info");
+  } });
+
+  const registerSeriesBlockersCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findSeriesRoot(ctx.cwd);
+    if (!existsSync(join(root, "SERIES_STATE.yaml"))) {
+      ctx.ui.notify(`No Genesis series workspace found from ${ctx.cwd}. Run /genesis-series-start first.`, "warning");
+      return;
+    }
+    const report = renderSeriesBlockers(root);
+    writeFileSync(join(root, "SERIES_STATUS.md"), renderSeriesStatus(root), "utf8");
+    ctx.ui.notify(report, /\[blocker\]/i.test(report) ? "warning" : "info");
+  } });
+
+  const registerSeriesScoreCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findSeriesRoot(ctx.cwd);
+    if (!existsSync(join(root, "SERIES_STATE.yaml"))) {
+      ctx.ui.notify(`No Genesis series workspace found from ${ctx.cwd}. Run /genesis-series-start first.`, "warning");
+      return;
+    }
+    const message = buildSeriesScorePrompt(root, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
+  } });
+
+  const registerSeriesExportCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
+    const root = findSeriesRoot(ctx.cwd);
+    if (!existsSync(join(root, "SERIES_STATE.yaml"))) {
+      ctx.ui.notify(`No Genesis series workspace found from ${ctx.cwd}. Run /genesis-series-start first.`, "warning");
+      return;
+    }
+    const result = createSeriesExport(root);
+    ctx.ui.notify(`Created Genesis series export.\nBooks: ${result.books}\n${result.files.map((file) => `- ${file}`).join("\n")}`, result.books ? "info" : "warning");
+  } });
+
+  const registerSeriesLockBookCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findSeriesRoot(ctx.cwd);
+    if (!existsSync(join(root, "SERIES_STATE.yaml"))) {
+      ctx.ui.notify(`No Genesis series workspace found from ${ctx.cwd}. Run /genesis-series-start first.`, "warning");
+      return;
+    }
+    const books = listSeriesBookProjects(root);
+    if (!books.length) {
+      ctx.ui.notify("No book projects found under this series workspace.", "warning");
+      return;
+    }
+    const requested = args.trim();
+    let bookRoot = requested ? books.find((book) => book.includes(requested) || basename(book) === requested) : null;
+    if (!bookRoot) {
+      const labels = books.map((book) => book.startsWith(root) ? book.slice(root.length + 1) : book);
+      const selected = await ctx.ui.select("Choose book to lock into series canon:", labels);
+      if (!selected) return;
+      bookRoot = join(root, selected);
+    }
+    const message = buildSeriesLockBookPrompt(root, bookRoot, args);
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`Queued /${name} as a follow-up.`, "info");
+      return;
+    }
+    pi.sendUserMessage(message);
   } });
 
   const registerOpenCommand = (name, description) => pi.registerCommand(name, { description, handler: async (_args, ctx) => {
@@ -1887,53 +3776,52 @@ export default function (pi) {
   } });
 
   registerStatusCommand("genesis-status", "Show Genesis for Pi project status from PROJECT_STATE and artifact files");
-  registerStatusCommand("bg-status", "Legacy alias for /genesis-status");
   registerPlanCommand("genesis-plan", "Show a dry-run summary of what Genesis would do next");
-  registerPlanCommand("bg-plan", "Legacy alias for /genesis-plan");
   registerResumeCommand("genesis-resume", "Summarize where a Genesis project left off and what should happen next");
-  registerResumeCommand("bg-resume", "Legacy alias for /genesis-resume");
   registerDoctorCommand("genesis-doctor", "Check install health, project health, blockers, and lint findings");
-  registerDoctorCommand("bg-doctor", "Legacy alias for /genesis-doctor");
   registerLintCommand("genesis-lint", "Lint Genesis artifacts for placeholders, empty sections, and weak scaffolds");
-  registerLintCommand("bg-lint", "Legacy alias for /genesis-lint");
   registerDashboardCommand("genesis-dashboard", "Show a richer Genesis project dashboard and write it to STATUS.md");
-  registerDashboardCommand("bg-dashboard", "Legacy alias for /genesis-dashboard");
   registerCompileCommand("genesis-compile", "Compile manuscript chapters into delivery/manuscript-full.md");
-  registerCompileCommand("bg-compile", "Legacy alias for /genesis-compile");
   registerExportCommand("genesis-export", "Create editorial handoff, beta packet, revision board, and export manifest files");
-  registerExportCommand("bg-export", "Legacy alias for /genesis-export");
   registerCheckpointCommand("genesis-checkpoint", "Commit changed Genesis project files one file at a time");
-  registerCheckpointCommand("bg-checkpoint", "Legacy alias for /genesis-checkpoint");
+  registerPrdStartCommand("genesis-prd-start", "Bootstrap a PRD-first Genesis project, score PRD completeness, and queue gap-only intake");
+  registerPrdIngestCommand("genesis-prd-ingest", "Ingest a PRD into the current Genesis project with traceability and gap reporting");
+  registerWriterCockpitCommand("genesis-cockpit", "Write a one-page writer cockpit with gates, blockers, decisions, and next actions");
+  registerAutopilotCommand("genesis-autopilot", "Run a bounded, writer-gated autopilot step without bypassing quality gates");
+  registerChapterQueueCommand("genesis-chapter-queue", "Build draftable chapter packets from the approved outline and project constraints");
+  registerPostChapterUpdateCommand("genesis-post-chapter-update", "Update continuity, promises, scorecards, and queue status after chapter drafting");
+  registerTasteLockCommand("genesis-taste-lock", "Protect author taste, risk, voice, and automation boundaries in durable artifacts");
+  registerPrdDiffCommand("genesis-prd-diff", "Compare a candidate PRD against the accepted PRD and report decision impact");
+  registerQuestionsCommand("genesis-questions", "Generate only the writer decisions needed for safe next automation");
+  registerOutlineStressTestCommand("genesis-outline-stress-test", "Stress-test outline architecture before drafting");
+  registerReviewPersonasCommand("genesis-review-personas", "Generate or refresh the reader/reviewer persona panel");
+  registerPersonaReviewCommand("genesis-persona-review", "Run an outline/chapter/manuscript review through the persona panel");
+  registerRegressionCheckCommand("genesis-regression-check", "Check whether revisions broke approved promises, continuity, voice, gates, or tickets");
   queuePromptCommand("genesis-ingest", "Ingest an existing manuscript, notes folder, research, or canon material into Genesis artifacts", buildIngestPrompt);
-  queuePromptCommand("bg-ingest", "Legacy alias for /genesis-ingest", buildIngestPrompt);
   queuePromptCommand("genesis-voice-ingest", "Ingest author voice samples into the voice fingerprint and voice bible", buildVoiceIngestPrompt);
-  queuePromptCommand("bg-voice-ingest", "Legacy alias for /genesis-voice-ingest", buildVoiceIngestPrompt);
   queuePromptCommand("genesis-voice-drift", "Audit manuscript chapters against the author voice fingerprint and voice bible", buildVoiceDriftPrompt);
-  queuePromptCommand("bg-voice-drift", "Legacy alias for /genesis-voice-drift", buildVoiceDriftPrompt);
   registerInitCommand("genesis-init", "Create a fresh Genesis for Pi project tree and optionally start intake");
-  registerInitCommand("bg-init", "Legacy alias for /genesis-init");
   registerStartCommand("genesis-start", "Bootstrap a new Genesis project with mode selection, scaffolds, and intake kickoff");
-  registerStartCommand("bg-start", "Legacy alias for /genesis-start");
+  registerSeriesStartCommand("genesis-series-start", "Bootstrap a whole-series workspace with shared series artifacts and per-book projects");
+  registerSeriesOpenCommand("genesis-series-open", "Pick an existing series workspace, then inspect or continue it");
+  registerSeriesStatusCommand("genesis-series-status", "Show whole-series status across shared artifacts and book projects");
+  registerSeriesNextCommand("genesis-series-next", "Advance the next safest series-level or book-level step");
+  registerSeriesAddBookCommand("genesis-series-add-book", "Add another installment project to an existing series workspace");
+  registerSeriesBlockersCommand("genesis-series-blockers", "Inspect series-level and cross-book blockers");
+  registerSeriesVerifyCommand("genesis-series-verify", "Run cross-book canon, continuity, escalation, and promise verification");
+  registerSeriesRegressionCheckCommand("genesis-series-regression-check", "Check whether cross-book revisions broke canon, timeline, reveal order, handoffs, or escalation");
+  registerSeriesScoreCommand("genesis-series-score", "Score whole-series canon, escalation, payoff, repetition, and cohesion");
+  registerSeriesExportCommand("genesis-series-export", "Create whole-series delivery and editorial handoff files");
+  registerSeriesLockBookCommand("genesis-series-lock-book", "Extract one completed installment into locked series canon");
   registerOpenCommand("genesis-open", "Pick an existing Genesis project, then inspect or continue it");
-  registerOpenCommand("bg-open", "Legacy alias for /genesis-open");
   registerNextCommand("genesis-next", "Clear blockers when possible, then advance Genesis for Pi to the next incomplete pipeline step");
-  registerNextCommand("bg-next", "Legacy alias for /genesis-next");
   registerValidateCommand("genesis-validate", "Validate the current Genesis phase contract, missing outputs, and blocker state");
-  registerValidateCommand("bg-validate", "Legacy alias for /genesis-validate");
   registerMigrateCommand("genesis-migrate", "Repair or upgrade an older Genesis project tree to the current layout");
-  registerMigrateCommand("bg-migrate", "Legacy alias for /genesis-migrate");
   registerSetModeCommand("genesis-set-mode", "Set the active Genesis workflow mode and update project files");
-  registerSetModeCommand("bg-set-mode", "Legacy alias for /genesis-set-mode");
   registerBlockerCommand("genesis-blockers", "Interactively inspect Genesis blockers and optionally queue a blocker-fix turn");
-  registerBlockerCommand("bg-blockers", "Legacy alias for /genesis-blockers");
   registerTemplateCommand("genesis-scaffold-templates", "Scaffold core Genesis artifact templates into the current project");
-  registerTemplateCommand("bg-scaffold-templates", "Legacy alias for /genesis-scaffold-templates");
   registerScoreToTicketsCommand("genesis-score-to-tickets", "Convert Genesis score and audit findings into revision tickets");
-  registerScoreToTicketsCommand("bg-score-to-tickets", "Legacy alias for /genesis-score-to-tickets");
   registerAiThrillerReviewCommand("genesis-ai-thriller-review", "Run a publication-facing developmental review for an AI thriller or system-driven novel");
-  registerAiThrillerReviewCommand("bg-ai-thriller-review", "Legacy alias for /genesis-ai-thriller-review");
   registerAiThrillerFixCommand("genesis-ai-thriller-fix", "Run a prioritized repair pass for an AI thriller or system-driven novel");
-  registerAiThrillerFixCommand("bg-ai-thriller-fix", "Legacy alias for /genesis-ai-thriller-fix");
   registerFluffAuditCommand("genesis-audit-fluff", "Run a focused anti-padding audit for fluff, filler scenes, and ornamental subplots");
-  registerFluffAuditCommand("bg-audit-fluff", "Legacy alias for /genesis-audit-fluff");
 }

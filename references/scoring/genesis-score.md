@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Genesis Score is the single scoring contract for Genesis for Pi, using the `book-genesis-codex` compatibility skill contract.
+Genesis Score is the single scoring contract for Genesis for Pi, using the `genesis-for-pi` skill contract.
 It must be used consistently across prompts, adapters, examples, reports, and manual review.
 
 The score exists to answer one question:

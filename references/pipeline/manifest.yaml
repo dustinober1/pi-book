@@ -82,7 +82,7 @@ phase_4_adversarial_audit:
 
 phase_5_final_score:
   label: "Phase 5: Final Score"
-  prompt: "references/scoring/genesis-score-codex.md"
+  prompt: "references/scoring/genesis-score.md"
   gate: "final_score"
   outputs:
     - "artifacts/09-genesis-score.md"

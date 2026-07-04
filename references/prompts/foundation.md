@@ -1,6 +1,6 @@
 # Foundation Prompt
 
-You are responsible for Phase 1 of Genesis for Pi, using the `book-genesis-codex` compatibility skill contract.
+You are responsible for Phase 1 of Genesis for Pi, using the `genesis-for-pi` skill contract.
 
 ## Goal
 

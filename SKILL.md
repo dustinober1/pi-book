@@ -5,9 +5,9 @@ description: "Use when the user wants Genesis for Pi, an extension-first Book Ge
 
 # Genesis for Pi
 
-Genesis for Pi is Felipe's portable book-production pipeline for file-aware AI agents, packaged as a Pi-native workflow with extension commands and durable project artifacts. It still works conceptually in Claude Code, Codex, Antigravity, Kimi, and similar tools that can read project files and write artifacts.
+Genesis for Pi is Felipe's portable book-production pipeline for file-aware AI agents, packaged as a Pi-native workflow with extension commands and durable project artifacts. It also works conceptually in other file-aware agents that can read project files and write artifacts.
 
-The package folder is now `genesis-for-pi`, with a compatibility symlink from `book-genesis-codex`. The primary skill name is now `genesis-for-pi`, and a legacy compatibility skill named `book-genesis-codex` is also included for older slash commands. The workflow is not Codex-only. In Pi, treat this package as extension-first: use the Genesis commands and blocker-triage UI when available, and use the skill/orchestrator rules as the durable production contract.
+The package folder and canonical skill name are `genesis-for-pi`. In Pi, treat this package as extension-first: use the Genesis commands and blocker-triage UI when available, and use the skill/orchestrator rules as the durable production contract.
 
 Use this skill for:
 
@@ -20,8 +20,6 @@ Use this skill for:
 - auditing AI-written prose and narrative structure
 - producing Genesis Score evaluations
 - creating synopses, cover briefs, launch/editorial packages, and formatting handoff notes
-
-Do not use the legacy V4 17-phase workflow as the default. It is copied only for historical reference in `references/legacy-v4-book-genesis.md`.
 
 ## Core Rule
 
@@ -65,6 +63,18 @@ Default project layout:
     discarded-choices.md
     review-personas.md
     publication-shape.md
+    book-prd.md
+    prd-completeness-score.md
+    prd-gap-report.md
+    prd-traceability-map.md
+    prd-change-log.md
+    decision-impact-report.md
+    writer-questions.md
+    quality-gates.md
+    writer-cockpit.md
+    chapter-production-queue.md
+    taste-lock.md
+    decision-ledger.md
     voice-bible.md
     author-voice-fingerprint.md
     human-source-bank.md
@@ -99,6 +109,9 @@ Default project layout:
     chapters/
   evaluations/
     chapter-scorecards.md
+    outline-stress-test.md
+    persona-review.md
+    regression-check.md
   delivery/
   research/
     reference-inventory.md
@@ -108,7 +121,7 @@ Default project layout:
 
 ## Canonical Pipeline
 
-Template references for high-friction artifacts live under `references/templates/`. Use them when creating or repairing `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-verification-matrix.md`, `argument-spine.md`, `certification-blueprint-map.md`, `study-guide-objectives.md`, `evidence-map.md`, `research/reference-inventory.md`, and similar artifacts that benefit from a stable structure.
+Template references for high-friction artifacts live under `references/templates/`. Use them when creating or repairing `book-prd.md`, `prd-gap-report.md`, `prd-traceability-map.md`, `prd-completeness-score.md`, `prd-change-log.md`, `decision-impact-report.md`, `writer-questions.md`, `quality-gates.md`, `writer-cockpit.md`, `chapter-production-queue.md`, `outline-stress-test.md`, `persona-review.md`, `regression-check.md`, `series-regression-check.md`, `taste-lock.md`, `decision-ledger.md`, `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `series-arc-map.md`, `series-timeline.md`, `character-state-matrix.md`, `reveal-spoiler-matrix.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-payoff-ledger.md`, `series-verification-matrix.md`, `retcon-log.md`, `series-repetition-radar.md`, `book-handoff-packet.md`, `argument-spine.md`, `certification-blueprint-map.md`, `study-guide-objectives.md`, `evidence-map.md`, `research/reference-inventory.md`, and similar artifacts that benefit from a stable structure.
 
 ## Workflow Modes
 
@@ -126,6 +139,7 @@ Choose and record a workflow mode during intake. Common modes include:
 
 Mode affects which artifacts are mandatory in practice. Narrative fiction defaults to the full subplot/scene/continuity contract. Nonfiction may replace some plot pressure with argument flow, evidence, case studies, and reader transformation. Study guides and certification books should prioritize blueprint coverage, objective tracking, and reference integrity. Series installments should maintain both book-level and series-level continuity. Series repair projects should treat earlier locked books as canon, reverse-engineer them into durable artifacts, and verify later books against those constraints before approving rewrites.
 
+For whole-series work, prefer `/genesis-series-start` to create a series root with `SERIES_STATE.yaml`, `SERIES_STATUS.md`, shared series artifacts, and one `series installment` Genesis project per book under `books/`. Use `/genesis-series-open` to pick an existing workspace, `/genesis-series-next` for the next safe series/book step, `/genesis-series-add-book` when the series expands, `/genesis-series-blockers` for cross-book triage, `/genesis-series-verify` for cross-book verification, `/genesis-series-regression-check` after revisions or lock decisions, `/genesis-series-score` for whole-series scoring, `/genesis-series-export` for delivery handoff, and `/genesis-series-lock-book` after an installment is ready to become canon.
 
 Load `references/pipeline/manifest.yaml` before starting or advancing phases.
 
@@ -148,7 +162,7 @@ Read only the prompt for the active phase:
 - Architecture: `references/prompts/architecture.md`
 - Drafting: `references/prompts/drafting.md`
 - Adversarial Audit: `references/prompts/adversarial-audit.md`
-- Final Score: `references/scoring/genesis-score-codex.md`
+- Final Score: `references/scoring/genesis-score.md`
 - Editorial Package: `references/prompts/editorial-package.md`
 
 `references/prompts/orchestrator.md` contains the portable orchestration rules.
@@ -162,14 +176,15 @@ Read only the prompt for the active phase:
 4a. Read `STATUS.md` when it exists for a quick resume dashboard, but treat project files such as `PROJECT_STATE.yaml`, artifact files, and manuscript files as the source of truth.
 4b. Identify and record the workflow mode early: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, series repair, or another explicitly named mode.
 5. Load the current phase prompt and produce only that phase's required outputs.
-5a. When creating a supported artifact from scratch, check `references/templates/` first and use the matching template unless the project clearly needs a different structure.
+5a. For PRD-first work, treat the PRD as upstream evidence: import it into `research/notes/source-prd.md`, score it in `artifacts/prd-completeness-score.md`, map supported claims in `artifacts/prd-traceability-map.md`, ask only unanswered questions in `artifacts/prd-gap-report.md` and `artifacts/writer-questions.md`, and do not draft prose until gates allow it. When a revised PRD appears, compare it in `artifacts/prd-change-log.md` and `artifacts/decision-impact-report.md` before accepting it as source of truth.
+5b. When creating a supported artifact from scratch, check `references/templates/` first and use the matching template unless the project clearly needs a different structure.
 6. Commit one file per commit after every artifact, chapter, state, evaluation, or delivery file update.
 7. Update `PROJECT_STATE.yaml` after every phase, chapter block, audit, score, or blocker-clearing pass.
 8. Do not skip Phase 4. Audit before final scoring.
 9. When drafting, write in chapter files under `manuscript/chapters/` and keep the state synchronized.
 10. When user feedback changes direction, record it in project files before continuing.
 11. Lock `artifacts/publication-shape.md` early and revisit it before the final act so the ending does not drift into being thematically right but commercially under-resolved.
-12. Use writer approval gates after author voice fingerprinting, first-page/sample drafting, chapter one, pre-full-drafting, and final polish; if the writer says "this is not how I sound," update the voice artifacts before continuing.
+12. Use writer approval gates after PRD import, author voice fingerprinting, first-page/sample drafting, chapter one, pre-full-drafting, and final polish; record gate state in `artifacts/quality-gates.md` and summarize it in `artifacts/writer-cockpit.md`. If the writer says "this is not how I sound," update the voice artifacts before continuing.
 12. Treat 2-3 integrated subplots as a required structural layer for book-length work unless the user explicitly requests a shorter or single-threaded form.
 13. Plan, track, audit, and package subplots through `artifacts/05-subplot-map.md`; do not invent major subplot turns during drafting without updating that map.
 14. Maintain `artifacts/continuity-ledger.md` as the manuscript memory: facts, timelines, promises, unresolved questions, clues, reveals, locations, objects, and subplot status.
@@ -178,8 +193,11 @@ Read only the prompt for the active phase:
 17. Maintain `evaluations/chapter-scorecards.md` after chapter blocks so each chapter has a compact diagnostic record.
 18. Maintain `artifacts/drift-loop-alarm.md` as the hard stop system for repeated structure, no-state-change chapters, reopened tickets, local-model drift, phase-output mismatch, false productivity, and padding attempts.
 19. Maintain `artifacts/expansion-integrity.md` whenever target length, pacing, or scope creates pressure to expand. Record why expansion is needed, which subplot or pressure line justifies it, what each added scene changes, and which filler patterns are forbidden.
-20. For series work, maintain `artifacts/series-bible.md`, and when needed `artifacts/series-arc-map.md` and `artifacts/installment-promise-tracker.md`, so recurring continuity, cross-book escalation, and installment obligations remain visible.
+20. For series work, maintain `artifacts/series-bible.md`, `artifacts/series-arc-map.md`, `artifacts/series-timeline.md`, `artifacts/character-state-matrix.md`, `artifacts/reveal-spoiler-matrix.md`, `artifacts/installment-promise-tracker.md`, `artifacts/series-payoff-ledger.md`, `artifacts/retcon-log.md`, and `artifacts/series-repetition-radar.md` so recurring continuity, chronology, reveal order, cross-book escalation, setup/payoff, and installment obligations remain visible.
 20a. For series repair work, maintain `artifacts/canon-lock.md` for immutable published-book facts and non-negotiables, plus `artifacts/series-verification-matrix.md` to compare each repairable installment against locked canon, promises, continuity, voice, and escalation obligations.
+20b. For all series work, keep planned future material separate from locked canon. Do not over-plan every book at scene level, do not invent definitive future-book endings prematurely, and do not lock canon without explicit user approval or `/genesis-series-lock-book`.
+20c. When a book becomes final enough to hand off downstream obligations, maintain that book's `artifacts/book-handoff-packet.md` so the next installment inherits the correct ending state, unresolved promises, reveal constraints, and forbidden contradictions.
+20d. After cross-book revision, run or update `evaluations/series-regression-check.md` so canon, timeline, character state, reveal order, handoff integrity, and repetition/escalation risks do not silently regress.
 21. For nonfiction and study-guide work, maintain argument and research artifacts such as `artifacts/argument-spine.md`, `artifacts/evidence-map.md`, `artifacts/reader-transformation-map.md`, `artifacts/certification-blueprint-map.md`, `artifacts/study-guide-objectives.md`, and `research/reference-inventory.md` when relevant.
 22. Maintain `artifacts/causality-chain.md` so scenes connect by therefore/but causality, not loose and-then sequence.
 23. Maintain `artifacts/review-personas.md` during research as a small set of high-signal reader and reviewer personas who will notice false notes, genre betrayal, sentimentality, flattening, overwritten prose, or fake specificity; use them as pressure tests during drafting and audit.
@@ -188,6 +206,13 @@ Read only the prompt for the active phase:
 26. Maintain `artifacts/human-source-bank.md` as optional writer-supplied lived material: memories, overheard phrases, known places, occupational details, embarrassing behavior, family sayings, sensory facts, private annoyances, objects, jokes, and things the writer refuses to sentimentalize.
 27. Maintain `artifacts/author-intent.md`, `artifacts/taste-profile.md`, and `artifacts/risk-budget.md` as the creative sovereignty layer: why the book matters, what must not be changed, the author's taste, intentional risks, acceptable reader costs, and what the system must not optimize away.
 28. Maintain `artifacts/discarded-choices.md` so rejected openings, endings, names, plot turns, character choices, tonal directions, argument paths, and content structures remain visible and are not accidentally reintroduced.
+28a. Maintain `artifacts/decision-ledger.md` for approved pivots, rejected ideas, unresolved choices, and automation boundaries; do not silently reverse a ledgered decision.
+28b. Maintain `artifacts/taste-lock.md` as the compact do-not-smooth-away layer for author taste, intentional risk, productive roughness, taboo generic cadences, and changes requiring writer approval.
+28c. Maintain `artifacts/chapter-production-queue.md` when architecture is approved so drafting proceeds from packets with goals, promises, causality, continuity constraints, taste-lock notes, forbidden filler, and post-draft ledger tasks.
+28d. Maintain `artifacts/writer-questions.md` as a gap-only decision list; ask the writer only questions that require judgment, approval, taste, risk, or strategic direction.
+28e. Maintain `evaluations/outline-stress-test.md` before full drafting to catch middle sag, weak reversals, broken causality, decorative threads, promise gaps, false climax, ending mismatch, and padding risk.
+28f. Maintain `artifacts/review-personas.md` as an active reader/reviewer panel and `evaluations/persona-review.md` when reviewing outline, chapters, or manuscript through that panel.
+28g. Maintain `evaluations/regression-check.md` after significant revision, PRD changes, or persona/audit fixes so approved promises, continuity, voice/taste, resolved tickets, and expansion integrity are not accidentally broken.
 29. Maintain `artifacts/name-collision-audit.md` as a web-backed audit of character, place, faction, institution, object, and invented-term names before they are finalized.
 30. Maintain `artifacts/name-entity-filter.md` as an internal originality filter for character names, place names, institutions, companies, agencies, cults, factions, recurring objects, named artifacts, and invented terminology; include world-fit logic, AI-default risk, rejected alternatives, and bans on hyper-symbolic surnames, overly smooth YA/fantasy names, cool but empty faction names, invented words without phonetic logic, repeated soft consonant patterns, and placeholder TV drama names.
 31. Maintain `artifacts/human-specificity-ledger.md` during drafting so each chapter gets a few precise details with restraint: petty contradictions, dumb object attachments, bad jokes, bodily inconvenience, texture, social awkwardness, silence, uneven competence, and small consequences of fatigue, hunger, weather, money, or shame.
@@ -222,6 +247,7 @@ Read only the prompt for the active phase:
 - Treat broken reader promises as structural failures unless the manuscript clearly transforms or deliberately denies them with payoff.
 - Use chapter scorecards to make revision surgical instead of rewriting broad sections without evidence.
 - Treat any triggered `artifacts/drift-loop-alarm.md` hard stop as a pause point; stop drafting or revision and ask for direction before generating more manuscript.
+- Treat `artifacts/quality-gates.md` statuses of `blocked` or `needs_writer_approval` as hard automation stops; update the writer cockpit with the needed decision instead of advancing.
 - Treat unresolved `artifacts/expansion-integrity.md` padding risk as a blocker when the project is expanding to meet a target length, trim count, or pacing requirement.
 - Treat broken therefore/but causality as a structural failure; every major scene should cause, constrain, complicate, pay off something, or justify a necessary expansion with new pressure.
 - Treat anti-voice violations as evidence of prose drift, especially when local models become generic after revision passes.

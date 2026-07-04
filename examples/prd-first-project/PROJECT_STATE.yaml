@@ -1,0 +1,15 @@
+project_name: "The Memory Orchard"
+genesis_schema_version: "0.2.0"
+current_phase: "Phase 0: Intake"
+phase_gate: "intake"
+status: "prd_first_example"
+language: "English"
+workflow_mode: "novel"
+project_root_initialized_by: "example-prd-first-project"
+next_required_outputs:
+  - "artifacts/00-brief.md"
+  - "artifacts/prd-gap-report.md"
+  - "artifacts/prd-traceability-map.md"
+  - "artifacts/writer-questions.md"
+notes:
+  - "Golden fixture for PRD-first Genesis workflow."

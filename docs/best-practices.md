@@ -1,6 +1,19 @@
 # Genesis for Pi Best Practices
 
-- Use `/genesis-start` for the fastest safe bootstrap.
+- Use `/genesis-start` for the fastest safe single-book bootstrap.
+- Use `/genesis-prd-start <path>` when you already have a book PRD; let Genesis score completeness, create traceability, and ask only gap questions instead of repeating intake.
+- Use `/genesis-cockpit` before long sessions to see what the writer must decide, which gates are blocked, and what automation is allowed to do.
+- Use `/genesis-autopilot <target>` only for one bounded gated step; do not use it to skip writer approval, voice approval, or PRD gap answers.
+- Use `/genesis-chapter-queue` before full drafting so every chapter has a packet with goals, promises, continuity constraints, taste-lock notes, and post-draft ledger tasks.
+- Use `/genesis-post-chapter-update` after drafting chapters so continuity, promises, scorecards, and queue status stay synchronized.
+- Use `/genesis-taste-lock` whenever feedback or revision pressure might smooth away intentional risk, weirdness, roughness, restraint, or author voice.
+- Use `/genesis-prd-diff <path>` when you revise the PRD; review decision impact before accepting the new PRD as source of truth.
+- Use `/genesis-questions` to reduce cognitive load: it should ask only writer-level decisions, not artifact chores.
+- Use `/genesis-outline-stress-test` before drafting so weak architecture is repaired before prose exists.
+- Use `/genesis-review-personas` early and `/genesis-persona-review` before major revision so feedback is tied to actual reader experience instead of abstract quality.
+- Use `/genesis-regression-check` after significant revision or PRD changes to catch broken promises, continuity drift, reopened tickets, voice drift, or accidental padding.
+- Use `/genesis-series-start` for a planned multi-book series so shared canon, series arc, timeline, character state, reveal order, and per-book projects stay separated.
+- Use `/genesis-series-open` from a parent directory when you have multiple series workspaces.
 - Use `/genesis-plan` before `/genesis-next` when resuming older work.
 - Use `/genesis-resume` to understand where a project stalled.
 - Use `/genesis-doctor` when install health, git state, lint findings, or missing directories feel suspicious.
@@ -10,6 +23,13 @@
 - Use `/genesis-score-to-tickets` after audit or scoring to convert findings into concrete revision work.
 - Use `/genesis-migrate` on older or partial project trees before continuing.
 - Treat `STATUS.md` as a dashboard, not the source of truth; project artifacts still win.
+- In planned series work, run `/genesis-series-add-book` instead of hand-copying a book folder when the series expands.
+- In planned series work, run `/genesis-series-blockers` when shared canon, payoff, or book state feels unsafe.
+- In planned series work, keep future-book details provisional; do not treat planned endings or sequel setup as canon until locked.
+- In planned series work, run `/genesis-series-lock-book` before treating a completed installment as canon for later books, and generate a book handoff packet when you do.
 - In series repair, extract canon before rewriting later books; do not rely on memory or scattered manuscript notes.
+- Use `/genesis-series-verify` before approving later installments that depend on earlier-book canon or promises.
+- Use `/genesis-series-regression-check` after revisions, rewrites, or lock changes so timeline, character-state, reveal-order, and handoff drift get caught early.
+- Use `/genesis-series-score` before packaging a series arc, and `/genesis-series-export` when preparing an editorial or archive handoff.
 - For AI thrillers and system-driven novels, run `docs/ai-thriller-qa-checklist.md` before final scoring and before publication packaging.
 - Use `docs/ai-thriller-review-prompt.md` when you want a fast publication-facing developmental review after a full draft or major revision.

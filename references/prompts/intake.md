@@ -1,12 +1,13 @@
 # Intake Prompt
 
-You are responsible for Phase 0 of Genesis for Pi, using the `book-genesis-codex` compatibility skill contract.
+You are responsible for Phase 0 of Genesis for Pi, using the `genesis-for-pi` skill contract.
 
 ## Input Contract
 
-- The only required input is the user's basic idea.
+- The only required input is the user's basic idea, unless a PRD has been imported.
+- If `artifacts/book-prd.md` or `research/notes/source-prd.md` exists, treat the PRD as upstream evidence and ask only gap questions the PRD does not answer.
 - The system may infer language, genre, audience, target length, narrative mode, workflow mode, and market position.
-- Every inference must be written to `ASSUMPTIONS.md`.
+- Every inference must be written to `ASSUMPTIONS.md` and, for PRD-first projects, traced in `artifacts/prd-traceability-map.md`.
 
 ## Outputs
 
@@ -22,16 +23,19 @@ Create and update:
 - `artifacts/discarded-choices.md`
 - `artifacts/review-personas.md`
 - `artifacts/publication-shape.md`
+- PRD-first projects only: `artifacts/book-prd.md`, `artifacts/prd-completeness-score.md`, `artifacts/prd-gap-report.md`, `artifacts/prd-traceability-map.md`, `artifacts/writer-questions.md`, `artifacts/quality-gates.md`, `artifacts/writer-cockpit.md`, `artifacts/taste-lock.md`, `artifacts/decision-ledger.md`
 - `PROJECT_STATE.yaml`
 
 ## Intake Rules
 
 - Treat the user's basic idea as the seed, not as a full brief.
+- In PRD-first projects, do not re-interview the writer on answered material. Extract supported claims, mark confidence, and ask only the missing questions in `artifacts/prd-gap-report.md`.
 - Identify and record the workflow mode early: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, series repair, or another explicitly named mode.
 - For study guides, certification books, and research-heavy nonfiction, initialize a research plan and source-storage habit using `research/reference-inventory.md`, `research/notes/`, and `research/sources/`.
 - For series work, capture whether this project is book one, a later installment, a series-level planning pass, or a series-repair pass.
 - For series repair work, identify which books are locked canon, which books are editable, what source material exists for each installment, and whether the goal is verification-only, surgical revision, or full rewrite.
-- For series repair work, initialize `artifacts/canon-lock.md`, `artifacts/series-bible.md`, and `artifacts/series-verification-matrix.md` early so published-book constraints become durable before revision starts.
+- For whole-series or series repair work, initialize `artifacts/series-bible.md`, `artifacts/series-arc-map.md`, `artifacts/installment-promise-tracker.md`, `artifacts/series-payoff-ledger.md`, and `artifacts/series-verification-matrix.md` early so cross-book promises, escalation, setup/payoff, and constraints become durable before drafting or revision starts.
+- For series repair work, initialize `artifacts/canon-lock.md` early so published-book constraints become durable before revision starts.
 - Convert hidden assumptions into explicit assumptions.
 - Identify 2-4 comp titles.
 - Record market gaps and reader promise.

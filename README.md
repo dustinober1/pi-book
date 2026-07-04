@@ -10,7 +10,7 @@ For AI thrillers and other system-driven fiction, the package now also includes:
 - a reusable QA pass in `docs/ai-thriller-qa-checklist.md`
 - a reusable developmental review prompt in `docs/ai-thriller-review-prompt.md`
 
-This package is now extension-first: it exposes Pi commands, blocker-triage UI/tooling, the primary `genesis-for-pi` skill, and the `book-genesis-codex` compatibility alias for durable intake, foundation, architecture, drafting, adversarial audit, Genesis Score, and editorial package generation.
+This package is extension-first: it exposes Pi commands, blocker-triage UI/tooling, and the primary `genesis-for-pi` skill for durable intake, foundation, architecture, drafting, adversarial audit, Genesis Score, and editorial package generation.
 
 ## Install in Pi
 
@@ -47,12 +47,6 @@ Primary skill:
 /skill:genesis-for-pi
 ```
 
-Legacy alias:
-
-```text
-/skill:book-genesis-codex
-```
-
 You can also ask naturally, for example:
 
 ```text
@@ -68,6 +62,30 @@ Run the next Genesis phase.
 | command | use it for |
 | --- | --- |
 | `/genesis-start` | one-command bootstrap |
+| `/genesis-prd-start` | PRD-first bootstrap with completeness score, traceability, and gap-only intake |
+| `/genesis-prd-ingest` | import or refresh a PRD inside an existing project |
+| `/genesis-cockpit` | one-page writer dashboard for gates, blockers, decisions, and next actions |
+| `/genesis-autopilot` | bounded writer-gated automation step |
+| `/genesis-chapter-queue` | build draftable chapter packets from approved architecture |
+| `/genesis-post-chapter-update` | synchronize continuity, promises, scorecards, and queue status after drafting |
+| `/genesis-taste-lock` | protect author taste, risk, voice, and non-negotiables |
+| `/genesis-prd-diff` | compare a revised PRD against the accepted PRD and report decision impact |
+| `/genesis-questions` | generate only the writer decisions needed before safe automation |
+| `/genesis-outline-stress-test` | stress-test outline architecture before drafting |
+| `/genesis-review-personas` | generate or refresh the reader/reviewer persona panel |
+| `/genesis-persona-review` | run outline/chapter/manuscript review through the persona panel |
+| `/genesis-regression-check` | check whether revisions broke approved promises, continuity, voice, gates, or tickets |
+| `/genesis-series-start` | whole-series workspace bootstrap |
+| `/genesis-series-open` | pick an existing series workspace |
+| `/genesis-series-status` | cross-book series dashboard |
+| `/genesis-series-next` | next safe series/book step |
+| `/genesis-series-add-book` | append another installment project |
+| `/genesis-series-blockers` | series-level blocker triage |
+| `/genesis-series-verify` | cross-book continuity and promise verification |
+| `/genesis-series-regression-check` | cross-book regression gate after revisions, rewrites, or lock changes |
+| `/genesis-series-score` | whole-series quality score |
+| `/genesis-series-export` | whole-series editorial/export package |
+| `/genesis-series-lock-book` | lock a completed installment into series canon |
 | `/genesis-init` | manual project creation |
 | `/genesis-open` | pick an existing project |
 | `/genesis-status` | current dashboard |
@@ -97,6 +115,30 @@ This package provides Pi-native extension commands:
 
 ```text
 /genesis-start
+/genesis-prd-start
+/genesis-prd-ingest
+/genesis-cockpit
+/genesis-autopilot
+/genesis-chapter-queue
+/genesis-post-chapter-update
+/genesis-taste-lock
+/genesis-prd-diff
+/genesis-questions
+/genesis-outline-stress-test
+/genesis-review-personas
+/genesis-persona-review
+/genesis-regression-check
+/genesis-series-start
+/genesis-series-open
+/genesis-series-status
+/genesis-series-next
+/genesis-series-add-book
+/genesis-series-blockers
+/genesis-series-verify
+/genesis-series-regression-check
+/genesis-series-score
+/genesis-series-export
+/genesis-series-lock-book
 /genesis-init
 /genesis-open
 /genesis-status
@@ -123,37 +165,55 @@ This package provides Pi-native extension commands:
 /genesis-audit-fluff
 ```
 
-Legacy aliases remain available:
-
-```text
-/bg-start
-/bg-init
-/bg-open
-/bg-status
-/bg-plan
-/bg-resume
-/bg-doctor
-/bg-lint
-/bg-dashboard
-/bg-compile
-/bg-export
-/bg-checkpoint
-/bg-ingest
-/bg-voice-ingest
-/bg-voice-drift
-/bg-next
-/bg-validate
-/bg-migrate
-/bg-set-mode
-/bg-blockers
-/bg-scaffold-templates
-/bg-score-to-tickets
-/bg-ai-thriller-review
-/bg-ai-thriller-fix
-/bg-audit-fluff
-```
-
 Use `/genesis-start` to create a fresh Genesis project, choose the workflow mode, scaffold the recommended mode bundle, initialize git, and kick off intake in one step.
+
+Use `/genesis-prd-start <path-to-prd>` to create a PRD-first Genesis project. It imports the PRD into `research/notes/source-prd.md`, scores PRD completeness, writes `prd-gap-report.md`, `prd-traceability-map.md`, `writer-questions.md`, `quality-gates.md`, `taste-lock.md`, `decision-ledger.md`, `chapter-production-queue.md`, and `writer-cockpit.md`, then queues a gap-only intake pass that maps only PRD-supported decisions into Genesis artifacts.
+
+Use `/genesis-prd-ingest <path-to-prd>` to import or refresh a PRD inside the current Genesis project without restarting.
+
+Use `/genesis-cockpit` to update `artifacts/writer-cockpit.md`, a one-page writer dashboard showing gate status, blockers, PRD readiness, next decisions, and what automation is currently allowed to do.
+
+Use `/genesis-autopilot <target>` for gated automation such as `foundation`, `architecture`, `chapter-queue`, `one chapter packet`, `one chapter draft`, or `post-chapter-update`. It refuses to run when hard blockers or quality gates are active.
+
+Use `/genesis-chapter-queue` to convert an approved outline into draftable chapter packets with goals, causality, promises, continuity constraints, taste-lock notes, human-specificity seeds, forbidden filler, and post-draft ledger tasks.
+
+Use `/genesis-post-chapter-update` after drafting to update continuity, reader promises, causality, scene embodiment, human-specificity, scorecards, revision tickets, the chapter queue, and the writer cockpit.
+
+Use `/genesis-taste-lock` to protect the author's voice, taste, intentional risk, weirdness, roughness, and automation boundaries in durable artifacts.
+
+Use `/genesis-prd-diff <path-to-revised-prd>` when the PRD changes. It writes `artifacts/prd-change-log.md`, `artifacts/decision-impact-report.md`, and `research/notes/source-prd-candidate.md`, then queues a semantic impact review without replacing the accepted PRD unless you approve it.
+
+Use `/genesis-questions` to generate `artifacts/writer-questions.md`, grouped into must-answer, approval-needed, can-defer, and wrong-reader/noise categories. It should ask only decisions the writer must make, not maintenance the agent can do.
+
+Use `/genesis-outline-stress-test` before drafting to write `evaluations/outline-stress-test.md` and pressure-test middle movement, reversals, causality, subplot/argument integration, reader promises, climax, ending shape, and padding risk.
+
+Use `/genesis-review-personas` to generate or refresh `artifacts/review-personas.md` as a 4-7 persona reader/reviewer panel grounded in the PRD, promise, taste, risk budget, comps, and market.
+
+Use `/genesis-persona-review <outline|chapter|manuscript>` to write `evaluations/persona-review.md`, separating ideal-reader signal, genre-native concerns, voice-sensitive craft feedback, skeptical-reader objections, and wrong-reader noise.
+
+Use `/genesis-regression-check` after revision or PRD changes to write `evaluations/regression-check.md` and check whether the project broke PRD-backed decisions, reader promises, publication shape, continuity, voice/taste lock, causality, resolved tickets, expansion integrity, or persona-panel signal.
+
+Use `/genesis-series-start` to create a whole-series workspace with shared series artifacts plus one Genesis project per planned book under `books/book-01`, `books/book-02`, and so on.
+
+Use `/genesis-series-open` to pick an existing series workspace, then show status, advance next, verify, inspect blockers, or export.
+
+Use `/genesis-series-status` to render `SERIES_STATUS.md` with series artifact health and per-book phase, manuscript, and blocker summaries.
+
+Use `/genesis-series-next` to advance the next safest series-level or book-level step without trying to draft the whole series at once.
+
+Use `/genesis-series-add-book` when the planned series grows and you need the next `books/book-NN` project scaffolded without restarting.
+
+Use `/genesis-series-blockers` to inspect missing shared artifacts, placeholder-heavy series files, book-level hard blockers, and likely predecessor-lock issues.
+
+Use `/genesis-series-verify` to audit books against shared canon, promises, escalation, and continuity.
+
+Use `/genesis-series-regression-check` after revisions, rewrites, or lock decisions to check whether canon, timeline, reveal order, handoff packets, character states, or escalation logic broke across books.
+
+Use `/genesis-series-score` to queue a whole-series score covering canon stability, escalation, payoff integrity, repetition risk, onboarding clarity, and commercial cohesion.
+
+Use `/genesis-series-export` to create a whole-series manuscript bundle, series-bible export, status report, editorial handoff, and export manifest.
+
+Use `/genesis-series-lock-book` to extract a completed installment into locked series canon before later books rely on it.
 
 Use `/genesis-init` to create a fresh Genesis project tree, initialize git when needed, scaffold research folders, and optionally kick off Phase 0 intake.
 
@@ -193,7 +253,7 @@ Use `/genesis-set-mode` to explicitly set the workflow mode, update `PROJECT_STA
 
 Use `/genesis-blockers` for interactive blocker triage. It lets you inspect blocker evidence and queue a targeted fix turn from the UI.
 
-Use `/genesis-scaffold-templates` to copy core artifact templates such as `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-verification-matrix.md`, `argument-spine.md`, `certification-blueprint-map.md`, `research/reference-inventory.md`, `author-intent.md`, `taste-profile.md`, `risk-budget.md`, `review-personas.md`, `reader-promise-tracker.md`, and `drift-loop-alarm.md` into the active project.
+Use `/genesis-scaffold-templates` to copy core artifact templates such as `book-prd.md`, `prd-gap-report.md`, `prd-traceability-map.md`, `prd-completeness-score.md`, `prd-change-log.md`, `decision-impact-report.md`, `writer-questions.md`, `quality-gates.md`, `writer-cockpit.md`, `chapter-production-queue.md`, `outline-stress-test.md`, `persona-review.md`, `regression-check.md`, `taste-lock.md`, `decision-ledger.md`, `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `series-arc-map.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-payoff-ledger.md`, `series-verification-matrix.md`, `argument-spine.md`, `certification-blueprint-map.md`, `research/reference-inventory.md`, `author-intent.md`, `taste-profile.md`, `risk-budget.md`, `review-personas.md`, `reader-promise-tracker.md`, and `drift-loop-alarm.md` into the active project.
 
 Use `/genesis-score-to-tickets` to convert score and audit findings into structured revision tickets.
 
@@ -213,10 +273,27 @@ Fallback prompt templates are also available as:
 
 ```text
 /genesis-next-prompt
-/bg-next-prompt
 ```
 
 ## Recommended workflow
+
+### PRD-first happy path
+
+If you normally write a full PRD before drafting, use this sequence:
+
+```text
+/genesis-prd-start my-book-prd.md
+/genesis-questions
+/genesis-review-personas
+/genesis-outline-stress-test
+/genesis-chapter-queue
+/genesis-autopilot one chapter draft
+/genesis-post-chapter-update
+/genesis-persona-review chapter-01
+/genesis-regression-check
+```
+
+Use `/genesis-prd-diff revised-prd.md` whenever the PRD changes. Genesis will report decision impact before replacing the accepted PRD.
 
 ### 1. Fast bootstrap
 
@@ -235,11 +312,38 @@ What happens:
 - git is initialized when possible
 - intake can begin immediately
 
-Legacy alias:
+### 1b. Whole-series bootstrap
+
+From the directory where you want the series folder to be created:
 
 ```text
-/bg-start
+/genesis-series-start
 ```
+
+What happens:
+
+- you are prompted for a series name, planned book count, and series premise
+- a series root is created with `SERIES_STATE.yaml`, `SERIES_STATUS.md`, and shared series artifacts
+- per-book Genesis projects are created under `books/book-01`, `books/book-02`, etc.
+- each book project is initialized as `series installment` mode
+- shared artifacts track the whole-series promise, book ladder, locked canon, installment obligations, cross-book continuity, timeline anchors, character states, reveal order, retcons, repetition risk, and verification state
+
+Use these commands after setup:
+
+```text
+/genesis-series-open
+/genesis-series-status
+/genesis-series-next
+/genesis-series-add-book
+/genesis-series-blockers
+/genesis-series-verify
+/genesis-series-regression-check
+/genesis-series-score
+/genesis-series-export
+/genesis-series-lock-book books/book-01
+```
+
+The intended rhythm is: plan the series, advance one installment at a time, lock finished books into canon, generate handoff packets for the next book, then run series verification/regression checks before final approval.
 
 ### 2. Create a new project manually
 
@@ -259,12 +363,6 @@ What happens:
 - `git init` runs automatically if needed
 - you can immediately kick off Phase 0 intake
 
-You can also use the legacy alias:
-
-```text
-/bg-init
-```
-
 ### 3. Open an existing project
 
 If you already have one or more Genesis projects under your current working directory:
@@ -280,12 +378,6 @@ This lets you pick a project and then:
 - inspect blockers
 - continue the next step
 
-Legacy alias:
-
-```text
-/bg-open
-```
-
 ### 4. Check project status
 
 ```text
@@ -299,12 +391,6 @@ Use this when you want a quick read on:
 - missing expected outputs
 - updated `STATUS.md` dashboard for easy resume
 
-Legacy alias:
-
-```text
-/bg-status
-```
-
 ### 5. Preview the next step
 
 ```text
@@ -316,12 +402,6 @@ Use this when you want a dry-run summary of:
 - hard blockers and warnings
 - the next expected file for the current phase
 - what `/genesis-next` will try to do
-
-Legacy alias:
-
-```text
-/bg-plan
-```
 
 ### 6. Advance the project
 
@@ -348,12 +428,6 @@ Useful examples:
 /genesis-next clear blockers first
 ```
 
-Legacy alias:
-
-```text
-/bg-next
-```
-
 ### 7. Resume an existing project intelligently
 
 ```text
@@ -365,12 +439,6 @@ Use this when you want:
 - the most recently touched project files
 - a summary of where the work stalled
 - the best next command
-
-Legacy alias:
-
-```text
-/bg-resume
-```
 
 ### 8. Run project doctor
 
@@ -385,12 +453,6 @@ Use this when you want:
 - blocker summary
 - artifact-quality lint summary
 
-Legacy alias:
-
-```text
-/bg-doctor
-```
-
 ### 9. Lint artifact quality
 
 ```text
@@ -398,12 +460,6 @@ Legacy alias:
 ```
 
 Use this when files exist but may still be half-scaffolded or placeholder-heavy.
-
-Legacy alias:
-
-```text
-/bg-lint
-```
 
 ### 10. Validate the current phase contract
 
@@ -419,12 +475,6 @@ Use this when you want to verify:
 - blocker and warning state
 - likely mismatch between `PROJECT_STATE.yaml` and actual files
 
-Legacy alias:
-
-```text
-/bg-validate
-```
-
 ### 11. Migrate an older or partial project
 
 ```text
@@ -432,12 +482,6 @@ Legacy alias:
 ```
 
 Use this when you want to repair or upgrade a project tree so it matches the current Genesis layout more closely.
-
-Legacy alias:
-
-```text
-/bg-migrate
-```
 
 ### 12. Set the workflow mode
 
@@ -459,12 +503,6 @@ Use this when you want to explicitly mark a project as:
 
 When templates are available for the selected mode, Genesis can also scaffold those mode-specific starter files immediately.
 
-Legacy alias:
-
-```text
-/bg-set-mode
-```
-
 ### 13. Inspect blockers directly
 
 ```text
@@ -476,12 +514,6 @@ Use this when you want targeted triage before advancing. The command lets you:
 - inspect blocker evidence
 - see suggested repair actions
 - queue a focused blocker-fix turn
-
-Legacy alias:
-
-```text
-/bg-blockers
-```
 
 ### 14. Scaffold core templates
 
@@ -496,20 +528,23 @@ Use this when you want to quickly create or replace structured starter files for
 - `revision-tickets.md`
 - `expansion-integrity.md`
 - `series-bible.md`
+- `series-arc-map.md`
+- `series-timeline.md`
+- `character-state-matrix.md`
+- `reveal-spoiler-matrix.md`
 - `canon-lock.md`
 - `installment-promise-tracker.md`
+- `series-payoff-ledger.md`
 - `series-verification-matrix.md`
+- `retcon-log.md`
+- `series-repetition-radar.md`
+- `book-handoff-packet.md`
+- `series-regression-check.md`
 - `argument-spine.md`
 - `certification-blueprint-map.md`
 - `study-guide-objectives.md`
 - `evidence-map.md`
 - `research/reference-inventory.md`
-
-Legacy alias:
-
-```text
-/bg-scaffold-templates
-```
 
 ### 15. Convert score findings into tickets
 
@@ -518,12 +553,6 @@ Legacy alias:
 ```
 
 Use this when you want to turn score and audit findings into structured revision tickets.
-
-Legacy alias:
-
-```text
-/bg-score-to-tickets
-```
 
 ### 16. Audit fluff directly
 
@@ -540,12 +569,6 @@ Use this when you want a focused pass on:
 - low-consequence chapter blocks
 - scenes that increase length without increasing pressure
 
-Legacy alias:
-
-```text
-/bg-audit-fluff
-```
-
 ### 17. Compile the manuscript
 
 ```text
@@ -554,12 +577,6 @@ Legacy alias:
 
 Concatenates chapter Markdown files under `manuscript/chapters/` into `delivery/manuscript-full.md` and writes a compile report with chapter counts and estimated word count.
 
-Legacy alias:
-
-```text
-/bg-compile
-```
-
 ### 18. Export editorial handoff files
 
 ```text
@@ -567,12 +584,6 @@ Legacy alias:
 ```
 
 Creates delivery files for handoff: compiled manuscript, compile report, editorial handoff, revision board, beta-reader packet, and export manifest.
-
-Legacy alias:
-
-```text
-/bg-export
-```
 
 ### 19. Create git checkpoints
 
@@ -583,12 +594,6 @@ Legacy alias:
 
 Commits changed Genesis project files one file at a time with normalized messages such as `Genesis: update artifacts/voice-bible.md`.
 
-Legacy alias:
-
-```text
-/bg-checkpoint
-```
-
 ### 20. Ingest existing material
 
 ```text
@@ -596,12 +601,6 @@ Legacy alias:
 ```
 
 Queues an agent pass to convert existing drafts, notes, research, or canon material into durable Genesis artifacts.
-
-Legacy alias:
-
-```text
-/bg-ingest
-```
 
 ### 21. Ingest author voice samples
 
@@ -611,12 +610,6 @@ Legacy alias:
 
 Queues a voice-ingestion pass that updates `author-voice-fingerprint.md`, `voice-bible.md`, and related protection artifacts.
 
-Legacy alias:
-
-```text
-/bg-voice-ingest
-```
-
 ### 22. Audit voice drift
 
 ```text
@@ -625,12 +618,6 @@ Legacy alias:
 
 Queues an audit comparing current manuscript chapters against the author voice fingerprint and voice bible.
 
-Legacy alias:
-
-```text
-/bg-voice-drift
-```
-
 ### 23. Show the rich dashboard
 
 ```text
@@ -638,12 +625,6 @@ Legacy alias:
 ```
 
 Writes a richer progress dashboard to `STATUS.md`: phase progress, blockers, warnings, lint count, manuscript stats, git state, recent files, and next best action.
-
-Legacy alias:
-
-```text
-/bg-dashboard
-```
 
 ## Typical ways to work
 
@@ -691,6 +672,32 @@ During intake, Genesis should record a workflow mode such as:
 
 This helps the system decide whether to emphasize subplots, argument flow, reference integrity, objective coverage, series continuity, or locked-canon verification and rewrite planning.
 
+### Write a whole series
+
+For a planned multi-book series, use a series root instead of trying to make one giant book project:
+
+```text
+/genesis-series-start
+```
+
+The series root owns cross-book truth:
+
+- `SERIES_STATE.yaml`
+- `SERIES_STATUS.md`
+- `artifacts/series-bible.md`
+- `artifacts/series-arc-map.md`
+- `artifacts/series-timeline.md`
+- `artifacts/character-state-matrix.md`
+- `artifacts/reveal-spoiler-matrix.md`
+- `artifacts/canon-lock.md`
+- `artifacts/installment-promise-tracker.md`
+- `artifacts/series-payoff-ledger.md`
+- `artifacts/series-verification-matrix.md`
+- `artifacts/retcon-log.md`
+- `artifacts/series-repetition-radar.md`
+
+Each installment is still a normal Genesis project under `books/book-01`, `books/book-02`, and so on. Use `/genesis-series-open` to pick a workspace from a parent directory, or `/genesis-series-next` from anywhere inside the series to choose the next safe series-level or book-level step. Use `/genesis-series-add-book` if the series expands, `/genesis-series-blockers` when cross-book state feels unsafe, `/genesis-series-lock-book` when a book is final enough to become canon, `/genesis-series-verify` before approving later installments, `/genesis-series-regression-check` after revisions or lock changes, `/genesis-series-score` for a whole-series quality read, and `/genesis-series-export` for editorial handoff.
+
 ### Offer this as a service
 
 Genesis also supports a **series repair** service model.
@@ -707,9 +714,10 @@ Recommended service flow:
 2. extract canon into `artifacts/series-bible.md` and `artifacts/canon-lock.md`
 3. reverse-outline the editable books
 4. track inherited obligations in `artifacts/installment-promise-tracker.md`
-5. compare each later book in `artifacts/series-verification-matrix.md`
-6. convert failures into `artifacts/revision-tickets.md`
-7. revise or rewrite only the editable installments
+5. track setup/payoff obligations in `artifacts/series-payoff-ledger.md`
+6. compare each later book in `artifacts/series-verification-matrix.md`
+7. convert failures into `artifacts/revision-tickets.md`
+8. revise or rewrite only the editable installments
 
 This lets you sell verification, continuity cleanup, and rewrite planning without pretending every series starts from scratch.
 
@@ -803,11 +811,10 @@ Use tags or commit refs to keep machines pinned to the same version.
 ## Package contents
 
 - `SKILL.md` — primary `genesis-for-pi` skill entrypoint and workflow contract
-- `book-genesis-codex.md` — legacy compatibility alias skill
 - `extensions/genesis.ts` — Pi-native commands including start, resume, doctor, lint, migrate, score-to-tickets, blockers, scaffolding, and next-step orchestration plus the `genesis_blocker_triage` tool
 - `references/` — pipeline prompts, scoring contract, reference docs, and templates
-- `references/templates/` — starter templates for voice, continuity, tickets, expansion integrity, author intent, taste, risk, review personas, reader promises, drift alarms, series, canon-lock, verification, nonfiction, study-guide, and certification artifacts
+- `references/templates/` — starter templates for voice, continuity, tickets, expansion integrity, author intent, taste, risk, review personas, reader promises, drift alarms, series bible, series arc map, series timeline, character-state matrix, reveal/spoiler tracking, canon-lock, retcon logging, handoff packets, verification, nonfiction, study-guide, and certification artifacts
 - `docs/` — best practices, troubleshooting notes, service packaging guidance, and AI-thriller review aids
 - `examples/` — sample Genesis project trees for different workflow modes
-- `prompts/genesis-next-prompt.md` and `prompts/bg-next-prompt.md` — fallback prompt-template versions of `/genesis-next`
+- `prompts/genesis-next-prompt.md` — fallback prompt-template version of `/genesis-next`
 - `agents/openai.yaml` — adapter metadata

@@ -21,8 +21,12 @@ Preserve locked canon, diagnose what broke in later installments, and create a c
 Deliverables:
 
 - `artifacts/series-bible.md`
+- `artifacts/series-timeline.md`
+- `artifacts/character-state-matrix.md`
+- `artifacts/reveal-spoiler-matrix.md`
 - `artifacts/canon-lock.md`
 - `artifacts/installment-promise-tracker.md`
+- `artifacts/series-payoff-ledger.md`
 
 Outcome:
 
@@ -33,8 +37,12 @@ Outcome:
 Deliverables:
 
 - `artifacts/series-verification-matrix.md`
+- `artifacts/series-payoff-ledger.md`
+- `artifacts/retcon-log.md`
+- `artifacts/series-repetition-radar.md`
 - `artifacts/continuity-ledger.md`
 - `artifacts/revision-tickets.md`
+- `evaluations/series-regression-check.md`
 
 Outcome:
 
@@ -47,6 +55,7 @@ Deliverables:
 - repaired or rebuilt `artifacts/05-outline.md`
 - updated `artifacts/05-subplot-map.md`
 - updated `artifacts/reader-promise-tracker.md`
+- per-book `artifacts/book-handoff-packet.md` where needed
 - rewrite plan in `artifacts/revision-tickets.md`
 
 Outcome:

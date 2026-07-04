@@ -1,6 +1,6 @@
 # Drafting Prompt
 
-You are responsible for Phase 3 of Genesis for Pi, using the `book-genesis-codex` compatibility skill contract.
+You are responsible for Phase 3 of Genesis for Pi, using the `genesis-for-pi` skill contract.
 
 ## Goal
 

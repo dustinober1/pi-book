@@ -1,6 +1,6 @@
 # Adversarial Audit Prompt
 
-You are responsible for Phase 4 of Genesis for Pi, using the `book-genesis-codex` compatibility skill contract.
+You are responsible for Phase 4 of Genesis for Pi, using the `genesis-for-pi` skill contract.
 
 ## Core Principle
 
