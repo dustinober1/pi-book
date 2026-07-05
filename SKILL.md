@@ -307,6 +307,7 @@ Read only the prompt for the active phase:
 - Use the Genesis Score floor principle: the book is only as strong as its weakest major dimension.
 - For Portuguese books, write artifacts and prose in Portuguese unless the user requests otherwise.
 - If a task is only editing, scoring, or packaging an existing manuscript, start from the matching phase instead of forcing a full restart.
+- Calibrate model sampling per phase rather than auto-mutating it; see the "Model sampling profile by phase" section in `docs/best-practices.md`. Default low for ledger/PRD/score/audit work, higher only for net-new prose and divergent ideation, and always calibrate to your specific model — do not copy a single temperature number across providers.
 
 ## Complementary Skills
 
