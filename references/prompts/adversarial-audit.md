@@ -10,6 +10,8 @@ You are not here to protect the manuscript's feelings. You are here to identify 
 
 This phase applies structural criticism before the final score.
 
+When possible, keep critique blind and non-convergent: preserve independent reviewer passes and contradictions long enough to expose real problems before synthesis.
+
 ## Output
 
 Save the audit to `artifacts/08-adversarial-audit.md`.
@@ -168,6 +170,8 @@ Find where important plans or beats succeed too easily.
 Check whether too many consecutive chapters repeat the same internal template.
 
 - if repetition becomes predictive, recommend restructuring
+- specifically test for the common smart-thriller loop: discovery, plain-language correction, legal/comms call, human-cost text/call, dashboard update, guilt realization, aphoristic chapter close
+- if the loop appears three or more times without a changed scene engine, public/physical consequence, or reversed power dynamic, create a high-severity pacing ticket
 
 Audit the recurring formal device tracker if the manuscript uses distinctive structural devices (logs, epistolary sections, data dumps, alternate POV chapters, in-world documents):
 
@@ -175,6 +179,33 @@ Audit the recurring formal device tracker if the manuscript uses distinctive str
 - verify later occurrences are more compressed and more chilling/revealing than earlier ones
 - if any occurrence repeats a function already established, flag it for cut or merge
 - verify the device voice escalates rather than remaining static
+
+### Pass 13a: External Clock, Midpoint, and Protagonist Agency Audit
+
+Audit the outline, scorecards, and manuscript for commercial forward pressure.
+
+- verify an external clock or pressure deadline appears early when the genre/use-case needs momentum
+- verify the midpoint creates an unmistakable active danger, public consequence, physical/institutional cost, or option-changing reversal, not only a clearer private theory
+- verify the protagonist makes consequential choices before the final act, including at least one bold or wrong decision that creates new cost
+- flag long stretches where the protagonist only discovers, explains, audits, reacts, or receives moral correction
+- create revision tickets for missing clock, soft midpoint, or passive/reactive protagonist architecture
+
+### Pass 13b: Technical Vocabulary and Plain-Model Audit
+
+Audit `artifacts/technical-seed-map.md`, `artifacts/system-rule-sheet.md`, and the manuscript for jargon load and reader tracking.
+
+- verify the reader receives a simple working model by the first quarter before specialized vocabulary piles up
+- flag scenes where technical, legal, medical, institutional, or invented terms stack without lived consequence or plain-language paraphrase
+- verify late technical escalation attaches to earlier concrete seeds rather than arriving as legal-technical chess
+- create revision tickets for term soup, late mechanism exposition, or missing plain-language architecture
+
+### Pass 13c: Rhetorical Pattern and Verdict-Line Audit
+
+Audit the prose for repeated rhetorical shapes, especially in chapter endings and moral-reckoning scenes.
+
+- flag overuse of patterns such as "Not X. Not Y. Just Z.", "That was the part...", "There it was.", "Of course.", list-of-fragments verdicts, repeated negative parallelism, and aphoristic closeouts
+- keep the strongest instances; cut, vary, or reassign the rest to character-specific speech or plainer movement
+- create tickets only when the pattern becomes audible as author machinery rather than character pressure
 
 ### Pass 14: Expansion Integrity Audit
 
@@ -371,6 +402,22 @@ For fiction that depends on technical, medical, legal, scientific, or institutio
 - if no expert review has been conducted for plot-critical domain claims, create a high-severity revision ticket
 - the goal is not realism for its own sake; it is preventing avoidable disbelief
 
+### Pass 27a: Sacred Retelling Source And Invention Audit
+
+For biblical fiction or sacred retelling mode only, audit the manuscript against `artifacts/sacred-retelling-promise.md`, `artifacts/scripture-source-map.md`, `artifacts/invention-boundary-ledger.md`, `artifacts/theological-risk-budget.md`, `artifacts/historical-cultural-plausibility-audit.md`, `artifacts/point-of-view-ethics-audit.md`, `artifacts/authors-note-source-note.md`, `artifacts/sacred-scene-packets.md`, `artifacts/translation-sensitivity-map.md`, `artifacts/tradition-lane-selector.md`, `artifacts/sacred-figure-handling-rules.md`, `artifacts/anachronism-modernity-audit.md`, `artifacts/faith-reader-personas.md`, `artifacts/miracle-supernatural-policy.md`, `artifacts/character-humility-guardrail.md`, `artifacts/sacred-residue-audit.md`, and `research/reference-inventory.md`.
+
+- verify every major scene, claim, motive, invented conversation, interior thought, composite character, timeline compression, and cultural detail is classified as explicit scripture, biblical inference, historical/cultural context, theological tradition, or narrative invention
+- flag invented material that reads like biblical fact without disclosure
+- flag source contradictions, over-modern psychology, doctrinal claims the book did not intend to make, translation-dependent claims without comparison, wrong tradition-lane signaling, and sacred-figure interiority that feels presumptuous or over-explained
+- verify passage-level sacred scene packets existed before drafting or are reconstructed before approval
+- verify ancient-world details are plausible enough for the target reader and source posture
+- verify miracles, visions, angels, demons, prophecy, healings, resurrection, divine speech, and other supernatural events follow the approved portrayal policy
+- verify characters are humanized without being reduced to trauma, romance, ambition, resentment, or modern liberation arcs unless that risk is explicitly accepted
+- verify faith-reader personas were used to distinguish true source/reader-trust signal from wrong-reader noise
+- verify the ending and major turns leave the intended sacred residue rather than a sermon summary, sentimental closure, or cold historical exercise
+- verify the Author's Note / Source Note transparently explains what comes from Scripture, what is historical/cultural reconstruction, what is tradition, what was imagined, where traditions or translations differ, why choices were made, and what remains mystery
+- create revision tickets for source contradiction, unclear invention boundary, accidental theology, translation sensitivity, tradition-lane mismatch, sacred-figure handling failure, anachronism/modernity leak, miracle/supernatural tone drift, character reduction, weak sacred residue, POV ethics risk, or missing reader disclosure
+
 ### Pass 28: Setting Variety and Ordinary-Life Audit
 
 Audit whether the manuscript contains enough scenes set in ordinary, non-high-stakes environments.
@@ -378,6 +425,7 @@ Audit whether the manuscript contains enough scenes set in ordinary, non-high-st
 - check whether the book's settings are predominantly operations centers, hospitals, apartments at night, and core facilities — all high-stakes analytical spaces
 - flag if ordinary life appears only in brief flashes that are immediately swallowed by interpretation
 - recommend adding or preserving concrete human scenes that do not immediately become thesis: a conversation at a bus stop, a mistake by a minor character, an argument about an ordinary inconvenience, a city resident reacting to a mundane change
+- for an emotional-anchor character, require at least one grounded scene in their physical world before late crisis if the manuscript otherwise knows them mostly through calls, messages, reports, summaries, or protagonist interpretation
 - the final claim of the book — that inefficiency and variance are part of humanity — should feel socially lived, not only philosophically asserted
 
 ### Pass 29: System And Authority Clarity Audit
@@ -448,6 +496,8 @@ Do not create vague tickets. If a finding lacks evidence and affected files, kee
 - any unresolved over-polish-audit.md blocker, including revision that erases author fingerprint or replaces AI tells with anti-AI tells, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any unresolved creative sovereignty blocker, including erased author intent, ignored taste constraints, accidental risk, or reintroduced rejected choices, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any unresolved expansion-integrity.md blocker, including padding added to meet a target length, ornamental subplots, or repeated no-consequence beats, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
+- any unresolved structural-repetition, soft-midpoint, missing-clock, reactive-protagonist, jargon-pileup, missing plain-model, or rhetorical-pattern blocker must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
+- for biblical fiction or sacred retelling mode, any unresolved source contradiction, missing sacred scene packet, unclear invention boundary, accidental theological claim, translation sensitivity blocker, tradition-lane mismatch, sacred-figure handling blocker, sacred-figure POV ethics blocker, anachronism/modernity leak, miracle/supernatural tone drift, character reduction, historical/cultural blocker, weak sacred residue, or missing Author's Note / Source Note disclosure must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any unresolved negative-capability-audit.md blocker, including over-explained ambiguity or false opacity, must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any unresolved scene-embodiment-map.md blocker for disembodied scenes must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk
 - any blocker or high-severity ticket must prevent approval until fixed, deferred with rationale, or accepted as deliberate risk

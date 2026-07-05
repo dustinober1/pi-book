@@ -18,8 +18,12 @@ Create and update:
 - `artifacts/reader-promise-tracker.md`
 - `artifacts/drift-loop-alarm.md`
 - `artifacts/expansion-integrity.md`
+- `artifacts/publication-shape.md`
+- `artifacts/technical-seed-map.md`
 - `artifacts/authority-chain-map.md`
 - `artifacts/system-rule-sheet.md`
+- `artifacts/opposition-case.md`
+- `artifacts/domain-plausibility-audit.md`
 - `artifacts/07-opening-strategy.md`
 - `PROJECT_STATE.yaml`
 
@@ -28,6 +32,7 @@ Create and update:
 - build a chapter or block outline with clear narrative, argumentative, or instructional function
 - define the ending turn, claim turn, or learning turn for each major block
 - preserve escalation logic from the story engine or argument/learning progression from the core problem
+- define the external clock or pressure deadline early when the genre/use-case benefits from momentum: board vote, launch, hearing, public exposure, exam date, investigation deadline, illness progression, funding deadline, or another visible countdown
 - build `artifacts/causality-chain.md` so major scenes connect by therefore/but causality rather than and-then sequence
 - align the architecture with the emotional curve
 - design 2-3 integrated subplots for book-length fiction when appropriate, or 2-3 integrated nonfiction/study-guide threads such as case lines, recurring examples, domain clusters, or competency tracks
@@ -36,19 +41,30 @@ Create and update:
 - initialize `artifacts/continuity-ledger.md` with every fact the drafting phase must preserve; use `references/templates/continuity-ledger.md` unless the project clearly needs a different structure
 - for whole-series work, build or update `artifacts/series-arc-map.md` and `artifacts/series-payoff-ledger.md` before drafting later books so each installment has a role, escalation turn, ending state, setup/payoff path, and carryover obligation
 - for series repair work, reverse-outline the locked and editable books before major rewriting, then initialize `artifacts/canon-lock.md`, `artifacts/installment-promise-tracker.md`, and `artifacts/series-verification-matrix.md` so architecture changes can be tested against published canon
-- initialize `artifacts/reader-promise-tracker.md` with every promise the book is making to the reader, including learning, transformation, exam-readiness, or series-continuity promises when relevant
+- for biblical fiction or sacred retelling mode, map every major scene to source category in `artifacts/scripture-source-map.md` and `artifacts/invention-boundary-ledger.md` before drafting; preserve source sequence unless the ledger records an approved compression or narrative frame
+- for biblical fiction or sacred retelling mode, create passage-level chapter packets in `artifacts/sacred-scene-packets.md`, track translation-sensitive passages in `artifacts/translation-sensitivity-map.md`, apply `artifacts/sacred-figure-handling-rules.md`, and plan miracle/supernatural portrayal through `artifacts/miracle-supernatural-policy.md`
+- initialize `artifacts/reader-promise-tracker.md` with every promise the book is making to the reader, including learning, transformation, exam-readiness, sacred-retelling/source-fidelity, or series-continuity promises when relevant
 - initialize `artifacts/drift-loop-alarm.md` with hard stop conditions for drift, loops, no-state-change chapters, reopened tickets, phase mismatch, false productivity, and filler expansion
 - create `artifacts/expansion-integrity.md` whenever target length, trim pressure, or pacing concerns suggest the manuscript may need expansion; use `references/templates/expansion-integrity.md` unless the project clearly needs a different structure, and ensure expansion comes from consequence, not padding
 - create `artifacts/recurring-formal-device-tracker.md` if the manuscript uses distinctive structural devices (logs, epistolary sections, data dumps, alternate POV chapters, in-world documents); use `references/templates/recurring-formal-device-tracker.md` and track each occurrence's function, escalation, and compression
-- create `artifacts/technical-seed-map.md` for speculative fiction, thrillers, or any book whose climax depends on a specific technical or conceptual mechanism; use `references/templates/technical-seed-map.md` and plan when key concepts are introduced, deepened, and made operational
+- create `artifacts/technical-seed-map.md` for speculative fiction, thrillers, or any book whose climax depends on a specific technical or conceptual mechanism; use `references/templates/technical-seed-map.md` and plan when key concepts are introduced, deepened, made operational, and explained in a simple reader-facing mental model by the first quarter
 - create `artifacts/domain-plausibility-audit.md` for fiction that depends on technical, medical, legal, scientific, or institutional credibility; use `references/templates/domain-plausibility-audit.md` and flag plot-critical claims that will need expert review
+- for biblical fiction or sacred retelling mode, use `artifacts/historical-cultural-plausibility-audit.md` for ancient-world geography, travel, household life, law, temple/synagogue practice, naming, class, gender norms, and language/register; use `artifacts/anachronism-modernity-audit.md` to catch modern therapy language, politics, individualism, church assumptions, and romance beats; use `artifacts/point-of-view-ethics-audit.md` for sacred or high-risk interiority boundaries
+- for biblical fiction or sacred retelling mode, plan character arcs through `artifacts/character-humility-guardrail.md` so humanization does not become cheap psychologizing, and plan endings/major turns through `artifacts/sacred-residue-audit.md` so plot closure leaves the intended reverence, awe, grief, hope, or holy discomfort
+- create `artifacts/opposition-case.md` when the book has a major antagonist, foil, institution, or ideological opposition; give the opposition a positive case, not only self-protection or villain behavior
 - create `artifacts/system-rule-sheet.md` for speculative fiction and techno-thrillers so the system's capabilities, limits, authority surfaces, legacy exceptions, and shutdown logic are defined before drafting
 - create `artifacts/authority-chain-map.md` for books involving institutional interventions, platforms, healthcare, welfare checks, moderation, compliance, or crisis escalation so every major intervention has a visible authority chain
 - include a visible tension map, learning-pressure map, or argument-pressure map
+- define a midpoint turn where suspicion, pressure, or argument becomes unmistakably active; in thrillers, this should create public, physical, institutional, or relational consequence, not only a better dashboard or private realization
 - define an opening strategy that promises what the book will actually deliver
 - map physical scene embodiment before drafting so scenes are not only conversations about meaning
+- map the dominant scene engine for each chapter or block (screen diagnosis, phone pressure, physical action, public consequence, institutional process, ordinary-life grounding, confrontation, aftermath) and avoid three consecutive blocks using the same engine unless deliberately varied in pressure and outcome
+- for key emotional-anchor characters, include at least one early grounded scene in their physical world before they become proof of the plot's harm
+- give the protagonist at least one proactive, consequential decision before the final act; do not let them only discover, explain, audit, or get morally corrected
+- give at least one human pressure point or recurring collateral-damage face to abstract systems, institutions, or arguments before the late manuscript
 - preserve intentional ambiguity, weirdness, and residue from `artifacts/risk-budget.md` rather than forcing every beat into clean explanation
 - consolidate reveal architecture: do not build the middle around endless sequential subsystem reveals; group reveals into fewer, more powerful turns that change the game rather than merely deepen the file
+- lock publication shape before drafting the final act: standalone endings need decisive external consequence; series openers need one battle clearly closed and a larger conflict intentionally opened
 
 ## Outline Requirements
 
@@ -61,6 +77,10 @@ Create and update:
 - central conflict
 - ending turn
 - tension map
+- external clock or pressure deadline, if any
+- midpoint turn and why it changes the game
+- protagonist agency beats, including at least one bold or costly action before the final act
+- scene-engine variety map so the middle does not become a repeated discovery/call/dashboard cycle
 - for series repair work, a clear distinction between inherited canon beats, preserved beats, rebuilt beats, and newly proposed replacement beats
 
 ## Scene Embodiment Map Requirements
@@ -73,6 +93,7 @@ Create and update:
 - interruption, task, obligation, or external friction that prevents clean explanation
 - what characters do instead of directly saying what they mean
 - risk of disembodied conversation or scene-as-therapy
+- whether the scene is primarily screen/phone/dashboard driven and, if so, the embodied consequence or external pressure that makes it dramatic
 
 ## Causality Chain Requirements
 
@@ -159,6 +180,9 @@ If the project is already long enough, record that no expansion is currently jus
 - no-state-change alarm: stop if a chapter scorecard records no plot, character, promise, continuity, or subplot movement
 - subplot-stall alarm: stop if a subplot appears twice without escalation, complication, convergence, or payoff movement
 - padding alarm: stop if new outline material increases length without adding consequence, pressure, or changed end conditions
+- screen/phone/dashboard-loop alarm: stop if three consecutive scenes rely on remote diagnosis, calls, dashboards, or textual evidence without a changed physical, public, institutional, or relational consequence
+- jargon pileup alarm: stop if technical, legal, medical, institutional, or invented terms accumulate without a simple reader-facing model or lived consequence
+- rhetorical-shape alarm: stop if chapter endings, paragraph turns, or dialogue verdicts repeat the same aphoristic form often enough to become predictable
 - continuity-regression alarm: stop if a revision reintroduces a fixed continuity error
 - ticket-reopen alarm: stop if three revision tickets reopen after attempted repair
 - prose-flattening alarm: stop if revision makes voice less specific, less textured, or more generic across two passes

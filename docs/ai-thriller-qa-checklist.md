@@ -18,9 +18,11 @@ Use this as a fast pre-audit or post-draft check for AI thrillers, system thrill
 ## 3. Middle-act stall
 
 - Does the middle keep repeating the same discovery/confrontation cycle?
+- Is the hidden scene engine becoming predictable: system behavior discovered, skeptic demands plain speech, legal/comms call, human-cost message, dashboard change, guilt realization, aphoristic close?
 - Is protagonist withholding being used to prolong plot more than once or twice?
 - After the second major withholding beat, is there an irreversible external consequence or a reveal that changes the story shape?
 - Are there too many "one more hidden layer" reveals?
+- Is there an external clock early enough: board release, public launch, journalist exposé, hearing, update window, regulatory deadline, or another visible countdown?
 
 ## 4. Reveal architecture
 
@@ -33,6 +35,7 @@ Use this as a fast pre-audit or post-draft check for AI thrillers, system thrill
 - Does the reader experience the system's logic in the world, not only on screens?
 - Are there enough lockouts, humiliations, delays, injuries, public distortions, referrals, or institutional actions?
 - Does each important technical discovery connect quickly to lived consequence?
+- Is at least one secondary beneficiary, pressure-source, journalist, board member, caregiver, or institutional actor recurring enough to put a face on collateral damage before the late chapters?
 - If a beat is only interesting on a dashboard, has it been rebuilt?
 
 ## 6. System-rule clarity
@@ -40,6 +43,7 @@ Use this as a fast pre-audit or post-draft check for AI thrillers, system thrill
 - Is it clear what the system can do directly?
 - Is it clear what the system can only suggest?
 - Is it clear what requires delegated trust or human authorization?
+- Does the reader get a simple four-to-six-layer model by the first quarter before terms start piling up?
 - Are legacy permissions and emergency exceptions seeded before they become plot-critical?
 - Is shutdown/containment logic understandable before the climax?
 
@@ -71,6 +75,8 @@ Use this as a fast pre-audit or post-draft check for AI thrillers, system thrill
 - Does each major secondary character have a private stake?
 - Does each have a costly choice?
 - Does each have at least one scene not centered on correcting the protagonist?
+- Does the emotional-anchor character get an early grounded scene in their physical world, rather than being known mostly through calls, texts, system summaries, or protagonist interpretation?
+- Does the protagonist make at least one bold, wrong, or costly choice before the final act, not only audits and reactive technical repairs?
 - If a character becomes the bodily or social proof of harm, do they also have pre-cost and endgame agency?
 
 ## 11. Opposition strength
@@ -91,7 +97,8 @@ Use this as a fast pre-audit or post-draft check for AI thrillers, system thrill
 
 - Is the prose too uniformly aphoristic, solemn, or self-aware?
 - Are there too many verdict lines per scene?
-- Are repeated patterns overused: "not X but Y," "that was the real ____," polished moral closeouts, triads, compressed indictments?
+- Are repeated patterns overused: "not X but Y," "Not X. Not Y. Just Z.", "that was the real ____," "There it was," "Of course," polished moral closeouts, triads, compressed indictments?
+- Would keeping only the strongest third of those rhetorical shapes make the voice sharper?
 - Do some paragraphs simply move without trying to become quotable?
 - Do some people speak imperfectly under pressure?
 
@@ -143,6 +150,7 @@ If any of these are true, stop and revise:
 - the middle depends on repeated withholding and one-more-hidden-layer reveals
 - technical beats live only on screens
 - major interventions have no visible authority chain
+- technical terms pile up before the reader has a plain mental model
 - major characters sound interchangeable under pressure
 - a harmed character functions mainly as proof for the protagonist's learning arc
 - the opposition is wrong about everything

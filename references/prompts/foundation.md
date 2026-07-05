@@ -34,6 +34,8 @@ Create and update:
 - define the lie they believe
 - define contradictions and relationship pressure
 - identify 2-3 potential subplot engines for book-length work, or the nonfiction equivalent: case-study lines, recurring questions, domain threads, or instructional pressure lines
+- for biblical fiction or sacred retelling mode, separate explicit scripture, plausible inference, historical/cultural context, theological tradition, and narrative invention before treating any scene, motive, or relationship beat as foundation
+- for biblical fiction or sacred retelling mode, set tradition lane, faith-reader personas, sacred-figure handling rules, miracle/supernatural policy, character humility guardrails, and translation sensitivity watchlist before drafting voice or character interiority
 - make every subplot candidate or nonfiction thread serve character contradiction, theme, main-plot pressure, argument progression, reader transformation, or ending payoff
 - define the strongest good-faith case for each major antagonist, institutional foil, or opposition force in `artifacts/opposition-case.md`; the opposition should be partially right in a way that pressures the book
 - prevent pressure characters from becoming single-function devices; every major secondary character should have a private stake, a costly choice, and at least one scene not centered on correcting the protagonist
@@ -47,6 +49,7 @@ Create and update:
 - preserve author intent and taste when defining theme, character arcs, voice, and market framing
 - update `artifacts/review-personas.md` when foundation work reveals sharper voice-risk, sentimentality-risk, or genre-betrayal triggers
 - classify creative risks as intentional, accidental, reduced, heightened, or accepted
+- for biblical fiction or sacred retelling mode, classify theological, devotional, denominational, source-fidelity, POV-interiority, translation, miracle/supernatural, anachronism/modernity, character-reduction, sacred-residue, and historical/cultural risks in the sacred-retelling artifacts; do not present invention as fact
 - update discarded choices whenever names, arcs, themes, premises, or voice directions are rejected
 
 ## Character Requirements

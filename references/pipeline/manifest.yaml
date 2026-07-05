@@ -14,6 +14,7 @@ phase_0_intake:
     - "artifacts/risk-budget.md"
     - "artifacts/discarded-choices.md"
     - "artifacts/review-personas.md"
+    - "artifacts/publication-shape.md"
   next: "Phase 1: Foundation"
 
 phase_1_foundation:
@@ -28,6 +29,7 @@ phase_1_foundation:
     - "artifacts/human-source-bank.md"
     - "artifacts/name-collision-audit.md"
     - "artifacts/name-entity-filter.md"
+    - "artifacts/opposition-case.md"
     - "artifacts/06-emotional-curve.md"
   next: "Phase 2: Architecture"
 
@@ -44,6 +46,12 @@ phase_2_architecture:
     - "artifacts/reader-promise-tracker.md"
     - "artifacts/drift-loop-alarm.md"
     - "artifacts/expansion-integrity.md"
+    - "artifacts/publication-shape.md"
+    - "artifacts/technical-seed-map.md"
+    - "artifacts/system-rule-sheet.md"
+    - "artifacts/authority-chain-map.md"
+    - "artifacts/opposition-case.md"
+    - "artifacts/domain-plausibility-audit.md"
     - "artifacts/07-opening-strategy.md"
   next: "Phase 3: Drafting"
 
@@ -75,7 +83,9 @@ phase_4_adversarial_audit:
     - "artifacts/ear-pass.md"
     - "artifacts/over-polish-audit.md"
     - "artifacts/negative-capability-audit.md"
+    - "artifacts/domain-plausibility-audit.md"
     - "artifacts/expansion-integrity.md"
+    - "artifacts/publication-shape.md"
     - "artifacts/revision-philosophy.md"
     - "artifacts/revision-tickets.md"
   next: "Phase 5: Final Score"
@@ -94,6 +104,7 @@ phase_6_editorial_package:
   gate: "editorial_package"
   outputs:
     - "artifacts/10-editorial-package.md"
+    - "artifacts/cover-generation-prompt.md"
     - "artifacts/reader-response-plan.md"
     - "artifacts/beta-feedback-log.md"
     - "artifacts/positioning-strategy.md"

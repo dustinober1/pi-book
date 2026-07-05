@@ -9,6 +9,9 @@ It can be used for novels, memoir, narrative nonfiction, prescriptive nonfiction
 For AI thrillers and other system-driven fiction, the package now also includes:
 - a reusable QA pass in `docs/ai-thriller-qa-checklist.md`
 - a reusable developmental review prompt in `docs/ai-thriller-review-prompt.md`
+- stronger built-in safeguards for publication shape, external clocks, midpoint turns, plain-language system models, scene-engine variety, embodied consequence, protagonist agency, and repeated rhetorical patterns
+- final-package cover support, including a paste-ready ebook cover generation prompt targeting 1600 x 2560 px KDP-friendly artwork
+- mode-specific biblical fiction / sacred retelling support that tracks scripture sources, passage scene packets, invention boundaries, translation sensitivity, tradition lane, theological risk, sacred-figure handling, ancient-world plausibility, anachronism/modernity, faith-reader personas, miracle/supernatural portrayal, character humility, sacred residue, POV ethics, and Author's Note disclosure without burdening unrelated genres
 
 This package is extension-first: it exposes Pi commands, blocker-triage UI/tooling, and the primary `genesis-for-pi` skill for durable intake, foundation, architecture, drafting, adversarial audit, Genesis Score, and editorial package generation.
 
@@ -175,7 +178,7 @@ Use `/genesis-cockpit` to update `artifacts/writer-cockpit.md`, a one-page write
 
 Use `/genesis-autopilot <target>` for gated automation such as `foundation`, `architecture`, `chapter-queue`, `one chapter packet`, `one chapter draft`, or `post-chapter-update`. It refuses to run when hard blockers or quality gates are active.
 
-Use `/genesis-chapter-queue` to convert an approved outline into draftable chapter packets with goals, causality, promises, continuity constraints, taste-lock notes, human-specificity seeds, forbidden filler, and post-draft ledger tasks.
+Use `/genesis-chapter-queue` to convert an approved outline into draftable chapter packets with goals, scene-engine contrast, causality, promises, continuity constraints, protagonist/secondary-character agency, technical/plain-language load, taste-lock notes, human-specificity seeds, rhetorical-shape watch, forbidden filler, and post-draft ledger tasks.
 
 Use `/genesis-post-chapter-update` after drafting to update continuity, reader promises, causality, scene embodiment, human-specificity, scorecards, revision tickets, the chapter queue, and the writer cockpit.
 
@@ -233,7 +236,7 @@ Use `/genesis-dashboard` for a richer progress dashboard with phase progress, bl
 
 Use `/genesis-compile` to concatenate `manuscript/chapters/*.md` into `delivery/manuscript-full.md` and write `delivery/manuscript-compile-report.md` with chapter and word-count diagnostics.
 
-Use `/genesis-export` to create delivery handoff files: compiled manuscript, compile report, editorial handoff, revision board, beta-reader packet, and export manifest.
+Use `/genesis-export` to create delivery handoff files: compiled manuscript, compile report, editorial handoff, revision board, beta-reader packet, cover prompt handoff when available, and export manifest.
 
 Use `/genesis-checkpoint` to commit changed Genesis project files one file at a time. Pass a relative path to commit only one file, or use no argument/`all` for all changed Genesis files.
 
@@ -497,6 +500,8 @@ Use this when you want to explicitly mark a project as:
 - prescriptive nonfiction
 - study guide
 - certification prep
+- biblical fiction
+- sacred retelling
 - series installment
 - series repair
 - other
@@ -569,6 +574,36 @@ Use this when you want a focused pass on:
 - low-consequence chapter blocks
 - scenes that increase length without increasing pressure
 
+### 16a. Run a local n-gram repetition audit
+
+```bash
+npm run audit:ngrams -- /path/to/project
+node scripts/ngram-audit.mjs manuscript/chapters --min-count 2 --top 15
+node scripts/ngram-audit.mjs /path/to/project --write-ear-pass --write-ai-tell
+```
+
+Use this when you want a quick repeated-phrase report for bigrams, trigrams, 4-grams, and 5-grams. When you pass a Genesis project root, the script automatically scans `manuscript/chapters/` and reports repeated phrases with counts and file spread. With `--write-ear-pass` and/or `--write-ai-tell`, it also writes a bounded automated n-gram section into `artifacts/ear-pass.md` and `artifacts/ai-tell-mitigation-audit.md`.
+
+### 16b. Run the structure, continuity, and rhetoric scanners
+
+Three deterministic scanners that catch problems the LLM audits handle inconsistently. Run them before scoring and before any developmental cut pass.
+
+```bash
+# Assembly-draft scaffolding (Chapter 2A/2B) + post-climax bloat detection
+npm run audit:structure -- /path/to/project
+node scripts/structure-audit.mjs /path/to/project --max-chapter-share 20 --climax-token "The Door"
+
+# Locked numerical-fact divergences (ages, counts, dates) vs continuity-ledger.md
+npm run audit:continuity -- /path/to/project
+node scripts/continuity-scan.mjs /path/to/project --write-audit
+
+# Sentence-shape fatigue: negative parallelism, aphoristic closeouts, triads
+npm run audit:rhetoric -- /path/to/project
+node scripts/rhetorical-pattern-audit.mjs /path/to/project --write-ear-pass --per-scene 5
+```
+
+`audit:structure` flags A/B/C chapter scaffolding and any chapter that exceeds a configurable share of total length (default 25%), and reports the post-climax tail share so a final act doesn't read as a second novella after the novel has climaxed. `audit:continuity` reads locked numerical facts from `artifacts/continuity-ledger.md` and flags manuscript mentions whose value diverges — the kind of slip a reviewer spots instantly (a child who is eleven, then thirteen, then twelve). `audit:rhetoric` catches recurring sentence *shapes* (Not X. Y., That was the work/law/cost., the kind of…, which is to say…) rather than verbatim phrases, so it complements `audit:ngrams`. Pair all three with the `scene-inventory.md`, `chronology-rebuild.md`, and `act-design-audit.md` templates.
+
 ### 17. Compile the manuscript
 
 ```text
@@ -583,7 +618,7 @@ Concatenates chapter Markdown files under `manuscript/chapters/` into `delivery/
 /genesis-export
 ```
 
-Creates delivery files for handoff: compiled manuscript, compile report, editorial handoff, revision board, beta-reader packet, and export manifest.
+Creates delivery files for handoff: compiled manuscript, compile report, editorial handoff, revision board, beta-reader packet, cover prompt handoff when available, and export manifest.
 
 ### 19. Create git checkpoints
 
@@ -667,10 +702,12 @@ During intake, Genesis should record a workflow mode such as:
 - prescriptive nonfiction
 - study guide
 - certification prep
+- biblical fiction
+- sacred retelling
 - series installment
 - series repair
 
-This helps the system decide whether to emphasize subplots, argument flow, reference integrity, objective coverage, series continuity, or locked-canon verification and rewrite planning.
+This helps the system decide whether to emphasize subplots, argument flow, reference integrity, objective coverage, scripture/source boundaries, passage packets, translation sensitivity, tradition lane, sacred-figure handling, miracle/supernatural portrayal, theological and historical-cultural plausibility, anachronism checks, sacred residue, series continuity, or locked-canon verification and rewrite planning.
 
 ### Write a whole series
 

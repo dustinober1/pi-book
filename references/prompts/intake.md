@@ -30,8 +30,9 @@ Create and update:
 
 - Treat the user's basic idea as the seed, not as a full brief.
 - In PRD-first projects, do not re-interview the writer on answered material. Extract supported claims, mark confidence, and ask only the missing questions in `artifacts/prd-gap-report.md`.
-- Identify and record the workflow mode early: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, series repair, or another explicitly named mode.
+- Identify and record the workflow mode early: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, biblical fiction, sacred retelling, series installment, series repair, or another explicitly named mode.
 - For study guides, certification books, and research-heavy nonfiction, initialize a research plan and source-storage habit using `research/reference-inventory.md`, `research/notes/`, and `research/sources/`.
+- For biblical fiction or sacred retelling mode, initialize `artifacts/sacred-retelling-promise.md`, `artifacts/scripture-source-map.md`, `artifacts/invention-boundary-ledger.md`, `artifacts/theological-risk-budget.md`, `artifacts/historical-cultural-plausibility-audit.md`, `artifacts/point-of-view-ethics-audit.md`, `artifacts/authors-note-source-note.md`, `artifacts/sacred-scene-packets.md`, `artifacts/translation-sensitivity-map.md`, `artifacts/tradition-lane-selector.md`, `artifacts/sacred-figure-handling-rules.md`, `artifacts/anachronism-modernity-audit.md`, `artifacts/faith-reader-personas.md`, `artifacts/miracle-supernatural-policy.md`, `artifacts/character-humility-guardrail.md`, `artifacts/sacred-residue-audit.md`, and `research/reference-inventory.md`. These are mode-specific; do not apply them as blockers to unrelated genres.
 - For series work, capture whether this project is book one, a later installment, a series-level planning pass, or a series-repair pass.
 - For series repair work, identify which books are locked canon, which books are editable, what source material exists for each installment, and whether the goal is verification-only, surgical revision, or full rewrite.
 - For whole-series or series repair work, initialize `artifacts/series-bible.md`, `artifacts/series-arc-map.md`, `artifacts/installment-promise-tracker.md`, `artifacts/series-payoff-ledger.md`, and `artifacts/series-verification-matrix.md` early so cross-book promises, escalation, setup/payoff, and constraints become durable before drafting or revision starts.
@@ -42,6 +43,7 @@ Create and update:
 - Define what makes this version commercially legible without making it generic.
 - Capture author intent, taste, and risk before optimizing the idea.
 - Lock publication shape early in `artifacts/publication-shape.md`: standalone vs series, commercial vs literary weighting, closure target, residue tolerance, and ending promise.
+- For biblical fiction or sacred retelling mode, define the sacred retelling promise early: true where the source can support truth, clearly imagined where the source is silent, transparent with readers about the fiction boundary, and clear about tradition lane, translation posture, miracle/supernatural portrayal, high-risk figure handling, and target sacred residue.
 - Generate a compact review-personas file during early research so the project has concrete readers/reviewers who can detect false voice, generic smoothing, fake specificity, comp-chasing, sentimentality, and genre betrayal.
 - Start a discarded choices ledger immediately; rejected assumptions are useful creative memory.
 

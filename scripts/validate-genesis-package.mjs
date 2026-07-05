@@ -78,6 +78,22 @@ const templatePaths = [
   "references/templates/reference-inventory.md",
   "references/templates/evidence-map.md",
   "references/templates/study-guide-objectives.md",
+  "references/templates/sacred-retelling-promise.md",
+  "references/templates/scripture-source-map.md",
+  "references/templates/invention-boundary-ledger.md",
+  "references/templates/theological-risk-budget.md",
+  "references/templates/historical-cultural-plausibility-audit.md",
+  "references/templates/point-of-view-ethics-audit.md",
+  "references/templates/authors-note-source-note.md",
+  "references/templates/sacred-scene-packets.md",
+  "references/templates/translation-sensitivity-map.md",
+  "references/templates/tradition-lane-selector.md",
+  "references/templates/sacred-figure-handling-rules.md",
+  "references/templates/anachronism-modernity-audit.md",
+  "references/templates/faith-reader-personas.md",
+  "references/templates/miracle-supernatural-policy.md",
+  "references/templates/character-humility-guardrail.md",
+  "references/templates/sacred-residue-audit.md",
   "references/templates/author-intent.md",
   "references/templates/taste-profile.md",
   "references/templates/risk-budget.md",
@@ -85,6 +101,12 @@ const templatePaths = [
   "references/templates/reader-promise-tracker.md",
   "references/templates/drift-loop-alarm.md",
   "references/templates/publication-shape.md",
+  "references/templates/technical-seed-map.md",
+  "references/templates/system-rule-sheet.md",
+  "references/templates/authority-chain-map.md",
+  "references/templates/opposition-case.md",
+  "references/templates/domain-plausibility-audit.md",
+  "references/templates/cover-generation-prompt.md",
   "references/templates/book-prd.md",
   "references/templates/prd-gap-report.md",
   "references/templates/prd-traceability-map.md",
@@ -132,7 +154,10 @@ assert.ok(readme.includes("/genesis-series-score"), "README should document /gen
 assert.ok(readme.includes("/genesis-series-export"), "README should document /genesis-series-export");
 assert.ok(readme.includes("/genesis-compile"), "README should document /genesis-compile");
 assert.ok(readme.includes("/genesis-checkpoint"), "README should document /genesis-checkpoint");
-assert.ok(readme.includes("/genesis-ingest"), "README should document /genesis-ingest");
+assert.ok(readme.includes("audit:ngrams"), "README should document audit:ngrams");
+assert.ok(readme.includes("audit:structure"), "README should document audit:structure");
+assert.ok(readme.includes("audit:continuity"), "README should document audit:continuity");
+assert.ok(readme.includes("audit:rhetoric"), "README should document audit:rhetoric");
 assert.ok(!readme.includes("/bg-"), "README should not document legacy /bg-* aliases");
 assert.ok(!readme.includes("book-genesis-codex"), "README should not document the removed legacy skill alias");
 
@@ -180,6 +205,13 @@ assert.ok(!existsSync(join(root, "prompts", "bg-next-prompt.md")), "legacy promp
 assert.ok(!existsSync(join(root, "references", "legacy-v4-book-genesis.md")), "legacy V4 reference should be removed");
 assert.ok(existsSync(join(root, "references", "scoring", "genesis-score.md")), "Genesis Score contract should exist");
 assert.ok(existsSync(join(root, "scripts", "test-genesis-sample-projects.mjs")), "sample-project test script should exist");
+assert.ok(existsSync(join(root, "scripts", "ngram-audit.mjs")), "n-gram audit script should exist");
+assert.ok(existsSync(join(root, "scripts", "rhetorical-pattern-audit.mjs")), "rhetorical-pattern audit script should exist");
+assert.ok(existsSync(join(root, "scripts", "continuity-scan.mjs")), "continuity scan script should exist");
+assert.ok(existsSync(join(root, "scripts", "structure-audit.mjs")), "structure audit script should exist");
+assert.ok(existsSync(join(root, "references", "templates", "scene-inventory.md")), "scene-inventory template should exist");
+assert.ok(existsSync(join(root, "references", "templates", "chronology-rebuild.md")), "chronology-rebuild template should exist");
+assert.ok(existsSync(join(root, "references", "templates", "act-design-audit.md")), "act-design-audit template should exist");
 assert.ok(existsSync(join(root, "docs", "best-practices.md")), "best-practices doc should exist");
 assert.ok(existsSync(join(root, "docs", "troubleshooting.md")), "troubleshooting doc should exist");
 assert.ok(existsSync(join(root, "docs", "series-repair-service.md")), "series-repair service doc should exist");

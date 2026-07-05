@@ -101,3 +101,31 @@
 - immediate action: standardize immediately and update continuity-ledger.md canonical-name lock
 - owner must approve: no (automatically flagged)
 - note: this is a continuity failure, not a copy-editing issue. repair before final scoring.
+
+### Alarm O: Screen / phone / dashboard loop
+- trigger: three consecutive scenes rely on remote diagnosis, phone calls, dashboards, messages, reports, or textual evidence without a changed physical, public, institutional, or relational consequence
+- evidence required: scene-embodiment-map.md and chapter scorecards showing repeated scene engine and limited embodied consequence
+- immediate action: stop drafting; rebuild at least one scene around physical action, external pressure, public consequence, ordinary-life grounding, or a new human decision point
+- owner must approve: yes
+- note: especially important for techno-thrillers and system novels. the abstract mechanism must keep entering the lived world.
+
+### Alarm P: Jargon pileup / missing plain model
+- trigger: specialized, invented, legal, medical, institutional, or technical terms accumulate faster than the reader's simple mental model can support
+- evidence required: term list from affected chapters, technical-seed-map.md gaps, and passages where terms are not tied to action or consequence
+- immediate action: add or move an early plain-language model; cut duplicate terms; anchor necessary terms in observable consequence
+- owner must approve: yes
+- note: do not dumb the book down. make the architecture legible before making it intricate.
+
+### Alarm Q: Rhetorical shape fatigue
+- trigger: chapter endings, paragraph turns, or dialogue verdicts repeatedly use the same aphoristic shape, negative parallelism, triad, fragment list, or signature phrase
+- evidence required: quoted examples from at least three locations showing the repeated shape
+- immediate action: keep only the strongest instances; vary, cut, or convert the rest into plainer movement or character-specific speech
+- owner must approve: no (flagged for line edit unless the pattern is severe enough to affect pacing)
+- note: a strong voice can become audible machinery if every scene closes with the same kind of sentence.
+
+### Alarm R: Soft midpoint / missing active danger
+- trigger: by the midpoint, the central threat, argument, or problem remains private, abstract, diagnostic, or reversible instead of producing an option-changing public, physical, institutional, relational, or material consequence
+- evidence required: outline-stress-test.md, reader-promise-tracker.md, and scorecards showing no midpoint turn that changes available choices
+- immediate action: revise the midpoint to create a sharper consequence or update publication-shape.md if the book deliberately rejects that genre pressure
+- owner must approve: yes
+- note: readers need to feel when the book has crossed from suspicious to actively dangerous.

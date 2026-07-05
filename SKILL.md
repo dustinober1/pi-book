@@ -104,6 +104,23 @@ Default project layout:
     reader-response-plan.md
     beta-feedback-log.md
     positioning-strategy.md
+    cover-generation-prompt.md
+    sacred-retelling-promise.md
+    scripture-source-map.md
+    invention-boundary-ledger.md
+    theological-risk-budget.md
+    historical-cultural-plausibility-audit.md
+    point-of-view-ethics-audit.md
+    authors-note-source-note.md
+    sacred-scene-packets.md
+    translation-sensitivity-map.md
+    tradition-lane-selector.md
+    sacred-figure-handling-rules.md
+    anachronism-modernity-audit.md
+    faith-reader-personas.md
+    miracle-supernatural-policy.md
+    character-humility-guardrail.md
+    sacred-residue-audit.md
     revision-tickets.md
   manuscript/
     chapters/
@@ -121,7 +138,7 @@ Default project layout:
 
 ## Canonical Pipeline
 
-Template references for high-friction artifacts live under `references/templates/`. Use them when creating or repairing `book-prd.md`, `prd-gap-report.md`, `prd-traceability-map.md`, `prd-completeness-score.md`, `prd-change-log.md`, `decision-impact-report.md`, `writer-questions.md`, `quality-gates.md`, `writer-cockpit.md`, `chapter-production-queue.md`, `outline-stress-test.md`, `persona-review.md`, `regression-check.md`, `series-regression-check.md`, `taste-lock.md`, `decision-ledger.md`, `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `series-arc-map.md`, `series-timeline.md`, `character-state-matrix.md`, `reveal-spoiler-matrix.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-payoff-ledger.md`, `series-verification-matrix.md`, `retcon-log.md`, `series-repetition-radar.md`, `book-handoff-packet.md`, `argument-spine.md`, `certification-blueprint-map.md`, `study-guide-objectives.md`, `evidence-map.md`, `research/reference-inventory.md`, and similar artifacts that benefit from a stable structure.
+Template references for high-friction artifacts live under `references/templates/`. Use them when creating or repairing `book-prd.md`, `prd-gap-report.md`, `prd-traceability-map.md`, `prd-completeness-score.md`, `prd-change-log.md`, `decision-impact-report.md`, `writer-questions.md`, `quality-gates.md`, `writer-cockpit.md`, `chapter-production-queue.md`, `outline-stress-test.md`, `persona-review.md`, `regression-check.md`, `series-regression-check.md`, `taste-lock.md`, `decision-ledger.md`, `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `scene-inventory.md`, `chronology-rebuild.md`, `act-design-audit.md`, `series-bible.md`, `series-arc-map.md`, `series-timeline.md`, `character-state-matrix.md`, `reveal-spoiler-matrix.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-payoff-ledger.md`, `series-verification-matrix.md`, `retcon-log.md`, `series-repetition-radar.md`, `book-handoff-packet.md`, `argument-spine.md`, `certification-blueprint-map.md`, `study-guide-objectives.md`, `evidence-map.md`, sacred retelling templates such as `scripture-source-map.md`, `invention-boundary-ledger.md`, `sacred-scene-packets.md`, `translation-sensitivity-map.md`, `tradition-lane-selector.md`, `sacred-figure-handling-rules.md`, `anachronism-modernity-audit.md`, `miracle-supernatural-policy.md`, `character-humility-guardrail.md`, `sacred-residue-audit.md`, `authors-note-source-note.md`, `research/reference-inventory.md`, and similar artifacts that benefit from a stable structure.
 
 ## Workflow Modes
 
@@ -133,11 +150,13 @@ Choose and record a workflow mode during intake. Common modes include:
 - prescriptive nonfiction
 - study guide
 - certification prep
+- biblical fiction
+- sacred retelling
 - series installment
 - series repair
 - other custom mode named explicitly in project files
 
-Mode affects which artifacts are mandatory in practice. Narrative fiction defaults to the full subplot/scene/continuity contract. Nonfiction may replace some plot pressure with argument flow, evidence, case studies, and reader transformation. Study guides and certification books should prioritize blueprint coverage, objective tracking, and reference integrity. Series installments should maintain both book-level and series-level continuity. Series repair projects should treat earlier locked books as canon, reverse-engineer them into durable artifacts, and verify later books against those constraints before approving rewrites.
+Mode affects which artifacts are mandatory in practice. Narrative fiction defaults to the full subplot/scene/continuity contract. Nonfiction may replace some plot pressure with argument flow, evidence, case studies, and reader transformation. Study guides and certification books should prioritize blueprint coverage, objective tracking, and reference integrity. Biblical fiction and sacred retellings should protect scripture/source fidelity, invention boundaries, theological risk, ancient-world plausibility, POV ethics, and reader disclosure; these safeguards are mode-specific and should not burden thrillers, LitRPG, romance, sci-fi, or unrelated modes. Series installments should maintain both book-level and series-level continuity. Series repair projects should treat earlier locked books as canon, reverse-engineer them into durable artifacts, and verify later books against those constraints before approving rewrites.
 
 For whole-series work, prefer `/genesis-series-start` to create a series root with `SERIES_STATE.yaml`, `SERIES_STATUS.md`, shared series artifacts, and one `series installment` Genesis project per book under `books/`. Use `/genesis-series-open` to pick an existing workspace, `/genesis-series-next` for the next safe series/book step, `/genesis-series-add-book` when the series expands, `/genesis-series-blockers` for cross-book triage, `/genesis-series-verify` for cross-book verification, `/genesis-series-regression-check` after revisions or lock decisions, `/genesis-series-score` for whole-series scoring, `/genesis-series-export` for delivery handoff, and `/genesis-series-lock-book` after an installment is ready to become canon.
 
@@ -174,7 +193,7 @@ Read only the prompt for the active phase:
 3. Read `PROJECT_STATE.yaml` if it exists. If not, initialize it from the manifest phases and user idea.
 4. Read `ASSUMPTIONS.md` if it exists. If not, create it and mark inferred assumptions clearly.
 4a. Read `STATUS.md` when it exists for a quick resume dashboard, but treat project files such as `PROJECT_STATE.yaml`, artifact files, and manuscript files as the source of truth.
-4b. Identify and record the workflow mode early: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, series repair, or another explicitly named mode.
+4b. Identify and record the workflow mode early: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, biblical fiction, sacred retelling, series installment, series repair, or another explicitly named mode.
 5. Load the current phase prompt and produce only that phase's required outputs.
 5a. For PRD-first work, treat the PRD as upstream evidence: import it into `research/notes/source-prd.md`, score it in `artifacts/prd-completeness-score.md`, map supported claims in `artifacts/prd-traceability-map.md`, ask only unanswered questions in `artifacts/prd-gap-report.md` and `artifacts/writer-questions.md`, and do not draft prose until gates allow it. When a revised PRD appears, compare it in `artifacts/prd-change-log.md` and `artifacts/decision-impact-report.md` before accepting it as source of truth.
 5b. When creating a supported artifact from scratch, check `references/templates/` first and use the matching template unless the project clearly needs a different structure.
@@ -183,7 +202,10 @@ Read only the prompt for the active phase:
 8. Do not skip Phase 4. Audit before final scoring.
 9. When drafting, write in chapter files under `manuscript/chapters/` and keep the state synchronized.
 10. When user feedback changes direction, record it in project files before continuing.
-11. Lock `artifacts/publication-shape.md` early and revisit it before the final act so the ending does not drift into being thematically right but commercially under-resolved.
+11. Lock `artifacts/publication-shape.md` early and revisit it before the final act so the ending does not drift into being thematically right but commercially under-resolved. Standalone books need decisive external consequence; series openers need one battle closed and a larger conflict intentionally left alive.
+11a. For thrillers, speculative fiction, institutional stories, and system-driven novels, require an early external clock or visible pressure deadline, a midpoint turn that changes public/physical/institutional/relational conditions, and at least one proactive protagonist decision before the final act.
+11b. Do not let the middle default to a repeated scene engine of discovery, explanation, phone/legal pressure, text/call human cost, dashboard update, guilt realization, and aphoristic close. Track and vary scene engines through `artifacts/scene-embodiment-map.md`, `evaluations/chapter-scorecards.md`, and `artifacts/drift-loop-alarm.md`.
+11c. For technical, legal, medical, institutional, or invented systems, create a simple reader-facing model in `artifacts/technical-seed-map.md` by the first quarter before specialized terms pile up.
 12. Use writer approval gates after PRD import, author voice fingerprinting, first-page/sample drafting, chapter one, pre-full-drafting, and final polish; record gate state in `artifacts/quality-gates.md` and summarize it in `artifacts/writer-cockpit.md`. If the writer says "this is not how I sound," update the voice artifacts before continuing.
 12. Treat 2-3 integrated subplots as a required structural layer for book-length work unless the user explicitly requests a shorter or single-threaded form.
 13. Plan, track, audit, and package subplots through `artifacts/05-subplot-map.md`; do not invent major subplot turns during drafting without updating that map.
@@ -198,6 +220,7 @@ Read only the prompt for the active phase:
 20b. For all series work, keep planned future material separate from locked canon. Do not over-plan every book at scene level, do not invent definitive future-book endings prematurely, and do not lock canon without explicit user approval or `/genesis-series-lock-book`.
 20c. When a book becomes final enough to hand off downstream obligations, maintain that book's `artifacts/book-handoff-packet.md` so the next installment inherits the correct ending state, unresolved promises, reveal constraints, and forbidden contradictions.
 20d. After cross-book revision, run or update `evaluations/series-regression-check.md` so canon, timeline, character state, reveal order, handoff integrity, and repetition/escalation risks do not silently regress.
+20e. For biblical fiction or sacred retelling mode, maintain `artifacts/sacred-retelling-promise.md`, `artifacts/scripture-source-map.md`, `artifacts/invention-boundary-ledger.md`, `artifacts/theological-risk-budget.md`, `artifacts/historical-cultural-plausibility-audit.md`, `artifacts/point-of-view-ethics-audit.md`, `artifacts/authors-note-source-note.md`, `artifacts/sacred-scene-packets.md`, `artifacts/translation-sensitivity-map.md`, `artifacts/tradition-lane-selector.md`, `artifacts/sacred-figure-handling-rules.md`, `artifacts/anachronism-modernity-audit.md`, `artifacts/faith-reader-personas.md`, `artifacts/miracle-supernatural-policy.md`, `artifacts/character-humility-guardrail.md`, `artifacts/sacred-residue-audit.md`, and `research/reference-inventory.md`. Separate explicit scripture, inference, historical/cultural context, tradition, and narrative invention. Do not present invention as biblical fact.
 21. For nonfiction and study-guide work, maintain argument and research artifacts such as `artifacts/argument-spine.md`, `artifacts/evidence-map.md`, `artifacts/reader-transformation-map.md`, `artifacts/certification-blueprint-map.md`, `artifacts/study-guide-objectives.md`, and `research/reference-inventory.md` when relevant.
 22. Maintain `artifacts/causality-chain.md` so scenes connect by therefore/but causality, not loose and-then sequence.
 23. Maintain `artifacts/review-personas.md` during research as a small set of high-signal reader and reviewer personas who will notice false notes, genre betrayal, sentimentality, flattening, overwritten prose, or fake specificity; use them as pressure tests during drafting and audit.
@@ -221,7 +244,9 @@ Read only the prompt for the active phase:
 34. Maintain `artifacts/subtext-audit.md` to catch places where characters say exactly what they mean, narration explains the scene's meaning, symbols are interpreted for the reader, jokes are explained, conflict is too cleanly articulated, or miscommunication/evasion would create more human pressure.
 35. Maintain `artifacts/ear-pass.md` as a read-aloud rhythm audit: repeated sentence shapes, too-smooth paragraphs, unnatural dialogue, assistant-like exposition, dead segues, and paragraphs that need to become rougher, shorter, stranger, or more character-shaped.
 36. Maintain `artifacts/over-polish-audit.md` to protect productive awkwardness, asymmetry, silence, contradiction, abruptness, and character-shaped roughness from being polished into generic competence.
-37. Maintain `artifacts/scene-embodiment-map.md` so major scenes contain physical action, objects, spatial pressure, interruption, practical stakes, and behavior beyond people explaining themselves.
+37. Maintain `artifacts/scene-embodiment-map.md` so major scenes contain physical action, objects, spatial pressure, interruption, practical stakes, and behavior beyond people explaining themselves. Also track dominant scene engine and screen/phone/dashboard dependence so abstract plots keep entering the lived world.
+37a. Track repeated rhetorical shapes during drafting and audit. Strong signature moves are allowed, but recurring aphoristic closeouts, negative parallelism, triads, fragment verdicts, and stock phrases become prose fatigue when they make the author more audible than the character. Run `npm run audit:rhetoric -- <project>` for a sentence-shape report (pair it with `npm run audit:ngrams` for verbatim repetition).
+37b. Run the three deterministic scanners before scoring and before any developmental cut pass: `npm run audit:structure -- <project>` (catches assembly-draft scaffolding like Chapter 2A/2B and post-climax bloat), `npm run audit:continuity -- <project>` (flags locked numerical facts — ages, counts, dates — that diverge in the manuscript), and `npm run audit:rhetoric -- <project>` (sentence-shape fatigue). These are supporting diagnostics, not verdicts; confirm each finding in context. Maintain `artifacts/scene-inventory.md` so every scene earns its place by changing plot, character, or pressure (not by delivering a reflection alone), `artifacts/chronology-rebuild.md` so the per-scene timeline grid and character-age track are consistent, and `artifacts/act-design-audit.md` so the post-climax tail is a deliberate Act IV or a compressed denouement rather than a second novella after the novel has climaxed.
 38. Maintain `artifacts/negative-capability-audit.md` to protect unresolved tension, moral ambiguity, contradiction, opacity, images that do not reduce to a single theme, and endings with residue.
 39. Maintain `artifacts/recurring-formal-device-tracker.md` when the manuscript uses distinctive structural devices (logs, epistolary sections, data dumps, alternate POV chapters, in-world documents); track each occurrence's function, escalation, and compression ratio. Flag and cut redundant occurrences that repeat established work.
 40. Maintain `artifacts/technical-seed-map.md` for speculative fiction and thrillers whose climax depends on a specific technical or conceptual mechanism; track when key concepts are introduced, deepened, and made operational so the reader can track the logic in real time at the climax.
@@ -230,6 +255,7 @@ Read only the prompt for the active phase:
 43. Maintain `artifacts/opposition-case.md` so every major antagonist, institutional foil, or opposition force has a coherent positive case and protects some real value the book would lose if they lost.
 44. Maintain `artifacts/domain-plausibility-audit.md` for fiction that depends on technical, medical, legal, or institutional credibility; flag plot-critical claims that need expert review before final scoring.
 45. Maintain `artifacts/manuscript-formatting-checklist.md` during Phase 6 to verify word count accuracy, title page correctness, formatting consistency, metadata scrub, and code-fence/log formatting.
+45a. Maintain `artifacts/cover-generation-prompt.md` during Phase 6 as a detailed paste-ready ebook cover prompt. Default KDP ebook art target is 1600 px wide by 2560 px high, with clear thumbnail-readable composition, negative space for typography, avoid list, and manual text-finishing notes.
 46. Maintain `artifacts/revision-philosophy.md`, `artifacts/reader-response-plan.md`, `artifacts/beta-feedback-log.md`, and `artifacts/positioning-strategy.md` when revision, outside response, or packaging begins.
 
 ## Quality Policy
@@ -239,6 +265,7 @@ Read only the prompt for the active phase:
 - Treat word-count padding as a structural failure; if the manuscript needs to be longer, add consequence rather than volume.
 - In nonfiction, let argument, evidence, case sequencing, and reader transformation perform structural work that plot and subplot perform in fiction.
 - In study guides and certification books, treat blueprint coverage, factual accuracy, source organization, and objective mapping as structural requirements, not packaging details.
+- In biblical fiction and sacred retelling mode, treat source/invention boundaries as reader-trust requirements. The story may imagine, but the package must show what is scripture-backed, inferred, historically/culturally sourced, tradition-backed, or invented. Passage packets, translation sensitivity, tradition lane, sacred-figure handling, anachronism checks, miracle/supernatural policy, character humility, sacred residue, and Author's Note disclosure are mode-specific safeguards, not universal genre rules.
 - In series work, protect both installment payoff and series-level continuity; do not solve one by breaking the other.
 - In series repair work, do not quietly rewrite around locked canon; extract the canon first, record what is immutable, then repair later books against that record.
 - Require every subplot to pressure the main plot, expose character contradiction, sharpen theme, alter the ending, or materially increase pressure on an existing promise; decorative side business should be cut or merged.
@@ -261,6 +288,9 @@ Read only the prompt for the active phase:
 - Treat unresolved opposition-case.md weakness as a thematic and character blocker; a major foil who is not protecting any real value weakens the book.
 - Treat unresolved publication-shape.md softness as an ending blocker; standalone books need decisive external consequence, and series openers need a clearer one-battle-closed hook.
 - Treat protagonist withholding as a limited tool, not a middle-act engine; repeated delay without changed conditions should be treated as stalling.
+- Treat missing external clock, soft midpoint, or passive/reactive protagonist architecture as pacing and market risks in thriller, suspense, and system-driven fiction.
+- Treat jargon pileup before a plain reader-facing model as a clarity risk. The repair is not to dumb the book down, but to seed a simpler mental model earlier and tie terms to consequence.
+- Treat repeated screen/phone/dashboard scenes as a scene-embodiment risk unless each instance creates a new physical, public, institutional, relational, or material consequence.
 - Treat canonical-name-lock violations in continuity-ledger.md as continuity failures, not copy-editing issues; standardize immediately when a name, term, or numerical value appears in two forms.
 - Treat an empty or excessive human-specificity-ledger.md as a prose risk; lived detail should add believable noise with restraint, not decorate every beat with quirks.
 - Treat unresolved StoryScope-style narrative-fingerprint risk as a blocker; the manuscript should not approve if its story shape depends on thematic over-determination, tidy single-track plotting, overly clean causality, excessive embodied emotion, obvious atmosphere-as-feeling, or closure that turns into a lesson.

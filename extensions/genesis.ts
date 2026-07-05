@@ -24,6 +24,7 @@ const DEFAULT_PHASE_DEFINITIONS = [
       "artifacts/risk-budget.md",
       "artifacts/discarded-choices.md",
       "artifacts/review-personas.md",
+      "artifacts/publication-shape.md",
     ],
     next: "Phase 1: Foundation",
   },
@@ -40,6 +41,7 @@ const DEFAULT_PHASE_DEFINITIONS = [
       "artifacts/human-source-bank.md",
       "artifacts/name-collision-audit.md",
       "artifacts/name-entity-filter.md",
+      "artifacts/opposition-case.md",
       "artifacts/06-emotional-curve.md",
     ],
     next: "Phase 2: Architecture",
@@ -58,6 +60,12 @@ const DEFAULT_PHASE_DEFINITIONS = [
       "artifacts/reader-promise-tracker.md",
       "artifacts/drift-loop-alarm.md",
       "artifacts/expansion-integrity.md",
+      "artifacts/publication-shape.md",
+      "artifacts/technical-seed-map.md",
+      "artifacts/system-rule-sheet.md",
+      "artifacts/authority-chain-map.md",
+      "artifacts/opposition-case.md",
+      "artifacts/domain-plausibility-audit.md",
       "artifacts/07-opening-strategy.md",
     ],
     next: "Phase 3: Drafting",
@@ -93,7 +101,9 @@ const DEFAULT_PHASE_DEFINITIONS = [
       "artifacts/ear-pass.md",
       "artifacts/over-polish-audit.md",
       "artifacts/negative-capability-audit.md",
+      "artifacts/domain-plausibility-audit.md",
       "artifacts/expansion-integrity.md",
+      "artifacts/publication-shape.md",
       "artifacts/revision-philosophy.md",
       "artifacts/revision-tickets.md",
     ],
@@ -114,6 +124,7 @@ const DEFAULT_PHASE_DEFINITIONS = [
     gate: "editorial_package",
     outputs: [
       "artifacts/10-editorial-package.md",
+      "artifacts/cover-generation-prompt.md",
       "artifacts/reader-response-plan.md",
       "artifacts/beta-feedback-log.md",
       "artifacts/positioning-strategy.md",
@@ -129,6 +140,8 @@ const WORKFLOW_MODES = [
   "prescriptive nonfiction",
   "study guide",
   "certification prep",
+  "biblical fiction",
+  "sacred retelling",
   "series installment",
   "series repair",
   "other",
@@ -154,9 +167,56 @@ const SERIES_ARTIFACTS = [
   "artifacts/drift-loop-alarm.md",
 ];
 
+const SACRED_RETELLING_ARTIFACTS = [
+  "artifacts/sacred-retelling-promise.md",
+  "artifacts/scripture-source-map.md",
+  "artifacts/invention-boundary-ledger.md",
+  "artifacts/theological-risk-budget.md",
+  "artifacts/historical-cultural-plausibility-audit.md",
+  "artifacts/point-of-view-ethics-audit.md",
+  "artifacts/authors-note-source-note.md",
+  "artifacts/sacred-scene-packets.md",
+  "artifacts/translation-sensitivity-map.md",
+  "artifacts/tradition-lane-selector.md",
+  "artifacts/sacred-figure-handling-rules.md",
+  "artifacts/anachronism-modernity-audit.md",
+  "artifacts/faith-reader-personas.md",
+  "artifacts/miracle-supernatural-policy.md",
+  "artifacts/character-humility-guardrail.md",
+  "artifacts/sacred-residue-audit.md",
+  "research/reference-inventory.md",
+  "artifacts/reader-promise-tracker.md",
+];
+
+const SACRED_RETELLING_BUNDLE = [
+  "artifacts/sacred-retelling-promise.md",
+  "artifacts/scripture-source-map.md",
+  "artifacts/invention-boundary-ledger.md",
+  "artifacts/theological-risk-budget.md",
+  "artifacts/historical-cultural-plausibility-audit.md",
+  "artifacts/point-of-view-ethics-audit.md",
+  "artifacts/authors-note-source-note.md",
+  "artifacts/sacred-scene-packets.md",
+  "artifacts/translation-sensitivity-map.md",
+  "artifacts/tradition-lane-selector.md",
+  "artifacts/sacred-figure-handling-rules.md",
+  "artifacts/anachronism-modernity-audit.md",
+  "artifacts/faith-reader-personas.md",
+  "artifacts/miracle-supernatural-policy.md",
+  "artifacts/character-humility-guardrail.md",
+  "artifacts/sacred-residue-audit.md",
+  "research/reference-inventory.md",
+  "artifacts/continuity-ledger.md",
+  "artifacts/reader-promise-tracker.md",
+  "artifacts/review-personas.md",
+  "artifacts/voice-bible.md",
+  "artifacts/drift-loop-alarm.md",
+  "artifacts/publication-shape.md",
+];
+
 const MODE_ARTIFACTS = {
-  novel: ["artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md"],
-  memoir: ["artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md"],
+  novel: ["artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md", "artifacts/publication-shape.md"],
+  memoir: ["artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md", "artifacts/publication-shape.md"],
   "series installment": [
     "artifacts/series-bible.md",
     "artifacts/series-arc-map.md",
@@ -195,6 +255,8 @@ const MODE_ARTIFACTS = {
     "research/reference-inventory.md",
     "artifacts/reader-promise-tracker.md",
   ],
+  "biblical fiction": SACRED_RETELLING_ARTIFACTS,
+  "sacred retelling": SACRED_RETELLING_ARTIFACTS,
   other: ["artifacts/reader-promise-tracker.md"],
 };
 
@@ -204,6 +266,7 @@ const MODE_SCAFFOLD_BUNDLES = {
     "artifacts/review-personas.md",
     "artifacts/reader-promise-tracker.md",
     "artifacts/drift-loop-alarm.md",
+    "artifacts/publication-shape.md",
     "artifacts/continuity-ledger.md",
   ],
   memoir: [
@@ -242,6 +305,8 @@ const MODE_SCAFFOLD_BUNDLES = {
     "artifacts/reader-promise-tracker.md",
     "artifacts/drift-loop-alarm.md",
   ],
+  "biblical fiction": SACRED_RETELLING_BUNDLE,
+  "sacred retelling": SACRED_RETELLING_BUNDLE,
   "series installment": [
     "artifacts/series-bible.md",
     "artifacts/series-arc-map.md",
@@ -300,6 +365,22 @@ const TEMPLATE_SCAFFOLDS = [
   { label: "reference-inventory.md", template: "references/templates/reference-inventory.md", destination: "research/reference-inventory.md" },
   { label: "evidence-map.md", template: "references/templates/evidence-map.md", destination: "artifacts/evidence-map.md" },
   { label: "study-guide-objectives.md", template: "references/templates/study-guide-objectives.md", destination: "artifacts/study-guide-objectives.md" },
+  { label: "sacred-retelling-promise.md", template: "references/templates/sacred-retelling-promise.md", destination: "artifacts/sacred-retelling-promise.md" },
+  { label: "scripture-source-map.md", template: "references/templates/scripture-source-map.md", destination: "artifacts/scripture-source-map.md" },
+  { label: "invention-boundary-ledger.md", template: "references/templates/invention-boundary-ledger.md", destination: "artifacts/invention-boundary-ledger.md" },
+  { label: "theological-risk-budget.md", template: "references/templates/theological-risk-budget.md", destination: "artifacts/theological-risk-budget.md" },
+  { label: "historical-cultural-plausibility-audit.md", template: "references/templates/historical-cultural-plausibility-audit.md", destination: "artifacts/historical-cultural-plausibility-audit.md" },
+  { label: "point-of-view-ethics-audit.md", template: "references/templates/point-of-view-ethics-audit.md", destination: "artifacts/point-of-view-ethics-audit.md" },
+  { label: "authors-note-source-note.md", template: "references/templates/authors-note-source-note.md", destination: "artifacts/authors-note-source-note.md" },
+  { label: "sacred-scene-packets.md", template: "references/templates/sacred-scene-packets.md", destination: "artifacts/sacred-scene-packets.md" },
+  { label: "translation-sensitivity-map.md", template: "references/templates/translation-sensitivity-map.md", destination: "artifacts/translation-sensitivity-map.md" },
+  { label: "tradition-lane-selector.md", template: "references/templates/tradition-lane-selector.md", destination: "artifacts/tradition-lane-selector.md" },
+  { label: "sacred-figure-handling-rules.md", template: "references/templates/sacred-figure-handling-rules.md", destination: "artifacts/sacred-figure-handling-rules.md" },
+  { label: "anachronism-modernity-audit.md", template: "references/templates/anachronism-modernity-audit.md", destination: "artifacts/anachronism-modernity-audit.md" },
+  { label: "faith-reader-personas.md", template: "references/templates/faith-reader-personas.md", destination: "artifacts/faith-reader-personas.md" },
+  { label: "miracle-supernatural-policy.md", template: "references/templates/miracle-supernatural-policy.md", destination: "artifacts/miracle-supernatural-policy.md" },
+  { label: "character-humility-guardrail.md", template: "references/templates/character-humility-guardrail.md", destination: "artifacts/character-humility-guardrail.md" },
+  { label: "sacred-residue-audit.md", template: "references/templates/sacred-residue-audit.md", destination: "artifacts/sacred-residue-audit.md" },
   { label: "author-intent.md", template: "references/templates/author-intent.md", destination: "artifacts/author-intent.md" },
   { label: "taste-profile.md", template: "references/templates/taste-profile.md", destination: "artifacts/taste-profile.md" },
   { label: "risk-budget.md", template: "references/templates/risk-budget.md", destination: "artifacts/risk-budget.md" },
@@ -307,6 +388,12 @@ const TEMPLATE_SCAFFOLDS = [
   { label: "reader-promise-tracker.md", template: "references/templates/reader-promise-tracker.md", destination: "artifacts/reader-promise-tracker.md" },
   { label: "drift-loop-alarm.md", template: "references/templates/drift-loop-alarm.md", destination: "artifacts/drift-loop-alarm.md" },
   { label: "publication-shape.md", template: "references/templates/publication-shape.md", destination: "artifacts/publication-shape.md" },
+  { label: "technical-seed-map.md", template: "references/templates/technical-seed-map.md", destination: "artifacts/technical-seed-map.md" },
+  { label: "system-rule-sheet.md", template: "references/templates/system-rule-sheet.md", destination: "artifacts/system-rule-sheet.md" },
+  { label: "authority-chain-map.md", template: "references/templates/authority-chain-map.md", destination: "artifacts/authority-chain-map.md" },
+  { label: "opposition-case.md", template: "references/templates/opposition-case.md", destination: "artifacts/opposition-case.md" },
+  { label: "domain-plausibility-audit.md", template: "references/templates/domain-plausibility-audit.md", destination: "artifacts/domain-plausibility-audit.md" },
+  { label: "cover-generation-prompt.md", template: "references/templates/cover-generation-prompt.md", destination: "artifacts/cover-generation-prompt.md" },
   { label: "book-prd.md", template: "references/templates/book-prd.md", destination: "artifacts/book-prd.md" },
   { label: "prd-gap-report.md", template: "references/templates/prd-gap-report.md", destination: "artifacts/prd-gap-report.md" },
   { label: "prd-traceability-map.md", template: "references/templates/prd-traceability-map.md", destination: "artifacts/prd-traceability-map.md" },
@@ -404,7 +491,135 @@ const BLOCKER_CHECKS = [
     pattern: /blocker|disembodied|unresolved/i,
     suggestion: "Add physical action, object pressure, interruption, or practical stakes.",
   },
+  {
+    file: "artifacts/publication-shape.md",
+    label: "Publication-shape blocker",
+    pattern: /blocker|unresolved|commercially soft|under-resolved|standalone.*unclear|series.*unclear|containment alone/i,
+    suggestion: "Decide standalone vs series opener and pair containment with irreversible external consequence or a clear larger-conflict hook.",
+  },
+  {
+    file: "artifacts/system-rule-sheet.md",
+    label: "System-rule blocker",
+    pattern: /blocker|unresolved|unclear|late-appearing|unseeded/i,
+    suggestion: "Clarify capabilities, limits, delegated-trust paths, emergency exceptions, and shutdown logic before approving the draft.",
+  },
+  {
+    file: "artifacts/authority-chain-map.md",
+    label: "Authority-chain blocker",
+    pattern: /blocker|unresolved|unclear|who saw what|who decided what/i,
+    suggestion: "Make every institutional intervention visible at the human decision and authorization level.",
+  },
+  {
+    file: "artifacts/opposition-case.md",
+    label: "Opposition positive-case blocker",
+    pattern: /blocker|unresolved|weak positive case|wrong about everything/i,
+    suggestion: "Give each major foil a coherent value they protect and at least one argument a smart reader can partly accept.",
+  },
+  {
+    file: "artifacts/domain-plausibility-audit.md",
+    label: "Domain-plausibility blocker",
+    pattern: /blocker|unresolved|expert review needed|unverified plot-critical/i,
+    suggestion: "Flag or review plot-critical technical, medical, legal, security, or institutional claims before final scoring.",
+  },
 ];
+
+const SACRED_RETELLING_BLOCKER_CHECKS = [
+  {
+    file: "artifacts/scripture-source-map.md",
+    label: "Scripture source-map blocker",
+    pattern: /status\s*:\s*(blocker|open)|verdict\s*:\s*(blocker|contradicts source)|\|\s*(blocker|contradicts source|needs source)\s*\|/i,
+    suggestion: "Separate explicit scripture, inference, tradition, historical context, and invention before approving the retelling.",
+  },
+  {
+    file: "artifacts/invention-boundary-ledger.md",
+    label: "Invention-boundary blocker",
+    pattern: /status\s*:\s*(blocker|open)|verdict\s*:\s*(blocker|boundary unclear)|\|\s*(blocker|unmarked invention|presented as fact)\s*\|/i,
+    suggestion: "Mark invented dialogue, interiority, composite material, and compressed timelines so fiction is not presented as biblical fact.",
+  },
+  {
+    file: "artifacts/theological-risk-budget.md",
+    label: "Theological-risk blocker",
+    pattern: /status\s*:\s*(blocker|open)|verdict\s*:\s*(blocker|accidental theology)|\|\s*(blocker|accidental theology|seek reader review)\s*\|/i,
+    suggestion: "Classify doctrinal and denominational risks, then revise, disclose, or seek faith-context review.",
+  },
+  {
+    file: "artifacts/historical-cultural-plausibility-audit.md",
+    label: "Historical-cultural plausibility blocker",
+    pattern: /status\s*:\s*(blocker|open)|verdict\s*:\s*(blocker|anachronism)|\|\s*(blocker|anachronism|needs source)\s*\|/i,
+    suggestion: "Repair or source ancient-world details before final approval.",
+  },
+  {
+    file: "artifacts/point-of-view-ethics-audit.md",
+    label: "Point-of-view ethics blocker",
+    pattern: /status\s*:\s*(blocker|open)|verdict\s*:\s*(blocker|too presumptuous)|\|\s*(blocker|reduce interiority|move to external POV)\s*\|/i,
+    suggestion: "Adjust sacred-figure or high-risk POV so interiority is reverent, bounded, and not contradicted by source material.",
+  },
+  {
+    file: "artifacts/sacred-scene-packets.md",
+    label: "Sacred scene-packet blocker",
+    pattern: /status\s*:\s*(blocker|open)|\|\s*(blocked|needs source|revise)\s*\|/i,
+    suggestion: "Create source-aware chapter packets before drafting scenes that rely on scripture, inference, or invention.",
+  },
+  {
+    file: "artifacts/translation-sensitivity-map.md",
+    label: "Translation-sensitivity blocker",
+    pattern: /status\s*:\s*(blocker|open)|\|\s*(needs comparison|avoid direct quote)\s*\|/i,
+    suggestion: "Compare translation-sensitive phrases before using wording that carries theological or reader-recognition weight.",
+  },
+  {
+    file: "artifacts/tradition-lane-selector.md",
+    label: "Tradition-lane blocker",
+    pattern: /status\s*:\s*(blocker|open)|\|\s*(unclear lane|revise|needs reviewer)\s*\|/i,
+    suggestion: "Choose the interpretive lane so the book does not accidentally promise one tradition while dramatizing another.",
+  },
+  {
+    file: "artifacts/sacred-figure-handling-rules.md",
+    label: "Sacred-figure handling blocker",
+    pattern: /status\s*:\s*(blocker|open)|\|\s*(external POV only|limited interiority|revise portrayal|seek reviewer)\s*\|/i,
+    suggestion: "Lock POV, dialogue, motive, and mystery boundaries for high-risk sacred figures.",
+  },
+  {
+    file: "artifacts/anachronism-modernity-audit.md",
+    label: "Anachronism / modernity blocker",
+    pattern: /status\s*:\s*(blocker|open)|\|\s*(anachronism|modernity leak|revise)\s*\|/i,
+    suggestion: "Translate modern psychology, politics, idioms, and romance beats into period-plausible pressure.",
+  },
+  {
+    file: "artifacts/faith-reader-personas.md",
+    label: "Faith-reader persona blocker",
+    pattern: /status\s*:\s*(blocker|open)|\|\s*(missing persona|needs review)\s*\|/i,
+    suggestion: "Use faith-reader personas to separate source-risk signal from wrong-reader noise.",
+  },
+  {
+    file: "artifacts/miracle-supernatural-policy.md",
+    label: "Miracle / supernatural policy blocker",
+    pattern: /status\s*:\s*(blocker|open)|\|\s*(reduce spectacle|move to witness POV|preserve mystery|revise)\s*\|/i,
+    suggestion: "Set and follow the portrayal lane for miracles, visions, angels, demons, and divine speech.",
+  },
+  {
+    file: "artifacts/character-humility-guardrail.md",
+    label: "Character humility blocker",
+    pattern: /status\s*:\s*(blocker|open)|\|\s*(reduce psychology|preserve mystery|revise)\s*\|/i,
+    suggestion: "Humanize biblical characters without reducing them to modern motives, trauma formula, romance, or author argument.",
+  },
+  {
+    file: "artifacts/sacred-residue-audit.md",
+    label: "Sacred residue blocker",
+    pattern: /status\s*:\s*(blocker|open)|\|\s*(over-explained|too tidy|too sentimental|too cold|revise)\s*\|/i,
+    suggestion: "Repair endings or major turns that do not leave the intended reverence, awe, grief, hope, or holy discomfort.",
+  },
+  {
+    file: "artifacts/authors-note-source-note.md",
+    label: "Author's Note / source disclosure blocker",
+    pattern: /status\s*:\s*(blocker|open)|verdict\s*:\s*(blocker|missing disclosure)|\|\s*(blocker|missing disclosure|needs author approval)\s*\|/i,
+    suggestion: "Prepare transparent source and invention disclosure for readers.",
+  },
+];
+
+const MODE_BLOCKER_CHECKS = {
+  "biblical fiction": SACRED_RETELLING_BLOCKER_CHECKS,
+  "sacred retelling": SACRED_RETELLING_BLOCKER_CHECKS,
+};
 
 const PLACEHOLDER_PATTERNS = [
   { label: "placeholder unknown", pattern: /\bunknown\b/i },
@@ -865,6 +1080,7 @@ function createEditorialExport(root) {
   const handoffPath = join(root, "delivery", "editorial-handoff.md");
   const boardPath = join(root, "delivery", "revision-board.md");
   const betaPath = join(root, "delivery", "beta-reader-packet.md");
+  const coverPromptPath = join(root, "delivery", "cover-generation-prompt.md");
   const manifestPath = join(root, "delivery", "genesis-export-manifest.md");
   writeFileSync(handoffPath, [
     "# Editorial Handoff",
@@ -909,7 +1125,12 @@ function createEditorialExport(root) {
     "- What residue stayed with you after the ending?",
     "",
   ].join("\n"), "utf8");
+  const coverPrompt = readIfExists(join(root, "artifacts", "cover-generation-prompt.md"));
   const files = ["delivery/manuscript-full.md", "delivery/manuscript-compile-report.md", "delivery/editorial-handoff.md", "delivery/revision-board.md", "delivery/beta-reader-packet.md"];
+  if (coverPrompt?.trim()) {
+    writeFileSync(coverPromptPath, coverPrompt.trimEnd() + "\n", "utf8");
+    files.push("delivery/cover-generation-prompt.md");
+  }
   writeFileSync(manifestPath, ["# Genesis Export Manifest", "", `Generated: ${new Date().toISOString()}`, "", ...files.map((file) => `- ${file}`), ""].join("\n"), "utf8");
   return { ...compile, files: [...files, "delivery/genesis-export-manifest.md"] };
 }
@@ -954,7 +1175,7 @@ function collectBlockers(root, includeMissing = true) {
   const phase = detectPhase(readIfExists(join(root, "PROJECT_STATE.yaml")));
   const workflowMode = detectWorkflowMode(root);
 
-  for (const check of BLOCKER_CHECKS) {
+  for (const check of [...BLOCKER_CHECKS, ...(MODE_BLOCKER_CHECKS[workflowMode] || [])]) {
     const text = readIfExists(join(root, check.file));
     if (!text || !check.pattern.test(text)) continue;
     blockers.push({
@@ -1351,7 +1572,7 @@ function initializeProject(root, projectName, idea) {
 
   writeIfMissing(
     join(root, "ASSUMPTIONS.md"),
-    `# Assumptions\n\n## Explicit user input\n\n- Project: ${projectName}\n- Seed idea: ${idea || "Not provided yet."}\n\n## Inferred assumptions\n\n- Language: unknown\n- Genre: unknown\n- Audience: unknown\n- Target length: unknown\n- Narrative mode: unknown\n- Workflow mode: unknown (novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, series installment, series repair, other)\n\nMark each assumption as confirmed, provisional, or rejected during Phase 0.\n`,
+    `# Assumptions\n\n## Explicit user input\n\n- Project: ${projectName}\n- Seed idea: ${idea || "Not provided yet."}\n\n## Inferred assumptions\n\n- Language: unknown\n- Genre: unknown\n- Audience: unknown\n- Target length: unknown\n- Narrative mode: unknown\n- Workflow mode: unknown (novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, biblical fiction, sacred retelling, series installment, series repair, other)\n\nMark each assumption as confirmed, provisional, or rejected during Phase 0.\n`,
   );
 
   writeIfMissing(join(root, "artifacts", "00-brief.md"), `# Brief\n\n## Original idea\n\n${idea || "Add the writer's seed idea here."}\n\n## Intake scaffold\n\n- Language:\n- Genre:\n- Audience:\n- Target length:\n- Narrative mode:\n- Workflow mode:\n- Reader promise:\n`);
@@ -1361,7 +1582,7 @@ function initializeProject(root, projectName, idea) {
   writeIfMissing(join(root, "research", "notes", "README.md"), "# Research Notes\n\nUse this folder for study notes, source summaries, interview notes, certification objective breakdowns, and working research memos.\n");
   writeIfMissing(join(root, "research", "sources", "README.md"), "# Research Sources\n\nStore downloaded PDFs, copied standards, exam blueprints, article captures, transcripts, and other raw reference material here when permitted.\n");
 
-  for (const destination of ["artifacts/author-intent.md", "artifacts/taste-profile.md", "artifacts/risk-budget.md", "artifacts/review-personas.md", "artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md", "artifacts/expansion-integrity.md"]) {
+  for (const destination of ["artifacts/author-intent.md", "artifacts/taste-profile.md", "artifacts/risk-budget.md", "artifacts/review-personas.md", "artifacts/reader-promise-tracker.md", "artifacts/drift-loop-alarm.md", "artifacts/expansion-integrity.md", "artifacts/publication-shape.md"]) {
     const item = findTemplateEntryByDestination(destination);
     if (item) scaffoldTemplate(root, item.template, item.destination, false);
   }
@@ -1936,6 +2157,7 @@ function readPrdSource(sourcePath) {
 function inferWorkflowModeFromPrd(text) {
   const lower = String(text || "").toLowerCase();
   if (/certification|exam|blueprint|objectives|practice questions|domain/.test(lower)) return "certification prep";
+  if (/bible|biblical|scripture|gospel|old testament|new testament|jesus|mary|moses|david|apostle|prophet|sacred retelling|parable/.test(lower)) return "biblical fiction";
   if (/study guide|lesson|learning objective|quiz|chapter objectives/.test(lower)) return "study guide";
   if (/memoir|personal essay|lived experience|my story/.test(lower)) return "memoir";
   if (/series|book\s*[1-9]|installment|trilogy|saga/.test(lower)) return "series installment";
@@ -2114,7 +2336,7 @@ function renderChapterProductionQueue(root) {
   const chapters = collectManuscriptChapters(root);
   const outlineHeadings = [...outline.matchAll(/^#{2,3}\s+(.+)$/gm)].slice(0, 40).map((match) => match[1].trim());
   const queueRows = outlineHeadings.length
-    ? outlineHeadings.map((title, index) => `| ${index + 1} | ${title} | queued | define scene goal, reader promise, continuity constraints, taste lock checks |`)
+    ? outlineHeadings.map((title, index) => `| ${index + 1} | ${title} | queued | define scene goal, function profile, reader promise, continuity constraints, carry-forward constraints, tension forecast, taste lock checks |`)
     : ["| 1 | pending outline | blocked | Create or approve artifacts/05-outline.md before chapter autopilot |"];
   return [
     "# Chapter Production Queue",
@@ -2130,7 +2352,7 @@ function renderChapterProductionQueue(root) {
     "",
     "## Per-chapter packet contract",
     "",
-    "Each chapter packet must include: chapter purpose, scene/section list, reader promise touched, causality link, subplot/argument pressure, continuity constraints, human-specificity seeds, voice/taste-lock notes, forbidden filler, and post-draft ledger updates.",
+    "Each chapter packet must include: chapter purpose, dominant scene engine and contrast, scene/section list, scene-function profile, reader promise touched, causality link, subplot/argument pressure, external-clock/midpoint/ending pressure, protagonist and secondary-character agency, continuity constraints, carry-forward constraints, tension forecast, technical/plain-language load, mode-specific safeguards such as sacred-retelling source/invention/translation/figure/supernatural checks when applicable, human-specificity seeds, voice/taste-lock notes, rhetorical-shape watch, forbidden filler, and post-draft ledger updates.",
     "",
   ].join("\n");
 }
@@ -2278,7 +2500,7 @@ function buildChapterQueuePrompt(root, args = "") {
     "",
     "Required output:",
     "- update artifacts/chapter-production-queue.md with draftable packets",
-    "- each packet must name chapter goal, scene/section beats, therefore/but link, promise touched, pressure added, continuity constraints, human-specificity seeds, voice/taste constraints, forbidden filler, and post-draft ledger tasks",
+    "- each packet must name chapter goal, dominant scene engine and contrast, scene/section beats, scene-function profile, therefore/but link, promise touched, pressure added, external-clock/midpoint/ending pressure, protagonist and secondary-character agency, continuity constraints, carry-forward constraints, tension forecast, technical/plain-language load, mode-specific safeguards such as sacred-retelling source/invention/translation/figure/supernatural checks when applicable, human-specificity seeds, voice/taste constraints, rhetorical-shape watch, forbidden filler, and post-draft ledger tasks",
     "- mark packets blocked when outline, voice, or quality gates are not approved",
     "- update artifacts/writer-cockpit.md and STATUS.md",
     "",
@@ -2299,7 +2521,7 @@ function buildPostChapterUpdatePrompt(root, args = "") {
     "- artifacts/causality-chain.md: therefore/but links created or broken",
     "- artifacts/scene-embodiment-map.md: physical action, objects, interruption, spatial pressure, practical stakes",
     "- artifacts/human-specificity-ledger.md: restrained lived details actually present or needed",
-    "- evaluations/chapter-scorecards.md: compact diagnostic for the chapter",
+    "- evaluations/chapter-scorecards.md: compact diagnostic for the chapter, including packet carry-through, dropped constraints, and whether the ending became too easy to forecast",
     "- artifacts/chapter-production-queue.md: packet status and next packet",
     "- artifacts/revision-tickets.md: concrete issues only, with evidence and affected files",
     "- artifacts/writer-cockpit.md and STATUS.md",
@@ -2308,6 +2530,7 @@ function buildPostChapterUpdatePrompt(root, args = "") {
     "- Do not invent continuity facts not present in chapters or artifacts.",
     "- Do not polish prose in this pass unless the user explicitly asks; this is memory and QA automation.",
     "- If the chapter violates taste-lock, quality-gates, or reader promise, create revision tickets instead of silently fixing the book's direction.",
+    "- If prose drops packet-required promises, reveals, continuity constraints, or other carry-forward obligations, record the drift and ticket it.",
   ].join("\n");
 }
 
@@ -2449,10 +2672,19 @@ function renderOutlineStressTest(root) {
     "| Dimension | Risk to check | Verdict | Evidence | Required repair |",
     "| --- | --- | --- | --- | --- |",
     "| Middle movement | sag, repetition, no-state-change chapters | pending | pending | pending |",
+    "| Scene-engine variety | repeated discovery/call/dashboard/conversation pattern | pending | pending | pending |",
+    "| Setup becomes live problem | opening setup stays descriptive instead of turning into active pressure | pending | pending | pending |",
+    "| External clock | no visible deadline or pressure countdown where genre needs one | pending | pending | pending |",
     "| Causality | and-then sequence instead of therefore/but | pending | pending | pending |",
     "| Reversals | missing option-changing turns | pending | pending | pending |",
+    "| Midpoint turn | danger remains private, abstract, or merely diagnostic | pending | pending | pending |",
+    "| Protagonist agency | lead only discovers, explains, audits, or reacts | pending | pending | pending |",
+    "| Human pressure point | antagonist/system/institution remains abstract too long | pending | pending | pending |",
+    "| Technical / conceptual clarity | jargon pileup or missing early plain-language model | pending | pending | pending |",
+    "| Exposition by local need | explanation arrives because the scene needs it, not because the outline knows it | pending | pending | pending |",
     "| Subplot / argument pressure | decorative thread or weak integration | pending | pending | pending |",
     "| Reader promises | setup without payoff or genre betrayal | pending | pending | pending |",
+    "| Tension forecastability | ending becomes too easy to predict too early; too few viable competing outcomes | pending | pending | pending |",
     "| Climax / final proof | false climax or underpowered final argument | pending | pending | pending |",
     "| Ending shape | mismatch with publication-shape.md | pending | pending | pending |",
     "| Expansion integrity | chapters that only add volume | pending | pending | pending |",
@@ -2536,7 +2768,7 @@ function buildOutlineStressTestPrompt(root, args = "") {
     "- update artifacts/writer-questions.md for decisions only the writer can answer",
     "- update artifacts/quality-gates.md, artifacts/writer-cockpit.md, and STATUS.md",
     "",
-    "Stress dimensions: middle sag, repeated scene shapes, weak therefore/but causality, missing reversals, decorative subplots, broken promises, false climax, ending underpayment, nonfiction argument gaps, study-guide objective gaps, and padding risk.",
+    "Stress dimensions: middle sag, repeated scene engines, opening setup that never becomes active pressure, missing external clock, weak therefore/but causality, missing reversals, soft midpoint, protagonist passivity/reactivity, abstract antagonist/system pressure, jargon without a plain model, exposition delivered before local scene need, decorative subplots, broken promises, premature ending forecastability, false climax, ending underpayment, nonfiction argument gaps, study-guide objective gaps, and padding risk.",
     "Do not draft prose in this pass.",
   ].join("\n");
 }
@@ -2557,6 +2789,7 @@ function buildReviewPersonasPrompt(root, args = "") {
     "- update artifacts/writer-cockpit.md and STATUS.md",
     "",
     "Personas should protect reader experience and author voice. Do not let a hostile persona become the target reader.",
+    "When possible, keep critique blind and non-convergent: collect independent persona judgments before synthesis, and do not smooth them into one consensus voice too early.",
   ].join("\n");
 }
 
@@ -2615,6 +2848,7 @@ function renderRegressionCheck(root) {
     "| Continuity | pending | pending | verify names, facts, timeline, objects, locations, canon |",
     "| Voice / taste lock | pending | pending | verify author voice and non-smoothing constraints survived revision |",
     "| Causality / outline | pending | pending | verify revisions did not break therefore/but logic |",
+    "| Plan-to-prose propagation | pending | pending | verify chapter packets, promises, reveals, and constraints still survive in the prose |",
     "| Revision tickets | pending | pending | verify fixed tickets stayed fixed and no resolved issue reopened |",
     "| Expansion integrity | pending | pending | verify no padding, duplicated beats, or ornamental expansion appeared |",
     "| Persona panel signal | pending | pending | verify target-reader concerns improved without obeying wrong-reader noise |",
@@ -2657,7 +2891,7 @@ function buildRegressionCheckPrompt(root, args = "") {
     "- update artifacts/quality-gates.md if regression creates a hard stop or approval gate",
     "- update artifacts/writer-cockpit.md and STATUS.md",
     "",
-    "Check whether the revision broke: PRD-backed decisions, reader promise, ending/publication shape, continuity, voice/taste lock, causality, resolved tickets, expansion integrity, or useful persona-panel signal.",
+    "Check whether the revision broke: PRD-backed decisions, reader promise, ending/publication shape, continuity, voice/taste lock, causality, chapter-packet carry-forward constraints, resolved tickets, expansion integrity, or useful persona-panel signal.",
     "Do not rewrite the manuscript in this pass unless explicitly asked; diagnose and ticket first.",
   ].join("\n");
 }
@@ -2755,7 +2989,7 @@ Rules:
 2. Identify the current phase, the next incomplete required output, and any active blocker that prevents safe advancement.
 3. Continue from the current state; do not restart unless state is missing or explicitly invalid.
 4. Bypass optional writer approval gates for this turn unless the user explicitly asks for a check-in.
-5. Do not bypass hard blockers: active drift-loop hard stops, open blocker/high revision tickets, unresolved name-collision blockers, unresolved AI-tell blockers, unresolved author-voice blockers, unresolved subtext/ear/over-polish blockers, unresolved expansion-integrity blockers, missing required phase outputs, or phase contract mismatches.
+5. Do not bypass hard blockers: active drift-loop hard stops, open blocker/high revision tickets, unresolved name-collision blockers, unresolved AI-tell blockers, unresolved author-voice blockers, unresolved subtext/ear/over-polish blockers, unresolved expansion-integrity blockers, unresolved publication-shape softness, unresolved system-rule/authority-chain/opposition/domain-plausibility blockers, missing required phase outputs, or phase contract mismatches.
 6. If blockers exist, clear them first when possible by updating the relevant blocker files, repair artifacts, revision tickets, and manuscript/project files with concrete evidence-based fixes.
 7. Once blockers are cleared or none exist, produce only the next required pipeline step's outputs, update \`PROJECT_STATE.yaml\`, and commit each changed file separately.
 8. Preserve the Human Voice Rule and the Expansion Integrity Rule.
@@ -2802,9 +3036,13 @@ function buildAiThrillerReviewPrompt(root, args = "") {
     "",
     "Focus the review on:",
     "- middle-act repetition or stall",
+    "- repeated scene engine: discovery, plain-language correction, legal/comms call, human-cost message, dashboard update, guilt realization, aphoristic close",
     "- protagonist withholding as a plot engine",
+    "- protagonist agency versus reactive auditing/explaining",
+    "- external clock and midpoint turn strength",
     "- reveal fatigue / too many hidden layers",
     "- embodied consequence versus screen-based diagnosis",
+    "- plain-language reader model versus jargon pileup",
     "- system-rule clarity",
     "- authority-chain plausibility",
     "- governance / organizational clarity",
@@ -2812,6 +3050,7 @@ function buildAiThrillerReviewPrompt(root, args = "") {
     "- agency-before-cost for harmed or beneficiary characters",
     "- opposition positive-case strength",
     "- prose over-concentration and repeated verdict lines",
+    "- ordinary-life grounding for emotional-anchor characters",
     "- climax technical clarity",
     "- ending shape: standalone vs series, moral resolution vs publication-strength closure",
     "- continuity and domain plausibility risks",
@@ -2846,12 +3085,13 @@ function buildAiThrillerFixPrompt(root, args = "") {
     "- manuscript/chapters/",
     "",
     "Repair priorities:",
-    "1. middle-act repetition and withholding-stall",
-    "2. reveal consolidation and embodied consequence",
-    "3. system-rule and authority-chain clarity",
-    "4. character voice differentiation and agency-before-cost",
-    "5. opposition positive-case and ending publication shape",
-    "6. continuity and domain plausibility fixes",
+    "1. publication shape, external clock, midpoint, and protagonist agency",
+    "2. middle-act repetition and withholding-stall",
+    "3. reveal consolidation, embodied consequence, and ordinary-life grounding",
+    "4. plain-language reader model, system-rule clarity, and authority-chain clarity",
+    "5. character voice differentiation and agency-before-cost",
+    "6. opposition positive-case and ending publication shape",
+    "7. continuity and domain plausibility fixes",
     "",
     "Rules:",
     "- make the highest-leverage fixes first; do not do cosmetic cleanup before structural repair",

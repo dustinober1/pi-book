@@ -77,6 +77,36 @@ try {
   assert.ok(bundleTemplates.includes("artifacts/drift-loop-alarm.md"), "mode bundle should include drift-loop alarm");
   assert.ok(bundleTemplates.includes("artifacts/reader-promise-tracker.md"), "mode bundle should include reader-promise-tracker");
 
+  const sacredTemplates = helpers.getModeTemplateEntries("biblical fiction").map((item) => item.destination).sort();
+  assert.deepEqual(sacredTemplates, [
+    "artifacts/anachronism-modernity-audit.md",
+    "artifacts/authors-note-source-note.md",
+    "artifacts/character-humility-guardrail.md",
+    "artifacts/faith-reader-personas.md",
+    "artifacts/historical-cultural-plausibility-audit.md",
+    "artifacts/invention-boundary-ledger.md",
+    "artifacts/miracle-supernatural-policy.md",
+    "artifacts/point-of-view-ethics-audit.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/sacred-figure-handling-rules.md",
+    "artifacts/sacred-residue-audit.md",
+    "artifacts/sacred-retelling-promise.md",
+    "artifacts/sacred-scene-packets.md",
+    "artifacts/scripture-source-map.md",
+    "artifacts/theological-risk-budget.md",
+    "artifacts/tradition-lane-selector.md",
+    "artifacts/translation-sensitivity-map.md",
+    "research/reference-inventory.md",
+  ]);
+  const sacredBundle = helpers.getModeBundleEntries("sacred retelling").map((item) => item.destination).sort();
+  assert.ok(sacredBundle.includes("artifacts/scripture-source-map.md"), "sacred retelling bundle should include scripture source map");
+  assert.ok(sacredBundle.includes("artifacts/invention-boundary-ledger.md"), "sacred retelling bundle should include invention boundary ledger");
+  assert.ok(sacredBundle.includes("artifacts/sacred-scene-packets.md"), "sacred retelling bundle should include sacred scene packets");
+  assert.ok(sacredBundle.includes("artifacts/anachronism-modernity-audit.md"), "sacred retelling bundle should include anachronism audit");
+  assert.ok(sacredBundle.includes("artifacts/miracle-supernatural-policy.md"), "sacred retelling bundle should include miracle policy");
+  assert.ok(sacredBundle.includes("artifacts/sacred-residue-audit.md"), "sacred retelling bundle should include sacred residue audit");
+  assert.ok(sacredBundle.includes("artifacts/authors-note-source-note.md"), "sacred retelling bundle should include author's note source note");
+
   const seriesRepairTemplates = helpers.getModeTemplateEntries("series repair").map((item) => item.destination).sort();
   assert.deepEqual(seriesRepairTemplates, [
     "artifacts/book-handoff-packet.md",
@@ -206,6 +236,26 @@ try {
   assert.ok(helpers.renderWriterQuestions(cert).includes("# Writer Questions"), "writer questions should render");
   assert.ok(helpers.renderOutlineStressTest(cert).includes("# Outline Stress Test"), "outline stress test should render");
   assert.ok(helpers.renderRegressionCheck(cert).includes("# Regression Check"), "regression check should render");
+  const ngramFixture = join(tempRoot, "ngram-fixture");
+  mkdirSync(ngramFixture, { recursive: true });
+  writeFileSync(join(ngramFixture, "01.md"), "# One\n\nThere it was. There it was again. The real problem was not the machine but the room.", "utf8");
+  writeFileSync(join(ngramFixture, "02.md"), "# Two\n\nThere it was in the hallway. The real problem was not the machine but the timing.", "utf8");
+  const ngramOutput = execSync(`node scripts/ngram-audit.mjs \"${ngramFixture}\" --min-count 2 --top 10`, { cwd: process.cwd() }).toString();
+  assert.ok(ngramOutput.includes("# Genesis n-gram audit"), "n-gram audit should render a report header");
+  assert.ok(ngramOutput.includes("there it was"), "n-gram audit should catch repeated trigrams");
+  assert.ok(ngramOutput.includes("problem was not the machine"), "n-gram audit should catch repeated 5-grams");
+  const ngramProject = join(tempRoot, "ngram-project");
+  makeProject(ngramProject, { phase: "Phase 3: Drafting", workflowMode: "novel" });
+  mkdirSync(join(ngramProject, "manuscript", "chapters"), { recursive: true });
+  writeFileSync(join(ngramProject, "manuscript", "chapters", "01.md"), "# One\n\nThere it was. There it was again. The real problem was not the machine but the room.", "utf8");
+  writeFileSync(join(ngramProject, "manuscript", "chapters", "02.md"), "# Two\n\nThere it was in the hallway. The real problem was not the machine but the timing.", "utf8");
+  const artifactOutput = execSync(`node scripts/ngram-audit.mjs \"${ngramProject}\" --min-count 2 --write-ear-pass --write-ai-tell`, { cwd: process.cwd() }).toString();
+  assert.ok(artifactOutput.includes("Updated artifact section(s):"), "n-gram audit should report artifact updates");
+  const earPass = readFileSync(join(ngramProject, "artifacts", "ear-pass.md"), "utf8");
+  const aiTell = readFileSync(join(ngramProject, "artifacts", "ai-tell-mitigation-audit.md"), "utf8");
+  assert.ok(earPass.includes("<!-- ngram-audit:start -->"), "ear-pass should include bounded n-gram section");
+  assert.ok(aiTell.includes("<!-- ngram-audit:start -->"), "ai-tell audit should include bounded n-gram section");
+  assert.ok(earPass.includes("there it was"), "ear-pass artifact should include repeated phrase evidence");
   assert.ok(helpers.buildPrdDiffPrompt(cert, "candidate-prd.md").includes("PRD diff"), "PRD diff prompt should render");
   assert.ok(helpers.buildQuestionsPrompt(cert).includes("writer-only questions"), "questions prompt should render");
   assert.ok(helpers.buildOutlineStressTestPrompt(cert).includes("outline stress test"), "outline stress prompt should render");

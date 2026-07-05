@@ -11,6 +11,8 @@ Draft the manuscript in chapter blocks while preserving voice, momentum, and str
 - write in chapter blocks, not as disconnected scenes
 - each block must have a clear narrative, argumentative, or instructional function
 - use structural variation so consecutive blocks do not feel templated
+- treat approved chapter packets as constraints, not vibes; if prose must depart from a packet, record the deviation in ledgers/tickets instead of letting plan-to-prose drift go unmarked
+- vary the scene engine across the middle; do not let a default sequence of discovery, plain-language correction, phone/legal pressure, text/call human cost, dashboard update, guilt realization, aphoristic close become the book's hidden metronome
 - keep the emotional curve active
 - follow `artifacts/voice-bible.md`; apply voice rules and avoid anti-voice patterns before polishing
 - follow `artifacts/author-voice-fingerprint.md`; preserve the author's specific rhythm, taste, obsessions, tolerances, and productive imperfections instead of sanding everything into generic competence
@@ -21,6 +23,7 @@ Draft the manuscript in chapter blocks while preserving voice, momentum, and str
 - pressure-test scenes against `artifacts/review-personas.md`; use those personas to catch false notes, comp-chasing, fake depth, workshop-clean generic polish, and voice drift before the prose hardens
 - update `artifacts/discarded-choices.md` whenever drafting rejects an opening, scene path, reveal, character choice, ending move, joke, image, name, or tonal direction
 - follow `artifacts/05-subplot-map.md` and weave planned subplot beats without crowding the main chapter function
+- for biblical fiction or sacred retelling mode, check `artifacts/sacred-scene-packets.md`, `artifacts/scripture-source-map.md`, `artifacts/invention-boundary-ledger.md`, `artifacts/theological-risk-budget.md`, `artifacts/translation-sensitivity-map.md`, `artifacts/tradition-lane-selector.md`, `artifacts/sacred-figure-handling-rules.md`, `artifacts/historical-cultural-plausibility-audit.md`, `artifacts/anachronism-modernity-audit.md`, `artifacts/miracle-supernatural-policy.md`, `artifacts/character-humility-guardrail.md`, and `artifacts/point-of-view-ethics-audit.md` before drafting scenes that add dialogue, interiority, motive, chronology, cultural practice, supernatural events, or theological implication
 - follow and update `artifacts/expansion-integrity.md` whenever target length, pacing, or scope pressure creates temptation to pad; added words must come from new consequence, not filler
 - update `artifacts/05-subplot-map.md` whenever drafting changes a subplot beat, delay, convergence point, or payoff
 - update `artifacts/continuity-ledger.md` after every chapter block with new facts, timeline movement, clues, reveals, promises, locations, objects, and unresolved questions
@@ -36,6 +39,8 @@ Draft the manuscript in chapter blocks while preserving voice, momentum, and str
 - if the manuscript needs to get longer, add real subplot movement, aftermath, reversals, relational conflict, investigative pressure, or materially new scene work; do not add repetitive introspection, duplicate exposition, low-stakes banter, atmospheric drift, no-state-change scenes, or one-more-hidden-layer reveal beats that merely prolong the file
 - do not let protagonist withholding become the main engine of the middle; after the second major withholding beat, require either an irreversible external consequence or a full reveal that changes the story shape
 - whenever a technical discovery matters, show or immediately connect it to lived consequence in the world; if the beat is only interesting on a dashboard, it is not ready yet
+- keep the reader-facing mental model simple before layering technical vocabulary; for complex systems, give the reader a plain four-to-six-part model early, then let later complexity attach to that model rather than becoming term soup
+- watch specialized terms, invented terms, legal labels, system labels, and institutional vocabulary; if several appear in one scene, anchor them in action, consequence, or a character's plain-language paraphrase
 - do not replace AI tells with anti-AI tells; repair the underlying scene pressure, thought pattern, character voice, specificity, or subtext rather than merely swapping punctuation or banned words
 - update `artifacts/subtext-audit.md` during drafting with moments where meaning is explained too directly, dialogue says exactly what it means, symbols are interpreted for the reader, jokes are explained, or evasion/misunderstanding/silence would be stronger
 - update `artifacts/ear-pass.md` with read-aloud risks: repeated sentence shapes, too-smooth paragraphs, assistant-like exposition, unnatural dialogue, dead segues, and paragraphs that need to become rougher, shorter, stranger, or more character-shaped
@@ -44,8 +49,13 @@ Draft the manuscript in chapter blocks while preserving voice, momentum, and str
 - check the ledger before each new chapter block so names, relationships, time, and setup/payoff logic do not drift
 - keep character behavior consistent with wound, desire, need, and lie; for nonfiction and study guides, keep the chapter logic consistent with the declared argument, competency path, or learner promise
 - keep the opening promise and ending pressure alive
+- at the 25%, 50%, and pre-final-act checkpoints, verify that the external clock, midpoint danger, protagonist agency, antagonist/foil embodiment, and publication shape are still visible
+- before the final act, reopen `artifacts/publication-shape.md`; if the ending is drifting toward containment, residue, or moral intelligence without external consequence, create a high-severity ticket before drafting the ending
 - if web access is unavailable for a new name, mark it `web_blocked`, use a placeholder, and create or update a revision ticket instead of silently finalizing the name
 - reject names that fail `name-entity-filter.md` because they sound fantasy-random, thriller-cliche, AI-default, cool but empty, phonetically mushy, or like placeholder TV drama names unless the file records an accepted-risk rationale
+- in biblical fiction or sacred retelling mode, do not invent biblical facts. Mark additions as explicit scripture, plausible inference, historical/cultural context, theological tradition, or narrative invention, and update the Author's Note / Source Note obligations when invention is reader-facing.
+- in biblical fiction or sacred retelling mode, run a local anachronism check for modern therapy language, individualism, contemporary idiom, Western church assumptions, and modern romance beats before accepting the scene.
+- in biblical fiction or sacred retelling mode, update `artifacts/sacred-residue-audit.md` after major turns and the ending; sacred residue is not a sermon summary but the earned aftertaste of the scene.
 
 ## Block Standard
 
@@ -65,6 +75,11 @@ Not every block needs the same combination, but every block needs a reason to ex
 After each block, verify:
 
 - narrative function is clear
+- scene-engine type is recorded and does not repeat the same screen/phone/conversation/dashboard pattern without escalation or contrast
+- packet carry-through is checked: required promises, reveals, continuity constraints, and taste-lock obligations from the chapter packet survive in the prose or are explicitly ticketed
+- packet tension forecast is checked: the prose preserves more than one plausible reader forecast until the intended narrowing point, or tickets the collapse
+- for opening chapters, setup becomes a live problem rather than remaining descriptive setup
+- for biblical fiction or sacred retelling mode, source category, passage packet, invention boundary, translation sensitivity, tradition lane, sacred-figure handling, anachronism/modernity status, miracle/supernatural handling, character humility, and Author's Note obligations are recorded for the chapter's key additions
 - causality-chain.md records what changed, what action caused the next problem, what constraint was created, and which therefore/but link now points forward
 - voice-bible.md was followed and no anti-voice phrase, generic cadence, or synthetic emotional summary leaked into the prose
 - author-voice-fingerprint.md was honored; the chapter sounds like this author/project, not like a generalized competent novel
@@ -75,9 +90,10 @@ After each block, verify:
 - no subplot beat appears only because the map said it should; it must earn its page time in the chapter
 - continuity ledger reflects new or changed facts and flags contradictions immediately
 - reader-promise-tracker.md reflects any new promise, changed promise, payoff, or deliberate denial
-- drift-loop-alarm.md records whether repeated scene shape, repeated emotional beat, no state change, subplot stall, continuity regression, ticket reopen, prose flattening, phase-boundary mismatch, thematic restatement loop, static scene / talking heads, recurring formal device fatigue, prose register lock, or canonical name drift occurred
+- drift-loop-alarm.md records whether repeated scene shape, repeated emotional beat, no state change, subplot stall, continuity regression, ticket reopen, prose flattening, phase-boundary mismatch, thematic restatement loop, static scene / talking heads, recurring formal device fatigue, prose register lock, canonical name drift, screen/phone/dashboard loop, jargon pileup, or repeated rhetorical-shape fatigue occurred
 - recurring formal device tracker records each use of any distinctive structural device (logs, epistolary sections, data dumps, alternate POV chapters) and verifies each occurrence does new work and escalates
-- technical seed map (if applicable) records whether key concepts for the final mechanism are being introduced, deepened, and made operational on schedule
+- technical seed map (if applicable) records whether key concepts for the final mechanism are being introduced, deepened, and made operational on schedule, and whether the reader has a plain mental model before the jargon intensifies
+- exposition is motivated by local need: explanation arrives because a scene demands it, not because the outline already knows it
 - system-rule-sheet.md stays synchronized with the system's capabilities, limits, authority surfaces, emergency exceptions, shutdown logic, and knowledge distribution
 - authority-chain-map.md stays synchronized for every major intervention, referral, compliance action, welfare check, moderation path, or crisis escalation
 - domain plausibility audit flags any plot-critical technical, medical, legal, or institutional claim that needs expert review
@@ -90,9 +106,12 @@ After each block, verify:
 - ear-pass.md records rhythm problems, too-smooth paragraphs, repeated sentence shapes, unnatural dialogue, and assistant-like exposition
 - over-polish-audit.md protects any controlled roughness that should not be cleaned away
 - scene-embodiment-map.md records physical action, objects, space, tasks, interruptions, and constraints; the chapter is not just people explaining feelings or theme
+- protagonist agency is tracked: the lead makes consequential choices and mistakes, not only discoveries, explanations, audits, apologies, or reactive technical repairs
+- key secondary characters have private stakes, ordinary-life grounding, and decisions of their own before they are used as proof of harm or moral instruction
+- rhetorical pattern overuse is checked: aphoristic closeouts, "Not X. Not Y. Just Z.", "There it was," "Of course," triads, and verdict lines are kept only where they are the best shape for the beat
 - author-intent.md, taste-profile.md, and risk-budget.md were respected; any deviation is recorded with rationale
 - discarded-choices.md records important rejected alternatives so they are not accidentally reintroduced
-- chapter-scorecards.md records the block's function, emotional turn, tension level, subplot movement, continuity changes, promise movement, strongest paragraph, weakest paragraph, revision tickets created, and keep/cut/merge verdict
+- chapter-scorecards.md records the block's function, emotional turn, tension level, subplot movement, continuity changes, promise movement, forecasted endings / competing outcomes, strongest paragraph, weakest paragraph, revision tickets created, and keep/cut/merge verdict
 - the block earns its length; if cutting it would not damage plot, character, pressure, or promise, mark it for cut/merge/rebuild rather than defending the word count
 - names and world facts are consistent
 - voice remains recognizable

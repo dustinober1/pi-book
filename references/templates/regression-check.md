@@ -20,6 +20,7 @@
 | Continuity | pending | pending | verify names, facts, timeline, objects, locations, canon |
 | Voice / taste lock | pending | pending | verify author voice and non-smoothing constraints survived revision |
 | Causality / outline | pending | pending | verify revisions did not break therefore/but logic |
+| Plan-to-prose propagation | pending | pending | verify chapter packets, promises, reveals, and constraints still survive in the prose |
 | Revision tickets | pending | pending | verify fixed tickets stayed fixed and no resolved issue reopened |
 | Expansion integrity | pending | pending | verify no padding, duplicated beats, or ornamental expansion appeared |
 | Persona panel signal | pending | pending | verify target-reader concerns improved without obeying wrong-reader noise |

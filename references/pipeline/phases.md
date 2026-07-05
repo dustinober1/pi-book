@@ -63,6 +63,7 @@
 - pressure-test the manuscript against review personas so false notes and workshop-clean generic prose get caught before scoring
 - run creative sovereignty, scene embodiment, negative capability, expansion integrity, and revision philosophy passes
 - run domain plausibility audit for fiction with technical, medical, legal, or institutional dependencies
+- for biblical fiction or sacred retelling mode, run source/invention, sacred scene packet, translation sensitivity, tradition lane, sacred-figure handling, theological-risk, historical-cultural, anachronism/modernity, faith-reader persona, miracle/supernatural portrayal, character humility, sacred residue, POV-ethics, and Author's Note disclosure audits
 - run system and authority clarity audit for late-appearing capabilities, unclear access, unclear governance, and unclear intervention chains
 - run opposition positive-case audit so major foils protect something real and are right about something costly
 - run agency-before-cost audit so harmed characters are not reduced to proof devices
@@ -81,6 +82,7 @@
 
 - synopses
 - cover brief
+- detailed paste-ready ebook cover generation prompt targeting 1600 x 2560 px KDP-friendly artwork
 - formatting package with manuscript formatting checklist and word count verification
 - positioning strategy
 - reader response plan and beta feedback log

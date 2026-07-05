@@ -33,7 +33,9 @@ Before approval, read `artifacts/author-voice-fingerprint.md`. Missing or ignore
 
 Before approval, read `artifacts/subtext-audit.md`, `artifacts/ear-pass.md`, and `artifacts/over-polish-audit.md`. Unresolved over-explanation, too-direct dialogue, unnatural rhythm, assistant-like exposition, or over-polishing that erases author voice prevents approval unless fixed, deferred with rationale, or accepted as deliberate risk.
 
-Before approval, read `artifacts/author-intent.md`, `artifacts/taste-profile.md`, `artifacts/risk-budget.md`, `artifacts/discarded-choices.md`, `artifacts/scene-embodiment-map.md`, `artifacts/negative-capability-audit.md`, `artifacts/revision-philosophy.md`, `artifacts/system-rule-sheet.md`, `artifacts/authority-chain-map.md`, `artifacts/opposition-case.md`, and `artifacts/publication-shape.md`. Unresolved creative sovereignty failures, erased author intent, ignored taste constraints, accidental risk, disembodied scenes, false opacity, over-soft publication shape, unclear system rules, unclear authority chains, or weak opposition positive-case prevent approval unless fixed, deferred with rationale, or accepted as deliberate risk.
+Before approval, read `artifacts/author-intent.md`, `artifacts/taste-profile.md`, `artifacts/risk-budget.md`, `artifacts/discarded-choices.md`, `artifacts/scene-embodiment-map.md`, `artifacts/technical-seed-map.md`, `artifacts/negative-capability-audit.md`, `artifacts/revision-philosophy.md`, `artifacts/system-rule-sheet.md`, `artifacts/authority-chain-map.md`, `artifacts/opposition-case.md`, and `artifacts/publication-shape.md`. Unresolved creative sovereignty failures, erased author intent, ignored taste constraints, accidental risk, disembodied scenes, repeated screen/phone/dashboard loops, missing plain-language model, jargon pileup, false opacity, over-soft publication shape, unclear system rules, unclear authority chains, or weak opposition positive-case prevent approval unless fixed, deferred with rationale, or accepted as deliberate risk.
+
+For biblical fiction or sacred retelling mode, also read `artifacts/sacred-retelling-promise.md`, `artifacts/scripture-source-map.md`, `artifacts/invention-boundary-ledger.md`, `artifacts/theological-risk-budget.md`, `artifacts/historical-cultural-plausibility-audit.md`, `artifacts/point-of-view-ethics-audit.md`, `artifacts/authors-note-source-note.md`, `artifacts/sacred-scene-packets.md`, `artifacts/translation-sensitivity-map.md`, `artifacts/tradition-lane-selector.md`, `artifacts/sacred-figure-handling-rules.md`, `artifacts/anachronism-modernity-audit.md`, `artifacts/faith-reader-personas.md`, `artifacts/miracle-supernatural-policy.md`, `artifacts/character-humility-guardrail.md`, `artifacts/sacred-residue-audit.md`, and `research/reference-inventory.md`. Unresolved source contradiction, unclear invention boundary, invented material presented as biblical fact, accidental theology, translation sensitivity, tradition-lane mismatch, sacred-figure handling failure, anachronism/modernity leak, miracle/supernatural tone drift, character reduction, weak sacred residue, historical/cultural implausibility, high-risk POV ethics, or missing source disclosure prevents approval unless fixed, deferred with rationale, or accepted as deliberate risk.
 
 ## Dimensions
 
@@ -157,6 +159,7 @@ The score uses 10 dimensions:
 - Coherence evidence must address `artifacts/continuity-ledger.md`
 - Coherence and Opening evidence must address `artifacts/reader-promise-tracker.md`
 - Pacing evidence must address `evaluations/chapter-scorecards.md`
+- Pacing evidence must address external clock, midpoint turn, protagonist agency, and scene-engine variety when the genre/use-case depends on momentum
 - Pacing and Coherence evidence must address `artifacts/drift-loop-alarm.md`
 - Theme, Originality, Pacing, Emotion, Coherence, and Opening evidence must address `artifacts/narrative-fingerprint-audit.md`, StoryScope-style risks, thematic over-determination, and tidy single-track plotting
 - Coherence, Pacing, Characters, and Theme evidence must address subplot integration when the project is book-length
@@ -207,13 +210,16 @@ Approval requires all of the following:
 - ear-pass.md has no unresolved blocker for clustered repeated sentence shapes, unnatural dialogue, assistant-like exposition, or too-smooth rhythm
 - over-polish-audit.md has no unresolved blocker where revision erased author fingerprint or replaced AI tells with anti-AI tells
 - author-intent.md, taste-profile.md, risk-budget.md, and discarded-choices.md have no unresolved creative sovereignty blocker where the process erased authorial intent, ignored taste, flattened intentional risk, or reintroduced rejected choices without rationale
-- scene-embodiment-map.md has no unresolved blocker for disembodied or static scenes
+- scene-embodiment-map.md has no unresolved blocker for disembodied or static scenes, repeated screen/phone/dashboard loops, or missing ordinary-life grounding for key emotional-anchor characters
+- technical-seed-map.md has no unresolved blocker for missing early plain-language model, jargon pileup, or late mechanism exposition
 - domain-plausibility-audit.md has no unresolved blocker for plot-critical domain claims without expert review
+- for biblical fiction or sacred retelling mode, scripture-source-map.md, invention-boundary-ledger.md, theological-risk-budget.md, historical-cultural-plausibility-audit.md, point-of-view-ethics-audit.md, authors-note-source-note.md, sacred-scene-packets.md, translation-sensitivity-map.md, tradition-lane-selector.md, sacred-figure-handling-rules.md, anachronism-modernity-audit.md, faith-reader-personas.md, miracle-supernatural-policy.md, character-humility-guardrail.md, sacred-residue-audit.md, and reference-inventory.md have no unresolved source-fidelity, invention-boundary, accidental-theology, translation, tradition-lane, sacred-figure, anachronism/modernity, supernatural-tone, character-reduction, historical/cultural, POV-ethics, sacred-residue, or disclosure blocker
 - negative-capability-audit.md has no unresolved blocker for over-explained ambiguity, false opacity, or lesson-shaped reduction of residue
 - system-rule-sheet.md has no unresolved blocker for late-appearing capabilities, unclear limits, unclear shutdown logic, or emergency exceptions without prior seeding
 - authority-chain-map.md has no unresolved blocker for institutional intervention plausibility, unclear access, or unclear human decision points
 - opposition-case.md has no unresolved blocker where a major foil lacks a coherent positive case
 - publication-shape.md has no unresolved blocker for ending softness, unclear standalone-vs-series promise, or containment without irreversible external consequence when required
+- thriller/suspense/system-driven fiction has no unresolved blocker for missing external clock, soft midpoint, or protagonist passivity/reactivity without accepted-risk rationale
 - revision-philosophy.md defines what must be preserved and the order of operations for any required revision
 - name-collision-audit.md has no unresolved web-backed collision risk, finalized `web_blocked` names, high-risk IP overlap, or rejected names still present in prose
 - name-entity-filter.md has no unresolved AI-default, generic, over-symbolic, fantasy-random, thriller-cliche, placeholder TV drama, cool-but-empty, phonetic-logic, or rejected alternatives failure
@@ -255,7 +261,9 @@ The final report saved to `artifacts/09-genesis-score.md` must include:
 - over-polish audit verdict
 - creative sovereignty verdict
 - scene embodiment verdict
+- technical seed / plain-language model verdict
 - domain plausibility verdict
+- sacred retelling source/invention verdict when applicable
 - negative capability verdict
 - revision philosophy verdict
 - system rule sheet verdict
