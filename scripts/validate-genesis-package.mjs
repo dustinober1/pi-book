@@ -158,6 +158,7 @@ assert.ok(readme.includes("audit:ngrams"), "README should document audit:ngrams"
 assert.ok(readme.includes("audit:structure"), "README should document audit:structure");
 assert.ok(readme.includes("audit:continuity"), "README should document audit:continuity");
 assert.ok(readme.includes("audit:rhetoric"), "README should document audit:rhetoric");
+assert.ok(readme.includes("audit:spelling"), "README should document audit:spelling");
 assert.ok(!readme.includes("/bg-"), "README should not document legacy /bg-* aliases");
 assert.ok(!readme.includes("book-genesis-codex"), "README should not document the removed legacy skill alias");
 
@@ -209,6 +210,7 @@ assert.ok(existsSync(join(root, "scripts", "ngram-audit.mjs")), "n-gram audit sc
 assert.ok(existsSync(join(root, "scripts", "rhetorical-pattern-audit.mjs")), "rhetorical-pattern audit script should exist");
 assert.ok(existsSync(join(root, "scripts", "continuity-scan.mjs")), "continuity scan script should exist");
 assert.ok(existsSync(join(root, "scripts", "structure-audit.mjs")), "structure audit script should exist");
+assert.ok(existsSync(join(root, "scripts", "spelling-consistency-audit.mjs")), "spelling-consistency audit script should exist");
 assert.ok(existsSync(join(root, "references", "templates", "scene-inventory.md")), "scene-inventory template should exist");
 assert.ok(existsSync(join(root, "references", "templates", "chronology-rebuild.md")), "chronology-rebuild template should exist");
 assert.ok(existsSync(join(root, "references", "templates", "act-design-audit.md")), "act-design-audit template should exist");

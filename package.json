@@ -28,7 +28,8 @@
     "audit:ngrams": "node scripts/ngram-audit.mjs",
     "audit:rhetoric": "node scripts/rhetorical-pattern-audit.mjs",
     "audit:continuity": "node scripts/continuity-scan.mjs",
-    "audit:structure": "node scripts/structure-audit.mjs"
+    "audit:structure": "node scripts/structure-audit.mjs",
+    "audit:spelling": "node scripts/spelling-consistency-audit.mjs"
   },
   "pi": {
     "skills": [
@@ -56,6 +57,7 @@
     "scripts/rhetorical-pattern-audit.mjs",
     "scripts/continuity-scan.mjs",
     "scripts/structure-audit.mjs",
+    "scripts/spelling-consistency-audit.mjs",
     "README.md"
   ],
   "devDependencies": {

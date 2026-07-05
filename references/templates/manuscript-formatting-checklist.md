@@ -24,6 +24,7 @@ Steps:
 - [ ] rounded word count present and verified
 - [ ] no running header or page number on the title page (standard manuscript format)
 - [ ] no raw Markdown formatting visible in rendered output
+- [ ] no submission-status self-announcement on the title page (e.g., "Manuscript submitted for representation and publication") — the manuscript should not announce that it is being submitted
 
 ## Formatting consistency
 
@@ -33,6 +34,13 @@ Steps:
 - [ ] no raw code fences or Markdown artifacts in rendered manuscript
 - [ ] consistent quotation marks (curly or straight, not mixed)
 - [ ] no stray bolding, italics, or formatting artifacts from drafting
+
+## Spelling-system consistency
+
+- [ ] single spelling system chosen (British or American) and applied throughout
+- [ ] run `npm run audit:spelling -- <project>` and confirm **zero mixed-system pairs**
+- [ ] any intentional holdouts (e.g., a character voice, a quoted source) are deliberate and consistent
+- [ ] common mixed pairs audited: labour/labor, centre/center, neighbour/neighbor, theatre/theater, colour/color, favour/favor, honour/honor, behaviour/behavior, grey/gray, judgement/judgment, traveller/traveler, mould/mold, towards/toward, afterwards/afterward, plough/plow, litre/liter, metre/meter
 
 ## Code-fence and log formatting
 

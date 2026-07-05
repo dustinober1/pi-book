@@ -584,9 +584,9 @@ node scripts/ngram-audit.mjs /path/to/project --write-ear-pass --write-ai-tell
 
 Use this when you want a quick repeated-phrase report for bigrams, trigrams, 4-grams, and 5-grams. When you pass a Genesis project root, the script automatically scans `manuscript/chapters/` and reports repeated phrases with counts and file spread. With `--write-ear-pass` and/or `--write-ai-tell`, it also writes a bounded automated n-gram section into `artifacts/ear-pass.md` and `artifacts/ai-tell-mitigation-audit.md`.
 
-### 16b. Run the structure, continuity, and rhetoric scanners
+### 16b. Run the structure, continuity, rhetoric, and spelling scanners
 
-Three deterministic scanners that catch problems the LLM audits handle inconsistently. Run them before scoring and before any developmental cut pass.
+Four deterministic scanners that catch problems the LLM audits handle inconsistently. Run them before scoring and before any developmental cut pass.
 
 ```bash
 # Assembly-draft scaffolding (Chapter 2A/2B) + post-climax bloat detection
@@ -597,12 +597,16 @@ node scripts/structure-audit.mjs /path/to/project --max-chapter-share 20 --clima
 npm run audit:continuity -- /path/to/project
 node scripts/continuity-scan.mjs /path/to/project --write-audit
 
-# Sentence-shape fatigue: negative parallelism, aphoristic closeouts, triads
+# Sentence-shape fatigue: negative parallelism, aphoristic closeouts, triads, "the arithmetic of..."
 npm run audit:rhetoric -- /path/to/project
 node scripts/rhetorical-pattern-audit.mjs /path/to/project --write-ear-pass --per-scene 5
+
+# British/American mixed-system spelling (labor/labour, center/centre, ...)
+npm run audit:spelling -- /path/to/project
+node scripts/spelling-consistency-audit.mjs /path/to/project --write-audit
 ```
 
-`audit:structure` flags A/B/C chapter scaffolding and any chapter that exceeds a configurable share of total length (default 25%), and reports the post-climax tail share so a final act doesn't read as a second novella after the novel has climaxed. `audit:continuity` reads locked numerical facts from `artifacts/continuity-ledger.md` and flags manuscript mentions whose value diverges — the kind of slip a reviewer spots instantly (a child who is eleven, then thirteen, then twelve). `audit:rhetoric` catches recurring sentence *shapes* (Not X. Y., That was the work/law/cost., the kind of…, which is to say…) rather than verbatim phrases, so it complements `audit:ngrams`. Pair all three with the `scene-inventory.md`, `chronology-rebuild.md`, and `act-design-audit.md` templates.
+`audit:structure` flags A/B/C chapter scaffolding and any chapter that exceeds a configurable share of total length (default 25%), and reports the post-climax tail share so a final act doesn't read as a second novella after the novel has climaxed. `audit:continuity` reads locked numerical facts from `artifacts/continuity-ledger.md` and flags manuscript mentions whose value diverges — the kind of slip a reviewer spots instantly (a child who is eleven, then thirteen, then twelve). `audit:rhetoric` catches recurring sentence *shapes* (Not X. Y., That was the work/law/cost., the kind of…, which is to say…, the arithmetic of…) rather than verbatim phrases, so it complements `audit:ngrams`. `audit:spelling` flags any word that appears in BOTH British and American forms across the manuscript, so spelling can be standardized to one system before submission. Pair all four with the `scene-inventory.md`, `chronology-rebuild.md`, `act-design-audit.md`, and `manuscript-formatting-checklist.md` templates.
 
 ### 17. Compile the manuscript
 

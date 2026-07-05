@@ -24,6 +24,8 @@ const DEFAULT_PATTERNS = [
   { id: "had-not-been-hired", label: "He had not been hired (for/to)...", regex: /\b(?:he|she|they|i|we)\s+had\s+not\s+been\s+hired\b/gi },
   // "The thing about..."
   { id: "the-thing-about", label: "The thing about...", regex: /\bthe\s+thing\s+about\b/gi },
+  // "The arithmetic of..." (ledger-flavored aphorism, e.g. "the arithmetic of mercy")
+  { id: "the-arithmetic-of", label: "The arithmetic of...", regex: /\bthe\s+arithmetic\s+of\b/gi },
   // Fragment verdict: a one-line emphatic fragment ending a beat.
   { id: "fragment-verdict", label: "Fragment verdict (This was X. / So this was X.)", regex: /\b(?:this|so this|and this)\s+was\s+(?:the\s+)?[a-z]{2,15}\./gi },
   // Triadic list closeout: "..., and ." (loose, but flags three-beat rhythm).
