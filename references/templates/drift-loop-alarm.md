@@ -129,3 +129,10 @@
 - immediate action: revise the midpoint to create a sharper consequence or update publication-shape.md if the book deliberately rejects that genre pressure
 - owner must approve: yes
 - note: readers need to feel when the book has crossed from suspicious to actively dangerous.
+
+### Alarm S: Dangling forward-reference after revision / reorder
+- trigger: a chapter or scene still promises a future event ("tomorrow there would be…", "soon", "when the time came") that now occurs *earlier* in the book because a chapter was reordered, expanded, or moved
+- evidence required: temporal-reference-audit.mjs output showing a forward-reference whose promised event is already established in an earlier chapter per continuity-ledger.md / chronology-rebuild.md
+- immediate action: rewrite the dangling reference to past tense, remove it, or restore the intended order. Do not let a reordered manuscript ship with promises of events that already happened.
+- owner must approve: no (automatically flagged)
+- note: this is the most common publication-blocker introduced by structural revision. After ANY chapter reorder, move, or major expansion, run `npm run audit:temporal -- <project>` and reconcile every hit. The canonical failure: Chapter 12 establishes a law, but a later chapter still ends "Tomorrow there would be a law about X."

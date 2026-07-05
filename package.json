@@ -29,7 +29,9 @@
     "audit:rhetoric": "node scripts/rhetorical-pattern-audit.mjs",
     "audit:continuity": "node scripts/continuity-scan.mjs",
     "audit:structure": "node scripts/structure-audit.mjs",
-    "audit:spelling": "node scripts/spelling-consistency-audit.mjs"
+    "audit:spelling": "node scripts/spelling-consistency-audit.mjs",
+    "audit:temporal": "node scripts/temporal-reference-audit.mjs",
+    "audit:mechanics": "node scripts/copy-mechanics-audit.mjs"
   },
   "pi": {
     "skills": [
@@ -58,6 +60,8 @@
     "scripts/continuity-scan.mjs",
     "scripts/structure-audit.mjs",
     "scripts/spelling-consistency-audit.mjs",
+    "scripts/temporal-reference-audit.mjs",
+    "scripts/copy-mechanics-audit.mjs",
     "README.md"
   ],
   "devDependencies": {

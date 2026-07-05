@@ -584,29 +584,31 @@ node scripts/ngram-audit.mjs /path/to/project --write-ear-pass --write-ai-tell
 
 Use this when you want a quick repeated-phrase report for bigrams, trigrams, 4-grams, and 5-grams. When you pass a Genesis project root, the script automatically scans `manuscript/chapters/` and reports repeated phrases with counts and file spread. With `--write-ear-pass` and/or `--write-ai-tell`, it also writes a bounded automated n-gram section into `artifacts/ear-pass.md` and `artifacts/ai-tell-mitigation-audit.md`.
 
-### 16b. Run the structure, continuity, rhetoric, and spelling scanners
+### 16b. Run the structure, continuity, rhetoric, spelling, temporal, and mechanics scanners
 
-Four deterministic scanners that catch problems the LLM audits handle inconsistently. Run them before scoring and before any developmental cut pass.
+Six deterministic scanners that catch problems the LLM audits handle inconsistently. Run them before scoring and before any developmental cut pass. **Run `audit:temporal` after every chapter reorder.**
 
 ```bash
 # Assembly-draft scaffolding (Chapter 2A/2B) + post-climax bloat detection
 npm run audit:structure -- /path/to/project
-node scripts/structure-audit.mjs /path/to/project --max-chapter-share 20 --climax-token "The Door"
 
 # Locked numerical-fact divergences (ages, counts, dates) vs continuity-ledger.md
 npm run audit:continuity -- /path/to/project
-node scripts/continuity-scan.mjs /path/to/project --write-audit
 
 # Sentence-shape fatigue: negative parallelism, aphoristic closeouts, triads, "the arithmetic of..."
 npm run audit:rhetoric -- /path/to/project
-node scripts/rhetorical-pattern-audit.mjs /path/to/project --write-ear-pass --per-scene 5
 
-# British/American mixed-system spelling (labor/labour, center/centre, ...)
+# British/American mixed-system spelling AND stray minority tokens ("pretence" in a US ms)
 npm run audit:spelling -- /path/to/project
-node scripts/spelling-consistency-audit.mjs /path/to/project --write-audit
+
+# Dangling temporal forward-references after a reorder ("tomorrow there would be a law about X")
+npm run audit:temporal -- /path/to/project
+
+# Copy mechanics: lowercase sentence starts ("animal water."), doubled words, space-before-punct
+npm run audit:mechanics -- /path/to/project
 ```
 
-`audit:structure` flags A/B/C chapter scaffolding and any chapter that exceeds a configurable share of total length (default 25%), and reports the post-climax tail share so a final act doesn't read as a second novella after the novel has climaxed. `audit:continuity` reads locked numerical facts from `artifacts/continuity-ledger.md` and flags manuscript mentions whose value diverges — the kind of slip a reviewer spots instantly (a child who is eleven, then thirteen, then twelve). `audit:rhetoric` catches recurring sentence *shapes* (Not X. Y., That was the work/law/cost., the kind of…, which is to say…, the arithmetic of…) rather than verbatim phrases, so it complements `audit:ngrams`. `audit:spelling` flags any word that appears in BOTH British and American forms across the manuscript, so spelling can be standardized to one system before submission. Pair all four with the `scene-inventory.md`, `chronology-rebuild.md`, `act-design-audit.md`, and `manuscript-formatting-checklist.md` templates.
+`audit:structure` flags A/B/C chapter scaffolding and any chapter that exceeds a configurable share of total length (default 25%), and reports the post-climax tail share. `audit:continuity` reads locked numerical facts from `artifacts/continuity-ledger.md` and flags manuscript mentions whose value diverges. `audit:rhetoric` catches recurring sentence *shapes* rather than verbatim phrases, so it complements `audit:ngrams`. `audit:spelling` flags any word in BOTH British and American forms, plus stray minority-system tokens (a lone "pretence" in an American manuscript) — the failure mode where the partner form never appears. `audit:temporal` surfaces every promise of a future event ("tomorrow", "soon", "when the time came") so they can be reconciled against `chronology-rebuild.md` after a reorder — it cannot tell whether the event already happened, so treat it as a review checklist. `audit:mechanics` catches lowercase sentence starts, accidental doubled words, and space-before-punctuation. Pair all six with the `scene-inventory.md`, `chronology-rebuild.md`, `act-design-audit.md`, and `manuscript-formatting-checklist.md` templates.
 
 ### 17. Compile the manuscript
 

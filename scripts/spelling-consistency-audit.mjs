@@ -62,6 +62,40 @@ const SPELLING_PAIRS = [
   ["greyish", "grayish"],
   ["judgement", "judgment"],
   ["acknowledgement", "acknowledgment"],
+  ["pretence", "pretense"],
+  ["pretences", "pretenses"],
+  ["defence", "defense"],
+  ["defences", "defenses"],
+  ["offence", "offense"],
+  ["offences", "offenses"],
+  ["licence", "license"],
+  ["licences", "licenses"],
+  ["practise", "practice"],
+  ["practised", "practiced"],
+  ["practising", "practicing"],
+  ["cosy", "cozy"],
+  ["draught", "draft"],
+  ["draughts", "drafts"],
+  ["pyjamas", "pajamas"],
+  ["sceptic", "skeptic"],
+  ["sceptics", "skeptics"],
+  ["sceptical", "skeptical"],
+  ["sulphur", "sulfur"],
+  ["tyre", "tire"],
+  ["tyres", "tires"],
+  ["vapour", "vapor"],
+  ["vapours", "vapors"],
+  ["cheque", "check"],
+  ["cheques", "checks"],
+  ["programme", "program"],
+  ["catalogue", "catalog"],
+  ["catalogues", "catalogs"],
+  ["analogue", "analog"],
+  ["maths", "math"],
+  ["oedema", "edema"],
+  ["kerb", "curb"],
+  ["gaol", "jail"],
+  ["gaoler", "jailer"],
   ["argument", "argument"], // american-only; flag if "arguement" typo? skip
   ["traveller", "traveler"],
   ["travellers", "travelers"],
@@ -282,12 +316,31 @@ function analyze(files) {
   mixedPairs.sort((a, b) => (b.britishCount + b.americanCount) - (a.britishCount + a.americanCount));
 
   // Single-system usage (no mixing) still report for awareness.
+  const totalSystemTokens = systemTotals.british + systemTotals.american;
   const dominantSystem = systemTotals.british > systemTotals.american ? "british" : systemTotals.american > systemTotals.british ? "american" : "tied";
+
+  // Stray tokens: a minority-system word in a confidently dominant-system
+  // manuscript is a copy-editing miss even when the partner form is absent
+  // (e.g., a lone "pretence" in an otherwise-American manuscript). Flag these
+  // only when the dominant system is confidently inferred.
+  const minoritySystem = dominantSystem === "british" ? "american" : dominantSystem === "american" ? "british" : null;
+  const dominantShare = totalSystemTokens > 0 ? Math.max(systemTotals.british, systemTotals.american) / totalSystemTokens : 0;
+  const confidentDominance = totalSystemTokens >= 4 && dominantShare >= 0.7;
+  const strayTokens = [];
+  if (confidentDominance && minoritySystem) {
+    for (const hit of formHits.values()) {
+      if (hit.system === minoritySystem) strayTokens.push(hit);
+    }
+    strayTokens.sort((a, b) => b.count - a.count);
+  }
 
   return {
     totalWords,
     systemTotals,
     dominantSystem,
+    dominantShare,
+    confidentDominance,
+    strayTokens,
     mixedPairs,
     allHits: [...formHits.values()].sort((a, b) => b.count - a.count),
   };
@@ -310,11 +363,16 @@ function formatMarkdownReport(targetInfo, analysis) {
     "## Verdict",
     "",
   ];
-  if (!analysis.mixedPairs.length) {
-    lines.push(`- **clean** — no British/American spelling pair appears in both forms. Manuscript reads as a single spelling system (${analysis.dominantSystem}).`);
+  if (!analysis.mixedPairs.length && !analysis.strayTokens.length) {
+    lines.push(`- **clean** — no British/American spelling pair appears in both forms, and no stray minority-system tokens detected. Manuscript reads as a single spelling system (${analysis.dominantSystem}).`);
   } else {
-    lines.push(`- ⚠ **mixed spelling systems** — ${analysis.mixedPairs.length} word(s) appear in BOTH British and American forms. Standardize on one system before submission.`);
-    lines.push(`- Recommended target system: **${analysis.dominantSystem}** (current majority). Override only with a deliberate reason (e.g., UK publisher, character voice).`);
+    if (analysis.mixedPairs.length) {
+      lines.push(`- ⚠ **mixed spelling systems** — ${analysis.mixedPairs.length} word(s) appear in BOTH British and American forms. Standardize on one system before submission.`);
+    }
+    if (analysis.strayTokens.length) {
+      lines.push(`- ⚠ **stray ${analysis.strayTokens[0].system} tokens** in a ${analysis.dominantSystem} manuscript — ${analysis.strayTokens.length} word form(s) belong to the other system even though their counterpart never appears. These read as copy-editing misses (e.g., a lone "pretence" in an American book).`);
+    }
+    lines.push(`- Recommended target system: **${analysis.dominantSystem}** (current majority, ${analysis.confidentDominance ? `${(analysis.dominantShare * 100).toFixed(0)}%` : "weak"}). Override only with a deliberate reason (e.g., UK publisher, character voice).`);
   }
   lines.push("", "## Mixed-system word pairs", "");
   if (!analysis.mixedPairs.length) {
@@ -322,6 +380,10 @@ function formatMarkdownReport(targetInfo, analysis) {
   } else {
     lines.push("| british form | × | american form | × | total |", "| --- | ---: | --- | ---: | ---: |");
     for (const p of analysis.mixedPairs) lines.push(`| ${p.british} | ${p.britishCount} | ${p.american} | ${p.americanCount} | ${p.britishCount + p.americanCount} |`);
+  }
+  if (analysis.strayTokens.length) {
+    lines.push("", "## Stray minority-system tokens", "", `| stray form (${analysis.strayTokens[0].system}) | should be (${analysis.dominantSystem}) | count | files |`, "| --- | --- | ---: | ---: |");
+    for (const s of analysis.strayTokens) lines.push(`| ${s.form} | ${s.partner} | ${s.count} | ${s.files.size} |`);
   }
   if (analysis.allHits.length) {
     lines.push("", "## All spelling-system tokens found", "", "| form | system | count | files |", "| --- | --- | ---: | ---: |");
@@ -348,8 +410,14 @@ function formatArtifactSection(targetInfo, analysis) {
     lines.push("| british | × | american | × |", "| --- | ---: | --- | ---: |");
     for (const p of analysis.mixedPairs) lines.push(`| ${p.british} | ${p.britishCount} | ${p.american} | ${p.americanCount} |`);
     lines.push("");
-  } else {
-    lines.push("_No mixed-system pairs detected._", "");
+  }
+  if (analysis.strayTokens.length) {
+    lines.push(`Stray ${analysis.strayTokens[0].system} tokens in a ${analysis.dominantSystem} manuscript:`, "", "| stray | should be | × |", "| --- | --- | ---: |");
+    for (const s of analysis.strayTokens) lines.push(`| ${s.form} | ${s.partner} | ${s.count} |`);
+    lines.push("");
+  }
+  if (!analysis.mixedPairs.length && !analysis.strayTokens.length) {
+    lines.push("_No mixed-system pairs or stray tokens detected._", "");
   }
   return lines.join("\n");
 }

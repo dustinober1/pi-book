@@ -38,9 +38,16 @@ Steps:
 ## Spelling-system consistency
 
 - [ ] single spelling system chosen (British or American) and applied throughout
-- [ ] run `npm run audit:spelling -- <project>` and confirm **zero mixed-system pairs**
+- [ ] common mixed pairs audited: labour/labor, centre/center, neighbour/neighbor, theatre/theater, colour/color, favour/favor, honour/honor, behaviour/behavior, grey/gray, judgement/judgment, traveller/traveler, mould/mold, towards/toward, afterwards/afterward, plough/plow, litre/liter, metre/meter, pretence/pretense, defence/defense, offence/offense, licence/license, practise/practice
+- [ ] run `npm run audit:spelling -- <project>` and confirm **zero mixed-system pairs AND zero stray minority-system tokens**
 - [ ] any intentional holdouts (e.g., a character voice, a quoted source) are deliberate and consistent
-- [ ] common mixed pairs audited: labour/labor, centre/center, neighbour/neighbor, theatre/theater, colour/color, favour/favor, honour/honor, behaviour/behavior, grey/gray, judgement/judgment, traveller/traveler, mould/mold, towards/toward, afterwards/afterward, plough/plow, litre/liter, metre/meter
+
+## Copy mechanics
+
+- [ ] run `npm run audit:mechanics -- <project>` and confirm **zero lowercase sentence starts, doubled words, and space-before-punctuation**
+- [ ] sentence-initial words are capitalized (watch for lowercase list/category words: "animal water. private water.")
+- [ ] no accidental doubled words ("the the", "a a")
+- [ ] after any chapter reorder or revision, run `npm run audit:temporal -- <project>` and reconcile every temporal forward-reference against chronology-rebuild.md (catches dangling "tomorrow there would be…" promises of events that now occur earlier)
 
 ## Code-fence and log formatting
 
