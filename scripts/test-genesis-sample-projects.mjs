@@ -77,6 +77,20 @@ try {
   assert.ok(bundleTemplates.includes("artifacts/drift-loop-alarm.md"), "mode bundle should include drift-loop alarm");
   assert.ok(bundleTemplates.includes("artifacts/reader-promise-tracker.md"), "mode bundle should include reader-promise-tracker");
 
+  const leanTemplates = helpers.getModeTemplateEntries("lean-novel").map((item) => item.destination).sort();
+  assert.ok(leanTemplates.includes("artifacts/commercial-proof.md"), "lean mode should include commercial-proof");
+  assert.ok(leanTemplates.includes("artifacts/voice-bible.md"), "lean mode should include voice-bible");
+  const marketTestTemplates = helpers.getModeTemplateEntries("market-test").map((item) => item.destination).sort();
+  assert.ok(marketTestTemplates.includes("artifacts/category-competition-map.md"), "market-test should include category map");
+  assert.ok(marketTestTemplates.includes("artifacts/blurb-test-results.md"), "market-test should include blurb tests");
+
+  const leanProject = join(tempRoot, "lean-project");
+  makeProject(leanProject, { phase: "Phase 2: Architecture", workflowMode: "lean-novel" });
+  writeFileSync(join(leanProject, "artifacts", "00-brief.md"), "# Brief\n", "utf8");
+  const leanMissing = helpers.missingExpectedForPhase(leanProject, "Phase 2: Architecture");
+  assert.ok(leanMissing.includes("artifacts/commercial-proof.md"), "lean phase missing should include commercial proof");
+  assert.ok(!leanMissing.includes("artifacts/03-characters.md"), "lean mode should not require full foundation character artifact by default");
+
   const sacredTemplates = helpers.getModeTemplateEntries("biblical fiction").map((item) => item.destination).sort();
   assert.deepEqual(sacredTemplates, [
     "artifacts/anachronism-modernity-audit.md",

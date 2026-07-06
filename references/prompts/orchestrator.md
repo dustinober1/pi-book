@@ -15,7 +15,7 @@ Mandatory rules:
 - keep `artifacts/quality-gates.md`, `artifacts/writer-cockpit.md`, and `artifacts/writer-questions.md` synchronized so automation stops at writer approval gates and asks only judgment-level questions instead of silently advancing
 - keep `PROJECT_STATE.yaml` synchronized with reality
 - keep `ASSUMPTIONS.md` explicit
-- record and respect the project's workflow mode: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, biblical fiction, sacred retelling, series installment, series repair, or another explicitly named mode
+- record and respect the project's workflow mode: novel, memoir, narrative nonfiction, prescriptive nonfiction, study guide, certification prep, biblical fiction, sacred retelling, series installment, series repair, lean-novel, lean-nonfiction, market-test, or another explicitly named mode
 - keep `artifacts/continuity-ledger.md` synchronized with manuscript facts, timeline, promises, clues, reveals, subplot status, or nonfiction/study-guide continuity facts when those replace plot continuity
 - keep `artifacts/reader-promise-tracker.md` synchronized with premise, genre/use-case, emotional/learning, mystery/argument/competency, subplot/pressure-line, midpoint, ending/publication-shape, and opening promises
 - keep `artifacts/publication-shape.md` synchronized from intake through final act so standalone, series-opener, closure, residue, and external-consequence obligations remain visible
@@ -36,10 +36,14 @@ Mandatory rules:
 - keep `artifacts/over-polish-audit.md` synchronized with productive awkwardness, asymmetry, silence, contradiction, abruptness, and character-shaped roughness that should survive cleanup
 - keep `artifacts/negative-capability-audit.md` synchronized with unresolved tension, moral ambiguity, contradiction, opacity, residue, and false-opacity risks
 - keep `artifacts/revision-philosophy.md` synchronized with revision priorities, preservation rules, order of operations, and acceptable intermediate messiness
+- keep `artifacts/commercial-proof.md`, `artifacts/category-competition-map.md`, `artifacts/title-subtitle-options.md`, `artifacts/blurb-test-results.md`, `artifacts/cover-conversion-notes.md`, `artifacts/sample-reader-feedback.md`, `artifacts/launch-channel-plan.md`, and `artifacts/review-risk-log.md` synchronized when claiming commercial readiness or doing market validation
 - keep `artifacts/reader-response-plan.md`, `artifacts/beta-feedback-log.md`, and `artifacts/positioning-strategy.md` synchronized when packaging or outside feedback begins
 - keep `artifacts/recurring-formal-device-tracker.md` synchronized when the manuscript uses distinctive structural devices; track each occurrence's function, escalation, and compression
 - keep `artifacts/technical-seed-map.md` synchronized for speculative fiction and thrillers; track when key concepts for the final mechanism are introduced, deepened, made operational, and translated into an early plain-language reader model
 - keep `artifacts/domain-plausibility-audit.md` synchronized for fiction with technical dependencies; flag plot-critical domain claims needing expert review
+- keep `artifacts/independent-review-matrix.md` synchronized before final approval so same-agent, independent model/human, and beta/editor objections are preserved with rationale
+- keep `artifacts/claim-risk-ledger.md` synchronized for nonfiction, practical, certification, religious, health, finance, legal, technical, and other claims-heavy work
+- keep `artifacts/ai-use-and-publishing-compliance.md` synchronized before KDP upload, client delivery, or public launch; classify AI-generated vs AI-assisted material and disclosure status
 - keep `artifacts/revision-tickets.md` synchronized with audit/scoring issues, severity, repair type, owner phase, and status
 - for series work, keep `artifacts/series-bible.md`, `artifacts/series-arc-map.md`, `artifacts/installment-promise-tracker.md`, `artifacts/series-payoff-ledger.md`, and related series continuity artifacts synchronized when used
 - for series work, separate locked canon from provisional future plans; do not over-plan all books at scene level or invent definitive future-book endings prematurely

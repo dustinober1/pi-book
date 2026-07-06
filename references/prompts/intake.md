@@ -41,6 +41,7 @@ Create and update:
 - Identify 2-4 comp titles.
 - Record market gaps and reader promise.
 - Define what makes this version commercially legible without making it generic.
+- Initialize commercial validation: target reader sentence, 10-20 eventual comp targets, current demand signals, recurring review complaints, and why this / why now / why this author.
 - Capture author intent, taste, and risk before optimizing the idea.
 - Lock publication shape early in `artifacts/publication-shape.md`: standalone vs series, commercial vs literary weighting, closure target, residue tolerance, and ending promise.
 - For biblical fiction or sacred retelling mode, define the sacred retelling promise early: true where the source can support truth, clearly imagined where the source is silent, transparent with readers about the fiction boundary, and clear about tradition lane, translation posture, miracle/supernatural portrayal, high-risk figure handling, and target sacred residue.
@@ -70,7 +71,9 @@ Create and update:
 - market signals
 - comp titles
 - recurring patterns
+- review complaints and reader purchase signals where available
 - whitespace opportunity
+- a note on what would need real reader/platform validation before claiming the book can sell
 
 ## Story Engine Requirements
 
@@ -90,7 +93,7 @@ Create and update:
 - what kind of reader experience matters most
 - what risks may be intentional
 - what the writer would rather fail at than smooth over
-- success criteria beyond score, market fit, or cleanliness
+- success criteria beyond score, market fit, cleanliness, or conversion pressure
 
 `taste-profile.md` must include:
 

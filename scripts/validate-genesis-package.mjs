@@ -56,6 +56,23 @@ for (const phase of manifest) {
 }
 
 const templatePaths = [
+  "references/templates/00-brief.md",
+  "references/templates/01-market-map.md",
+  "references/templates/05-outline.md",
+  "references/templates/causality-chain.md",
+  "references/templates/08-adversarial-audit.md",
+  "references/templates/09-genesis-score.md",
+  "references/templates/commercial-proof.md",
+  "references/templates/category-competition-map.md",
+  "references/templates/title-subtitle-options.md",
+  "references/templates/blurb-test-results.md",
+  "references/templates/cover-conversion-notes.md",
+  "references/templates/sample-reader-feedback.md",
+  "references/templates/launch-channel-plan.md",
+  "references/templates/review-risk-log.md",
+  "references/templates/ai-use-and-publishing-compliance.md",
+  "references/templates/independent-review-matrix.md",
+  "references/templates/claim-risk-ledger.md",
   "references/templates/voice-bible.md",
   "references/templates/continuity-ledger.md",
   "references/templates/revision-tickets.md",
@@ -154,6 +171,9 @@ assert.ok(readme.includes("/genesis-series-score"), "README should document /gen
 assert.ok(readme.includes("/genesis-series-export"), "README should document /genesis-series-export");
 assert.ok(readme.includes("/genesis-compile"), "README should document /genesis-compile");
 assert.ok(readme.includes("/genesis-checkpoint"), "README should document /genesis-checkpoint");
+assert.ok(readme.includes("lean-novel"), "README should document lean modes");
+assert.ok(readme.includes("commercial-proof.md"), "README should document commercial proof artifacts");
+assert.ok(readme.includes("ai-use-and-publishing-compliance.md"), "README should document compliance artifacts");
 assert.ok(readme.includes("audit:ngrams"), "README should document audit:ngrams");
 assert.ok(readme.includes("audit:structure"), "README should document audit:structure");
 assert.ok(readme.includes("audit:continuity"), "README should document audit:continuity");
@@ -170,6 +190,9 @@ assert.ok(extension.includes("const PHASE_DEFINITIONS = loadPhaseDefinitions();"
 assert.ok(extension.includes("resolve(PACKAGE_ROOT, templatePath)"), "template scaffolding should resolve from package root");
 assert.ok(extension.includes("function getModeTemplateEntries(mode)"), "extension should expose mode-template mapping helper");
 assert.ok(extension.includes("function getModeBundleEntries(mode)"), "extension should expose mode-bundle helper");
+assert.ok(extension.includes('"lean-novel"'), "extension should support lean-novel mode");
+assert.ok(extension.includes('"market-test"'), "extension should support market-test mode");
+assert.ok(extension.includes("commercial-proof.md"), "extension should scaffold commercial proof artifacts");
 assert.ok(extension.includes("function renderDoctorReport(root)"), "extension should expose doctor report helper");
 assert.ok(extension.includes("function renderResume(root)"), "extension should expose resume helper");
 assert.ok(extension.includes("function collectLintFindings(root, phase)"), "extension should expose lint helper");

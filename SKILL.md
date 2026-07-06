@@ -63,6 +63,17 @@ Default project layout:
     discarded-choices.md
     review-personas.md
     publication-shape.md
+    commercial-proof.md
+    category-competition-map.md
+    title-subtitle-options.md
+    blurb-test-results.md
+    cover-conversion-notes.md
+    sample-reader-feedback.md
+    launch-channel-plan.md
+    review-risk-log.md
+    ai-use-and-publishing-compliance.md
+    independent-review-matrix.md
+    claim-risk-ledger.md
     book-prd.md
     prd-completeness-score.md
     prd-gap-report.md
@@ -138,7 +149,7 @@ Default project layout:
 
 ## Canonical Pipeline
 
-Template references for high-friction artifacts live under `references/templates/`. Use them when creating or repairing `book-prd.md`, `prd-gap-report.md`, `prd-traceability-map.md`, `prd-completeness-score.md`, `prd-change-log.md`, `decision-impact-report.md`, `writer-questions.md`, `quality-gates.md`, `writer-cockpit.md`, `chapter-production-queue.md`, `outline-stress-test.md`, `persona-review.md`, `regression-check.md`, `series-regression-check.md`, `taste-lock.md`, `decision-ledger.md`, `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `scene-inventory.md`, `chronology-rebuild.md`, `act-design-audit.md`, `series-bible.md`, `series-arc-map.md`, `series-timeline.md`, `character-state-matrix.md`, `reveal-spoiler-matrix.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-payoff-ledger.md`, `series-verification-matrix.md`, `retcon-log.md`, `series-repetition-radar.md`, `book-handoff-packet.md`, `argument-spine.md`, `certification-blueprint-map.md`, `study-guide-objectives.md`, `evidence-map.md`, sacred retelling templates such as `scripture-source-map.md`, `invention-boundary-ledger.md`, `sacred-scene-packets.md`, `translation-sensitivity-map.md`, `tradition-lane-selector.md`, `sacred-figure-handling-rules.md`, `anachronism-modernity-audit.md`, `miracle-supernatural-policy.md`, `character-humility-guardrail.md`, `sacred-residue-audit.md`, `authors-note-source-note.md`, `research/reference-inventory.md`, and similar artifacts that benefit from a stable structure.
+Template references for high-friction artifacts live under `references/templates/`. Use them when creating or repairing `book-prd.md`, `prd-gap-report.md`, `prd-traceability-map.md`, `prd-completeness-score.md`, `prd-change-log.md`, `decision-impact-report.md`, `writer-questions.md`, `quality-gates.md`, `writer-cockpit.md`, `chapter-production-queue.md`, `outline-stress-test.md`, `persona-review.md`, `regression-check.md`, `series-regression-check.md`, `taste-lock.md`, `decision-ledger.md`, `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `commercial-proof.md`, `category-competition-map.md`, `title-subtitle-options.md`, `blurb-test-results.md`, `cover-conversion-notes.md`, `sample-reader-feedback.md`, `launch-channel-plan.md`, `review-risk-log.md`, `ai-use-and-publishing-compliance.md`, `independent-review-matrix.md`, `claim-risk-ledger.md`, `scene-inventory.md`, `chronology-rebuild.md`, `act-design-audit.md`, `series-bible.md`, `series-arc-map.md`, `series-timeline.md`, `character-state-matrix.md`, `reveal-spoiler-matrix.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-payoff-ledger.md`, `series-verification-matrix.md`, `retcon-log.md`, `series-repetition-radar.md`, `book-handoff-packet.md`, `argument-spine.md`, `certification-blueprint-map.md`, `study-guide-objectives.md`, `evidence-map.md`, sacred retelling templates such as `scripture-source-map.md`, `invention-boundary-ledger.md`, `sacred-scene-packets.md`, `translation-sensitivity-map.md`, `tradition-lane-selector.md`, `sacred-figure-handling-rules.md`, `anachronism-modernity-audit.md`, `miracle-supernatural-policy.md`, `character-humility-guardrail.md`, `sacred-residue-audit.md`, `authors-note-source-note.md`, `research/reference-inventory.md`, and similar artifacts that benefit from a stable structure.
 
 ## Workflow Modes
 
@@ -154,9 +165,14 @@ Choose and record a workflow mode during intake. Common modes include:
 - sacred retelling
 - series installment
 - series repair
+- lean-novel
+- lean-nonfiction
+- market-test
 - other custom mode named explicitly in project files
 
-Mode affects which artifacts are mandatory in practice. Narrative fiction defaults to the full subplot/scene/continuity contract. Nonfiction may replace some plot pressure with argument flow, evidence, case studies, and reader transformation. Study guides and certification books should prioritize blueprint coverage, objective tracking, and reference integrity. Biblical fiction and sacred retellings should protect scripture/source fidelity, invention boundaries, theological risk, ancient-world plausibility, POV ethics, and reader disclosure; these safeguards are mode-specific and should not burden thrillers, LitRPG, romance, sci-fi, or unrelated modes. Series installments should maintain both book-level and series-level continuity. Series repair projects should treat earlier locked books as canon, reverse-engineer them into durable artifacts, and verify later books against those constraints before approving rewrites.
+Mode affects which artifacts are mandatory in practice. Narrative fiction defaults to the full subplot/scene/continuity contract. Nonfiction may replace some plot pressure with argument flow, evidence, case studies, and reader transformation. Study guides and certification books should prioritize blueprint coverage, objective tracking, and reference integrity. Biblical fiction and sacred retellings should protect scripture/source fidelity, invention boundaries, theological risk, ancient-world plausibility, POV ethics, and reader disclosure; these safeguards are mode-specific and should not burden thrillers, LitRPG, romance, sci-fi, or unrelated modes. Series installments should maintain both book-level and series-level continuity. Series repair projects should treat earlier locked books as canon, reverse-engineer them into durable artifacts, and verify later books against those constraints before approving rewrites. Lean modes intentionally reduce artifact gravity for shorter or faster projects: keep the brief, market map, author intent, taste lock, voice bible, outline or argument spine, causality/continuity/promises, chapter queue, revision tickets, adversarial audit, Genesis Score, commercial proof, and compliance ledger; add specialty artifacts only when genre, claim risk, series complexity, or sacred/source risk requires them.
+
+Commercial proof is now part of the workflow, not just final packaging. Before claiming a book is sellable, maintain `artifacts/commercial-proof.md`, map competition in `artifacts/category-competition-map.md`, test title/blurb/cover/sample signals where possible, preserve outside-reader feedback, and distinguish commercially legible from commercially proven. Before KDP upload, client delivery, or public launch, update `artifacts/ai-use-and-publishing-compliance.md`.
 
 For whole-series work, prefer `/genesis-series-start` to create a series root with `SERIES_STATE.yaml`, `SERIES_STATUS.md`, shared series artifacts, and one `series installment` Genesis project per book under `books/`. Use `/genesis-series-open` to pick an existing workspace, `/genesis-series-next` for the next safe series/book step, `/genesis-series-add-book` when the series expands, `/genesis-series-blockers` for cross-book triage, `/genesis-series-verify` for cross-book verification, `/genesis-series-regression-check` after revisions or lock decisions, `/genesis-series-score` for whole-series scoring, `/genesis-series-export` for delivery handoff, and `/genesis-series-lock-book` after an installment is ready to become canon.
 
@@ -164,11 +180,11 @@ Load `references/pipeline/manifest.yaml` before starting or advancing phases.
 
 1. Phase 0: Intake
 2. Phase 1: Foundation
-3. Phase 2: Architecture
+3. Phase 2: Architecture, including commercial proof and category/title validation
 4. Phase 3: Drafting
-5. Phase 4: Adversarial Audit
-6. Phase 5: Final Score
-7. Phase 6: Editorial Package
+5. Phase 4: Adversarial Audit, including outside-reader/independent-review and claim-risk checks
+6. Phase 5: Final Score, including Reader Conversion Score
+7. Phase 6: Editorial Package, including compliance and launch/conversion artifacts
 
 Use `references/pipeline/phases.md` for the compact phase overview.
 

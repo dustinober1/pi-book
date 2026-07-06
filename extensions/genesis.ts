@@ -66,6 +66,9 @@ const DEFAULT_PHASE_DEFINITIONS = [
       "artifacts/authority-chain-map.md",
       "artifacts/opposition-case.md",
       "artifacts/domain-plausibility-audit.md",
+      "artifacts/commercial-proof.md",
+      "artifacts/category-competition-map.md",
+      "artifacts/title-subtitle-options.md",
       "artifacts/07-opening-strategy.md",
     ],
     next: "Phase 3: Drafting",
@@ -104,6 +107,9 @@ const DEFAULT_PHASE_DEFINITIONS = [
       "artifacts/domain-plausibility-audit.md",
       "artifacts/expansion-integrity.md",
       "artifacts/publication-shape.md",
+      "artifacts/sample-reader-feedback.md",
+      "artifacts/independent-review-matrix.md",
+      "artifacts/claim-risk-ledger.md",
       "artifacts/revision-philosophy.md",
       "artifacts/revision-tickets.md",
     ],
@@ -114,7 +120,7 @@ const DEFAULT_PHASE_DEFINITIONS = [
     label: "Phase 5: Final Score",
     prompt: "references/scoring/genesis-score.md",
     gate: "final_score",
-    outputs: ["artifacts/09-genesis-score.md"],
+    outputs: ["artifacts/09-genesis-score.md", "artifacts/ai-use-and-publishing-compliance.md"],
     next: "Phase 6: Editorial Package",
   },
   {
@@ -128,6 +134,11 @@ const DEFAULT_PHASE_DEFINITIONS = [
       "artifacts/reader-response-plan.md",
       "artifacts/beta-feedback-log.md",
       "artifacts/positioning-strategy.md",
+      "artifacts/blurb-test-results.md",
+      "artifacts/cover-conversion-notes.md",
+      "artifacts/launch-channel-plan.md",
+      "artifacts/review-risk-log.md",
+      "artifacts/ai-use-and-publishing-compliance.md",
     ],
     next: "",
   },
@@ -144,10 +155,23 @@ const WORKFLOW_MODES = [
   "sacred retelling",
   "series installment",
   "series repair",
+  "lean-novel",
+  "lean-nonfiction",
+  "market-test",
   "other",
 ];
 
 const CORE_PROJECT_FILES = ["PROJECT_STATE.yaml", "ASSUMPTIONS.md", "STATUS.md"];
+const LEAN_MODES = ["lean-novel", "lean-nonfiction", "market-test"];
+const LEAN_MODE_PHASE_OUTPUTS = [
+  ["artifacts/00-brief.md", "artifacts/01-market-map.md", "artifacts/author-intent.md", "artifacts/taste-lock.md", "artifacts/commercial-proof.md"],
+  ["artifacts/voice-bible.md"],
+  ["artifacts/05-outline.md", "artifacts/causality-chain.md", "artifacts/argument-spine.md", "artifacts/reader-promise-tracker.md", "artifacts/continuity-ledger.md", "artifacts/chapter-production-queue.md"],
+  [],
+  ["artifacts/08-adversarial-audit.md", "artifacts/sample-reader-feedback.md", "artifacts/independent-review-matrix.md", "artifacts/revision-tickets.md"],
+  ["artifacts/09-genesis-score.md", "artifacts/ai-use-and-publishing-compliance.md"],
+  [],
+];
 const PROJECT_ROOT_DIRS = ["artifacts", "manuscript/chapters", "evaluations", "delivery", "research/notes", "research/sources"];
 const SERIES_ROOT_DIRS = ["artifacts", "books", "evaluations", "delivery", "research/notes", "research/sources"];
 const SERIES_ARTIFACTS = [
@@ -257,6 +281,51 @@ const MODE_ARTIFACTS = {
   ],
   "biblical fiction": SACRED_RETELLING_ARTIFACTS,
   "sacred retelling": SACRED_RETELLING_ARTIFACTS,
+  "lean-novel": [
+    "artifacts/00-brief.md",
+    "artifacts/01-market-map.md",
+    "artifacts/author-intent.md",
+    "artifacts/taste-lock.md",
+    "artifacts/voice-bible.md",
+    "artifacts/05-outline.md",
+    "artifacts/causality-chain.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/continuity-ledger.md",
+    "artifacts/chapter-production-queue.md",
+    "artifacts/revision-tickets.md",
+    "artifacts/08-adversarial-audit.md",
+    "artifacts/09-genesis-score.md",
+    "artifacts/commercial-proof.md",
+  ],
+  "lean-nonfiction": [
+    "artifacts/00-brief.md",
+    "artifacts/01-market-map.md",
+    "artifacts/author-intent.md",
+    "artifacts/taste-lock.md",
+    "artifacts/voice-bible.md",
+    "artifacts/05-outline.md",
+    "artifacts/argument-spine.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/continuity-ledger.md",
+    "artifacts/chapter-production-queue.md",
+    "artifacts/revision-tickets.md",
+    "artifacts/08-adversarial-audit.md",
+    "artifacts/09-genesis-score.md",
+    "artifacts/commercial-proof.md",
+    "artifacts/claim-risk-ledger.md",
+  ],
+  "market-test": [
+    "artifacts/00-brief.md",
+    "artifacts/01-market-map.md",
+    "artifacts/commercial-proof.md",
+    "artifacts/category-competition-map.md",
+    "artifacts/title-subtitle-options.md",
+    "artifacts/blurb-test-results.md",
+    "artifacts/cover-conversion-notes.md",
+    "artifacts/sample-reader-feedback.md",
+    "artifacts/launch-channel-plan.md",
+    "artifacts/review-risk-log.md",
+  ],
   other: ["artifacts/reader-promise-tracker.md"],
 };
 
@@ -307,6 +376,47 @@ const MODE_SCAFFOLD_BUNDLES = {
   ],
   "biblical fiction": SACRED_RETELLING_BUNDLE,
   "sacred retelling": SACRED_RETELLING_BUNDLE,
+  "lean-novel": [
+    "artifacts/00-brief.md",
+    "artifacts/01-market-map.md",
+    "artifacts/author-intent.md",
+    "artifacts/taste-lock.md",
+    "artifacts/voice-bible.md",
+    "artifacts/05-outline.md",
+    "artifacts/causality-chain.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/continuity-ledger.md",
+    "artifacts/chapter-production-queue.md",
+    "artifacts/revision-tickets.md",
+    "artifacts/commercial-proof.md",
+  ],
+  "lean-nonfiction": [
+    "artifacts/00-brief.md",
+    "artifacts/01-market-map.md",
+    "artifacts/author-intent.md",
+    "artifacts/taste-lock.md",
+    "artifacts/voice-bible.md",
+    "artifacts/05-outline.md",
+    "artifacts/argument-spine.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/continuity-ledger.md",
+    "artifacts/chapter-production-queue.md",
+    "artifacts/revision-tickets.md",
+    "artifacts/commercial-proof.md",
+    "artifacts/claim-risk-ledger.md",
+  ],
+  "market-test": [
+    "artifacts/00-brief.md",
+    "artifacts/01-market-map.md",
+    "artifacts/commercial-proof.md",
+    "artifacts/category-competition-map.md",
+    "artifacts/title-subtitle-options.md",
+    "artifacts/blurb-test-results.md",
+    "artifacts/cover-conversion-notes.md",
+    "artifacts/sample-reader-feedback.md",
+    "artifacts/launch-channel-plan.md",
+    "artifacts/review-risk-log.md",
+  ],
   "series installment": [
     "artifacts/series-bible.md",
     "artifacts/series-arc-map.md",
@@ -343,6 +453,23 @@ const MODE_SCAFFOLD_BUNDLES = {
 };
 
 const TEMPLATE_SCAFFOLDS = [
+  { label: "00-brief.md", template: "references/templates/00-brief.md", destination: "artifacts/00-brief.md" },
+  { label: "01-market-map.md", template: "references/templates/01-market-map.md", destination: "artifacts/01-market-map.md" },
+  { label: "05-outline.md", template: "references/templates/05-outline.md", destination: "artifacts/05-outline.md" },
+  { label: "causality-chain.md", template: "references/templates/causality-chain.md", destination: "artifacts/causality-chain.md" },
+  { label: "08-adversarial-audit.md", template: "references/templates/08-adversarial-audit.md", destination: "artifacts/08-adversarial-audit.md" },
+  { label: "09-genesis-score.md", template: "references/templates/09-genesis-score.md", destination: "artifacts/09-genesis-score.md" },
+  { label: "commercial-proof.md", template: "references/templates/commercial-proof.md", destination: "artifacts/commercial-proof.md" },
+  { label: "category-competition-map.md", template: "references/templates/category-competition-map.md", destination: "artifacts/category-competition-map.md" },
+  { label: "title-subtitle-options.md", template: "references/templates/title-subtitle-options.md", destination: "artifacts/title-subtitle-options.md" },
+  { label: "blurb-test-results.md", template: "references/templates/blurb-test-results.md", destination: "artifacts/blurb-test-results.md" },
+  { label: "cover-conversion-notes.md", template: "references/templates/cover-conversion-notes.md", destination: "artifacts/cover-conversion-notes.md" },
+  { label: "sample-reader-feedback.md", template: "references/templates/sample-reader-feedback.md", destination: "artifacts/sample-reader-feedback.md" },
+  { label: "launch-channel-plan.md", template: "references/templates/launch-channel-plan.md", destination: "artifacts/launch-channel-plan.md" },
+  { label: "review-risk-log.md", template: "references/templates/review-risk-log.md", destination: "artifacts/review-risk-log.md" },
+  { label: "ai-use-and-publishing-compliance.md", template: "references/templates/ai-use-and-publishing-compliance.md", destination: "artifacts/ai-use-and-publishing-compliance.md" },
+  { label: "independent-review-matrix.md", template: "references/templates/independent-review-matrix.md", destination: "artifacts/independent-review-matrix.md" },
+  { label: "claim-risk-ledger.md", template: "references/templates/claim-risk-ledger.md", destination: "artifacts/claim-risk-ledger.md" },
   { label: "voice-bible.md", template: "references/templates/voice-bible.md", destination: "artifacts/voice-bible.md" },
   { label: "continuity-ledger.md", template: "references/templates/continuity-ledger.md", destination: "artifacts/continuity-ledger.md" },
   { label: "revision-tickets.md", template: "references/templates/revision-tickets.md", destination: "artifacts/revision-tickets.md" },
@@ -520,6 +647,30 @@ const BLOCKER_CHECKS = [
     label: "Domain-plausibility blocker",
     pattern: /blocker|unresolved|expert review needed|unverified plot-critical/i,
     suggestion: "Flag or review plot-critical technical, medical, legal, security, or institutional claims before final scoring.",
+  },
+  {
+    file: "artifacts/commercial-proof.md",
+    label: "Commercial-proof blocker",
+    pattern: /blocked|needs validation|outside-reader signal.*missing|target reader.*missing|no demand evidence|commercially unproven/i,
+    suggestion: "Validate target reader, comps, hook, sample pull, and launch path before claiming the book can sell.",
+  },
+  {
+    file: "artifacts/independent-review-matrix.md",
+    label: "Independent-review blocker",
+    pattern: /blocked|needs more readers|unresolved contradictions|no human|no outside reader/i,
+    suggestion: "Run at least one independent review lane and preserve objections before final approval.",
+  },
+  {
+    file: "artifacts/claim-risk-ledger.md",
+    label: "Claim-risk blocker",
+    pattern: /status\s*:\s*(expert review required|marketing blocked)|\|[^\n|]*(high|unverified|remove)[^\n|]*\|/i,
+    suggestion: "Source, expert-review, revise, or remove high-risk nonfiction and marketing claims.",
+  },
+  {
+    file: "artifacts/ai-use-and-publishing-compliance.md",
+    label: "AI-use/compliance blocker",
+    pattern: /status\s*:\s*(blocked|needs disclosure decision)|KDP classification\s*:\s*.*unknown|Disclosure required\s*:\s*.*uncertain/i,
+    suggestion: "Classify AI-generated vs AI-assisted content and settle platform/client disclosure before delivery.",
   },
 ];
 
@@ -817,8 +968,18 @@ function getExpectedFilesForPhase(phase) {
   return [...new Set(expected)];
 }
 
+function getLeanExpectedFilesForPhase(phase) {
+  const index = getPhaseIndex(phase);
+  const expected = [...CORE_PROJECT_FILES];
+  if (index < 0) return expected;
+  for (let i = 0; i <= index; i += 1) expected.push(...(LEAN_MODE_PHASE_OUTPUTS[i] || []));
+  return [...new Set(expected)];
+}
+
 function missingExpectedForPhase(root, phase) {
-  return getExpectedFilesForPhase(phase).filter((file) => !pathExists(root, file));
+  const mode = detectWorkflowMode(root);
+  const expected = LEAN_MODES.includes(mode) ? getLeanExpectedFilesForPhase(phase) : getExpectedFilesForPhase(phase);
+  return expected.filter((file) => !pathExists(root, file));
 }
 
 function missingPhaseOutputs(root, phase) {

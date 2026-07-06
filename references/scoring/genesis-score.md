@@ -19,6 +19,14 @@ Before approval, read `artifacts/revision-tickets.md`. Open blocker or high-seve
 
 Before approval, read `artifacts/drift-loop-alarm.md`. An active hard stop prevents approval unless it is resolved, deferred with rationale, or accepted as deliberate risk.
 
+Before approval, read `artifacts/commercial-proof.md`, `artifacts/category-competition-map.md`, `artifacts/title-subtitle-options.md`, `artifacts/blurb-test-results.md`, `artifacts/cover-conversion-notes.md`, `artifacts/sample-reader-feedback.md`, `artifacts/launch-channel-plan.md`, and `artifacts/review-risk-log.md` when present or required by phase. Missing target reader, unmapped competition, no demand evidence, untested title/blurb/cover promise, absent outside-reader sample signal, unclear launch path, or unresolved review-risk blocker prevents approval unless explicitly deferred with rationale or accepted as deliberate risk.
+
+Before approval, read `artifacts/independent-review-matrix.md`. The book cannot pass because the drafting agent says it passes. Missing independent review lanes, unresolved contradictions, or rejected objections without textual/strategic evidence prevent approval unless explicitly deferred with rationale or accepted as deliberate risk.
+
+Before approval, read `artifacts/claim-risk-ledger.md` for nonfiction, practical, technical, health, finance, legal, religious, certification, and other claims-heavy work. Unverified high-risk claims, expert-review-required claims, or marketing-unsafe claims prevent approval unless sourced, expert-reviewed, revised, removed, or restricted from marketing.
+
+Before approval, read `artifacts/ai-use-and-publishing-compliance.md` before KDP upload, client delivery, or public launch. Unknown AI role, uncertain KDP/platform classification, unresolved disclosure decision, untracked AI-generated assets, or missing human authorship evidence prevents delivery approval unless explicitly deferred with rationale or accepted as deliberate risk.
+
 Before approval, read `artifacts/name-collision-audit.md`. Unresolved web-backed name collision risk, finalized `web_blocked` names, or high-risk existing-IP overlap prevents approval unless fixed, renamed, deferred with rationale, or accepted as deliberate risk.
 
 Before approval, read `artifacts/name-entity-filter.md`. Unresolved AI-default, generic, over-symbolic, fantasy-random, thriller-cliche, placeholder TV drama, cool-but-empty, phonetic-logic, or rejected alternatives issues prevent approval unless fixed, renamed, deferred with rationale, or accepted as deliberate risk.
@@ -39,7 +47,7 @@ For biblical fiction or sacred retelling mode, also read `artifacts/sacred-retel
 
 ## Dimensions
 
-The score uses 10 dimensions:
+The core craft score uses 10 dimensions:
 
 1. Originality
 2. Theme
@@ -51,6 +59,8 @@ The score uses 10 dimensions:
 8. Market
 9. Voice
 10. Opening
+
+A separate Reader Conversion Score must also be reported. It does not excuse weak craft, but it can block approval for projects claiming commercial intent.
 
 ## What Each Dimension Measures
 
@@ -128,7 +138,13 @@ The score uses 10 dimensions:
 
 - comp clarity
 - audience legibility
-- packaging viability
+- category and shelf viability
+- evidence that readers are actively buying or requesting this promise now
+- `artifacts/commercial-proof.md` evidence for target reader, why this / why now / why this author, demand signals, and validation status
+- `artifacts/category-competition-map.md` evidence for 10-20 comps or shelf neighbors, review complaints, cover/title language, price/page norms, and differentiation opportunity
+- `artifacts/title-subtitle-options.md`, `artifacts/blurb-test-results.md`, and `artifacts/cover-conversion-notes.md` evidence that the promise has been tested against alternatives
+- `artifacts/sample-reader-feedback.md` evidence of outside-reader signal where commercial approval is claimed
+- `artifacts/launch-channel-plan.md` and `artifacts/review-risk-log.md` evidence that reader access and predictable objections are not hand-waved
 - reduced confusion with existing books, media franchises, famous characters, celebrities, trademarks, and genre-overused names
 
 ### Voice
@@ -148,6 +164,23 @@ The score uses 10 dimensions:
 - whether the ending ultimately justifies that promise
 - whether reader-promise-tracker.md confirms the opening promise is honored by the ending
 
+## Reader Conversion Score
+
+Report a separate Reader Conversion Score from 0-10 covering:
+
+- cover/title/blurb promise clarity
+- first-page pull
+- first-chapter continuation pressure
+- category fit
+- comp differentiation
+- recurring comp-review complaint solved
+- reader-review risk
+- sample-to-purchase likelihood
+- launch-channel feasibility
+- series/read-through potential when applicable
+
+A Reader Conversion Score below 7.5 blocks `APPROVED FOR COMMERCIAL RELEASE` even if the craft score passes. A score below 6.5 requires a market-test or packaging revision before sales claims are made.
+
 ## Scoring Rules
 
 - baseline assumption is competence, not excellence
@@ -163,6 +196,7 @@ The score uses 10 dimensions:
 - Pacing and Coherence evidence must address `artifacts/drift-loop-alarm.md`
 - Theme, Originality, Pacing, Emotion, Coherence, and Opening evidence must address `artifacts/narrative-fingerprint-audit.md`, StoryScope-style risks, thematic over-determination, and tidy single-track plotting
 - Coherence, Pacing, Characters, and Theme evidence must address subplot integration when the project is book-length
+- Market evidence must address `artifacts/commercial-proof.md`, `artifacts/category-competition-map.md`, `artifacts/title-subtitle-options.md`, `artifacts/blurb-test-results.md`, `artifacts/cover-conversion-notes.md`, `artifacts/sample-reader-feedback.md`, `artifacts/launch-channel-plan.md`, and `artifacts/review-risk-log.md` where present or required
 - Originality, Characters, Coherence, and Market evidence must address `artifacts/name-collision-audit.md` and its web-backed collision findings
 - Originality, Characters, Coherence, and Market evidence must address `artifacts/name-entity-filter.md`, AI-default risk, and rejected alternatives
 - Prose, Emotion, Characters, and Voice evidence must address `artifacts/human-specificity-ledger.md`, petty contradictions, and restraint
@@ -184,7 +218,7 @@ Suggested weights:
 - Pacing: 1.0
 - Emotion: 1.1
 - Coherence: 0.9
-- Market: 0.8
+- Market: 1.1
 - Voice: 1.1
 - Opening: 0.8
 
@@ -196,6 +230,12 @@ Approval requires all of the following:
 - Weighted Average >= 9.0
 - no dimension below 8.0
 - evidence present for every dimension
+- Reader Conversion Score >= 7.5 for any project claiming commercial release/readiness
+- commercial-proof.md is not blocked and has target reader, demand evidence, mapped competition, why this / why now / why this author, and validation status
+- independent-review-matrix.md has no unresolved contradiction or missing high-stakes review lane without rationale
+- sample-reader-feedback.md has outside-reader signal or an explicit non-commercial/accepted-risk rationale
+- claim-risk-ledger.md has no high-risk unverified or marketing-unsafe claims without source, expert review, revision, removal, or restriction
+- ai-use-and-publishing-compliance.md is ready or has an explicit accepted-risk disclosure rationale before KDP/client/public delivery
 - adversarial audit not marked `MAJOR REWRITE`
 - causality-chain.md has no major and-then gaps or removable scenes without consequence
 - voice-bible.md has no unresolved anti-voice violations in core prose samples, and per-character pressure language is established for all major characters
@@ -226,6 +266,7 @@ Approval requires all of the following:
 - human-specificity-ledger.md covers every drafted chapter with restraint and no chapter is left too clean, too symmetrical, too emotionally legible, or overloaded with quirks
 - no required subplot is ornamental, abandoned, or resolved without consequence
 - no open blocker or high-severity item remains in `artifacts/revision-tickets.md` without rationale
+- no commercial-proof, independent-review, claim-risk, reader-conversion, or AI-use/compliance blocker remains without rationale
 
 ## Revision Logic
 
@@ -245,6 +286,7 @@ The final report saved to `artifacts/09-genesis-score.md` must include:
 - Dimension Scores table
 - Floor Score
 - Weighted Average
+- Reader Conversion Score
 - Gate Verdict
 - weakest dimension
 - causality chain verdict
@@ -270,6 +312,12 @@ The final report saved to `artifacts/09-genesis-score.md` must include:
 - authority chain verdict
 - opposition case verdict
 - publication shape verdict
+- commercial proof verdict
+- title/blurb/cover conversion verdict
+- sample reader feedback verdict
+- independent review matrix verdict
+- claim-risk verdict when applicable
+- AI-use and publishing-compliance verdict
 - name collision audit verdict
 - name entity filter verdict
 - human specificity ledger verdict

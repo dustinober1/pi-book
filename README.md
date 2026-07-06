@@ -12,8 +12,11 @@ For AI thrillers and other system-driven fiction, the package now also includes:
 - stronger built-in safeguards for publication shape, external clocks, midpoint turns, plain-language system models, scene-engine variety, embodied consequence, protagonist agency, and repeated rhetorical patterns
 - final-package cover support, including a paste-ready ebook cover generation prompt targeting 1600 x 2560 px KDP-friendly artwork
 - mode-specific biblical fiction / sacred retelling support that tracks scripture sources, passage scene packets, invention boundaries, translation sensitivity, tradition lane, theological risk, sacred-figure handling, ancient-world plausibility, anachronism/modernity, faith-reader personas, miracle/supernatural portrayal, character humility, sacred residue, POV ethics, and Author's Note disclosure without burdening unrelated genres
+- commercial proof and reader-conversion artifacts for target-reader validation, category competition, title/blurb/cover/sample testing, launch channels, review risks, and outside-reader signal
+- an AI-use and publishing-compliance ledger for KDP/client/platform disclosure decisions, plus independent-review and claim-risk ledgers for high-stakes projects
+- lean modes (`lean-novel`, `lean-nonfiction`, `market-test`) to reduce artifact gravity when a project needs validation or a lighter editorial path
 
-This package is extension-first: it exposes Pi commands, blocker-triage UI/tooling, and the primary `genesis-for-pi` skill for durable intake, foundation, architecture, drafting, adversarial audit, Genesis Score, and editorial package generation.
+This package is extension-first: it exposes Pi commands, blocker-triage UI/tooling, and the primary `genesis-for-pi` skill for durable intake, foundation, architecture, drafting, adversarial audit, Genesis Score, reader conversion scoring, commercial proof, and editorial package generation.
 
 ## Install in Pi
 
@@ -252,11 +255,11 @@ Use `/genesis-validate` to run a stricter phase-contract check for the current p
 
 Use `/genesis-migrate` to repair or upgrade partial/older Genesis project trees to the current layout.
 
-Use `/genesis-set-mode` to explicitly set the workflow mode, update `PROJECT_STATE.yaml`, `ASSUMPTIONS.md`, and `artifacts/00-brief.md`, and offer mode-specific scaffold files when templates exist.
+Use `/genesis-set-mode` to explicitly set the workflow mode, update `PROJECT_STATE.yaml`, `ASSUMPTIONS.md`, and `artifacts/00-brief.md`, and offer mode-specific scaffold files when templates exist. Supported modes include the full modes plus lean modes such as `lean-novel`, `lean-nonfiction`, and `market-test`.
 
 Use `/genesis-blockers` for interactive blocker triage. It lets you inspect blocker evidence and queue a targeted fix turn from the UI.
 
-Use `/genesis-scaffold-templates` to copy core artifact templates such as `book-prd.md`, `prd-gap-report.md`, `prd-traceability-map.md`, `prd-completeness-score.md`, `prd-change-log.md`, `decision-impact-report.md`, `writer-questions.md`, `quality-gates.md`, `writer-cockpit.md`, `chapter-production-queue.md`, `outline-stress-test.md`, `persona-review.md`, `regression-check.md`, `taste-lock.md`, `decision-ledger.md`, `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `series-bible.md`, `series-arc-map.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-payoff-ledger.md`, `series-verification-matrix.md`, `argument-spine.md`, `certification-blueprint-map.md`, `research/reference-inventory.md`, `author-intent.md`, `taste-profile.md`, `risk-budget.md`, `review-personas.md`, `reader-promise-tracker.md`, and `drift-loop-alarm.md` into the active project.
+Use `/genesis-scaffold-templates` to copy core artifact templates such as `book-prd.md`, `prd-gap-report.md`, `prd-traceability-map.md`, `prd-completeness-score.md`, `prd-change-log.md`, `decision-impact-report.md`, `writer-questions.md`, `quality-gates.md`, `writer-cockpit.md`, `chapter-production-queue.md`, `outline-stress-test.md`, `persona-review.md`, `regression-check.md`, `taste-lock.md`, `decision-ledger.md`, `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `commercial-proof.md`, `category-competition-map.md`, `title-subtitle-options.md`, `blurb-test-results.md`, `cover-conversion-notes.md`, `sample-reader-feedback.md`, `launch-channel-plan.md`, `review-risk-log.md`, `ai-use-and-publishing-compliance.md`, `independent-review-matrix.md`, `claim-risk-ledger.md`, `series-bible.md`, `series-arc-map.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-payoff-ledger.md`, `series-verification-matrix.md`, `argument-spine.md`, `certification-blueprint-map.md`, `research/reference-inventory.md`, `author-intent.md`, `taste-profile.md`, `risk-budget.md`, `review-personas.md`, `reader-promise-tracker.md`, and `drift-loop-alarm.md` into the active project.
 
 Use `/genesis-score-to-tickets` to convert score and audit findings into structured revision tickets.
 
@@ -807,6 +810,7 @@ Genesis for Pi uses this sequence:
    - continuity ledger
    - reader promise tracker
    - expansion integrity plan
+   - commercial proof, category competition map, and title/subtitle options
    - optional series / nonfiction / study-guide support artifacts
 4. **Phase 3: Drafting**
    - chapter drafting
@@ -815,11 +819,15 @@ Genesis for Pi uses this sequence:
 5. **Phase 4: Adversarial Audit**
    - narrative fingerprint audit
    - AI-tell mitigation audit
+   - independent review, sample-reader feedback, and claim-risk checks
    - revision tickets
 6. **Phase 5: Final Score**
    - Genesis Score evaluation
+   - separate Reader Conversion Score
 7. **Phase 6: Editorial Package**
    - editorial and delivery assets
+   - AI-use/publishing-compliance ledger
+   - blurb, cover, launch-channel, and review-risk assets
 
 ## Human-voice guidance
 
@@ -856,7 +864,7 @@ Use tags or commit refs to keep machines pinned to the same version.
 - `SKILL.md` — primary `genesis-for-pi` skill entrypoint and workflow contract
 - `extensions/genesis.ts` — Pi-native commands including start, resume, doctor, lint, migrate, score-to-tickets, blockers, scaffolding, and next-step orchestration plus the `genesis_blocker_triage` tool
 - `references/` — pipeline prompts, scoring contract, reference docs, and templates
-- `references/templates/` — starter templates for voice, continuity, tickets, expansion integrity, author intent, taste, risk, review personas, reader promises, drift alarms, series bible, series arc map, series timeline, character-state matrix, reveal/spoiler tracking, canon-lock, retcon logging, handoff packets, verification, nonfiction, study-guide, and certification artifacts
+- `references/templates/` — starter templates for voice, continuity, tickets, expansion integrity, commercial proof, compliance, independent review, claim risk, author intent, taste, risk, review personas, reader promises, drift alarms, series bible, series arc map, series timeline, character-state matrix, reveal/spoiler tracking, canon-lock, retcon logging, handoff packets, verification, nonfiction, study-guide, and certification artifacts
 - `docs/` — best practices, troubleshooting notes, service packaging guidance, and AI-thriller review aids
 - `examples/` — sample Genesis project trees for different workflow modes
 - `prompts/genesis-next-prompt.md` — fallback prompt-template version of `/genesis-next`

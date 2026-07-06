@@ -20,6 +20,7 @@
 - web-backed name collision audit
 - name and entity originality filter
 - market framing
+- commercial proof: target reader, comp demand, whitespace, category pressure, and why this / why now / why this author
 
 ## Phase 2: Architecture
 
@@ -34,6 +35,7 @@
 - emotional curve
 - opening strategy
 - ending promise
+- category competition map, title/subtitle options, and commercial proof gates before the draft is treated as sellable
 - recurring formal device tracker (if applicable)
 - technical seed map (for speculative fiction / thrillers)
 - system rule sheet (for speculative fiction / techno-thrillers)
@@ -68,14 +70,17 @@
 - run opposition positive-case audit so major foils protect something real and are right about something costly
 - run agency-before-cost audit so harmed characters are not reduced to proof devices
 - run publication-shape audit so endings are not only morally right but structurally right for standalone vs series and commercial vs literary balance
+- run independent review matrix and outside-reader/sample feedback checks before final score
+- run claim-risk ledger for nonfiction, technical, religious, health, finance, legal, certification, and other claims-heavy work
 - run setting variety and ordinary-life audit to ensure grounding scenes outside high-stakes analytical spaces
 - convert findings into revision tickets
 - cut, merge, reorder, or rewrite when needed
 
 ## Phase 5: Final Score
 
-- run Genesis Score
+- run Genesis Score and separate Reader Conversion Score
 - record gate verdict and next action
+- require commercial proof, independent review, sample-reader signal, and unresolved claim/compliance risks to be addressed before approval
 - write `artifacts/09-genesis-score.md`
 
 ## Phase 6: Editorial Package
@@ -86,3 +91,5 @@
 - formatting package with manuscript formatting checklist and word count verification
 - positioning strategy
 - reader response plan and beta feedback log
+- blurb/title/cover conversion notes, launch-channel plan, review-risk log
+- AI-use and publishing-compliance ledger for KDP/client/platform decisions

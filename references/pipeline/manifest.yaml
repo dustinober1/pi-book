@@ -52,6 +52,9 @@ phase_2_architecture:
     - "artifacts/authority-chain-map.md"
     - "artifacts/opposition-case.md"
     - "artifacts/domain-plausibility-audit.md"
+    - "artifacts/commercial-proof.md"
+    - "artifacts/category-competition-map.md"
+    - "artifacts/title-subtitle-options.md"
     - "artifacts/07-opening-strategy.md"
   next: "Phase 3: Drafting"
 
@@ -86,6 +89,9 @@ phase_4_adversarial_audit:
     - "artifacts/domain-plausibility-audit.md"
     - "artifacts/expansion-integrity.md"
     - "artifacts/publication-shape.md"
+    - "artifacts/sample-reader-feedback.md"
+    - "artifacts/independent-review-matrix.md"
+    - "artifacts/claim-risk-ledger.md"
     - "artifacts/revision-philosophy.md"
     - "artifacts/revision-tickets.md"
   next: "Phase 5: Final Score"
@@ -96,6 +102,7 @@ phase_5_final_score:
   gate: "final_score"
   outputs:
     - "artifacts/09-genesis-score.md"
+    - "artifacts/ai-use-and-publishing-compliance.md"
   next: "Phase 6: Editorial Package"
 
 phase_6_editorial_package:
@@ -108,4 +115,9 @@ phase_6_editorial_package:
     - "artifacts/reader-response-plan.md"
     - "artifacts/beta-feedback-log.md"
     - "artifacts/positioning-strategy.md"
+    - "artifacts/blurb-test-results.md"
+    - "artifacts/cover-conversion-notes.md"
+    - "artifacts/launch-channel-plan.md"
+    - "artifacts/review-risk-log.md"
+    - "artifacts/ai-use-and-publishing-compliance.md"
   next: ""
