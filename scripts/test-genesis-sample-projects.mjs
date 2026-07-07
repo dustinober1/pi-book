@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 
 async function loadGenesisHelpers() {
   const source = readFileSync(join(process.cwd(), "extensions", "genesis.ts"), "utf8");
-  const augmented = `${source}\nexport { detectPhase, findProjectRoot, missingExpectedForPhase, renderValidationReport, renderStatusDashboard, renderDashboard, renderResume, renderDoctorReport, detectWorkflowMode, missingModeArtifacts, getModeTemplateEntries, getModeBundleEntries, collectLintFindings, getGitState, migrateProject, compileManuscript, createEditorialExport, manuscriptStats, checkpointGenesisFiles, findSeriesRoot, findSeriesWorkspaces, initializeSeriesWorkspace, renderSeriesStatus, buildSeriesNextPrompt, buildSeriesVerifyPrompt, buildSeriesRegressionCheckPrompt, buildSeriesLockBookPrompt, buildSeriesScorePrompt, listSeriesBookProjects, seriesArtifactMissing, addSeriesBookToWorkspace, collectSeriesBlockers, renderSeriesBlockers, renderSeriesRegressionCheck, createSeriesExport, analyzePrdCompleteness, renderWriterQuestions, renderOutlineStressTest, renderRegressionCheck, buildPrdDiffPrompt, buildQuestionsPrompt, buildOutlineStressTestPrompt, buildReviewPersonasPrompt, buildPersonaReviewPrompt, buildRegressionCheckPrompt };`;
+  const augmented = `${source}\nexport { detectPhase, findProjectRoot, missingExpectedForPhase, renderValidationReport, renderStatusDashboard, renderDashboard, renderResume, renderDoctorReport, detectWorkflowMode, missingModeArtifacts, getModeTemplateEntries, getModeBundleEntries, collectLintFindings, collectBlockers, getGitState, migrateProject, compileManuscript, createEditorialExport, manuscriptStats, checkpointGenesisFiles, findSeriesRoot, findSeriesWorkspaces, initializeSeriesWorkspace, renderSeriesStatus, buildSeriesNextPrompt, buildSeriesVerifyPrompt, buildSeriesRegressionCheckPrompt, buildSeriesLockBookPrompt, buildSeriesScorePrompt, listSeriesBookProjects, seriesArtifactMissing, addSeriesBookToWorkspace, collectSeriesBlockers, renderSeriesBlockers, renderSeriesRegressionCheck, createSeriesExport, analyzePrdCompleteness, renderWriterQuestions, renderOutlineStressTest, renderRegressionCheck, buildPrdDiffPrompt, buildQuestionsPrompt, buildOutlineStressTestPrompt, buildReviewPersonasPrompt, buildPersonaReviewPrompt, buildRegressionCheckPrompt };`;
   const helperModulePath = join(process.cwd(), "scripts", ".genesis-test-module.mjs");
   writeFileSync(helperModulePath, augmented, "utf8");
   return { module: await import(pathToFileURL(helperModulePath).href), helperModulePath };
@@ -81,8 +81,16 @@ try {
   assert.ok(leanTemplates.includes("artifacts/commercial-proof.md"), "lean mode should include commercial-proof");
   assert.ok(leanTemplates.includes("artifacts/voice-bible.md"), "lean mode should include voice-bible");
   const marketTestTemplates = helpers.getModeTemplateEntries("market-test").map((item) => item.destination).sort();
-  assert.ok(marketTestTemplates.includes("artifacts/category-competition-map.md"), "market-test should include category map");
-  assert.ok(marketTestTemplates.includes("artifacts/blurb-test-results.md"), "market-test should include blurb tests");
+  for (const expected of [
+    "artifacts/category-competition-map.md",
+    "artifacts/title-subtitle-options.md",
+    "artifacts/blurb-test-results.md",
+    "artifacts/cover-conversion-notes.md",
+    "artifacts/sample-reader-feedback.md",
+    "artifacts/launch-channel-plan.md",
+    "artifacts/review-risk-log.md",
+    "artifacts/publishing-metadata-checklist.md",
+  ]) assert.ok(marketTestTemplates.includes(expected), `market-test should include ${expected}`);
 
   const leanProject = join(tempRoot, "lean-project");
   makeProject(leanProject, { phase: "Phase 2: Architecture", workflowMode: "lean-novel" });
@@ -174,9 +182,31 @@ try {
   const dashboard = helpers.renderDashboard(cert);
   assert.ok(dashboard.includes("# Genesis Dashboard"), "dashboard report should render");
   assert.ok(dashboard.includes("Manuscript: 2 chapter"), "dashboard should include manuscript stats");
+  writeFileSync(join(cert, "artifacts", "commercial-proof.md"), "# Commercial Proof\n\nstatus: commercially_proven\n", "utf8");
+  writeFileSync(join(cert, "artifacts", "category-competition-map.md"), "# Category Competition Map\n\n| Comp title | Source URL / searched phrase | As-of date |\n|---|---|---|\n| Example | search phrase | 2026-07-06 |\n", "utf8");
+  writeFileSync(join(cert, "artifacts", "ai-use-and-publishing-compliance.md"), "# AI Use\n\nstatus: ready\n- KDP classification: AI-assisted\n- Disclosure required: no\n", "utf8");
   const exported = helpers.createEditorialExport(cert);
   assert.ok(exported.files.includes("delivery/editorial-handoff.md"), "export should create handoff file");
+  assert.ok(exported.files.includes("delivery/commercial-validation-pack.md"), "export should create commercial validation pack");
+  assert.ok(exported.files.includes("delivery/publishing-compliance-pack.md"), "export should create compliance pack");
+  assert.ok(exported.files.includes("delivery/launch-readiness-pack.md"), "export should create launch readiness pack");
   assert.equal(existsSync(join(cert, "delivery", "beta-reader-packet.md")), true, "export should write beta packet");
+  const exportManifest = readFileSync(join(cert, "delivery", "genesis-export-manifest.md"), "utf8");
+  assert.ok(exportManifest.includes("artifacts/commercial-proof.md"), "export manifest should include commercial-proof when present");
+  assert.ok(exportManifest.includes("artifacts/ai-use-and-publishing-compliance.md"), "export manifest should include compliance ledger when present");
+
+  const blockerProject = join(tempRoot, "blocker-project");
+  makeProject(blockerProject, { phase: "Phase 5: Final Score", workflowMode: "market-test" });
+  writeFileSync(join(blockerProject, "artifacts", "commercial-proof.md"), "# Commercial Proof\n\nstatus: blocked\n", "utf8");
+  writeFileSync(join(blockerProject, "artifacts", "ai-use-and-publishing-compliance.md"), "# AI Use\n\nstatus: needs_disclosure_decision\n- KDP classification: unknown\n", "utf8");
+  let blockerFiles = helpers.collectBlockers(blockerProject, false).map((item) => item.file);
+  assert.ok(blockerFiles.includes("artifacts/commercial-proof.md"), "commercial-proof blocker should fire on blocked status");
+  assert.ok(blockerFiles.includes("artifacts/ai-use-and-publishing-compliance.md"), "AI-use blocker should fire on unknown/needs_disclosure status");
+  writeFileSync(join(blockerProject, "artifacts", "commercial-proof.md"), "# Commercial Proof\n\nstatus: commercially_proven\n", "utf8");
+  writeFileSync(join(blockerProject, "artifacts", "ai-use-and-publishing-compliance.md"), "# AI Use\n\nstatus: ready\n- KDP classification: AI-assisted\n- Disclosure required: no\n", "utf8");
+  blockerFiles = helpers.collectBlockers(blockerProject, false).map((item) => item.file);
+  assert.ok(!blockerFiles.includes("artifacts/commercial-proof.md"), "commercial-proof blocker should not fire when commercially proven");
+  assert.ok(!blockerFiles.includes("artifacts/ai-use-and-publishing-compliance.md"), "AI-use blocker should not fire when ready");
 
   execSync("git config user.email genesis-test@example.com", { cwd: cert });
   execSync("git config user.name Genesis Test", { cwd: cert });

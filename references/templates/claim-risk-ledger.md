@@ -19,5 +19,10 @@ Claims that must not appear in title, subtitle, cover, blurb, ads, or sales copy
 - 
 
 ## Verdict
-- Status: clear / needs sourcing / expert review required / marketing blocked
+status: needs_sourcing
+allowed_statuses:
+  - clear
+  - needs_sourcing
+  - expert_review_required
+  - marketing_blocked
 - Required action:

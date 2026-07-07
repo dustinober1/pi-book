@@ -30,5 +30,9 @@ Purpose: protect platform disclosure, client trust, author evidence, and marketi
 - Claims that must not appear in marketing:
 
 ## Verdict
-- Status: ready / needs disclosure decision / blocked
+status: needs_disclosure_decision
+allowed_statuses:
+  - ready
+  - needs_disclosure_decision
+  - blocked
 - Required action before upload/client delivery:

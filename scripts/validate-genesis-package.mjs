@@ -70,6 +70,7 @@ const templatePaths = [
   "references/templates/sample-reader-feedback.md",
   "references/templates/launch-channel-plan.md",
   "references/templates/review-risk-log.md",
+  "references/templates/publishing-metadata-checklist.md",
   "references/templates/ai-use-and-publishing-compliance.md",
   "references/templates/independent-review-matrix.md",
   "references/templates/claim-risk-ledger.md",
@@ -171,6 +172,8 @@ assert.ok(readme.includes("/genesis-series-score"), "README should document /gen
 assert.ok(readme.includes("/genesis-series-export"), "README should document /genesis-series-export");
 assert.ok(readme.includes("/genesis-compile"), "README should document /genesis-compile");
 assert.ok(readme.includes("/genesis-checkpoint"), "README should document /genesis-checkpoint");
+assert.ok(readme.includes("/genesis-market-test"), "README should document /genesis-market-test");
+assert.ok(readme.includes("/genesis-commercial-proof"), "README should document /genesis-commercial-proof");
 assert.ok(readme.includes("lean-novel"), "README should document lean modes");
 assert.ok(readme.includes("commercial-proof.md"), "README should document commercial proof artifacts");
 assert.ok(readme.includes("ai-use-and-publishing-compliance.md"), "README should document compliance artifacts");
@@ -223,6 +226,8 @@ assert.ok(extension.includes('registerSeriesExportCommand("genesis-series-export
 assert.ok(extension.includes('registerSeriesLockBookCommand("genesis-series-lock-book"'), "extension should register /genesis-series-lock-book");
 assert.ok(extension.includes('registerMigrateCommand("genesis-migrate"'), "extension should register /genesis-migrate");
 assert.ok(extension.includes('registerCompileCommand("genesis-compile"'), "extension should register /genesis-compile");
+assert.ok(extension.includes('registerCommercialProofCommand("genesis-market-test"'), "extension should register /genesis-market-test");
+assert.ok(extension.includes('registerCommercialProofCommand("genesis-commercial-proof"'), "extension should register /genesis-commercial-proof");
 assert.ok(extension.includes('registerCheckpointCommand("genesis-checkpoint"'), "extension should register /genesis-checkpoint");
 assert.ok(extension.includes('queuePromptCommand("genesis-ingest"'), "extension should register /genesis-ingest");
 assert.ok(!extension.includes('"bg-'), "extension should not register legacy /bg-* aliases");

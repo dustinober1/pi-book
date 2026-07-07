@@ -13,9 +13,9 @@ Purpose: prove there is a reachable reader and a credible purchase path before t
 - Trust assets still missing:
 
 ## Demand Evidence
-| Signal | Source/date | What readers are buying/requesting | Confidence | Action |
-|---|---|---|---|---|
-|  |  |  | low/medium/high |  |
+| Signal | Source URL / searched phrase | As-of date | What readers are buying/requesting | Confidence | Action |
+|---|---|---|---|---|---|
+|  |  |  |  | low/medium/high |  |
 
 ## Competition Evidence
 - Category and shelf:
@@ -38,6 +38,11 @@ Purpose: prove there is a reachable reader and a credible purchase path before t
 - [ ] Launch and review pathway is realistic for the author platform.
 
 ## Verdict
-- Status: blocked / needs validation / commercially legible / commercially proven
+status: blocked
+allowed_statuses:
+  - blocked
+  - needs_validation
+  - commercially_legible
+  - commercially_proven
 - Biggest commercial risk:
 - Next validation action:

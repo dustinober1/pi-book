@@ -138,6 +138,7 @@ const DEFAULT_PHASE_DEFINITIONS = [
       "artifacts/cover-conversion-notes.md",
       "artifacts/launch-channel-plan.md",
       "artifacts/review-risk-log.md",
+      "artifacts/publishing-metadata-checklist.md",
       "artifacts/ai-use-and-publishing-compliance.md",
     ],
     next: "",
@@ -325,6 +326,7 @@ const MODE_ARTIFACTS = {
     "artifacts/sample-reader-feedback.md",
     "artifacts/launch-channel-plan.md",
     "artifacts/review-risk-log.md",
+    "artifacts/publishing-metadata-checklist.md",
   ],
   other: ["artifacts/reader-promise-tracker.md"],
 };
@@ -416,6 +418,7 @@ const MODE_SCAFFOLD_BUNDLES = {
     "artifacts/sample-reader-feedback.md",
     "artifacts/launch-channel-plan.md",
     "artifacts/review-risk-log.md",
+    "artifacts/publishing-metadata-checklist.md",
   ],
   "series installment": [
     "artifacts/series-bible.md",
@@ -468,6 +471,7 @@ const TEMPLATE_SCAFFOLDS = [
   { label: "launch-channel-plan.md", template: "references/templates/launch-channel-plan.md", destination: "artifacts/launch-channel-plan.md" },
   { label: "review-risk-log.md", template: "references/templates/review-risk-log.md", destination: "artifacts/review-risk-log.md" },
   { label: "ai-use-and-publishing-compliance.md", template: "references/templates/ai-use-and-publishing-compliance.md", destination: "artifacts/ai-use-and-publishing-compliance.md" },
+  { label: "publishing-metadata-checklist.md", template: "references/templates/publishing-metadata-checklist.md", destination: "artifacts/publishing-metadata-checklist.md" },
   { label: "independent-review-matrix.md", template: "references/templates/independent-review-matrix.md", destination: "artifacts/independent-review-matrix.md" },
   { label: "claim-risk-ledger.md", template: "references/templates/claim-risk-ledger.md", destination: "artifacts/claim-risk-ledger.md" },
   { label: "voice-bible.md", template: "references/templates/voice-bible.md", destination: "artifacts/voice-bible.md" },
@@ -651,25 +655,31 @@ const BLOCKER_CHECKS = [
   {
     file: "artifacts/commercial-proof.md",
     label: "Commercial-proof blocker",
-    pattern: /blocked|needs validation|outside-reader signal.*missing|target reader.*missing|no demand evidence|commercially unproven/i,
+    pattern: /^status\s*:\s*(blocked|needs_validation)\b|outside-reader signal.*missing|target reader.*missing|no demand evidence|commercially unproven/im,
     suggestion: "Validate target reader, comps, hook, sample pull, and launch path before claiming the book can sell.",
   },
   {
     file: "artifacts/independent-review-matrix.md",
     label: "Independent-review blocker",
-    pattern: /blocked|needs more readers|unresolved contradictions|no human|no outside reader/i,
+    pattern: /^status\s*:\s*(blocked|needs_more_readers)\b|unresolved contradictions|no human|no outside reader/im,
     suggestion: "Run at least one independent review lane and preserve objections before final approval.",
   },
   {
     file: "artifacts/claim-risk-ledger.md",
     label: "Claim-risk blocker",
-    pattern: /status\s*:\s*(expert review required|marketing blocked)|\|[^\n|]*(high|unverified|remove)[^\n|]*\|/i,
+    pattern: /^status\s*:\s*(needs_sourcing|expert_review_required|marketing_blocked)\b|\|[^\n|]*(high|unverified|remove)[^\n|]*\|/im,
     suggestion: "Source, expert-review, revise, or remove high-risk nonfiction and marketing claims.",
+  },
+  {
+    file: "artifacts/publishing-metadata-checklist.md",
+    label: "Publishing-metadata blocker",
+    pattern: /^status\s*:\s*(incomplete|blocked)\b/im,
+    suggestion: "Complete title, subtitle, categories, keywords, pricing, format, launch, and compliance metadata before upload.",
   },
   {
     file: "artifacts/ai-use-and-publishing-compliance.md",
     label: "AI-use/compliance blocker",
-    pattern: /status\s*:\s*(blocked|needs disclosure decision)|KDP classification\s*:\s*.*unknown|Disclosure required\s*:\s*.*uncertain/i,
+    pattern: /^status\s*:\s*(blocked|needs_disclosure_decision)\b|KDP classification\s*:\s*.*unknown|Disclosure required\s*:\s*.*uncertain/im,
     suggestion: "Classify AI-generated vs AI-assisted content and settle platform/client disclosure before delivery.",
   },
 ];
@@ -1229,6 +1239,56 @@ function checkpointGenesisFiles(root, args = "") {
   return { root, requested: explicitPaths ? [...explicitPaths] : null, changed: changes.length, attempted: selected.length, results };
 }
 
+const COMMERCIAL_VALIDATION_ARTIFACTS = [
+  "artifacts/commercial-proof.md",
+  "artifacts/category-competition-map.md",
+  "artifacts/title-subtitle-options.md",
+  "artifacts/blurb-test-results.md",
+  "artifacts/cover-conversion-notes.md",
+  "artifacts/sample-reader-feedback.md",
+];
+
+const LAUNCH_READINESS_ARTIFACTS = [
+  "artifacts/launch-channel-plan.md",
+  "artifacts/review-risk-log.md",
+  "artifacts/publishing-metadata-checklist.md",
+  "artifacts/positioning-strategy.md",
+  "artifacts/reader-response-plan.md",
+  "artifacts/beta-feedback-log.md",
+];
+
+const PUBLISHING_COMPLIANCE_ARTIFACTS = [
+  "artifacts/independent-review-matrix.md",
+  "artifacts/claim-risk-ledger.md",
+  "artifacts/ai-use-and-publishing-compliance.md",
+  "artifacts/name-collision-audit.md",
+];
+
+const MARKET_TEST_ARTIFACTS = [
+  "artifacts/commercial-proof.md",
+  "artifacts/category-competition-map.md",
+  "artifacts/title-subtitle-options.md",
+  "artifacts/blurb-test-results.md",
+  "artifacts/cover-conversion-notes.md",
+  "artifacts/sample-reader-feedback.md",
+  "artifacts/launch-channel-plan.md",
+  "artifacts/review-risk-log.md",
+  "artifacts/publishing-metadata-checklist.md",
+];
+
+function renderExportPack(root, title, artifactPaths) {
+  const sections = [title, ""];
+  for (const relativePath of artifactPaths) {
+    const text = readIfExists(join(root, relativePath));
+    sections.push(`## ${relativePath}`, "", text?.trim() ? text.trim() : `_Missing: ${relativePath}_`, "");
+  }
+  return sections.join("\n");
+}
+
+function existingArtifacts(root, artifactPaths) {
+  return artifactPaths.filter((relativePath) => existsSync(join(root, relativePath)));
+}
+
 function createEditorialExport(root) {
   ensureDir(join(root, "delivery"));
   const compile = compileManuscript(root);
@@ -1241,8 +1301,20 @@ function createEditorialExport(root) {
   const handoffPath = join(root, "delivery", "editorial-handoff.md");
   const boardPath = join(root, "delivery", "revision-board.md");
   const betaPath = join(root, "delivery", "beta-reader-packet.md");
+  const commercialPackPath = join(root, "delivery", "commercial-validation-pack.md");
+  const compliancePackPath = join(root, "delivery", "publishing-compliance-pack.md");
+  const launchPackPath = join(root, "delivery", "launch-readiness-pack.md");
   const coverPromptPath = join(root, "delivery", "cover-generation-prompt.md");
   const manifestPath = join(root, "delivery", "genesis-export-manifest.md");
+  const highValueFiles = [
+    "PROJECT_STATE.yaml",
+    "STATUS.md",
+    "artifacts/continuity-ledger.md",
+    "artifacts/reader-promise-tracker.md",
+    "artifacts/revision-tickets.md",
+    "evaluations/chapter-scorecards.md",
+    ...existingArtifacts(root, [...COMMERCIAL_VALIDATION_ARTIFACTS, ...LAUNCH_READINESS_ARTIFACTS, ...PUBLISHING_COMPLIANCE_ARTIFACTS]),
+  ];
   writeFileSync(handoffPath, [
     "# Editorial Handoff",
     "",
@@ -1251,6 +1323,9 @@ function createEditorialExport(root) {
     `- Workflow mode: ${workflowMode}`,
     `- Manuscript: ${stats.chapters} chapter file(s), ${stats.words} estimated words`,
     `- Compiled manuscript: delivery/manuscript-full.md`,
+    `- Commercial validation pack: delivery/commercial-validation-pack.md`,
+    `- Publishing compliance pack: delivery/publishing-compliance-pack.md`,
+    `- Launch readiness pack: delivery/launch-readiness-pack.md`,
     `- Open blockers/warnings: ${blockers.length}`,
     "",
     "## Current risks",
@@ -1259,12 +1334,7 @@ function createEditorialExport(root) {
     "",
     "## High-value project files",
     "",
-    "- PROJECT_STATE.yaml",
-    "- STATUS.md",
-    "- artifacts/continuity-ledger.md",
-    "- artifacts/reader-promise-tracker.md",
-    "- artifacts/revision-tickets.md",
-    "- evaluations/chapter-scorecards.md",
+    ...[...new Set(highValueFiles)].map((file) => `- ${file}`),
     "",
   ].join("\n"), "utf8");
   writeFileSync(boardPath, `# Revision Board\n\nSource: artifacts/revision-tickets.md\n\n${revisionTickets.trim()}\n`, "utf8");
@@ -1286,13 +1356,39 @@ function createEditorialExport(root) {
     "- What residue stayed with you after the ending?",
     "",
   ].join("\n"), "utf8");
+  writeFileSync(commercialPackPath, renderExportPack(root, "# Commercial Validation Pack", COMMERCIAL_VALIDATION_ARTIFACTS), "utf8");
+  writeFileSync(compliancePackPath, renderExportPack(root, "# Publishing Compliance Pack", PUBLISHING_COMPLIANCE_ARTIFACTS), "utf8");
+  writeFileSync(launchPackPath, renderExportPack(root, "# Launch Readiness Pack", LAUNCH_READINESS_ARTIFACTS), "utf8");
   const coverPrompt = readIfExists(join(root, "artifacts", "cover-generation-prompt.md"));
-  const files = ["delivery/manuscript-full.md", "delivery/manuscript-compile-report.md", "delivery/editorial-handoff.md", "delivery/revision-board.md", "delivery/beta-reader-packet.md"];
+  const files = [
+    "delivery/manuscript-full.md",
+    "delivery/manuscript-compile-report.md",
+    "delivery/editorial-handoff.md",
+    "delivery/revision-board.md",
+    "delivery/beta-reader-packet.md",
+    "delivery/commercial-validation-pack.md",
+    "delivery/publishing-compliance-pack.md",
+    "delivery/launch-readiness-pack.md",
+  ];
   if (coverPrompt?.trim()) {
     writeFileSync(coverPromptPath, coverPrompt.trimEnd() + "\n", "utf8");
     files.push("delivery/cover-generation-prompt.md");
   }
-  writeFileSync(manifestPath, ["# Genesis Export Manifest", "", `Generated: ${new Date().toISOString()}`, "", ...files.map((file) => `- ${file}`), ""].join("\n"), "utf8");
+  const presentArtifacts = existingArtifacts(root, [...COMMERCIAL_VALIDATION_ARTIFACTS, ...LAUNCH_READINESS_ARTIFACTS, ...PUBLISHING_COMPLIANCE_ARTIFACTS]);
+  writeFileSync(manifestPath, [
+    "# Genesis Export Manifest",
+    "",
+    `Generated: ${new Date().toISOString()}`,
+    "",
+    "## Delivery files",
+    "",
+    ...files.map((file) => `- ${file}`),
+    "",
+    "## Included project artifacts present at export time",
+    "",
+    ...(presentArtifacts.length ? presentArtifacts.map((file) => `- ${file}`) : ["- none detected"]),
+    "",
+  ].join("\n"), "utf8");
   return { ...compile, files: [...files, "delivery/genesis-export-manifest.md"] };
 }
 
@@ -3337,6 +3433,36 @@ function buildVoiceDriftPrompt(root, args = "") {
   ].join("\n");
 }
 
+function buildCommercialProofPrompt(root, args = "") {
+  return [
+    "Use the `genesis-for-pi` skill and run a commercial proof / market-test pass before treating this book as sellable.",
+    "",
+    `Project root: ${root}`,
+    args.trim() ? `User instructions: ${args.trim()}` : "User instructions: validate the current idea, package, or manuscript against market evidence.",
+    "",
+    "Create or update these artifacts with source/date-driven evidence:",
+    "- artifacts/commercial-proof.md",
+    "- artifacts/category-competition-map.md",
+    "- artifacts/title-subtitle-options.md",
+    "- artifacts/blurb-test-results.md",
+    "- artifacts/cover-conversion-notes.md",
+    "- artifacts/sample-reader-feedback.md",
+    "- artifacts/launch-channel-plan.md",
+    "- artifacts/review-risk-log.md",
+    "- artifacts/publishing-metadata-checklist.md",
+    "",
+    "Minimum gates:",
+    "- target reader named in one sentence",
+    "- 10-20 comparable books or shelf neighbors mapped with source URL/searched phrase and as-of date",
+    "- why this / why now / why this author answer",
+    "- recurring review complaints identified and at least one manuscript/package response proposed",
+    "- at least 3 title/subtitle or blurb alternatives compared",
+    "- outside-reader sample signal recorded if available; otherwise mark status as needs_validation, not proven",
+    "",
+    "Do not fake validation. If evidence is missing, leave a blocker or needs_validation status and create concrete next validation actions.",
+  ].join("\n");
+}
+
 export default function (pi) {
   pi.registerTool({
     name: "genesis_blocker_triage",
@@ -3416,6 +3542,25 @@ export default function (pi) {
     const result = createEditorialExport(root);
     writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
     ctx.ui.notify(`Created Genesis delivery package files:\n${result.files.map((file) => `- ${file}`).join("\n")}\nChapters: ${result.chapters}\nWords: ${result.words}\nSTATUS.md updated.`, "info");
+  } });
+
+  const registerCommercialProofCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
+    const root = findProjectRoot(ctx.cwd);
+    ensureDir(join(root, "artifacts"));
+    const results = MARKET_TEST_ARTIFACTS.map((destination) => {
+      const item = findTemplateEntryByDestination(destination);
+      return item ? { destination, status: scaffoldTemplate(root, item.template, item.destination, false) } : { destination, status: "missing_template" };
+    });
+    writeFileSync(join(root, "STATUS.md"), renderStatusDashboard(root), "utf8");
+    const message = buildCommercialProofPrompt(root, args);
+    const notice = `Commercial proof artifacts prepared:\n${results.map((item) => `- ${item.destination}: ${item.status}`).join("\n")}\nSTATUS.md updated.`;
+    if (!ctx.isIdle()) {
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
+      ctx.ui.notify(`${notice}\nQueued /${name} as a follow-up.`, "info");
+      return;
+    }
+    ctx.ui.notify(notice, "info");
+    pi.sendUserMessage(message);
   } });
 
   const registerCheckpointCommand = (name, description) => pi.registerCommand(name, { description, handler: async (args, ctx) => {
@@ -4183,7 +4328,9 @@ export default function (pi) {
   registerLintCommand("genesis-lint", "Lint Genesis artifacts for placeholders, empty sections, and weak scaffolds");
   registerDashboardCommand("genesis-dashboard", "Show a richer Genesis project dashboard and write it to STATUS.md");
   registerCompileCommand("genesis-compile", "Compile manuscript chapters into delivery/manuscript-full.md");
-  registerExportCommand("genesis-export", "Create editorial handoff, beta packet, revision board, and export manifest files");
+  registerExportCommand("genesis-export", "Create editorial handoff, beta packet, revision board, commercial/compliance packs, and export manifest files");
+  registerCommercialProofCommand("genesis-market-test", "Scaffold and run commercial proof, category competition, title/blurb/cover, launch, and metadata validation");
+  registerCommercialProofCommand("genesis-commercial-proof", "Scaffold and run commercial proof, category competition, title/blurb/cover, launch, and metadata validation");
   registerCheckpointCommand("genesis-checkpoint", "Commit changed Genesis project files one file at a time");
   registerPrdStartCommand("genesis-prd-start", "Bootstrap a PRD-first Genesis project, score PRD completeness, and queue gap-only intake");
   registerPrdIngestCommand("genesis-prd-ingest", "Ingest a PRD into the current Genesis project with traceability and gap reporting");

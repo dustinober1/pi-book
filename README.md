@@ -101,7 +101,9 @@ Run the next Genesis phase.
 | `/genesis-lint` | placeholder/quality lint |
 | `/genesis-dashboard` | richer project dashboard |
 | `/genesis-compile` | compile chapter files into a full manuscript |
-| `/genesis-export` | create editorial/beta handoff files |
+| `/genesis-export` | create editorial/beta handoff files plus commercial, compliance, and launch packs |
+| `/genesis-market-test` | scaffold and run commercial proof before deeper book development |
+| `/genesis-commercial-proof` | alias for the commercial proof / market-test pass |
 | `/genesis-checkpoint` | commit Genesis files one file at a time |
 | `/genesis-ingest` | ingest existing drafts, notes, research, or canon |
 | `/genesis-voice-ingest` | build voice artifacts from author samples |
@@ -155,6 +157,8 @@ This package provides Pi-native extension commands:
 /genesis-dashboard
 /genesis-compile
 /genesis-export
+/genesis-market-test
+/genesis-commercial-proof
 /genesis-checkpoint
 /genesis-ingest
 /genesis-voice-ingest
@@ -239,7 +243,9 @@ Use `/genesis-dashboard` for a richer progress dashboard with phase progress, bl
 
 Use `/genesis-compile` to concatenate `manuscript/chapters/*.md` into `delivery/manuscript-full.md` and write `delivery/manuscript-compile-report.md` with chapter and word-count diagnostics.
 
-Use `/genesis-export` to create delivery handoff files: compiled manuscript, compile report, editorial handoff, revision board, beta-reader packet, cover prompt handoff when available, and export manifest.
+Use `/genesis-export` to create delivery handoff files: compiled manuscript, compile report, editorial handoff, revision board, beta-reader packet, `delivery/commercial-validation-pack.md`, `delivery/publishing-compliance-pack.md`, `delivery/launch-readiness-pack.md`, cover prompt handoff when available, and export manifest.
+
+Use `/genesis-market-test` or `/genesis-commercial-proof` to scaffold and run the commercial validation pass before deeper book development. It prepares commercial proof, category competition, title/subtitle, blurb, cover-conversion, sample-reader, launch-channel, review-risk, and publishing metadata artifacts, then queues an agent pass to fill them with source/date-driven evidence.
 
 Use `/genesis-checkpoint` to commit changed Genesis project files one file at a time. Pass a relative path to commit only one file, or use no argument/`all` for all changed Genesis files.
 
@@ -259,7 +265,7 @@ Use `/genesis-set-mode` to explicitly set the workflow mode, update `PROJECT_STA
 
 Use `/genesis-blockers` for interactive blocker triage. It lets you inspect blocker evidence and queue a targeted fix turn from the UI.
 
-Use `/genesis-scaffold-templates` to copy core artifact templates such as `book-prd.md`, `prd-gap-report.md`, `prd-traceability-map.md`, `prd-completeness-score.md`, `prd-change-log.md`, `decision-impact-report.md`, `writer-questions.md`, `quality-gates.md`, `writer-cockpit.md`, `chapter-production-queue.md`, `outline-stress-test.md`, `persona-review.md`, `regression-check.md`, `taste-lock.md`, `decision-ledger.md`, `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `commercial-proof.md`, `category-competition-map.md`, `title-subtitle-options.md`, `blurb-test-results.md`, `cover-conversion-notes.md`, `sample-reader-feedback.md`, `launch-channel-plan.md`, `review-risk-log.md`, `ai-use-and-publishing-compliance.md`, `independent-review-matrix.md`, `claim-risk-ledger.md`, `series-bible.md`, `series-arc-map.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-payoff-ledger.md`, `series-verification-matrix.md`, `argument-spine.md`, `certification-blueprint-map.md`, `research/reference-inventory.md`, `author-intent.md`, `taste-profile.md`, `risk-budget.md`, `review-personas.md`, `reader-promise-tracker.md`, and `drift-loop-alarm.md` into the active project.
+Use `/genesis-scaffold-templates` to copy core artifact templates such as `book-prd.md`, `prd-gap-report.md`, `prd-traceability-map.md`, `prd-completeness-score.md`, `prd-change-log.md`, `decision-impact-report.md`, `writer-questions.md`, `quality-gates.md`, `writer-cockpit.md`, `chapter-production-queue.md`, `outline-stress-test.md`, `persona-review.md`, `regression-check.md`, `taste-lock.md`, `decision-ledger.md`, `voice-bible.md`, `continuity-ledger.md`, `revision-tickets.md`, `expansion-integrity.md`, `commercial-proof.md`, `category-competition-map.md`, `title-subtitle-options.md`, `blurb-test-results.md`, `cover-conversion-notes.md`, `sample-reader-feedback.md`, `launch-channel-plan.md`, `review-risk-log.md`, `publishing-metadata-checklist.md`, `ai-use-and-publishing-compliance.md`, `independent-review-matrix.md`, `claim-risk-ledger.md`, `series-bible.md`, `series-arc-map.md`, `canon-lock.md`, `installment-promise-tracker.md`, `series-payoff-ledger.md`, `series-verification-matrix.md`, `argument-spine.md`, `certification-blueprint-map.md`, `research/reference-inventory.md`, `author-intent.md`, `taste-profile.md`, `risk-budget.md`, `review-personas.md`, `reader-promise-tracker.md`, and `drift-loop-alarm.md` into the active project.
 
 Use `/genesis-score-to-tickets` to convert score and audit findings into structured revision tickets.
 
@@ -827,7 +833,7 @@ Genesis for Pi uses this sequence:
 7. **Phase 6: Editorial Package**
    - editorial and delivery assets
    - AI-use/publishing-compliance ledger
-   - blurb, cover, launch-channel, and review-risk assets
+   - blurb, cover, launch-channel, review-risk, and publishing metadata assets
 
 ## Human-voice guidance
 
@@ -864,7 +870,7 @@ Use tags or commit refs to keep machines pinned to the same version.
 - `SKILL.md` — primary `genesis-for-pi` skill entrypoint and workflow contract
 - `extensions/genesis.ts` — Pi-native commands including start, resume, doctor, lint, migrate, score-to-tickets, blockers, scaffolding, and next-step orchestration plus the `genesis_blocker_triage` tool
 - `references/` — pipeline prompts, scoring contract, reference docs, and templates
-- `references/templates/` — starter templates for voice, continuity, tickets, expansion integrity, commercial proof, compliance, independent review, claim risk, author intent, taste, risk, review personas, reader promises, drift alarms, series bible, series arc map, series timeline, character-state matrix, reveal/spoiler tracking, canon-lock, retcon logging, handoff packets, verification, nonfiction, study-guide, and certification artifacts
+- `references/templates/` — starter templates for voice, continuity, tickets, expansion integrity, commercial proof, publishing metadata, compliance, independent review, claim risk, author intent, taste, risk, review personas, reader promises, drift alarms, series bible, series arc map, series timeline, character-state matrix, reveal/spoiler tracking, canon-lock, retcon logging, handoff packets, verification, nonfiction, study-guide, and certification artifacts
 - `docs/` — best practices, troubleshooting notes, service packaging guidance, and AI-thriller review aids
 - `examples/` — sample Genesis project trees for different workflow modes
 - `prompts/genesis-next-prompt.md` — fallback prompt-template version of `/genesis-next`

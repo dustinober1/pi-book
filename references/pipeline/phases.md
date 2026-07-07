@@ -91,5 +91,5 @@
 - formatting package with manuscript formatting checklist and word count verification
 - positioning strategy
 - reader response plan and beta feedback log
-- blurb/title/cover conversion notes, launch-channel plan, review-risk log
+- blurb/title/cover conversion notes, launch-channel plan, review-risk log, and publishing metadata checklist
 - AI-use and publishing-compliance ledger for KDP/client/platform decisions

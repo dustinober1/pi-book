@@ -119,5 +119,6 @@ phase_6_editorial_package:
     - "artifacts/cover-conversion-notes.md"
     - "artifacts/launch-channel-plan.md"
     - "artifacts/review-risk-log.md"
+    - "artifacts/publishing-metadata-checklist.md"
     - "artifacts/ai-use-and-publishing-compliance.md"
   next: ""

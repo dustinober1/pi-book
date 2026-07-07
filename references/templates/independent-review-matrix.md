@@ -15,5 +15,9 @@ Final approval must survive independent objections, not only the drafting agent'
 - Unresolved contradictions:
 
 ## Verdict
-- Status: blocked / needs more readers / review-sufficient
+status: blocked
+allowed_statuses:
+  - blocked
+  - needs_more_readers
+  - review_sufficient
 - Minimum next review lane:

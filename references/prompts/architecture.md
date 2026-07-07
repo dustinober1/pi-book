@@ -69,7 +69,7 @@ Create and update:
 - consolidate reveal architecture: do not build the middle around endless sequential subsystem reveals; group reveals into fewer, more powerful turns that change the game rather than merely deepen the file
 - lock publication shape before drafting the final act: standalone endings need decisive external consequence; series openers need one battle clearly closed and a larger conflict intentionally opened
 - create `artifacts/commercial-proof.md` with the target-reader sentence, demand evidence, 10-20 comp targets, recurring review complaints, why this / why now / why this author, and validation gates
-- create `artifacts/category-competition-map.md` for 10-20 comparable books or shelf neighbors, mapped by category, promise, review praise/complaints, price/page range, and cover/title language
+- create `artifacts/category-competition-map.md` for 10-20 comparable books or shelf neighbors, mapped by source URL/searched phrase, as-of date, category, promise, review count/rating snapshot, review praise/complaints, price/page range, and cover/title language
 - create `artifacts/title-subtitle-options.md` with at least 3 viable title/subtitle or tagline alternatives and the risk/confusion notes for each
 
 ## Outline Requirements
@@ -207,7 +207,7 @@ Each alarm entry must include trigger, evidence required, affected files, immedi
 - at least one recurring comp-review complaint the book intends to solve
 - validation status: blocked, needs validation, commercially legible, or commercially proven
 
-`category-competition-map.md` must include comps by category/shelf, reader promise, review praise and complaints, cover/title language, price/page norms, and differentiation opportunity.
+`category-competition-map.md` must include comps by source URL/searched phrase, as-of date, category/shelf, reader promise, review count/rating snapshot, review praise and complaints, cover/title language, price/page norms, and differentiation opportunity.
 
 `title-subtitle-options.md` must compare at least 3 options by hook, promise clarity, category fit, differentiation, and confusion risk.
 

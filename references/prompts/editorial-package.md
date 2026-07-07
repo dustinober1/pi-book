@@ -10,7 +10,7 @@ Turn the approved manuscript into a sales-ready editorial package without changi
 
 Save the main package to `artifacts/10-editorial-package.md` and the paste-ready ebook cover prompt to `artifacts/cover-generation-prompt.md`.
 
-Also create or update `artifacts/blurb-test-results.md`, `artifacts/cover-conversion-notes.md`, `artifacts/launch-channel-plan.md`, `artifacts/review-risk-log.md`, and `artifacts/ai-use-and-publishing-compliance.md`.
+Also create or update `artifacts/blurb-test-results.md`, `artifacts/cover-conversion-notes.md`, `artifacts/launch-channel-plan.md`, `artifacts/review-risk-log.md`, `artifacts/publishing-metadata-checklist.md`, and `artifacts/ai-use-and-publishing-compliance.md`.
 
 ## Required Sections
 
@@ -41,7 +41,7 @@ Also create or update `artifacts/blurb-test-results.md`, `artifacts/cover-conver
 - beta feedback log
 - positioning strategy
 - commercial proof summary
-- title/subtitle, blurb, cover, sample-reader, launch-channel, and review-risk notes
+- title/subtitle, blurb, cover, sample-reader, launch-channel, review-risk, and publishing metadata notes
 - independent review matrix summary
 - claim-risk summary when applicable
 - AI-use and publishing-compliance ledger
@@ -80,7 +80,7 @@ Also create or update `artifacts/blurb-test-results.md`, `artifacts/cover-conver
 - beta feedback log must exist even if empty and define how future outside feedback will be recorded, accepted, rejected, deferred, or converted into tickets
 - positioning strategy must separate the book itself from the sales story: author positioning, audience promise, comparable shelf, memorable one-sentence hook, taboo claims to avoid, and what not to over-market
 - commercial proof summary must report `artifacts/commercial-proof.md`, `artifacts/category-competition-map.md`, and `artifacts/title-subtitle-options.md`, including target reader, demand evidence, comp complaints solved, why this/why now/why this author, and remaining validation gaps
-- blurb, cover, sample, launch, and review-risk notes must update `artifacts/blurb-test-results.md`, `artifacts/cover-conversion-notes.md`, `artifacts/sample-reader-feedback.md`, `artifacts/launch-channel-plan.md`, and `artifacts/review-risk-log.md`; do not present simulated-persona approval as outside-reader proof
+- blurb, cover, sample, launch, review-risk, and metadata notes must update `artifacts/blurb-test-results.md`, `artifacts/cover-conversion-notes.md`, `artifacts/sample-reader-feedback.md`, `artifacts/launch-channel-plan.md`, `artifacts/review-risk-log.md`, and `artifacts/publishing-metadata-checklist.md`; do not present simulated-persona approval as outside-reader proof
 - independent review summary must report `artifacts/independent-review-matrix.md`, including reviewer source, blind status, key objections, contradictions with Genesis Score, and accepted/rejected/deferred rationale
 - claim-risk summary must report `artifacts/claim-risk-ledger.md` for nonfiction, practical, technical, health, finance, legal, religious, certification, and other claims-heavy books; marketing copy must not use claims marked speculative, unsourced, expert-review-needed, or marketing-unsafe
 - AI-use and publishing-compliance ledger must classify AI role, AI-generated vs AI-assisted files/assets, KDP or platform disclosure status, human authorship evidence, source/copyright checks, trademark/name collision checks, factual/expert review status, and marketing claims that must not appear

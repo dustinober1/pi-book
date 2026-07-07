@@ -19,7 +19,7 @@ Before approval, read `artifacts/revision-tickets.md`. Open blocker or high-seve
 
 Before approval, read `artifacts/drift-loop-alarm.md`. An active hard stop prevents approval unless it is resolved, deferred with rationale, or accepted as deliberate risk.
 
-Before approval, read `artifacts/commercial-proof.md`, `artifacts/category-competition-map.md`, `artifacts/title-subtitle-options.md`, `artifacts/blurb-test-results.md`, `artifacts/cover-conversion-notes.md`, `artifacts/sample-reader-feedback.md`, `artifacts/launch-channel-plan.md`, and `artifacts/review-risk-log.md` when present or required by phase. Missing target reader, unmapped competition, no demand evidence, untested title/blurb/cover promise, absent outside-reader sample signal, unclear launch path, or unresolved review-risk blocker prevents approval unless explicitly deferred with rationale or accepted as deliberate risk.
+Before approval, read `artifacts/commercial-proof.md`, `artifacts/category-competition-map.md`, `artifacts/title-subtitle-options.md`, `artifacts/blurb-test-results.md`, `artifacts/cover-conversion-notes.md`, `artifacts/sample-reader-feedback.md`, `artifacts/launch-channel-plan.md`, `artifacts/review-risk-log.md`, and `artifacts/publishing-metadata-checklist.md` when present or required by phase. Missing target reader, unmapped competition, no demand evidence, untested title/blurb/cover promise, absent outside-reader sample signal, unclear launch path, incomplete publishing metadata, or unresolved review-risk blocker prevents approval unless explicitly deferred with rationale or accepted as deliberate risk.
 
 Before approval, read `artifacts/independent-review-matrix.md`. The book cannot pass because the drafting agent says it passes. Missing independent review lanes, unresolved contradictions, or rejected objections without textual/strategic evidence prevent approval unless explicitly deferred with rationale or accepted as deliberate risk.
 
@@ -144,7 +144,7 @@ A separate Reader Conversion Score must also be reported. It does not excuse wea
 - `artifacts/category-competition-map.md` evidence for 10-20 comps or shelf neighbors, review complaints, cover/title language, price/page norms, and differentiation opportunity
 - `artifacts/title-subtitle-options.md`, `artifacts/blurb-test-results.md`, and `artifacts/cover-conversion-notes.md` evidence that the promise has been tested against alternatives
 - `artifacts/sample-reader-feedback.md` evidence of outside-reader signal where commercial approval is claimed
-- `artifacts/launch-channel-plan.md` and `artifacts/review-risk-log.md` evidence that reader access and predictable objections are not hand-waved
+- `artifacts/launch-channel-plan.md`, `artifacts/review-risk-log.md`, and `artifacts/publishing-metadata-checklist.md` evidence that reader access, predictable objections, and upload metadata are not hand-waved
 - reduced confusion with existing books, media franchises, famous characters, celebrities, trademarks, and genre-overused names
 
 ### Voice
@@ -196,7 +196,7 @@ A Reader Conversion Score below 7.5 blocks `APPROVED FOR COMMERCIAL RELEASE` eve
 - Pacing and Coherence evidence must address `artifacts/drift-loop-alarm.md`
 - Theme, Originality, Pacing, Emotion, Coherence, and Opening evidence must address `artifacts/narrative-fingerprint-audit.md`, StoryScope-style risks, thematic over-determination, and tidy single-track plotting
 - Coherence, Pacing, Characters, and Theme evidence must address subplot integration when the project is book-length
-- Market evidence must address `artifacts/commercial-proof.md`, `artifacts/category-competition-map.md`, `artifacts/title-subtitle-options.md`, `artifacts/blurb-test-results.md`, `artifacts/cover-conversion-notes.md`, `artifacts/sample-reader-feedback.md`, `artifacts/launch-channel-plan.md`, and `artifacts/review-risk-log.md` where present or required
+- Market evidence must address `artifacts/commercial-proof.md`, `artifacts/category-competition-map.md`, `artifacts/title-subtitle-options.md`, `artifacts/blurb-test-results.md`, `artifacts/cover-conversion-notes.md`, `artifacts/sample-reader-feedback.md`, `artifacts/launch-channel-plan.md`, `artifacts/review-risk-log.md`, and `artifacts/publishing-metadata-checklist.md` where present or required
 - Originality, Characters, Coherence, and Market evidence must address `artifacts/name-collision-audit.md` and its web-backed collision findings
 - Originality, Characters, Coherence, and Market evidence must address `artifacts/name-entity-filter.md`, AI-default risk, and rejected alternatives
 - Prose, Emotion, Characters, and Voice evidence must address `artifacts/human-specificity-ledger.md`, petty contradictions, and restraint
