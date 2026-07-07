@@ -18,7 +18,7 @@ series_planning:
 
 book_architecture:
   label: "Phase 2: Book Architecture"
-  prompt: "references/prompts/book-architecture.md"
+  prompt: "references/prompts/book-plan.md"
   gate: "book_architecture"
   outputs:
     - "books/book-NN/BOOK_STATE.yaml"
@@ -29,7 +29,7 @@ book_architecture:
 
 chapter_queue:
   label: "Phase 3: Chapter Queue"
-  prompt: "references/prompts/chapter-queue.md"
+  prompt: "references/prompts/architecture.md"
   gate: "chapter_queue"
   outputs:
     - "books/book-NN/chapter-queue.md"
@@ -37,7 +37,7 @@ chapter_queue:
 
 drafting:
   label: "Phase 4: Drafting"
-  prompt: "references/prompts/chapter-draft.md"
+  prompt: "references/prompts/drafting.md"
   gate: "drafting"
   outputs:
     - "books/book-NN/manuscript/chapters/"
@@ -49,7 +49,7 @@ drafting:
 
 act_audit:
   label: "Phase 5: Act Audit"
-  prompt: "references/prompts/act-audit.md"
+  prompt: "references/prompts/adversarial-audit.md"
   gate: "act_audit"
   outputs:
     - "books/book-NN/audits/act-1-audit.md"
@@ -60,7 +60,7 @@ act_audit:
 
 manuscript_audit:
   label: "Phase 6: Manuscript Audit"
-  prompt: "references/prompts/manuscript-audit.md"
+  prompt: "references/prompts/adversarial-audit.md"
   gate: "manuscript_audit"
   outputs:
     - "books/book-NN/audits/manuscript-audit.md"
@@ -70,7 +70,7 @@ manuscript_audit:
 
 series_audit:
   label: "Phase 7: Series Audit"
-  prompt: "references/prompts/series-audit.md"
+  prompt: "references/prompts/adversarial-audit.md"
   gate: "series_audit"
   outputs:
     - "series/series-bible.md"
@@ -82,7 +82,7 @@ series_audit:
 
 packaging:
   label: "Phase 8: Packaging"
-  prompt: "references/prompts/packaging.md"
+  prompt: "references/prompts/editorial-package.md"
   gate: "packaging"
   outputs:
     - "series/market-package.md"
