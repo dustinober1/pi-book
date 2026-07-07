@@ -49,7 +49,7 @@ drafting:
 
 act_audit:
   label: "Phase 5: Act Audit"
-  prompt: "references/prompts/adversarial-audit.md"
+  prompt: "references/prompts/review.md"
   gate: "act_audit"
   outputs:
     - "books/book-NN/audits/act-1-audit.md"
@@ -60,7 +60,7 @@ act_audit:
 
 manuscript_audit:
   label: "Phase 6: Manuscript Audit"
-  prompt: "references/prompts/adversarial-audit.md"
+  prompt: "references/prompts/review.md"
   gate: "manuscript_audit"
   outputs:
     - "books/book-NN/audits/manuscript-audit.md"
@@ -70,7 +70,7 @@ manuscript_audit:
 
 series_audit:
   label: "Phase 7: Series Audit"
-  prompt: "references/prompts/adversarial-audit.md"
+  prompt: "references/prompts/review.md"
   gate: "series_audit"
   outputs:
     - "series/series-bible.md"
