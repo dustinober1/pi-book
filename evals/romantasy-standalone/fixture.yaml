@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "profile": "romantasy",
+  "packet": {
+    "chapter": 7,
+    "title": "Pressure Test",
+    "status": "ready",
+    "pov": "lead",
+    "purpose": "force a consequential choice",
+    "scene_engine": "active confrontation",
+    "pressure_movement": "conditions materially worsen",
+    "character_movement": "lead accepts a cost",
+    "relationship_movement": "relationship state changes",
+    "story_thread_refs": [
+      "ST-001"
+    ],
+    "continuity_refs": [
+      "CAN-001"
+    ],
+    "character_refs": [
+      "lead"
+    ],
+    "required_research": [],
+    "profile_fields": {
+      "fantasy_movement": "paired ward opens the forbidden pass",
+      "romance_movement": "mutual competence becomes acknowledged attraction",
+      "trust_delta": "+1",
+      "desire_conflict": "need for alliance versus fear of magical dependence",
+      "power_balance": "each controls a necessary half",
+      "consent_state": "explicit before bond magic"
+    },
+    "ending_hook": "the choice creates the next unavoidable problem",
+    "milestone_gate": null,
+    "target_words": 3200
+  }
+}

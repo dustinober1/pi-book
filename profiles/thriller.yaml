@@ -1,0 +1,12 @@
+schema_version: "1.0.0"
+profile: thriller
+label: Thriller
+focus:
+  - visible threat
+  - evidence provenance
+  - protagonist agency
+  - opposition logic
+  - reveal order
+  - procedural plausibility
+  - midpoint state change
+  - legible climax

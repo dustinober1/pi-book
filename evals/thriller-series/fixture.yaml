@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "profile": "thriller",
+  "packet": {
+    "chapter": 7,
+    "title": "Pressure Test",
+    "status": "ready",
+    "pov": "lead",
+    "purpose": "force a consequential choice",
+    "scene_engine": "active confrontation",
+    "pressure_movement": "conditions materially worsen",
+    "character_movement": "lead accepts a cost",
+    "relationship_movement": "relationship state changes",
+    "story_thread_refs": [
+      "ST-001"
+    ],
+    "continuity_refs": [
+      "CAN-001"
+    ],
+    "character_refs": [
+      "lead"
+    ],
+    "required_research": [],
+    "profile_fields": {
+      "threat_delta": "+1",
+      "evidence_delta": "EV-201 contradicts Book 1 assumption",
+      "reader_forecast_change": "series antagonist may be protecting a real failure mode",
+      "protagonist_choice": "exposes the contradiction publicly"
+    },
+    "ending_hook": "the choice creates the next unavoidable problem",
+    "milestone_gate": null,
+    "target_words": 3200
+  }
+}

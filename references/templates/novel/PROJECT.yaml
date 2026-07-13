@@ -1,0 +1,13 @@
+schema_version: "1.0.0"
+project_name: "Example"
+project_type: standalone
+active_book: book-01
+default_profile: thriller
+current_stage: voice-intake
+next_gate: voice-approval
+gates: {}
+automation:
+  max_chapters_per_run: 3
+  require_first_chapter_approval: true
+  git_checkpoints: true
+migration_history: []

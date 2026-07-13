@@ -1,4 +1,4 @@
-name: Genesis for Pi tests
+name: Novel Forge tests
 
 on:
   push:
@@ -9,17 +9,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run package validation and sample-project tests
-        run: npm test
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run eval
+      - run: npm pack --dry-run
