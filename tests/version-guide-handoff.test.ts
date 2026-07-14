@@ -91,7 +91,7 @@ test("status starts with a decision and handoff is portable", () => {
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
-test("guarded events refresh status and handoff in the same changed file set", () => {
+test("guarded events refresh status and handoff without recording their own in-flight dirtiness", () => {
   const parent = temp();
   try {
     const root = initializeProject(parent, { projectName: "Event Handoff", projectType: "standalone", profile: "thriller" });
@@ -104,5 +104,6 @@ test("guarded events refresh status and handoff in the same changed file set", (
     assert.ok(result.changed.includes("STATUS.md"));
     assert.ok(result.changed.includes("HANDOFF.md"));
     assert.match(readFileSync(join(root, "HANDOFF.md"), "utf8"), /voice-profile/);
+    assert.doesNotMatch(readFileSync(join(root, "STATUS.md"), "utf8"), /uncommitted file/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
