@@ -10,17 +10,78 @@ import { readBook, readProject } from "../project/store.js";
 import { openBlockingTickets } from "../review/review.js";
 import { packetReferenceFindings } from "./integrity.js";
 
-export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "revise" | "canon-lock" | "package";
+export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "revise" | "canon-lock" | "package";
 export interface NovelEventInput { eventType: NovelEventType; expectedStage: Stage; expectedProjectHash: string; files: FileChange[]; chapter?: number; scope?: string }
 export interface NovelEventResult { changed: string[]; stage: Stage; projectHash: string; gitMessage: string }
-const eventStages: Record<NovelEventType, Stage[]> = { "voice-profile": ["voice-intake"], "series-plan": ["series-planning"], "book-plan": ["book-planning"], "chapter-queue": ["chapter-queue"], "draft-chapter": ["drafting"], review: ["act-review", "manuscript-review"], revise: ["revision"], "canon-lock": ["canon-lock"], package: ["packaging"] };
+const eventStages: Record<NovelEventType, Stage[]> = {
+  "voice-profile": ["voice-intake"],
+  "series-plan": ["series-planning"],
+  "book-plan": ["book-planning"],
+  "chapter-queue": ["chapter-queue"],
+  "draft-chapter": ["drafting"],
+  review: ["act-review", "manuscript-review"],
+  "reader-test": ["drafting", "act-review", "revision", "manuscript-review", "packaging"],
+  revise: ["revision"],
+  "canon-lock": ["canon-lock"],
+  package: ["packaging"],
+};
 function normalized(path: string): string { return path.replace(/\\/g, "/").replace(/^\.\//, ""); }
 export function projectStateHash(root: string): string { const project = readProject(root); const book = readBook(root); return createHash("sha256").update(stringifyYaml(project)).update("\0").update(stringifyYaml(book)).digest("hex"); }
-function allowedPath(event: NovelEventType, path: string, bookId: string, chapter?: number): boolean { const book = `books/${bookId}`; const exact: Record<NovelEventType, string[]> = { "voice-profile": ["series/voice-profile.md"], "series-plan": ["series/series-bible.md", "series/series-arc.yaml", "series/canon.yaml", "series/story-threads.yaml"], "book-plan": [`${book}/book-bible.md`, `${book}/genre.yaml`, `${book}/plot-grid.yaml`, `${book}/chapter-queue.yaml`, `${book}/continuity-delta.yaml`, "series/story-threads.yaml"], "chapter-queue": [`${book}/chapter-queue.yaml`, `${book}/plot-grid.yaml`], "draft-chapter": [`${book}/continuity-delta.yaml`, "series/story-threads.yaml", `${book}/revision-tickets.yaml`], review: [`${book}/review-report.md`, `${book}/revision-tickets.yaml`], revise: [`${book}/continuity-delta.yaml`, "series/story-threads.yaml", `${book}/revision-tickets.yaml`], "canon-lock": ["series/canon.yaml", "series/story-threads.yaml", "series/series-arc.yaml"], package: [`${book}/package.md`] }; if (exact[event].includes(path)) return true; if (["draft-chapter", "revise"].includes(event) && path.startsWith(`${book}/manuscript/chapters/`) && /\.md$/i.test(path)) { if (event === "revise" || chapter === undefined) return true; const match = basename(path).match(/^0*(\d+)(?:[-_ .]|$)/); return Boolean(match && Number.parseInt(match[1] ?? "", 10) === chapter); } return false; }
+function allowedPath(event: NovelEventType, path: string, bookId: string, chapter?: number): boolean {
+  const book = `books/${bookId}`;
+  const exact: Record<NovelEventType, string[]> = {
+    "voice-profile": ["series/voice-profile.md"],
+    "series-plan": ["series/series-bible.md", "series/series-arc.yaml", "series/canon.yaml", "series/story-threads.yaml"],
+    "book-plan": [`${book}/book-bible.md`, `${book}/genre.yaml`, `${book}/plot-grid.yaml`, `${book}/chapter-queue.yaml`, `${book}/continuity-delta.yaml`, `${book}/remarkability.yaml`, "series/story-threads.yaml"],
+    "chapter-queue": [`${book}/chapter-queue.yaml`, `${book}/plot-grid.yaml`],
+    "draft-chapter": [`${book}/continuity-delta.yaml`, "series/story-threads.yaml", `${book}/revision-tickets.yaml`],
+    review: [`${book}/review-report.md`, `${book}/revision-tickets.yaml`],
+    "reader-test": [`${book}/reader-experiments.yaml`, `${book}/revision-tickets.yaml`],
+    revise: [`${book}/continuity-delta.yaml`, "series/story-threads.yaml", `${book}/revision-tickets.yaml`],
+    "canon-lock": ["series/canon.yaml", "series/story-threads.yaml", "series/series-arc.yaml"],
+    package: [`${book}/package.md`],
+  };
+  if (exact[event].includes(path)) return true;
+  if (["draft-chapter", "revise"].includes(event) && path.startsWith(`${book}/manuscript/chapters/`) && /\.md$/i.test(path)) {
+    if (event === "revise" || chapter === undefined) return true;
+    const match = basename(path).match(/^0*(\d+)(?:[-_ .]|$)/);
+    return Boolean(match && Number.parseInt(match[1] ?? "", 10) === chapter);
+  }
+  return false;
+}
 function overlay(root: string, files: FileChange[], path: string): string | null { return files.find((file) => normalized(file.path) === path)?.content ?? readText(join(root, path)); }
 function setChange(changes: FileChange[], path: string, content: string): void { const existing = changes.find((item) => normalized(item.path) === path); if (existing) existing.content = content; else changes.push({ path, content }); }
 function parseOverlay<T>(root: string, files: FileChange[], path: string, schema: object, label = path): T { const content = overlay(root, files, path); if (!content) throw new Error(`Missing required event state: ${path}`); return parseYaml<T>(content, schema as never, label); }
-function validateFiles(root: string, input: NovelEventInput, project: ProjectState, book: BookState): void { if (!eventStages[input.eventType].includes(project.current_stage)) throw new Error(`${input.eventType} is not allowed during ${project.current_stage}.`); if (input.expectedStage !== project.current_stage) throw new Error(`Stale event stage: expected ${input.expectedStage}, current ${project.current_stage}.`); if (input.expectedProjectHash !== projectStateHash(root)) throw new Error("Stale project hash; reload state before applying this event."); const seen = new Set<string>(); for (const file of input.files) { file.path = normalized(file.path); if (seen.has(file.path)) throw new Error(`Duplicate event path: ${file.path}`); seen.add(file.path); if (!allowedPath(input.eventType, file.path, book.book_id, input.chapter)) throw new Error(`${file.path} is not allowed for ${input.eventType}.`); } const required: Partial<Record<NovelEventType, RegExp>> = { "voice-profile": /series\/voice-profile\.md$/, "series-plan": /series\/(series-bible\.md|series-arc\.yaml)$/, "book-plan": /book-bible\.md$|plot-grid\.yaml$/, "chapter-queue": /chapter-queue\.yaml$/, "draft-chapter": /manuscript\/chapters\/.*\.md$/, review: /review-report\.md$|revision-tickets\.yaml$/, "canon-lock": /series\/canon\.yaml$/, package: /package\.md$/ }; const pattern = required[input.eventType]; if (pattern && !input.files.some((file) => pattern.test(file.path))) throw new Error(`${input.eventType} event is missing its required output file.`); }
+function validateFiles(root: string, input: NovelEventInput, project: ProjectState, book: BookState): void {
+  if (!eventStages[input.eventType].includes(project.current_stage)) throw new Error(`${input.eventType} is not allowed during ${project.current_stage}.`);
+  if (input.expectedStage !== project.current_stage) throw new Error(`Stale event stage: expected ${input.expectedStage}, current ${project.current_stage}.`);
+  if (input.expectedProjectHash !== projectStateHash(root)) throw new Error("Stale project hash; reload state before applying this event.");
+  const seen = new Set<string>();
+  for (const file of input.files) {
+    file.path = normalized(file.path);
+    if (seen.has(file.path)) throw new Error(`Duplicate event path: ${file.path}`);
+    seen.add(file.path);
+    if (!allowedPath(input.eventType, file.path, book.book_id, input.chapter)) throw new Error(`${file.path} is not allowed for ${input.eventType}.`);
+  }
+  const required: Partial<Record<NovelEventType, RegExp>> = {
+    "voice-profile": /series\/voice-profile\.md$/,
+    "series-plan": /series\/(series-bible\.md|series-arc\.yaml)$/,
+    "book-plan": /book-bible\.md$|plot-grid\.yaml$|remarkability\.yaml$/,
+    "chapter-queue": /chapter-queue\.yaml$/,
+    "draft-chapter": /manuscript\/chapters\/.*\.md$/,
+    review: /review-report\.md$|revision-tickets\.yaml$/,
+    "reader-test": /reader-experiments\.yaml$/,
+    "canon-lock": /series\/canon\.yaml$/,
+    package: /package\.md$/,
+  };
+  const pattern = required[input.eventType];
+  if (pattern && !input.files.some((file) => pattern.test(file.path))) throw new Error(`${input.eventType} event is missing its required output file.`);
+  if (input.eventType === "book-plan") {
+    const requiredBookPlan = [`books/${book.book_id}/book-bible.md`, `books/${book.book_id}/plot-grid.yaml`, `books/${book.book_id}/remarkability.yaml`];
+    const missing = requiredBookPlan.filter((path) => !input.files.some((file) => file.path === path));
+    if (missing.length) throw new Error(`book-plan event is missing required output: ${missing.join(", ")}`);
+  }
+}
 function chapterNumber(path: string): number | null { const match = basename(path).match(/^0*(\d+)(?:[-_ .]|$)/); return match ? Number.parseInt(match[1] ?? "", 10) : null; }
 function projectedWordCount(root: string, bookId: string, changes: FileChange[]): number { const rootPath = join(root, "books", bookId); const content = new Map<number, string>(); for (const path of listChapterFiles(rootPath)) { const number = chapterNumber(path); if (number !== null) content.set(number, readText(path) ?? ""); } for (const change of changes) if (change.path.startsWith(`books/${bookId}/manuscript/chapters/`)) { const number = chapterNumber(change.path); if (number !== null) content.set(number, change.content); } return [...content.values()].reduce((sum, text) => sum + countWords(text), 0); }
 function validateArchitecture(root: string, files: FileChange[], book: BookState, event: NovelEventType, chapter?: number): { queue: ChapterQueueState; plot: PlotGridState } { const bookRoot = `books/${book.book_id}`; const profile = getProfile(book.profile); const genre = parseOverlay<GenreConfig>(root, files, `${bookRoot}/genre.yaml`, GenreConfigSchema); const plot = parseOverlay<PlotGridState>(root, files, `${bookRoot}/plot-grid.yaml`, PlotGridSchema); const queue = parseOverlay<ChapterQueueState>(root, files, `${bookRoot}/chapter-queue.yaml`, ChapterQueueSchema); const findings = [...profile.validateGenreConfig(genre), ...(event === "book-plan" || event === "chapter-queue" ? profile.validatePlot(plot) : [])]; const packets = chapter ? queue.packets.filter((packet) => packet.chapter === chapter) : event === "chapter-queue" ? queue.packets.filter((packet) => packet.status === "ready") : []; for (const packet of packets) findings.push(...profile.validatePacket(packet)); const blockers = findings.filter((finding) => finding.severity === "blocker"); if (blockers.length) throw new Error(`Profile validation blocked ${event}:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`); if (event === "draft-chapter") { const packet = queue.packets.find((item) => item.chapter === chapter); if (!packet || packet.status !== "ready") throw new Error(`Chapter ${chapter ?? "unknown"} packet is not ready.`); const canon = parseOverlay<CanonState>(root, files, "series/canon.yaml", CanonSchema); const threads = parseOverlay<StoryThreadsState>(root, files, "series/story-threads.yaml", StoryThreadsSchema); const sources = parseOverlay<SourceRegisterState>(root, files, "research/source-register.yaml", SourceRegisterSchema); const refs = packetReferenceFindings(packet, canon, threads, sources, plot).filter((finding) => finding.severity === "blocker"); if (refs.length) throw new Error(`Reference validation blocked drafting:\n${refs.map((item) => `- ${item.message}`).join("\n")}`); } return { queue, plot }; }
@@ -34,6 +95,7 @@ export function applyNovelEvent(root: string, input: NovelEventInput): NovelEven
     case "chapter-queue": project.current_stage = "drafting"; project.next_gate = null; book.status = "drafting"; break;
     case "draft-chapter": { if (!input.chapter || !queue || !plot) throw new Error("draft-chapter requires a chapter number and valid queue."); const packet = queue.packets.find((item) => item.chapter === input.chapter); if (!packet) throw new Error(`Chapter ${input.chapter} packet not found.`); packet.status = "drafted"; setChange(changes, `books/${book.book_id}/chapter-queue.yaml`, stringifyYaml(queue)); book.current_chapter = Math.max(book.current_chapter, input.chapter); book.actual_words = projectedWordCount(root, book.book_id, changes); book.status = "drafting"; if (input.chapter === 1 && project.automation.require_first_chapter_approval && project.gates["first-chapter-approval"] !== "approved") { project.gates["first-chapter-approval"] = "pending"; project.next_gate = "first-chapter-approval"; project.current_stage = "drafting"; } else if (packet.milestone_gate) { if (!(packet.milestone_gate in project.gates)) throw new Error(`Unknown milestone gate: ${packet.milestone_gate}`); project.gates[packet.milestone_gate] = "pending"; project.next_gate = packet.milestone_gate; project.current_stage = "act-review"; book.act_checkpoint = packet.milestone_gate; } else { const remaining = queue.packets.some((item) => item.status === "ready"); const manuscriptNumbers = new Set(listChapterFiles(join(root, "books", book.book_id)).map(chapterNumber).filter((item): item is number => item !== null)); manuscriptNumbers.add(input.chapter); const allPlanned = plot.chapters.length > 0 && plot.chapters.every((item) => manuscriptNumbers.has(item.chapter)); project.current_stage = remaining ? "drafting" : allPlanned ? "manuscript-review" : "chapter-queue"; project.next_gate = null; } break; }
     case "review": { const tickets = parseOverlay<RevisionTicketsState>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsSchema); book.status = "review"; if (openBlockingTickets(tickets).length) project.current_stage = "revision"; else if (input.scope === "manuscript" || project.current_stage === "manuscript-review") { project.current_stage = "manuscript-review"; project.gates["manuscript-approval"] = "pending"; project.next_gate = "manuscript-approval"; } else { project.current_stage = "act-review"; if (!project.next_gate) { project.next_gate = "act-1-review"; project.gates["act-1-review"] = "pending"; } } break; }
+    case "reader-test": break;
     case "revise": { const tickets = parseOverlay<RevisionTicketsState>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsSchema); book.status = "revision"; if (openBlockingTickets(tickets).length) project.current_stage = "revision"; else if (project.next_gate === "manuscript-approval") project.current_stage = "manuscript-review"; else if (project.next_gate) project.current_stage = "act-review"; else project.current_stage = "drafting"; break; }
     case "canon-lock": book.canon_locked = true; book.status = "locked"; project.current_stage = "packaging"; project.next_gate = null; break;
     case "package": book.status = "packaged"; project.gates["package-approval"] = "pending"; project.next_gate = "package-approval"; project.current_stage = "packaging"; break;
