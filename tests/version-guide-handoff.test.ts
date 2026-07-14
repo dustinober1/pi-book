@@ -107,3 +107,18 @@ test("guarded events refresh status and handoff without recording their own in-f
     assert.doesNotMatch(readFileSync(join(root, "STATUS.md"), "utf8"), /uncommitted file/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
+
+test("guarded events preserve warnings for unrelated pre-existing dirty files", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Existing Dirtiness", projectType: "standalone", profile: "thriller" });
+    writeFileSync(join(root, "author-notes.txt"), "Uncommitted author notes.\n", "utf8");
+    applyNovelEvent(root, {
+      eventType: "voice-profile",
+      expectedStage: "voice-intake",
+      expectedProjectHash: projectStateHash(root),
+      files: [{ path: "series/voice-profile.md", content: "# Voice Profile\n\nEvidence-specific restraint.\n" }],
+    });
+    assert.match(readFileSync(join(root, "STATUS.md"), "utf8"), /1 uncommitted file\(s\) exist/i);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
