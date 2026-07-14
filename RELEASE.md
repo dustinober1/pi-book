@@ -7,6 +7,7 @@ Do not create the `v1.1.0` tag until the feature pull request is merged and the 
 ### Code and compatibility
 
 - [ ] `package.json` reports `1.1.0`.
+- [ ] `package-lock.json` reports `1.1.0` in the root package metadata.
 - [ ] New projects write `novel_forge_version: 1.1.0`.
 - [ ] Projects without the field remain readable and receive an upgrade warning.
 - [ ] Projects created by a newer package version are blocked safely.
@@ -28,7 +29,7 @@ Do not create the `v1.1.0` tag until the feature pull request is merged and the 
 - [ ] A new user can start with `/novel-start` and continue with `/novel` without memorizing a gate identifier.
 - [ ] Pending gates expose approve, request changes, and evidence actions.
 - [ ] Rejected gates expose an exact repair action.
-- [ ] Every guarded workflow event refreshes `STATUS.md` and `HANDOFF.md` in the same checkpoint.
+- [ ] Every guarded workflow event refreshes `STATUS.md` and `HANDOFF.md` inside the same rollback-capable transaction and Git checkpoint.
 - [ ] Undo rejects dirty trees, non-Novel-Forge commits, and unconfirmed approval reversal.
 - [ ] Adoption preserves source files and refuses an occupied manuscript directory.
 - [ ] Reader imports reject simulated sources, duplicates, malformed booleans, and unmatched delayed rows.
