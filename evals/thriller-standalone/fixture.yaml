@@ -1,0 +1,44 @@
+schema_version: "1.0.0"
+profile: thriller
+project_type: standalone
+genre:
+  schema_version: "1.0.0"
+  profile: thriller
+  settings: { thriller_type: techno, suspense_style: escalating, violence_level: moderate, procedural_detail: high, series_model: recurring-protagonist }
+  requirements: { visible_external_pressure: true, protagonist_agency: required, opposition_positive_case: required, midpoint_state_change: required, climax_reader_legibility: required }
+packet:
+  chapter: 1
+  title: The Abort Window
+  status: ready
+  pov: lead
+  purpose: force the lead to act before proof is complete
+  scene_engine: countdown field intervention
+  pressure_movement: the deadline becomes physical and public
+  character_movement: the lead accepts responsibility for an unauthorized choice
+  relationship_movement: trust with the partner becomes conditional
+  story_thread_refs: []
+  continuity_refs: []
+  character_refs: [lead, partner]
+  required_research: []
+  profile_fields: { threat_delta: "+2", evidence_delta: "partial packet with contested provenance", reader_forecast_change: "the apparent saboteur may be containing a larger failure", protagonist_choice: "crosses the security boundary" }
+  ending_hook: the safety system begins the action she meant to prevent
+  milestone_gate: first-chapter-approval
+  target_words: 3200
+plot:
+  schema_version: "1.0.0"
+  acts:
+    - { id: act-1, purpose: expose the threat and force ownership, start_chapter: 1, end_chapter: 10, gate: act-1-review }
+    - { id: act-2, purpose: reverse the operating model, start_chapter: 11, end_chapter: 20, gate: midpoint-review }
+  chapters:
+    - { chapter: 1, act: act-1, causality: "Because the system starts the countdown, the lead violates protocol to interrupt it.", state_change: "The threat becomes public and the lead becomes accountable.", setup_ids: [], payoff_ids: [], profile_obligations: ["midpoint state change scheduled", "opposition acts independently"] }
+sample_chapter: |
+  The alarm did not sound. That was the first problem. The second was the pressure gauge climbing in silence while everyone in the control room watched the wrong screen. Mara pulled the maintenance key from the supervisor's hand and crossed the yellow line. Nobody ordered her to stop. They were already deciding who would carry the blame if she failed. Behind the sealed door, the manifold opened another degree.
+review_finding:
+  severity: medium
+  category: evidence-provenance
+  chapter: 1
+  evidence: The recovered packet is used before the scene establishes who captured it.
+  problem: The reader cannot distinguish risky evidence from convenient evidence.
+  requiredChange: Seed the packet's source and one reason it may be incomplete.
+  protectedConstraints: [Keep the unauthorized crossing, Do not identify the saboteur]
+  acceptanceTests: [The packet has visible provenance, Its evidentiary limit remains active]

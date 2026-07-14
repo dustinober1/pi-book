@@ -1,73 +1,29 @@
 {
-  "name": "genesis-for-pi",
-  "version": "0.4.0",
-  "description": "Genesis for Pi: an extension-first Book Genesis workflow with PRD-first intake, writer-gated automation, single-book and whole-series commands, blocker clearing, voice protection, audits, Genesis Score, and editorial packaging.",
+  "name": "novel-forge-for-pi",
+  "version": "1.0.0",
+  "description": "A compact, series-capable Pi workflow for high-quality thriller and romantasy novels.",
   "private": true,
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/dustinober1/pi-book.git"
-  },
-  "homepage": "https://github.com/dustinober1/pi-book",
-  "bugs": {
-    "url": "https://github.com/dustinober1/pi-book/issues"
-  },
-  "type": "module",
-  "keywords": [
-    "pi-package",
-    "pi-extension",
-    "pi-skill",
-    "agent-skill",
-    "book-genesis",
-    "genesis",
-    "book-writing",
-    "writing"
-  ],
   "license": "UNLICENSED",
+  "type": "module",
+  "repository": { "type": "git", "url": "https://github.com/dustinober1/pi-book.git" },
+  "keywords": ["pi-package", "novel-writing", "thriller", "romantasy", "series-writing", "continuity"],
   "scripts": {
-    "test": "node scripts/validate-genesis-package.mjs && node scripts/test-genesis-sample-projects.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts tests/e2e/*.test.ts",
+    "test:e2e": "node --import tsx --test tests/e2e/*.test.ts",
     "audit:ngrams": "node scripts/ngram-audit.mjs",
     "audit:rhetoric": "node scripts/rhetorical-pattern-audit.mjs",
     "audit:continuity": "node scripts/continuity-scan.mjs",
+    "audit:integrity": "node scripts/integrity-audit.mjs",
     "audit:structure": "node scripts/structure-audit.mjs",
     "audit:spelling": "node scripts/spelling-consistency-audit.mjs",
     "audit:temporal": "node scripts/temporal-reference-audit.mjs",
-    "audit:mechanics": "node scripts/copy-mechanics-audit.mjs"
+    "audit:mechanics": "node scripts/copy-mechanics-audit.mjs",
+    "eval": "node --import tsx scripts/evaluate-fixtures.ts"
   },
-  "pi": {
-    "skills": [
-      "."
-    ],
-    "prompts": [
-      "prompts"
-    ],
-    "extensions": [
-      "extensions"
-    ]
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
-  },
-  "files": [
-    "SKILL.md",
-    "agents/",
-    "references/",
-    "prompts/",
-    "extensions/",
-    "docs/",
-    "examples/",
-    "scripts/ngram-audit.mjs",
-    "scripts/rhetorical-pattern-audit.mjs",
-    "scripts/continuity-scan.mjs",
-    "scripts/structure-audit.mjs",
-    "scripts/spelling-consistency-audit.mjs",
-    "scripts/temporal-reference-audit.mjs",
-    "scripts/copy-mechanics-audit.mjs",
-    "README.md"
-  ],
-  "devDependencies": {
-    "@types/node": "^26.1.0"
-  },
-  "dependencies": {
-    "typebox": "^1.3.3"
-  }
+  "pi": { "skills": ["."], "extensions": ["extensions/novel-forge.ts"] },
+  "files": ["SKILL.md", "README.md", "agents/", "extensions/", "src/", "profiles/", "references/", "scripts/"],
+  "dependencies": { "@sinclair/typebox": "^0.34.52", "typebox": "^1.3.3", "yaml": "^2.9.0" },
+  "devDependencies": { "@earendil-works/pi-coding-agent": "0.80.3", "@types/node": "^24.0.0", "tsx": "^4.20.6", "typescript": "^5.9.3" },
+  "peerDependencies": { "@earendil-works/pi-coding-agent": "^0.80.3" }
 }

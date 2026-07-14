@@ -1,0 +1,54 @@
+schema_version: "1.0.0"
+product: novel-forge-for-pi
+stages:
+  - id: voice-intake
+    gate: voice-approval
+    next: series-planning
+  - id: series-planning
+    gate: null
+    next: book-planning
+  - id: book-planning
+    gate: book-plan-approval
+    next: chapter-queue
+  - id: chapter-queue
+    gate: null
+    next: drafting
+  - id: drafting
+    gate: milestone-dependent
+    next: act-review
+  - id: act-review
+    gate: review-blockers
+    next: revision
+  - id: revision
+    gate: regression
+    next: drafting
+  - id: manuscript-review
+    gate: manuscript-approval
+    next: canon-lock
+  - id: canon-lock
+    gate: null
+    next: packaging
+  - id: packaging
+    gate: package-approval
+    next: complete
+  - id: complete
+    gate: null
+    next: null
+gate_transitions:
+  voice-approval: series-planning
+  book-plan-approval: chapter-queue
+  first-chapter-approval: drafting
+  act-1-review: drafting
+  midpoint-review: drafting
+  pre-final-act-review: drafting
+  manuscript-approval: canon-lock
+  package-approval: complete
+gate_owners:
+  voice-approval: voice-intake
+  book-plan-approval: book-planning
+  first-chapter-approval: drafting
+  act-1-review: act-review
+  midpoint-review: act-review
+  pre-final-act-review: act-review
+  manuscript-approval: manuscript-review
+  package-approval: packaging

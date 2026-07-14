@@ -1,0 +1,44 @@
+schema_version: "1.0.0"
+profile: romantasy
+project_type: series
+genre:
+  schema_version: "1.0.0"
+  profile: romantasy
+  settings: { story_balance: fantasy-primary, romance_contract: central, ending_contract: series-progress, heat_level: open-door, fantasy_scale: epic, point_of_view: dual, relationship_structure: monogamous }
+  requirements: { protagonist_independent_goal: true, character_specific_attraction: true, explicit_consent_logic: true, magic_cost: true, fantasy_conflict_resolution: true, declared_ending_contract: true }
+packet:
+  chapter: 14
+  title: The Paired Crossing
+  status: ready
+  pov: mara
+  purpose: advance the war objective while changing the relationship's power balance
+  scene_engine: dangerous forced cooperation
+  pressure_movement: the bridge closes behind the army and demands a permanent bond
+  character_movement: Mara refuses the easy bond and invents a costlier route
+  relationship_movement: attraction becomes explicit while trust remains incomplete
+  story_thread_refs: []
+  continuity_refs: []
+  character_refs: [mara, kael]
+  required_research: []
+  profile_fields: { fantasy_movement: "paired magic opens the invasion route", romance_movement: "desire becomes spoken without resolving betrayal", trust_delta: "+1 then checked", desire_conflict: "wanting him versus preserving magical autonomy", power_balance: "Mara controls the route; Kael can absorb its cost", consent_state: "both explicitly reject the permanent bond" }
+  ending_hook: Mara discovers he has carried part of her old wound since Book One
+  milestone_gate: midpoint-review
+  target_words: 3700
+plot:
+  schema_version: "1.0.0"
+  acts:
+    - { id: act-1, purpose: inherit the prior-book relationship honestly, start_chapter: 1, end_chapter: 10, gate: act-1-review }
+    - { id: act-2, purpose: change alliance and intimacy conditions, start_chapter: 11, end_chapter: 20, gate: midpoint-review }
+  chapters:
+    - { chapter: 14, act: act-2, causality: "Because the bridge demands permanence, Mara invents a temporary bond that costs both armies time.", state_change: "The invasion route opens, desire is acknowledged, and magical autonomy becomes the next conflict.", setup_ids: [], payoff_ids: [], profile_obligations: ["romance trust progression", "fantasy war and magic cost", "earned betrayal rupture"] }
+sample_chapter: |
+  The bridge wanted a vow. Mara felt the shape of it press against her teeth, ancient and absolute. Kael offered his hand but not the promise. That distinction was why she still wanted him, and why wanting him remained dangerous. She drew a second circle inside the first and divided the cost between their armies. He understood before she explained. Together they said no to the bond. The bridge opened anyway, and his old scar began to bleed.
+review_finding:
+  severity: high
+  category: series-relationship-canon
+  chapter: 14
+  evidence: Kael carries a wound transferred during the prior installment.
+  problem: The reveal risks changing the established consent and knowledge state of Book One.
+  requiredChange: Preserve what both characters knew then while revealing what the magic concealed.
+  protectedConstraints: [Do not retroactively grant consent, Keep Mara's autonomy]
+  acceptanceTests: [Prior relationship canon remains intact, The hidden cost has a seeded mechanism]

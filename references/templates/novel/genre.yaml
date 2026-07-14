@@ -1,0 +1,14 @@
+schema_version: "1.0.0"
+profile: thriller
+settings:
+  thriller_type: techno
+  suspense_style: escalating
+  violence_level: moderate
+  procedural_detail: high
+  series_model: recurring-protagonist
+requirements:
+  visible_external_pressure: true
+  protagonist_agency: required
+  opposition_positive_case: required
+  midpoint_state_change: required
+  climax_reader_legibility: required
