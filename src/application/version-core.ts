@@ -15,7 +15,9 @@ function parts(value: string): [number, number, number] | null {
 
 function compare(left: [number, number, number], right: [number, number, number]): number {
   for (let index = 0; index < 3; index += 1) {
-    const difference = left[index] - right[index];
+    const leftPart = left[index] ?? 0;
+    const rightPart = right[index] ?? 0;
+    const difference = leftPart - rightPart;
     if (difference !== 0) return difference;
   }
   return 0;
@@ -24,7 +26,7 @@ function compare(left: [number, number, number], right: [number, number, number]
 export function versionFindings(project: ProjectState): VersionFinding[] {
   const installed = parts(NOVEL_FORGE_VERSION)!;
   if (!project.novel_forge_version) {
-    return [{ severity: "warning", message: `PROJECT.yaml is missing novel_forge_version; run /novel and choose Upgrade project metadata.` }];
+    return [{ severity: "warning", message: "PROJECT.yaml is missing novel_forge_version; run /novel and choose Upgrade project metadata." }];
   }
   const recorded = parts(project.novel_forge_version);
   if (!recorded) {
