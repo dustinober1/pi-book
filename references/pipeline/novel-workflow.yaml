@@ -43,3 +43,12 @@ gate_transitions:
   pre-final-act-review: drafting
   manuscript-approval: canon-lock
   package-approval: complete
+gate_owners:
+  voice-approval: voice-intake
+  book-plan-approval: book-planning
+  first-chapter-approval: drafting
+  act-1-review: act-review
+  midpoint-review: act-review
+  pre-final-act-review: act-review
+  manuscript-approval: manuscript-review
+  package-approval: packaging

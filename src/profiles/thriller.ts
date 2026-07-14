@@ -1,72 +1,27 @@
-import type { ChapterPacket, GenreConfig } from "../domain/schemas.js";
+import { Type } from "@sinclair/typebox";
+import { Value } from "@sinclair/typebox/value";
+import type { ChapterPacket, GenreConfig, PlotGridState } from "../domain/schemas.js";
 import type { NovelProfile, ProfileFinding } from "./types.js";
-
 const requiredProfileFields = ["threat_delta", "evidence_delta", "reader_forecast_change", "protagonist_choice"] as const;
-
+const profileFieldsSchema = Type.Object({ threat_delta: Type.String({ minLength: 1 }), evidence_delta: Type.String({ minLength: 1 }), reader_forecast_change: Type.String({ minLength: 1 }), protagonist_choice: Type.String({ minLength: 1 }) }, { additionalProperties: true });
+const genreSettingsSchema = Type.Object({
+  thriller_type: Type.Union(["techno", "military-intelligence", "political", "psychological", "legal", "medical", "espionage", "crime", "domestic", "action", "conspiracy"].map(Type.Literal)),
+  suspense_style: Type.Union([Type.Literal("escalating"), Type.Literal("slow-burn"), Type.Literal("cat-and-mouse")]),
+  violence_level: Type.Union([Type.Literal("low"), Type.Literal("moderate"), Type.Literal("high")]),
+  procedural_detail: Type.Union([Type.Literal("low"), Type.Literal("moderate"), Type.Literal("high")]),
+  series_model: Type.Union([Type.Literal("recurring-protagonist"), Type.Literal("ensemble"), Type.Literal("linked-world")]),
+}, { additionalProperties: false });
+const genreRequirementsSchema = Type.Object({ visible_external_pressure: Type.Boolean(), protagonist_agency: Type.Literal("required"), opposition_positive_case: Type.Literal("required"), midpoint_state_change: Type.Literal("required"), climax_reader_legibility: Type.Literal("required") }, { additionalProperties: false });
+function schemaFinding(schema: object, value: unknown, category: string): ProfileFinding[] { return Value.Check(schema as never, value) ? [] : [{ severity: "blocker", category, message: `Invalid ${category} values for the thriller profile.` }]; }
 export const thrillerProfile: NovelProfile = {
-  id: "thriller",
-  label: "Thriller",
-  defaultGenreConfig(): GenreConfig {
-    return {
-      schema_version: "1.0.0",
-      profile: "thriller",
-      settings: {
-        thriller_type: "techno",
-        suspense_style: "escalating",
-        violence_level: "moderate",
-        procedural_detail: "high",
-        series_model: "recurring-protagonist",
-      },
-      requirements: {
-        visible_external_pressure: true,
-        protagonist_agency: "required",
-        opposition_positive_case: "required",
-        midpoint_state_change: "required",
-        climax_reader_legibility: "required",
-      },
-    };
-  },
-  planningQuestions: [
-    "What is the threat, target, capability, escalation path, and consequence of delay?",
-    "What can the opposition plausibly observe, authorize, execute, and conceal?",
-    "What evidence exists, who controls it, what does it prove, and what does it not prove?",
-    "What false interpretation can a reasonable protagonist or reader hold?",
-    "What irreversible choice gives the protagonist ownership of the plot?",
-    "What state changes at the midpoint beyond discovering another fact?",
-    "What closes in this book and what pressure legitimately continues into the next?",
-  ],
+  id: "thriller", label: "Thriller", profileFieldsSchema, genreSettingsSchema, genreRequirementsSchema,
+  defaultGenreConfig() { return { schema_version: "1.0.0", profile: "thriller", settings: { thriller_type: "techno", suspense_style: "escalating", violence_level: "moderate", procedural_detail: "high", series_model: "recurring-protagonist" }, requirements: { visible_external_pressure: true, protagonist_agency: "required", opposition_positive_case: "required", midpoint_state_change: "required", climax_reader_legibility: "required" } }; },
+  planningQuestions: ["What is the threat, target, capability, escalation path, and consequence of delay?", "What can the opposition plausibly observe, authorize, execute, and conceal?", "What evidence exists, who controls it, what does it prove, and what does it not prove?", "What false interpretation can a reasonable protagonist or reader hold?", "What irreversible choice gives the protagonist ownership of the plot?", "What state changes at the midpoint beyond discovering another fact?", "What closes in this book and what pressure legitimately continues into the next?"],
   chapterPacketRequirements: requiredProfileFields,
-  milestoneReviewLanes: [
-    "suspense and pacing",
-    "evidence, clues, red herrings, and reveals",
-    "protagonist agency and opposition logic",
-    "technical and institutional plausibility",
-    "continuity and chronology",
-    "voice and line quality",
-  ],
-  draftingRules: [
-    "Make threat movement visible in the lived world, not only on screens.",
-    "Give discoveries provenance and limits.",
-    "Vary scene engines across consecutive chapters.",
-    "Make the protagonist choose, risk, sacrifice, or make a costly mistake.",
-    "Keep the opposition capable and attached to a defensible value.",
-    "Seed the climax mechanism before it becomes operational.",
-  ],
-  validatePacket(packet: ChapterPacket): ProfileFinding[] {
-    const findings: ProfileFinding[] = [];
-    for (const field of requiredProfileFields) {
-      if (!(field in packet.profile_fields) || packet.profile_fields[field] === "") {
-        findings.push({ severity: "blocker", category: "thriller-packet", message: `Missing thriller packet field: ${field}` });
-      }
-    }
-    if (!packet.pressure_movement.trim()) findings.push({ severity: "blocker", category: "pressure", message: "Thriller chapter has no pressure movement." });
-    if (!packet.ending_hook.trim()) findings.push({ severity: "high", category: "hook", message: "Thriller chapter has no honest forward hook." });
-    return findings;
-  },
-  endingRules: [
-    "Close the immediate battle with decisive external consequence.",
-    "Do not let a next-book hook invalidate the present resolution.",
-    "Ensure the reader can track the final mechanism and evidence chain.",
-    "Let protagonist action, not coincidence, drive the climax.",
-  ],
+  milestoneReviewLanes: ["suspense and pacing", "evidence, clues, red herrings, and reveals", "protagonist agency and opposition logic", "technical and institutional plausibility", "continuity and chronology", "voice and line quality"],
+  draftingRules: ["Make threat movement visible in the lived world, not only on screens.", "Give discoveries provenance and limits.", "Vary scene engines across consecutive chapters.", "Make the protagonist choose, risk, sacrifice, or make a costly mistake.", "Keep the opposition capable and attached to a defensible value.", "Seed the climax mechanism before it becomes operational."],
+  validatePacket(packet) { const findings = schemaFinding(profileFieldsSchema, packet.profile_fields, "thriller packet"); if (!packet.pressure_movement.trim()) findings.push({ severity: "blocker", category: "pressure", message: "Thriller chapter has no pressure movement." }); if (!packet.ending_hook.trim()) findings.push({ severity: "high", category: "hook", message: "Thriller chapter has no honest forward hook." }); return findings; },
+  validateGenreConfig(config) { if (config.profile !== "thriller") return [{ severity: "blocker", category: "genre", message: "Genre profile is not thriller." }]; return [...schemaFinding(genreSettingsSchema, config.settings, "thriller settings"), ...schemaFinding(genreRequirementsSchema, config.requirements, "thriller requirements")]; },
+  validatePlot(plot) { const findings: ProfileFinding[] = []; if (!plot.chapters.length) findings.push({ severity: "blocker", category: "architecture", message: "Thriller plot grid has no chapters." }); if (plot.chapters.some((chapter) => !chapter.state_change.trim() || /^none$/i.test(chapter.state_change) || /and then/i.test(chapter.causality))) findings.push({ severity: "high", category: "causality", message: "Thriller plot contains a no-state-change or and-then chapter." }); const midpoint = plot.acts.some((act) => act.gate === "midpoint-review") || plot.chapters.some((chapter) => chapter.profile_obligations.some((item) => /midpoint|reversal|state change/i.test(item))); if (!midpoint) findings.push({ severity: "high", category: "midpoint", message: "Thriller architecture does not identify a midpoint state change." }); return findings; },
+  endingRules: ["Close the immediate battle with decisive external consequence.", "Do not let a next-book hook invalidate the present resolution.", "Ensure the reader can track the final mechanism and evidence chain.", "Let protagonist action, not coincidence, drive the climax."],
 };

@@ -1,11 +1,6 @@
 # Novel Forge for Pi
 
-Novel Forge is a compact, series-capable production workflow for high-quality novels. Version 1 supports two profiles:
-
-- **Thriller** — threat, evidence, reveals, agency, procedural plausibility, and escalation.
-- **Romantasy** — romance/fantasy balance, chemistry, trust, consent, power, magic cost, and emotional payoff.
-
-Novel Forge optimizes for reader trust and author-specific voice. It does not chase AI-detector scores or disguise provenance through cosmetic word replacement.
+Novel Forge is a compact, series-capable production workflow for high-quality **thriller** and **romantasy** novels. It protects author-specific voice, canon, story threads, causal architecture, and evidence-backed revision without chasing AI-detector scores.
 
 ## Install
 
@@ -18,34 +13,44 @@ pi install git:github.com/dustinober1/pi-book@novel-forge-v1
 | Command | Purpose |
 | --- | --- |
 | `/novel-start` | Create a standalone or series-capable project |
-| `/novel-status` | Show gates, blockers, manuscript progress, and the next safe action |
+| `/novel-status` | Show gates, blockers, manuscript progress, and next action |
 | `/novel-plan` | Build or repair voice, series, and active-book plans |
 | `/novel-run` | Advance safe work until a gate, blocker, or requested limit |
 | `/novel-draft` | Draft the next approved chapter packet |
 | `/novel-review` | Review a chapter, act, manuscript, or series |
-| `/novel-revise` | Apply open revision tickets with protected constraints |
-| `/novel-package` | Compile the manuscript and prepare an editorial package |
+| `/novel-revise` | Apply open revision tickets |
+| `/novel-package` | Compile and prepare the editorial package |
 
-Administrative migration command:
+Administrative migration: `/novel-migrate thriller|romantasy [--dry-run] [--force]`.
 
-```text
-/novel-migrate
-```
-
-## Typical workflow
+## Workflow
 
 ```text
 /novel-start
 /novel-plan voice
 /novel-run --approve voice-approval
+/novel-plan series
 /novel-plan book
 /novel-run --approve book-plan-approval
-/novel-run --until first-chapter-gate
+/novel-run --until first-chapter-approval
 /novel-run --approve first-chapter-approval
 /novel-run --until act-1-review
 /novel-review act
 /novel-revise
 ```
+
+Approvals cannot skip stages. A gate must be the active `next_gate`, be `pending`, and belong to the current stage. Direct drafting, review, revision, packaging, and series expansion also enforce stage and handoff rules.
+
+## Transactional agent changes
+
+Planning, drafting, review, revision, canon lock, and packaging prompts do not ask the agent to write files directly. They require the `novel_apply_event` tool. The tool:
+
+1. verifies the expected stage and project hash;
+2. enforces an event-specific file allowlist;
+3. validates YAML, profile values, canon/thread/research references, and packet state;
+4. derives PROJECT.yaml and BOOK.yaml transitions in code;
+5. applies the files as one rollback-capable transaction;
+6. creates one Git checkpoint for the workflow event.
 
 ## Compact project model
 
@@ -74,34 +79,25 @@ research/
   notes/
 ```
 
-A standalone is a one-book project, not a different file format. It can become a series without migration.
+A standalone is a one-book project, not a different format. Adding another book normally requires the current book to be canon-locked; `--force` is an explicit override.
 
-## Automation boundaries
+## Context policy
 
-`/novel-run` automates repeatable production work, but stops for:
+Chapter context includes the approved packet, referenced canon and story threads, required research, the exact preceding chapter, relevant voice evidence, book bible, and genre settings. Missing references or paid-off/abandoned threads block drafting. Context is budgeted by section priority instead of truncating the most local prose from the end.
 
-- voice approval;
-- book-plan approval;
-- first-chapter approval;
-- act and midpoint review gates;
-- unresolved blocker tickets;
-- canon or reveal-order conflicts;
-- missing plot-critical research;
-- final manuscript and package approval.
+## Profiles
 
-Use `--approve <gate>` to record an explicit approval, and `--until <gate>` or `--max-chapters <n>` to bound automation.
+Thriller validates typed threat/evidence/forecast/choice fields, genre settings, causality, and midpoint state change. Romantasy validates typed fantasy/romance/trust/desire/power/consent fields, declared ending contract, and fantasy/romance/rupture architecture.
 
-## Quality model
+## Legacy migration
 
-Novel Forge keeps five durable concepts at the center:
+Run a dry run first:
 
-1. voice;
-2. canon;
-3. story threads;
-4. plot grid;
-5. revision tickets.
+```text
+/novel-migrate romantasy --dry-run
+```
 
-The two profiles add genre-specific rules without adding new workflows or command families.
+Migration detects multi-book Genesis workspaces, preserves legacy files, computes manuscript SHA256 checksums, creates provisional structured canon/story-thread/ticket candidates, and blocks repeat migration. Human review is still required before candidates become locked truth.
 
 ## Deterministic audits
 
@@ -115,14 +111,4 @@ npm run audit:temporal -- /path/to/project
 npm run audit:mechanics -- /path/to/project
 ```
 
-Scanner findings are evidence for review tickets, not automatic literary verdicts.
-
-## Legacy Genesis projects
-
-Run `/novel-migrate thriller` or `/novel-migrate romantasy` from an existing Genesis project. Migration:
-
-- preserves the manuscript;
-- copies legacy control files under `legacy/genesis-v0.4/`;
-- consolidates voice material;
-- maps series facts, outlines, and open findings into the compact model;
-- writes `MIGRATION_REPORT.md`.
+Scanner findings are evidence, not final literary verdicts.

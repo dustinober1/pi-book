@@ -1,113 +1,35 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
-import { ProjectSchema, type ProfileId, type ProjectState } from "../domain/schemas.js";
-import { readText } from "../infrastructure/files.js";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readdirSync } from "node:fs";
+import { basename, join, relative } from "node:path";
+import { CanonSchema, ProjectSchema, RevisionTicketsSchema, StoryThreadsSchema, type CanonState, type ProfileId, type ProjectState, type RevisionTicketsState, type StoryThreadsState } from "../domain/schemas.js";
+import { listFilesRecursive, readText } from "../infrastructure/files.js";
+import { createPreMigrationTag } from "../infrastructure/git.js";
 import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
-import { applyTransaction } from "../infrastructure/transaction.js";
+import { applyTransaction, type FileChange } from "../infrastructure/transaction.js";
 import { projectTemplateFiles } from "../project/templates.js";
-
-function copyIfExists(source: string, destination: string): boolean {
-  if (!existsSync(source)) return false;
-  mkdirSync(dirname(destination), { recursive: true });
-  cpSync(source, destination, { recursive: true });
-  return true;
-}
-
-function collectArtifact(root: string, names: string[]): string {
-  return names
-    .map((name) => readText(join(root, "artifacts", name)))
-    .filter((value): value is string => Boolean(value))
-    .join("\n\n---\n\n");
-}
-
-function projectNameFromLegacy(root: string): string {
-  const state = readText(join(root, "PROJECT_STATE.yaml")) ?? "";
-  return state.match(/^project_name:\s*["']?(.+?)["']?\s*$/m)?.[1] ?? basename(root);
-}
-
-export interface MigrationResult {
-  root: string;
-  preserved: string[];
-  mapped: string[];
-  reportPath: string;
-}
-
-export function migrateGenesisProject(root: string, profile: ProfileId): MigrationResult {
-  if (!existsSync(join(root, "PROJECT_STATE.yaml"))) {
-    throw new Error("This directory does not contain PROJECT_STATE.yaml and is not a Genesis v0.4 project.");
-  }
-  if (existsSync(join(root, "PROJECT.yaml"))) throw new Error("This project is already in Novel Forge format.");
-
-  const projectName = projectNameFromLegacy(root);
-  const legacyRoot = join(root, "legacy", "genesis-v0.4");
-  mkdirSync(legacyRoot, { recursive: true });
-  const preserved: string[] = [];
-  for (const name of ["PROJECT_STATE.yaml", "ASSUMPTIONS.md", "STATUS.md", "artifacts", "evaluations", "delivery"]) {
-    if (copyIfExists(join(root, name), join(legacyRoot, name))) preserved.push(name);
-  }
-
-  const templates = projectTemplateFiles({ projectName, projectType: "open-ended-series", profile });
-  const voice = collectArtifact(root, [
-    "author-intent.md", "taste-profile.md", "risk-budget.md", "voice-bible.md",
-    "author-voice-fingerprint.md", "human-source-bank.md", "over-polish-audit.md",
-  ]);
-  if (voice) templates["series/voice-profile.md"] = `# Migrated Voice Profile\n\nstatus: pending\n\n${voice}`;
-
-  const seriesBible = collectArtifact(root, [
-    "series-bible.md", "series-arc-map.md", "series-timeline.md", "character-state-matrix.md", "canon-lock.md",
-  ]);
-  if (seriesBible) templates["series/series-bible.md"] = `# Migrated Series Material\n\n${seriesBible}`;
-
-  const outline = collectArtifact(root, [
-    "05-outline.md", "causality-chain.md", "05-subplot-map.md", "reader-promise-tracker.md",
-    "publication-shape.md", "chapter-production-queue.md",
-  ]);
-  if (outline) templates["books/book-01/book-bible.md"] += `\n\n## Legacy architecture material\n\n${outline}`;
-
-  const review = collectArtifact(root, [
-    "08-adversarial-audit.md", "narrative-fingerprint-audit.md", "ai-tell-mitigation-audit.md",
-    "subtext-audit.md", "ear-pass.md", "revision-tickets.md",
-  ]);
-  if (review) templates["books/book-01/review-report.md"] = `# Migrated Review Material\n\n${review}`;
-
-  const project = parseYaml<ProjectState>(templates["PROJECT.yaml"] ?? "", ProjectSchema, "migrated PROJECT.yaml");
-  project.migration_history.push(new Date().toISOString());
-  templates["PROJECT.yaml"] = stringifyYaml(project);
-
-  applyTransaction(
-    root,
-    Object.entries(templates).map(([path, content]) => ({ path, content })),
-    { gitCheckpoint: false },
-  );
-
-  const oldChapters = join(root, "manuscript", "chapters");
-  const newChapters = join(root, "books", "book-01", "manuscript", "chapters");
-  mkdirSync(newChapters, { recursive: true });
-  if (existsSync(oldChapters)) {
-    for (const entry of readdirSync(oldChapters, { withFileTypes: true })) {
-      if (entry.isFile()) cpSync(join(oldChapters, entry.name), join(newChapters, entry.name));
-    }
-  }
-  mkdirSync(join(root, "research", "notes"), { recursive: true });
-
-  const mapped = ["voice profile", "series material", "book architecture", "review material", "manuscript chapters"];
-  const reportPath = join(root, "MIGRATION_REPORT.md");
-  writeFileSync(
-    reportPath,
-    [
-      "# Genesis v0.4 to Novel Forge Migration", "",
-      `- Project: ${projectName}`,
-      `- Profile: ${profile}`,
-      `- Migrated: ${new Date().toISOString()}`,
-      "", "## Preserved legacy paths", "", ...preserved.map((item) => `- legacy/genesis-v0.4/${item}`),
-      "", "## Mapped material", "", ...mapped.map((item) => `- ${item}`),
-      "", "## Required human review", "",
-      "- Approve the consolidated voice profile.",
-      "- Convert legacy prose notes into structured canon and story-thread entries.",
-      "- Rebuild the active chapter queue before automated drafting.",
-      "- Review migrated tickets before closing any issue.", "",
-    ].join("\n"),
-    "utf8",
-  );
-  return { root, preserved, mapped, reportPath };
+export interface MigrationOptions { dryRun?: boolean; force?: boolean }
+export interface MigrationResult { root: string; preserved: string[]; mapped: string[]; reportPath: string; report: string; dryRun: boolean }
+function projectNameFromLegacy(root: string): string { const state = readText(join(root, "PROJECT_STATE.yaml")) ?? ""; return state.match(/^project_name:\s*["']?(.+?)["']?\s*$/m)?.[1] ?? basename(root); }
+function candidateLines(text: string): string[] { return [...new Set(text.split(/\r?\n/).map((line) => line.replace(/^\s*[-*]\s*/, "").replace(/^\s*\|/, "").replace(/\|\s*$/, "").trim()).filter((line) => line.length >= 12 && line.length <= 300 && !/^#|^[-:| ]+$|pending|unknown|todo|tbd/i.test(line)))].slice(0, 100); }
+function collectLines(root: string, names: string[]): string[] { return names.flatMap((name) => candidateLines(readText(join(root, "artifacts", name)) ?? "")); }
+function checksum(text: string): string { return createHash("sha256").update(text).digest("hex"); }
+function detectSeriesWorkspace(root: string): void { const nested = existsSync(join(root, "books")) ? listFilesRecursive(join(root, "books"), (path) => basename(path) === "PROJECT_STATE.yaml") : []; if (existsSync(join(root, "SERIES_STATE.yaml")) || nested.length > 1) throw new Error("Genesis series workspace with multiple books detected. Migrate each book with a series-aware migration instead of flattening the workspace."); }
+function legacyFiles(root: string): string[] { const direct = ["PROJECT_STATE.yaml", "ASSUMPTIONS.md", "STATUS.md"].map((name) => join(root, name)).filter(existsSync); const dirs = ["artifacts", "evaluations", "delivery"].flatMap((name) => listFilesRecursive(join(root, name), () => true)); return [...direct, ...dirs]; }
+export function migrateGenesisProject(root: string, profile: ProfileId, options: MigrationOptions = {}): MigrationResult {
+  detectSeriesWorkspace(root); if (!existsSync(join(root, "PROJECT_STATE.yaml"))) throw new Error("This directory does not contain PROJECT_STATE.yaml and is not a Genesis v0.4 project."); if (existsSync(join(root, "PROJECT.yaml"))) throw new Error("This project is already in Novel Forge format; migration is idempotently blocked."); if (existsSync(join(root, "legacy", "genesis-v0.4")) && !options.force) throw new Error("A prior Genesis preservation directory already exists; pass force only after reviewing it.");
+  const projectName = projectNameFromLegacy(root); const templates = projectTemplateFiles({ projectName, projectType: "open-ended-series", profile });
+  const canonLines = collectLines(root, ["continuity-ledger.md", "canon-lock.md", "series-timeline.md", "character-state-matrix.md"]); const threadLines = collectLines(root, ["reader-promise-tracker.md", "reveal-spoiler-matrix.md", "installment-promise-tracker.md", "series-payoff-ledger.md"]); const ticketLines = collectLines(root, ["revision-tickets.md"]);
+  const canon = parseYaml<CanonState>(templates["series/canon.yaml"] ?? "", CanonSchema, "migrated canon"); canon.facts = canonLines.map((line, index) => ({ id: `MIG-CAN-${String(index + 1).padStart(3, "0")}`, category: "legacy-candidate", subject: line.split(/[.:|]/)[0]?.slice(0, 80) || "legacy fact", fact: line, source: "legacy/genesis-v0.4", status: "provisional", introduced_in: null })); templates["series/canon.yaml"] = stringifyYaml(canon);
+  const threads = parseYaml<StoryThreadsState>(templates["series/story-threads.yaml"] ?? "", StoryThreadsSchema, "migrated threads"); threads.threads = threadLines.map((line, index) => ({ id: `MIG-ST-${String(index + 1).padStart(3, "0")}`, type: "legacy-candidate", setup: line, reader_knows: "requires human classification", characters_know: {}, status: "planned", intended_payoff: null, last_advanced_in: null })); templates["series/story-threads.yaml"] = stringifyYaml(threads);
+  const tickets = parseYaml<RevisionTicketsState>(templates["books/book-01/revision-tickets.yaml"] ?? "", RevisionTicketsSchema, "migrated tickets"); tickets.tickets = ticketLines.map((line, index) => ({ id: `B01-T${String(index + 1).padStart(3, "0")}`, severity: /blocker|critical|high/i.test(line) ? "high" : "medium", category: "legacy-migration", chapter: Number(line.match(/chapter\s+(\d+)/i)?.[1] ?? 0) || null, evidence: line, problem: line, required_change: "Review and convert this legacy finding into a precise repair.", protected_constraints: [], acceptance_tests: ["Human reviewer confirms the migrated finding is accurately classified."], status: "open" })); templates["books/book-01/revision-tickets.yaml"] = stringifyYaml(tickets);
+  const project = parseYaml<ProjectState>(templates["PROJECT.yaml"] ?? "", ProjectSchema, "migrated PROJECT.yaml"); project.migration_history.push(new Date().toISOString()); templates["PROJECT.yaml"] = stringifyYaml(project);
+  const chapterFiles = listFilesRecursive(join(root, "manuscript", "chapters"), (path) => /\.md$/i.test(path)); const checksums = chapterFiles.map((path) => ({ path: relative(join(root, "manuscript", "chapters"), path), sha: checksum(readText(path) ?? "") }));
+  const preserved = legacyFiles(root).map((path) => relative(root, path)); const mapped = [`${canon.facts.length} canon candidate(s)`, `${threads.threads.length} story-thread candidate(s)`, `${tickets.tickets.length} ticket candidate(s)`, `${checksums.length} manuscript chapter(s)`]; const tag = options.dryRun ? null : createPreMigrationTag(root);
+  const report = ["# Genesis v0.4 to Novel Forge Migration", "", `- Project: ${projectName}`, `- Profile: ${profile}`, `- Mode: ${options.dryRun ? "dry-run" : "apply"}`, `- Pre-migration Git tag: ${tag ?? "not created (repository missing, dirty, or dry-run)"}`, "", "## Structured candidate mapping", "", ...mapped.map((item) => `- ${item}`), "", "## Preserved legacy paths", "", ...preserved.map((item) => `- legacy/genesis-v0.4/${item}`), "", "## Manuscript SHA256", "", ...checksums.map((item) => `- ${item.path}: ${item.sha}`), "", "## Required human review", "", "- Approve the consolidated voice profile.", "- Classify provisional canon and story-thread candidates.", "- Rebuild the active chapter queue before drafting.", "- Review migrated tickets before closing them.", ""].join("\n");
+  if (options.dryRun) return { root, preserved, mapped, reportPath: "", report, dryRun: true };
+  const changes: FileChange[] = Object.entries(templates).map(([path, content]) => ({ path, content }));
+  for (const path of legacyFiles(root)) changes.push({ path: `legacy/genesis-v0.4/${relative(root, path)}`, content: readText(path) ?? "" });
+  for (const path of chapterFiles) changes.push({ path: `books/book-01/manuscript/chapters/${relative(join(root, "manuscript", "chapters"), path)}`, content: readText(path) ?? "" });
+  changes.push({ path: "MIGRATION_REPORT.md", content: report }); applyTransaction(root, changes, { gitCheckpoint: false }); mkdirSync(join(root, "research", "notes"), { recursive: true });
+  return { root, preserved, mapped, reportPath: join(root, "MIGRATION_REPORT.md"), report, dryRun: false };
 }

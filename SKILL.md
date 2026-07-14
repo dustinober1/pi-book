@@ -1,50 +1,49 @@
 ---
 name: novel-forge-for-pi
-description: "Use for planning, drafting, reviewing, revising, and packaging high-quality thriller and romantasy novels or series with compact durable state, author-specific voice, continuity, and targeted revision."
+description: "Use for series-capable thriller and romantasy planning, drafting, review, revision, canon control, and packaging through the compact Novel Forge workflow."
 ---
 
 # Novel Forge for Pi
 
-Novel Forge is a compact, series-capable novel-production contract. It supports the `thriller` and `romantasy` profiles through one shared engine.
+Novel Forge uses five durable concepts: voice, canon, story threads, plot grid, and revision tickets. Thriller and romantasy are typed profiles over one workflow.
 
 ## Core rules
 
-1. Preserve author-specific voice through approved examples and explicit not-this-author constraints.
-2. Optimize for reader trust, not AI-detector games.
-3. Keep locked canon separate from provisional plans.
-4. Draft from approved chapter packets.
-5. Every chapter must change pressure, character state, relationship state, evidence, reader forecast, or the path to the ending.
-6. Update state and prose as one coherent workflow event.
-7. Run light checks after chapters and heavy review at milestones.
-8. Convert concrete review findings into revision tickets with evidence and acceptance tests.
-9. Stop at human gates and blockers.
-10. Do not create extra control artifacts unless a specific failure cannot be represented in the existing model.
+- Optimize for reader trust and author-specific voice, not AI-detector evasion.
+- Treat future-book plans as provisional until explicitly locked.
+- Draft only from a ready, profile-valid chapter packet.
+- Do not invent missing canon, thread, research, or character facts.
+- Run heavy review at milestones, not after every chapter.
+- Convert concrete review findings into evidence-backed revision tickets.
+- Never bypass active human gates.
 
-## Profiles
+## Transaction rule
 
-### Thriller
+For voice, series plan, book plan, chapter queue, drafting, review, revision, canon lock, and packaging work, prepare the allowed file contents and call `novel_apply_event`. Do not edit `PROJECT.yaml`, `BOOK.yaml`, or `STATUS.md` directly. The tool owns validation, state transitions, rollback, and Git checkpointing.
 
-Prioritize visible threat, evidence provenance, protagonist agency, opposition logic, reveal order, procedural plausibility, midpoint state change, and a legible climax.
+## Normal commands
 
-### Romantasy
+```text
+/novel-start
+/novel-status
+/novel-plan
+/novel-run
+/novel-draft
+/novel-review
+/novel-revise
+/novel-package
+```
 
-Prioritize romance/fantasy balance, character-specific attraction, trust progression, consent, power asymmetry, magic cost, independent character goals, rupture causality, and the declared ending contract.
+Administrative migration:
 
-## Required files
+```text
+/novel-migrate thriller|romantasy --dry-run
+```
 
-Read `PROJECT.yaml`, the active `BOOK.yaml`, `series/voice-profile.md`, relevant entries from `series/canon.yaml` and `series/story-threads.yaml`, the active book plan, and only the chapter context needed for the current operation.
+## Drafting context
 
-## Human gates
+Read only the active packet, referenced canon and story threads, required research, profile rules, the exact preceding chapter, relevant voice evidence, active book bible, and genre configuration. Missing or closed references are blockers.
 
-Do not silently approve:
+## Approval gates
 
-- voice profile;
-- book architecture;
-- Chapter 1;
-- milestone reviews with blocker findings;
-- final manuscript;
-- final package.
-
-## Command surface
-
-Use the eight `/novel-*` commands documented in `README.md`. `/novel-migrate` is administrative and temporary.
+Voice, book plan, first chapter, act/midpoint/pre-final review, manuscript, and package approvals are real gates. Approve only the active pending gate after reviewing its evidence.

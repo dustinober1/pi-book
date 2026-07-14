@@ -31,12 +31,8 @@
     "eval": "node --import tsx scripts/evaluate-fixtures.ts"
   },
   "pi": {
-    "skills": [
-      "."
-    ],
-    "extensions": [
-      "extensions/novel-forge.ts"
-    ]
+    "skills": ["."],
+    "extensions": ["extensions/novel-forge.ts"]
   },
   "files": [
     "SKILL.md",
@@ -50,19 +46,16 @@
   ],
   "dependencies": {
     "@sinclair/typebox": "^0.34.52",
+    "typebox": "^1.3.3",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.80.3",
     "@types/node": "^24.0.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.20.0"
-  },
-  "peerDependenciesMeta": {
-    "@earendil-works/pi-coding-agent": {
-      "optional": true
-    }
+    "@earendil-works/pi-coding-agent": "^0.80.3"
   }
 }
