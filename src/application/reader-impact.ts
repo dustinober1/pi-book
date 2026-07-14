@@ -8,6 +8,8 @@ function duplicateValues(values: string[]): string[] {
   for (const value of values) { if (seen.has(value)) duplicates.add(value); else seen.add(value); }
   return [...duplicates];
 }
+function booleanRate(values: boolean[]): number | null { return values.length ? values.filter(Boolean).length / values.length : null; }
+function ratesMatch(left: number, right: number): boolean { return Math.abs(left - right) <= 0.0001; }
 
 export function remarkabilityFindings(state: RemarkabilityState): ReaderImpactFinding[] {
   const findings: ReaderImpactFinding[] = [];
@@ -45,15 +47,41 @@ export function readerExperimentFindings(state: ReaderExperimentsState): ReaderI
     const delayedIds = experiment.delayed_responses.map((item) => item.reader_id);
     for (const id of duplicateValues(immediateIds)) findings.push({ severity: "blocker", message: `${experiment.id} has duplicate immediate response reader id ${id}.` });
     for (const id of duplicateValues(delayedIds)) findings.push({ severity: "blocker", message: `${experiment.id} has duplicate delayed response reader id ${id}.` });
-    if (["complete"].includes(experiment.status) && !experiment.delayed_responses.length) findings.push({ severity: "blocker", message: `${experiment.id} is complete but has no delayed responses.` });
+    const immediateSet = new Set(immediateIds);
+    for (const id of delayedIds.filter((item) => !immediateSet.has(item))) findings.push({ severity: "blocker", message: `${experiment.id} delayed response ${id} has no matching immediate response.` });
+
+    if (experiment.status === "complete" && !experiment.delayed_responses.length) findings.push({ severity: "blocker", message: `${experiment.id} is complete but has no delayed responses.` });
+    if (experiment.status === "delayed-pending" && !experiment.immediate_responses.length) findings.push({ severity: "warning", message: `${experiment.id} is delayed-pending without an immediate response baseline.` });
+    if (!experiment.blind && experiment.variant.trim()) findings.push({ severity: "warning", message: `${experiment.id} names a variant but is not blind; comparison bias should be disclosed.` });
+
+    const continuation = booleanRate(experiment.immediate_responses.filter((item) => item.continued_reading !== null).map((item) => item.continued_reading === true));
+    const purchase = booleanRate(experiment.immediate_responses.filter((item) => item.would_buy !== null).map((item) => item.would_buy === true));
+    const delayedHook = booleanRate(experiment.delayed_responses.map((item) => !blank(item.remembered_hook)));
+    const signatureRecall = booleanRate(experiment.delayed_responses.map((item) => item.remembered_moments.some((moment) => !blank(moment))));
+    const recommendation = booleanRate(experiment.delayed_responses.map((item) => !blank(item.recommendation_target) && !blank(item.recommendation_reason)));
+    const talkability = booleanRate(experiment.delayed_responses.map((item) => item.told_someone === true));
+    const expectedMetrics: Array<[keyof typeof experiment.metrics, number | null]> = [
+      ["continuation_rate", continuation],
+      ["purchase_intent_rate", purchase],
+      ["delayed_hook_recall_rate", delayedHook],
+      ["signature_moment_recall_rate", signatureRecall],
+      ["specific_recommendation_rate", recommendation],
+      ["talkability_rate", talkability],
+    ];
+    for (const [name, expected] of expectedMetrics) {
+      const recorded = experiment.metrics[name];
+      if (expected === null && recorded !== null) findings.push({ severity: "blocker", message: `${experiment.id} records ${name} without eligible responses.` });
+      else if (expected !== null && recorded === null && experiment.status === "complete") findings.push({ severity: "blocker", message: `${experiment.id} is complete but ${name} is missing; computed value is ${expected}.` });
+      else if (expected !== null && recorded !== null && !ratesMatch(expected, recorded)) findings.push({ severity: "blocker", message: `${experiment.id} ${name} is ${recorded}, but the recorded human responses compute to ${expected}.` });
+    }
+
     if (experiment.verdict === "validated") {
+      if (experiment.immediate_responses.length < experiment.minimum_reader_count || experiment.delayed_responses.length < experiment.minimum_reader_count) findings.push({ severity: "blocker", message: `${experiment.id} uses a validated verdict before meeting its minimum reader count of ${experiment.minimum_reader_count} in both sessions.` });
       if (!experiment.delayed_responses.length) findings.push({ severity: "blocker", message: `${experiment.id} uses a validated verdict without delayed responses.` });
       if (!experiment.immediate_responses.length) findings.push({ severity: "blocker", message: `${experiment.id} uses a validated verdict without immediate responses.` });
       const metrics = experiment.metrics;
       if ([metrics.delayed_hook_recall_rate, metrics.signature_moment_recall_rate, metrics.specific_recommendation_rate].some((value) => value === null)) findings.push({ severity: "blocker", message: `${experiment.id} uses a validated verdict without complete delayed recall and recommendation metrics.` });
     }
-    if (experiment.status === "delayed-pending" && !experiment.immediate_responses.length) findings.push({ severity: "warning", message: `${experiment.id} is delayed-pending without an immediate response baseline.` });
-    if (!experiment.blind && experiment.variant.trim()) findings.push({ severity: "warning", message: `${experiment.id} names a variant but is not blind; comparison bias should be disclosed.` });
   }
   return findings;
 }
