@@ -106,6 +106,7 @@ const NullableRateSchema = Type.Union([Type.Number({ minimum: 0, maximum: 1 }), 
 
 export const ReaderResponseSchema = Type.Object({
   reader_id: Type.String({ minLength: 1 }),
+  source: Type.Literal("human"),
   segment: Type.String(),
   recorded_at: Type.String(),
   continued_reading: Type.Union([Type.Boolean(), Type.Null()]),
@@ -146,6 +147,7 @@ export const ReaderExperimentSchema = Type.Object({
   blind: Type.Boolean(),
   target_reader: Type.String(),
   sample_path: Type.String(),
+  minimum_reader_count: Type.Integer({ minimum: 1, maximum: 1000 }),
   immediate_responses: Type.Array(ReaderResponseSchema),
   delayed_after_hours: Type.Integer({ minimum: 24, maximum: 168 }),
   delayed_responses: Type.Array(ReaderResponseSchema),
