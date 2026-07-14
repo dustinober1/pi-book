@@ -17,8 +17,10 @@ test("the packed extension imports and registers against the installed Pi API bo
     const module = await import(pathToFileURL(resolve(packageRoot, "extensions", "novel-forge.ts")).href);
     const commands: string[] = []; const tools: string[] = [];
     module.default({ registerCommand(name: string) { commands.push(name); }, registerTool(tool: { name: string }) { tools.push(tool.name); }, sendUserMessage() {} });
-    assert.equal(commands.length, 10);
+    assert.equal(commands.length, 12);
+    assert.ok(commands.includes("novel"));
     assert.ok(commands.includes("novel-readers"));
+    assert.ok(commands.includes("novel-adopt"));
     assert.deepEqual(tools, ["novel_apply_event"]);
     assert.match(readFileSync(resolve(packageRoot, "package.json"), "utf8"), /novel-forge-for-pi/);
   } finally { rmSync(temp, { recursive: true, force: true }); }
