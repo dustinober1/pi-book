@@ -90,7 +90,8 @@ test("CSV import rejects simulated, duplicate, malformed, and unmatched rows", (
     assert.throws(() => importReaderResponses(root, prepared.experimentId, csv), /source.*human/i);
     writeFileSync(csv, `${header}\nimmediate,R-001,human,core,now,maybe,true,,,,,,,,,,,\n`, "utf8");
     assert.throws(() => importReaderResponses(root, prepared.experimentId, csv), /boolean/i);
-    writeFileSync(csv, `${header}\ndelayed,R-002,human,core,now,,,,,,,hook,moment,description,question,linger,target,reason,true\n`, "utf8");
+    const unmatched = ["delayed", "R-002", "human", "core", "now", "", "", "", "", "", "hook", "moment", "description", "question", "linger", "target", "reason", "true"].join(",");
+    writeFileSync(csv, `${header}\n${unmatched}\n`, "utf8");
     assert.throws(() => importReaderResponses(root, prepared.experimentId, csv), /matching immediate/i);
     writeFileSync(csv, `${header}\nimmediate,R-001,human,core,now,true,true,,,,,,,,,,,\nimmediate,R-001,human,core,now,true,true,,,,,,,,,,,\n`, "utf8");
     assert.throws(() => importReaderResponses(root, prepared.experimentId, csv), /duplicate/i);
