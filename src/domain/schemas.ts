@@ -33,6 +33,7 @@ export type Approval = Static<typeof ApprovalSchema>;
 
 export const ProjectSchema = Type.Object({
   schema_version: Type.Literal("1.0.0"),
+  novel_forge_version: Type.Optional(Type.String({ minLength: 1 })),
   project_name: Type.String({ minLength: 1 }),
   project_type: ProjectTypeSchema,
   active_book: Type.String({ pattern: "^book-[0-9]{2}$" }),

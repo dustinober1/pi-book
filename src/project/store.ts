@@ -4,7 +4,7 @@ import { BookSchema, ProjectSchema, RevisionTicketsSchema, type BookState, type 
 import { findProjectRoot, readText, safeSlug } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { applyTransaction, type FileChange } from "../infrastructure/transaction.js";
-import { ensureGit } from "../infrastructure/git.js";
+import { commitWorkflowEvent, ensureGit } from "../infrastructure/git.js";
 import { projectTemplateFiles, type ProjectTemplateOptions } from "./templates.js";
 
 export function initializeProject(parent: string, options: ProjectTemplateOptions): string {
@@ -15,7 +15,7 @@ export function initializeProject(parent: string, options: ProjectTemplateOption
   applyTransaction(root, changes, { gitCheckpoint: false });
   mkdirSync(join(root, "books", "book-01", "manuscript", "chapters"), { recursive: true });
   mkdirSync(join(root, "research", "notes"), { recursive: true });
-  ensureGit(root);
+  if (ensureGit(root)) commitWorkflowEvent(root, changes.map((change) => change.path), "Novel Forge: initialize project");
   return root;
 }
 

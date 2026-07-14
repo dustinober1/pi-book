@@ -10,27 +10,79 @@ import { readBook, readProject, readTickets } from "../project/store.js";
 import { collectProjectIntegrityFindings } from "./integrity.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 import { getProfile } from "../profiles/index.js";
+import { gateDetail } from "./gate-metadata.js";
+import { versionFindings } from "./version-core.js";
 
-export interface ProjectStatus { blockers: string[]; warnings: string[]; nextAction: string; markdown: string }
+export interface ProjectStatus {
+  blockers: string[];
+  warnings: string[];
+  nextAction: string;
+  headline: string;
+  reason: string;
+  recommendedCommand: string;
+  primaryBlocker: string | null;
+  markdown: string;
+}
+
+export interface ProjectStatusOptions {
+  gitDirtyOverride?: number;
+}
 
 function nextActionForStage(stage: string): string {
   const actions: Record<string, string> = {
-    "voice-intake": "Run /novel-plan voice, then approve voice-approval.",
-    "series-planning": "Run /novel-plan series.",
-    "book-planning": "Run /novel-plan book, then approve book-plan-approval.",
-    "chapter-queue": "Run /novel-run to build the next chapter window.",
-    drafting: "Run /novel-draft or /novel-run. Use /novel-readers when an opening or sample is ready for evidence.",
-    "act-review": "Run /novel-review act or /novel-readers act.",
-    revision: "Run /novel-revise.",
-    "manuscript-review": "Run /novel-review manuscript and /novel-readers manuscript.",
-    "canon-lock": "Run /novel-run to lock accepted book facts into series canon.",
-    packaging: "Run /novel-package.",
-    complete: "Project is complete; add another book through /novel-plan --add-book when needed.",
+    "voice-intake": "Build the voice profile from the writer's evidence.",
+    "series-planning": "Define the series promise, escalation, cast pressure, and carry rules.",
+    "book-planning": "Build the active book plan and remarkability contract.",
+    "chapter-queue": "Prepare the next bounded window of chapter packets.",
+    drafting: "Draft the next ready chapter packet.",
+    "act-review": "Run the required act-level review.",
+    revision: "Resolve the highest-priority open revision tickets.",
+    "manuscript-review": "Run manuscript review and gather any required reader evidence.",
+    "canon-lock": "Lock only manuscript-evidenced facts into series canon.",
+    packaging: "Compile the manuscript and complete the editorial package checklist.",
+    complete: "Add the next book when the series is ready to continue.",
   };
   return actions[stage] ?? "Inspect PROJECT.yaml for an unsupported stage.";
 }
 
-export function getProjectStatus(root: string): ProjectStatus {
+function decisionText(project: ReturnType<typeof readProject>, blockers: string[]): { headline: string; reason: string; nextAction: string; command: string } {
+  const activeGate = project.next_gate;
+  const gateState = activeGate ? project.gates[activeGate] : undefined;
+  if (activeGate && gateState === "pending") {
+    const title = gateDetail(activeGate).title;
+    return {
+      headline: `${title} is ready for your decision.`,
+      reason: `Novel Forge stopped because ${title.toLowerCase()} requires an explicit writer approval before creative work can continue.`,
+      nextAction: `Review the ${title.toLowerCase()} evidence and approve it or request changes.`,
+      command: "/novel",
+    };
+  }
+  if (activeGate && gateState === "rejected") {
+    const detail = gateDetail(activeGate);
+    return {
+      headline: `${detail.title} needs repair.`,
+      reason: `The active writer decision rejected the current ${detail.title.toLowerCase()} evidence.`,
+      nextAction: detail.repairLabel,
+      command: "/novel",
+    };
+  }
+  if (blockers.length) {
+    return {
+      headline: "Novel Forge needs one issue resolved before it can continue.",
+      reason: blockers[0] ?? "A blocking integrity issue exists.",
+      nextAction: "Open the guided workflow for an explanation and exact recovery action.",
+      command: "/novel",
+    };
+  }
+  return {
+    headline: `Novel Forge is ready to continue ${project.current_stage.replace(/-/g, " ")}.`,
+    reason: "No human gate or integrity blocker is stopping the recommended next step.",
+    nextAction: nextActionForStage(project.current_stage),
+    command: "/novel",
+  };
+}
+
+export function getProjectStatus(root: string, options: ProjectStatusOptions = {}): ProjectStatus {
   const project = readProject(root);
   const book = readBook(root);
   const tickets = readTickets(root);
@@ -38,8 +90,8 @@ export function getProjectStatus(root: string): ProjectStatus {
   const warnings: string[] = [];
   const gate = project.next_gate ? project.gates[project.next_gate] : undefined;
 
-  if (project.next_gate && gate === "pending") blockers.push(`Human approval required: ${project.next_gate}`);
-  if (project.next_gate && gate === "rejected") blockers.push(`Gate rejected and requires repair: ${project.next_gate}`);
+  if (project.next_gate && gate === "pending") blockers.push(`Human approval required: ${gateDetail(project.next_gate).title}`);
+  if (project.next_gate && gate === "rejected") blockers.push(`Writer-requested repair required: ${gateDetail(project.next_gate).title}`);
   for (const ticket of openBlockingTickets(tickets)) blockers.push(`${ticket.id}: ${ticket.problem}`);
 
   const bookRoot = join(root, "books", book.book_id);
@@ -89,17 +141,35 @@ export function getProjectStatus(root: string): ProjectStatus {
     for (const finding of readerExperimentFindings(experiments)) (finding.severity === "blocker" ? blockers : warnings).push(finding.message);
   }
 
+  for (const finding of versionFindings(project)) (finding.severity === "blocker" ? blockers : warnings).push(finding.message);
   for (const finding of collectProjectIntegrityFindings(root)) (finding.severity === "blocker" ? blockers : warnings).push(finding.message);
 
   const git = gitState(root);
+  const dirty = options.gitDirtyOverride ?? git.dirty;
   if (!git.initialized) warnings.push("Git is not initialized; workflow checkpoints are unavailable.");
-  else if (git.dirty) warnings.push(`${git.dirty} uncommitted file(s) exist.`);
+  else if (dirty) warnings.push(`${dirty} uncommitted file(s) exist.`);
 
   const words = manuscriptWordCount(root, book.book_id);
-  const nextAction = blockers.length ? "Resolve the first blocker before automation continues." : nextActionForStage(project.current_stage);
+  const decision = decisionText(project, blockers);
   const recent = newestFiles(root, 6);
   const markdown = [
-    "# Novel Forge Status",
+    "# Novel Forge",
+    "",
+    "## What needs you",
+    "",
+    decision.headline,
+    "",
+    "## Recommended action",
+    "",
+    `${decision.nextAction}`,
+    "",
+    `Run: \`${decision.command}\``,
+    "",
+    "## Why this stopped",
+    "",
+    decision.reason,
+    "",
+    "## Project snapshot",
     "",
     `- Project: ${project.project_name}`,
     `- Type: ${project.project_type}`,
@@ -110,7 +180,6 @@ export function getProjectStatus(root: string): ProjectStatus {
     `- Manuscript words: ${words}`,
     `- Blocking tickets/conflicts: ${blockers.length}`,
     `- Warnings: ${warnings.length}`,
-    `- Next action: ${nextAction}`,
     "",
     "## Blockers",
     "",
@@ -125,7 +194,16 @@ export function getProjectStatus(root: string): ProjectStatus {
     ...(recent.length ? recent.map((item) => `- ${item.path}`) : ["- none"]),
     "",
   ].join("\n");
-  return { blockers, warnings, nextAction, markdown };
+  return {
+    blockers,
+    warnings,
+    nextAction: decision.nextAction,
+    headline: decision.headline,
+    reason: decision.reason,
+    recommendedCommand: decision.command,
+    primaryBlocker: blockers[0] ?? null,
+    markdown,
+  };
 }
 
 export function refreshStatus(root: string): ProjectStatus {
