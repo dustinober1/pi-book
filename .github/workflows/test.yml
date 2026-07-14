@@ -14,7 +14,27 @@ jobs:
         with:
           node-version: '24'
       - run: npm install
-      - run: npm run typecheck
+      - name: Run TypeScript check
+        id: typecheck
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck > typecheck.log 2>&1
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          cat typecheck.log
+          exit 0
+      - name: Upload diagnostics and resolved lockfile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: novel-forge-ci-diagnostics
+          path: |
+            typecheck.log
+            package-lock.json
+      - name: Enforce TypeScript result
+        if: steps.typecheck.outputs.code != '0'
+        run: exit 1
       - run: npm test
       - run: npm run eval
       - run: npm pack --dry-run
