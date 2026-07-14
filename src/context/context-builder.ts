@@ -1,5 +1,5 @@
 import { basename, join } from "node:path";
-import { CanonSchema, ChapterQueueSchema, PlotGridSchema, SourceRegisterSchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type PlotGridState, type SourceRegisterState, type StoryThreadsState } from "../domain/schemas.js";
+import { CanonSchema, ChapterQueueSchema, PlotGridSchema, RemarkabilitySchema, SourceRegisterSchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type PlotGridState, type RemarkabilityState, type SourceRegisterState, type StoryThreadsState } from "../domain/schemas.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { getProfile } from "../profiles/index.js";
@@ -32,13 +32,14 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
   const project = readProject(root); const book = readBook(root); const bookRoot = join(root, "books", book.book_id);
   const queueText = readText(join(bookRoot, "chapter-queue.yaml")); const canonText = readText(join(root, "series", "canon.yaml"));
   const threadsText = readText(join(root, "series", "story-threads.yaml")); const plotText = readText(join(bookRoot, "plot-grid.yaml"));
-  const sourcesText = readText(join(root, "research", "source-register.yaml"));
-  if (!queueText || !canonText || !threadsText || !plotText || !sourcesText) throw new Error("Chapter context is missing queue, canon, thread, plot-grid, or research state.");
+  const sourcesText = readText(join(root, "research", "source-register.yaml")); const remarkabilityText = readText(join(bookRoot, "remarkability.yaml"));
+  if (!queueText || !canonText || !threadsText || !plotText || !sourcesText || !remarkabilityText) throw new Error("Chapter context is missing queue, canon, thread, plot-grid, research, or remarkability state.");
   const queue = parseYaml<ChapterQueueState>(queueText, ChapterQueueSchema, "chapter-queue.yaml");
   const canon = parseYaml<CanonState>(canonText, CanonSchema, "canon.yaml");
   const threads = parseYaml<StoryThreadsState>(threadsText, StoryThreadsSchema, "story-threads.yaml");
   const plot = parseYaml<PlotGridState>(plotText, PlotGridSchema, "plot-grid.yaml");
   const sources = parseYaml<SourceRegisterState>(sourcesText, SourceRegisterSchema, "source-register.yaml");
+  const remarkability = parseYaml<RemarkabilityState>(remarkabilityText, RemarkabilitySchema, "remarkability.yaml");
   const packet = selectPacket(queue, requestedChapter); const profile = getProfile(book.profile);
   const profileBlockers = profile.validatePacket(packet).filter((finding) => finding.severity === "blocker");
   const referenceBlockers = packetReferenceFindings(packet, canon, threads, sources, plot).filter((finding) => finding.severity === "blocker");
@@ -57,13 +58,14 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     { title: "Relevant story threads", body: JSON.stringify(relevantThreads, null, 2), required: true, cap: 7000 },
     { title: "Plot-grid entry", body: JSON.stringify(plotEntry, null, 2), required: true, cap: 5000 },
     { title: "Previous chapter ending/context", body: previous, required: true, cap: 12000 },
+    { title: "Remarkability contract", body: JSON.stringify(remarkability, null, 2), required: false, cap: 6000 },
     { title: "Profile rules", body: profile.draftingRules.map((rule) => `- ${rule}`).join("\n"), required: false, cap: 5000 },
     { title: "Voice profile excerpt", body: readText(join(root, "series", "voice-profile.md")) ?? "", required: false, cap: 14000 },
     { title: "Active book bible excerpt", body: readText(join(bookRoot, "book-bible.md")) ?? "", required: false, cap: 12000 },
     { title: "Genre configuration", body: readText(join(bookRoot, "genre.yaml")) ?? "", required: false, cap: 6000 },
   ];
   const text = `# Drafting Context — Chapter ${packet.chapter}` + buildBudgetedSections(sections, maxChars);
-  const included = [`chapter packet ${packet.chapter}`, ...relevantFacts.map((fact) => `canon ${fact.id}`), ...relevantRelationships.map((relationship) => `relationship ${relationship.id}`), ...relevantThreads.map((thread) => `thread ${thread.id}`), previousPath ? `previous chapter ${previousPath.slice(bookRoot.length + 1)}` : "no previous chapter"];
-  return { root, bookId: project.active_book, packet, text, report: { estimatedTokens: Math.ceil(text.length / 4), included, excluded: ["unreferenced canon", "unreferenced story threads", "non-adjacent chapters", "future books", "packaging files", "legacy artifacts"] } };
+  const included = [`chapter packet ${packet.chapter}`, ...relevantFacts.map((fact) => `canon ${fact.id}`), ...relevantRelationships.map((relationship) => `relationship ${relationship.id}`), ...relevantThreads.map((thread) => `thread ${thread.id}`), "remarkability contract", previousPath ? `previous chapter ${previousPath.slice(bookRoot.length + 1)}` : "no previous chapter"];
+  return { root, bookId: project.active_book, packet, text, report: { estimatedTokens: Math.ceil(text.length / 4), included, excluded: ["unreferenced canon", "unreferenced story threads", "non-adjacent chapters", "future books", "reader experiment responses", "packaging files", "legacy artifacts"] } };
 }
 export function manuscriptWordCount(root: string, bookId?: string): number { const project = readProject(root); const bookRoot = join(root, "books", bookId ?? project.active_book); return listChapterFiles(bookRoot).reduce((total, path) => total + countWords(readText(path) ?? ""), 0); }
