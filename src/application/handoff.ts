@@ -90,10 +90,10 @@ export function renderHandoff(project: ProjectState, book: BookState, status: Pr
   ].join("\n");
 }
 
-function buildGuidance(root: string, options: HandoffOptions = {}, ignoreGitDirty = false): { status: ProjectStatus; changes: FileChange[] } {
+function buildGuidance(root: string, options: HandoffOptions = {}, gitDirtyOverride?: number): { status: ProjectStatus; changes: FileChange[] } {
   const project = readProject(root);
   const book = readBook(root);
-  const status = getProjectStatus(root, { ignoreGitDirty });
+  const status = getProjectStatus(root, { ...(gitDirtyOverride !== undefined ? { gitDirtyOverride } : {}) });
   return {
     status,
     changes: [
@@ -120,12 +120,13 @@ export function refreshGuidance(root: string, options: HandoffOptions = {}): Pro
 
 export function applyGuidedProjectEvent(root: string, changes: FileChange[], message: string, options: HandoffOptions = {}): GuidedProjectEventResult {
   const checkpointEnabled = readProject(root).automation.git_checkpoints;
+  const preexistingDirty = gitState(root).dirty;
   let finalStatus: ProjectStatus | null = null;
   const transaction = applyTransaction(root, changes, {
     gitCheckpoint: checkpointEnabled,
     commitMessage: message,
     deriveChanges() {
-      const guidance = buildGuidance(root, { lastAction: options.lastAction ?? message.replace(/^Novel Forge:\s*/, "") }, true);
+      const guidance = buildGuidance(root, { lastAction: options.lastAction ?? message.replace(/^Novel Forge:\s*/, "") }, preexistingDirty);
       finalStatus = guidance.status;
       return guidance.changes;
     },
