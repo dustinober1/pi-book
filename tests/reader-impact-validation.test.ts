@@ -19,7 +19,9 @@ function emptyRemarkability(): RemarkabilityState {
   };
 }
 
-function response(readerId: string, overrides: Record<string, unknown> = {}) {
+type ReaderResponse = ReaderExperimentsState["experiments"][number]["immediate_responses"][number];
+
+function response(readerId: string): ReaderResponse {
   return {
     reader_id: readerId,
     source: "human",
@@ -38,7 +40,6 @@ function response(readerId: string, overrides: Record<string, unknown> = {}) {
     recommendation_target: "Readers of procedural institutional thrillers",
     recommendation_reason: "The physical system itself becomes an unreliable witness.",
     told_someone: true,
-    ...overrides,
   };
 }
 
@@ -77,7 +78,7 @@ test("reader evidence schema rejects model or simulated responses", () => {
       target_reader: "procedural thriller readers",
       sample_path: "books/book-01/manuscript/chapters/01-opening.md",
       minimum_reader_count: 3,
-      immediate_responses: [response("R-001", { source: "model" })],
+      immediate_responses: [{ ...response("R-001"), source: "model" }],
       delayed_after_hours: 48,
       delayed_responses: [],
       metrics: {
