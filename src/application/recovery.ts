@@ -38,7 +38,7 @@ export function undoLastNovelEvent(root: string, allowApprovalReversal = false):
   const original = beginRevertHead(root);
   const commitMessage = `Revert "${original.subject}"`;
   try {
-    refreshGuidance(root, { lastAction: `Undid ${original.subject}` });
+    refreshGuidance(root, { lastAction: `Undid ${original.subject}`, checkpoint: false });
     const committed = commitWorkflowEvent(root, ["STATUS.md", "HANDOFF.md"], commitMessage);
     if (!committed.committed) throw new Error(committed.message);
     return { reverted: true, originalSha: original.sha, originalSubject: original.subject, commitMessage };
