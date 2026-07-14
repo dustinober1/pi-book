@@ -20,8 +20,10 @@ function readerEvidence(): string {
       blind: true,
       target_reader: "procedural thriller readers",
       sample_path: "books/book-01/manuscript/chapters/01-opening.md",
+      minimum_reader_count: 3,
       immediate_responses: [{
         reader_id: "R-001",
+        source: "human",
         segment: "core",
         recorded_at: "2026-07-13T20:00:00Z",
         continued_reading: true,
