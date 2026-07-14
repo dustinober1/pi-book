@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { ReaderExperimentsState, RemarkabilityState } from "../src/domain/schemas.js";
+import { ReaderExperimentsSchema, assertSchema, type ReaderExperimentsState, type RemarkabilityState } from "../src/domain/schemas.js";
 import { readerExperimentFindings, remarkabilityFindings } from "../src/application/reader-impact.js";
 
 function emptyRemarkability(): RemarkabilityState {
@@ -16,6 +16,29 @@ function emptyRemarkability(): RemarkabilityState {
     lingering_question: "",
     hand_sell_reason: "",
     accepted_reader_costs: [],
+  };
+}
+
+function response(readerId: string, overrides: Record<string, unknown> = {}) {
+  return {
+    reader_id: readerId,
+    source: "human",
+    segment: "core",
+    recorded_at: "2026-07-13T20:00:00Z",
+    continued_reading: true,
+    would_buy: true,
+    confusions: [],
+    trust_breaks: [],
+    lines_that_worked: ["The exit sign changed its testimony."],
+    remembered_hook: "A building edits its own evacuation record.",
+    remembered_moments: ["The exit sign changed its testimony."],
+    friend_description: "A procedural thriller where the building falsifies evidence around trapped people.",
+    disagreement_question: "Was Mara right to stay?",
+    lingering_question: "What evidence is worth a life?",
+    recommendation_target: "Readers of procedural institutional thrillers",
+    recommendation_reason: "The physical system itself becomes an unreliable witness.",
+    told_someone: true,
+    ...overrides,
   };
 }
 
@@ -42,6 +65,36 @@ test("remarkability validation blocks empty planning contracts and accepts speci
   assert.equal(remarkabilityFindings(valid).filter((finding) => finding.severity === "blocker").length, 0);
 });
 
+test("reader evidence schema rejects model or simulated responses", () => {
+  const state = {
+    schema_version: "1.0.0",
+    experiments: [{
+      id: "RE-001",
+      status: "immediate-complete",
+      scope: "first-chapter",
+      variant: "A",
+      blind: true,
+      target_reader: "procedural thriller readers",
+      sample_path: "books/book-01/manuscript/chapters/01-opening.md",
+      minimum_reader_count: 3,
+      immediate_responses: [response("R-001", { source: "model" })],
+      delayed_after_hours: 48,
+      delayed_responses: [],
+      metrics: {
+        continuation_rate: 1,
+        purchase_intent_rate: 1,
+        delayed_hook_recall_rate: null,
+        signature_moment_recall_rate: null,
+        specific_recommendation_rate: null,
+        talkability_rate: null,
+      },
+      verdict: "insufficient-signal",
+      next_action: "Recruit real readers.",
+    }],
+  };
+  assert.throws(() => assertSchema(ReaderExperimentsSchema, state, "reader experiments"), /schema validation/i);
+});
+
 test("reader evidence cannot claim validation without delayed real-reader recall", () => {
   const state: ReaderExperimentsState = {
     schema_version: "1.0.0",
@@ -53,6 +106,7 @@ test("reader evidence cannot claim validation without delayed real-reader recall
       blind: true,
       target_reader: "procedural thriller readers",
       sample_path: "books/book-01/manuscript/chapters/01-opening.md",
+      minimum_reader_count: 3,
       immediate_responses: [],
       delayed_after_hours: 48,
       delayed_responses: [],
@@ -71,4 +125,37 @@ test("reader evidence cannot claim validation without delayed real-reader recall
   const blockers = readerExperimentFindings(state).filter((finding) => finding.severity === "blocker");
   assert.ok(blockers.some((finding) => /delayed responses/i.test(finding.message)));
   assert.ok(blockers.some((finding) => /validated verdict/i.test(finding.message)));
+});
+
+test("reader evidence blocks inconsistent aggregate rates and undersized validation", () => {
+  const state: ReaderExperimentsState = {
+    schema_version: "1.0.0",
+    experiments: [{
+      id: "RE-002",
+      status: "complete",
+      scope: "first-chapter",
+      variant: "A",
+      blind: true,
+      target_reader: "procedural thriller readers",
+      sample_path: "books/book-01/manuscript/chapters/01-opening.md",
+      minimum_reader_count: 3,
+      immediate_responses: [response("R-001")],
+      delayed_after_hours: 48,
+      delayed_responses: [response("R-001")],
+      metrics: {
+        continuation_rate: 0,
+        purchase_intent_rate: 0,
+        delayed_hook_recall_rate: 0,
+        signature_moment_recall_rate: 0,
+        specific_recommendation_rate: 0,
+        talkability_rate: 0,
+      },
+      verdict: "validated",
+      next_action: "Use the validation claim.",
+    }],
+  };
+  const blockers = readerExperimentFindings(state).filter((finding) => finding.severity === "blocker");
+  assert.ok(blockers.some((finding) => /minimum reader count/i.test(finding.message)));
+  assert.ok(blockers.some((finding) => /continuation_rate/i.test(finding.message)));
+  assert.ok(blockers.some((finding) => /talkability_rate/i.test(finding.message)));
 });
