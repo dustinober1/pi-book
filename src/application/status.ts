@@ -25,7 +25,7 @@ export interface ProjectStatus {
 }
 
 export interface ProjectStatusOptions {
-  ignoreGitDirty?: boolean;
+  gitDirtyOverride?: number;
 }
 
 function nextActionForStage(stage: string): string {
@@ -145,8 +145,9 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
   for (const finding of collectProjectIntegrityFindings(root)) (finding.severity === "blocker" ? blockers : warnings).push(finding.message);
 
   const git = gitState(root);
+  const dirty = options.gitDirtyOverride ?? git.dirty;
   if (!git.initialized) warnings.push("Git is not initialized; workflow checkpoints are unavailable.");
-  else if (git.dirty && !options.ignoreGitDirty) warnings.push(`${git.dirty} uncommitted file(s) exist.`);
+  else if (dirty) warnings.push(`${dirty} uncommitted file(s) exist.`);
 
   const words = manuscriptWordCount(root, book.book_id);
   const decision = decisionText(project, blockers);
