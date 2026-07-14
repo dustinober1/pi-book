@@ -110,7 +110,7 @@ async function guidedAddBook(root: string, context: ExtensionCommandContext, for
   if (!targetRaw) return;
   const targetWords = Number.parseInt(targetRaw, 10);
   if (!Number.isInteger(targetWords) || targetWords < 1000) throw new Error("Target words must be an integer of at least 1000.");
-  const confirmed = await context.ui.confirm(`Create ${proposal.bookId} after ${proposal.previousBook} with profile ${proposal.profile} and target ${targetWords} words?`);
+  const confirmed = await context.ui.confirm("Create next book", `Create ${proposal.bookId} after ${proposal.previousBook} with profile ${proposal.profile} and target ${targetWords} words?`);
   if (!confirmed) return;
   const bookId = addBook(root, targetWords, { force });
   context.ui.notify(`Created ${bookId}. Run /novel to begin its guided book plan.`, "info");
@@ -119,7 +119,7 @@ async function guidedAddBook(root: string, context: ExtensionCommandContext, for
 async function guidedAdoption(root: string, context: ExtensionCommandContext, suppliedPath?: string): Promise<void> {
   const sourcePath = suppliedPath || await context.ui.input("Existing manuscript file or chapter-directory path:");
   if (!sourcePath) return;
-  const confirmed = await context.ui.confirm("Adopt this manuscript non-destructively? The source will remain unchanged and the active book must have no chapter files.");
+  const confirmed = await context.ui.confirm("Adopt manuscript", "Adopt this manuscript non-destructively? The source will remain unchanged and the active book must have no chapter files.");
   if (!confirmed) return;
   const result = adoptManuscript(root, sourcePath);
   context.ui.notify(`Adopted ${result.chapters} chapters (${result.words} words). Review ${result.reportPath}.`, "info");
@@ -142,16 +142,16 @@ async function guidedAdvanced(root: string, context: ExtensionCommandContext): P
   else if (choice === "Upgrade project metadata") context.ui.notify(`Project metadata upgraded to Novel Forge ${upgradeProjectVersion(root)}.`, "info");
   else if (choice === "Adopt an existing manuscript") await guidedAdoption(root, context);
   else if (choice === "Force-add another book") {
-    const confirmed = await context.ui.confirm("Force-adding a book may preserve an unlocked previous book as superseded-by-force. Continue?");
+    const confirmed = await context.ui.confirm("Force-add book", "Force-adding a book may preserve an unlocked previous book as superseded-by-force. Continue?");
     if (confirmed) await guidedAddBook(root, context, true);
   } else if (choice === "Undo last Novel Forge event") {
     const inspection = inspectUndo(root);
     if (!inspection.allowed) { context.ui.notify(inspection.reason, "warning"); return; }
-    const confirmed = await context.ui.confirm(`Create a revert commit for ${inspection.subject}?`);
+    const confirmed = await context.ui.confirm("Undo Novel Forge event", `Create a revert commit for ${inspection.subject}?`);
     if (!confirmed) return;
     let allowApproval = false;
     if (inspection.approvalCheckpoint) {
-      allowApproval = await context.ui.confirm("This reverses a recorded writer approval. Confirm approval reversal?");
+      allowApproval = await context.ui.confirm("Reverse writer approval", "This reverses a recorded writer approval. Confirm approval reversal?");
       if (!allowApproval) return;
     }
     const result = undoLastNovelEvent(root, allowApproval);
@@ -191,7 +191,7 @@ async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): 
   else if (id === "approve") {
     const gate = readProject(root).next_gate;
     if (!gate) throw new Error("No active gate is available for approval.");
-    const confirmed = await context.ui.confirm(`Approve ${gateDetail(gate).title}? This records writer approval with an evidence hash.`);
+    const confirmed = await context.ui.confirm("Approve gate", `Approve ${gateDetail(gate).title}? This records writer approval with an evidence hash.`);
     if (!confirmed) return;
     const note = await context.ui.input("Optional approval note:");
     sendDecision(pi, context, approveProjectGate(root, gate, note ?? ""));
@@ -207,7 +207,7 @@ async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): 
       const checklist = buildPackagingChecklist(root);
       context.ui.notify(formatChecklist(root), checklist.ready ? "info" : "warning");
       if (!checklist.ready) return;
-      const confirmed = await context.ui.confirm("Packaging prerequisites are complete. Compile and queue the editorial package?");
+      const confirmed = await context.ui.confirm("Package active book", "Packaging prerequisites are complete. Compile and queue the editorial package?");
       if (!confirmed) return;
     }
     sendDecision(pi, context, decideNextRun(root));
