@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { applyNovelEvent, projectStateHash } from "../src/application/events.js";
+import { gateEvidenceHash } from "../src/application/gates.js";
 import { approveProjectGate, rejectProjectGate } from "../src/application/run.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readProject } from "../src/project/store.js";
@@ -38,5 +39,18 @@ test("a writer can request changes, repair the active gate, and approve without 
     assert.equal(final.gates["voice-approval"], "approved");
     assert.equal(final.current_stage, "series-planning");
     assert.equal(final.approvals.at(-1)?.approved_by, "writer");
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("book-plan approval evidence hash includes the displayed remarkability contract", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Book Evidence", projectType: "standalone", profile: "thriller" });
+    const project = readProject(root);
+    const before = gateEvidenceHash(root, project, "book-plan-approval");
+    const path = join(root, "books", "book-01", "remarkability.yaml");
+    writeFileSync(path, `${readFileSync(path, "utf8")}\n# writer-approved distinction\n`, "utf8");
+    const after = gateEvidenceHash(root, project, "book-plan-approval");
+    assert.notEqual(after, before);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
