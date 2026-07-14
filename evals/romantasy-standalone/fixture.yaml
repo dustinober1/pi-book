@@ -1,36 +1,44 @@
-{
-  "schema_version": "1.0.0",
-  "profile": "romantasy",
-  "packet": {
-    "chapter": 7,
-    "title": "Pressure Test",
-    "status": "ready",
-    "pov": "lead",
-    "purpose": "force a consequential choice",
-    "scene_engine": "active confrontation",
-    "pressure_movement": "conditions materially worsen",
-    "character_movement": "lead accepts a cost",
-    "relationship_movement": "relationship state changes",
-    "story_thread_refs": [
-      "ST-001"
-    ],
-    "continuity_refs": [
-      "CAN-001"
-    ],
-    "character_refs": [
-      "lead"
-    ],
-    "required_research": [],
-    "profile_fields": {
-      "fantasy_movement": "paired ward opens the forbidden pass",
-      "romance_movement": "mutual competence becomes acknowledged attraction",
-      "trust_delta": "+1",
-      "desire_conflict": "need for alliance versus fear of magical dependence",
-      "power_balance": "each controls a necessary half",
-      "consent_state": "explicit before bond magic"
-    },
-    "ending_hook": "the choice creates the next unavoidable problem",
-    "milestone_gate": null,
-    "target_words": 3200
-  }
-}
+schema_version: "1.0.0"
+profile: romantasy
+project_type: standalone
+genre:
+  schema_version: "1.0.0"
+  profile: romantasy
+  settings: { story_balance: balanced, romance_contract: central, ending_contract: hea, heat_level: open-door, fantasy_scale: regional, point_of_view: dual, relationship_structure: monogamous }
+  requirements: { protagonist_independent_goal: true, character_specific_attraction: true, explicit_consent_logic: true, magic_cost: true, fantasy_conflict_resolution: true, declared_ending_contract: true }
+packet:
+  chapter: 1
+  title: The Broken Ward
+  status: ready
+  pov: mara
+  purpose: force cooperation without surrendering either protagonist's independent goal
+  scene_engine: failed magical containment
+  pressure_movement: the ward breach traps both rivals inside the forbidden quarter
+  character_movement: Mara chooses the mission over a clean escape
+  relationship_movement: distrust gains a specific exception based on competence
+  story_thread_refs: []
+  continuity_refs: []
+  character_refs: [mara, kael]
+  required_research: []
+  profile_fields: { fantasy_movement: "the ward reveals a paired-magic rule", romance_movement: "attraction begins through observed restraint", trust_delta: "+1 conditional", desire_conflict: "need his magic versus fear of dependence", power_balance: "Mara controls the route and Kael controls the ward", consent_state: "explicit permission before sharing magic" }
+  ending_hook: Kael takes half the wound without being asked to keep it
+  milestone_gate: first-chapter-approval
+  target_words: 3500
+plot:
+  schema_version: "1.0.0"
+  acts:
+    - { id: act-1, purpose: bind goals without erasing rivalry, start_chapter: 1, end_chapter: 10, gate: act-1-review }
+    - { id: act-2, purpose: deepen trust and expose the cost of magic, start_chapter: 11, end_chapter: 21, gate: midpoint-review }
+  chapters:
+    - { chapter: 1, act: act-1, causality: "Because the ward responds only to paired magic, Mara permits a bounded connection to continue her mission.", state_change: "They become necessary allies and magical cost becomes shared.", setup_ids: [], payoff_ids: [], profile_obligations: ["romance trust progression", "fantasy magic cost", "earned rupture planned"] }
+sample_chapter: |
+  The ward split beneath Mara's palm and sent blue fire through the street. Kael could have caught her wrist. He stopped a breath short and asked. The courtesy irritated her more than force would have. She gave him permission because the trapped children were screaming behind the stones, not because his voice had gone quiet. Their magic joined badly, all sparks and resistance. When the wall opened, blood ran from his nose instead of hers.
+review_finding:
+  severity: medium
+  category: consent-and-magic
+  chapter: 1
+  evidence: The magical connection transfers harm between the leads.
+  problem: The scene must establish whether consent to connect includes consent to transferred cost.
+  requiredChange: Clarify the known and unknown boundaries without removing the emergency choice.
+  protectedConstraints: [Keep Mara's independent rescue goal, Keep Kael's restraint]
+  acceptanceTests: [Permission is explicit, Unknown cost remains a future conflict]

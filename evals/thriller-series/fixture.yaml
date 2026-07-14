@@ -1,34 +1,44 @@
-{
-  "schema_version": "1.0.0",
-  "profile": "thriller",
-  "packet": {
-    "chapter": 7,
-    "title": "Pressure Test",
-    "status": "ready",
-    "pov": "lead",
-    "purpose": "force a consequential choice",
-    "scene_engine": "active confrontation",
-    "pressure_movement": "conditions materially worsen",
-    "character_movement": "lead accepts a cost",
-    "relationship_movement": "relationship state changes",
-    "story_thread_refs": [
-      "ST-001"
-    ],
-    "continuity_refs": [
-      "CAN-001"
-    ],
-    "character_refs": [
-      "lead"
-    ],
-    "required_research": [],
-    "profile_fields": {
-      "threat_delta": "+1",
-      "evidence_delta": "EV-201 contradicts Book 1 assumption",
-      "reader_forecast_change": "series antagonist may be protecting a real failure mode",
-      "protagonist_choice": "exposes the contradiction publicly"
-    },
-    "ending_hook": "the choice creates the next unavoidable problem",
-    "milestone_gate": null,
-    "target_words": 3200
-  }
-}
+schema_version: "1.0.0"
+profile: thriller
+project_type: series
+genre:
+  schema_version: "1.0.0"
+  profile: thriller
+  settings: { thriller_type: espionage, suspense_style: cat-and-mouse, violence_level: moderate, procedural_detail: high, series_model: recurring-protagonist }
+  requirements: { visible_external_pressure: true, protagonist_agency: required, opposition_positive_case: required, midpoint_state_change: required, climax_reader_legibility: required }
+packet:
+  chapter: 7
+  title: Pressure Test
+  status: ready
+  pov: lead
+  purpose: turn inherited canon into a new consequential choice
+  scene_engine: hostile debrief in a moving convoy
+  pressure_movement: the safe extraction route becomes the opposition's test chamber
+  character_movement: the lead risks a protected source to expose a false order
+  relationship_movement: an old ally becomes a conditional adversary
+  story_thread_refs: []
+  continuity_refs: []
+  character_refs: [lead, ally]
+  required_research: []
+  profile_fields: { threat_delta: "+1", evidence_delta: "EV-201 contradicts the prior-book assumption", reader_forecast_change: "the series antagonist may be protecting a real failure mode", protagonist_choice: "exposes the contradiction publicly" }
+  ending_hook: the convoy changes route without receiving an order
+  milestone_gate: null
+  target_words: 3300
+plot:
+  schema_version: "1.0.0"
+  acts:
+    - { id: act-1, purpose: weaponize inherited obligations, start_chapter: 1, end_chapter: 9, gate: act-1-review }
+    - { id: act-2, purpose: change the institutional battlefield, start_chapter: 10, end_chapter: 19, gate: midpoint-review }
+  chapters:
+    - { chapter: 7, act: act-1, causality: "Because the false order uses a locked series credential, the lead exposes the source who can disprove it.", state_change: "The ally loses deniability and the extraction becomes hostile.", setup_ids: [], payoff_ids: [], profile_obligations: ["midpoint reversal scheduled", "series antagonist protects a defensible value"] }
+sample_chapter: |
+  The convoy turned east three blocks before the approved junction. Julie felt the change through the floor before the navigation display admitted it. Marcus looked at her, then at the driver, and chose not to reach for his weapon. That told her the test was not whether they noticed. It was whether they panicked. She opened the sealed channel and named the source she had promised never to expose. The brakes came on hard.
+review_finding:
+  severity: high
+  category: series-canon-pressure
+  chapter: 7
+  evidence: The false order uses a credential established in the prior book.
+  problem: The chapter needs to distinguish a stolen credential from a retcon of who held it.
+  requiredChange: Preserve prior ownership while establishing the compromise path.
+  protectedConstraints: [Do not change prior-book credential ownership, Keep the ally's hesitation]
+  acceptanceTests: [Prior canon remains intact, The compromise path is seeded]
