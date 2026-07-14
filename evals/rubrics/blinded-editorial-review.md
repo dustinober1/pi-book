@@ -12,5 +12,9 @@ Score each dimension from 1–10 and cite textual evidence:
 6. Subtext and omission
 7. Continuity and setup/payoff integrity
 8. Ending pressure and next-page pull
+9. Retellable premise or scene identity
+10. Signature-moment potential: a scene, image, argument, or choice likely to survive memory
+11. Productive disagreement: more than one defensible target-reader interpretation
+12. Residue and specific recommendation language: a reason to discuss or hand-sell the work
 
-Record severe failures separately. Novel Forge should be preferred in at least seven of ten matched comparisons, with no severe canon, consent, reveal-order, or causal regression.
+Record severe failures separately. Do not reward forced quotability, obvious symbolism, artificial controversy, or repeated restatement of the premise. Novel Forge should be preferred in at least seven of ten matched comparisons, with no severe canon, consent, reveal-order, causal, or voice regression.
