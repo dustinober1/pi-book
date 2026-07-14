@@ -9,6 +9,17 @@ function run(root: string, args: string[]): string {
   return execFileSync("git", args, { cwd: root, stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
 }
 
+function commitArgs(root: string, message: string): string[] {
+  try {
+    if (run(root, ["config", "user.name"]) && run(root, ["config", "user.email"])) return ["commit", "-m", message];
+  } catch {}
+  return [
+    "-c", "user.name=Novel Forge",
+    "-c", "user.email=novel-forge@localhost",
+    "commit", "-m", message,
+  ];
+}
+
 export function ensureGit(root: string): boolean {
   try { if (run(root, ["rev-parse", "--is-inside-work-tree"]) === "true") return true; } catch {}
   try { run(root, ["init"]); return existsSync(join(root, ".git")); } catch { return false; }
@@ -46,7 +57,7 @@ export function commitWorkflowEvent(root: string, relativePaths: string[], messa
     if (relativePaths.length) run(root, ["add", "--", ...relativePaths]);
     const staged = run(root, ["diff", "--cached", "--name-only"]);
     if (!staged) return { initialized: true, committed: false, message: "No staged changes required a checkpoint." };
-    run(root, ["commit", "-m", message]);
+    run(root, commitArgs(root, message));
     return { initialized: true, committed: true, message };
   } catch (error) {
     return { initialized: true, committed: false, message: `Files were written, but Git checkpoint failed: ${error instanceof Error ? error.message : String(error)}` };
