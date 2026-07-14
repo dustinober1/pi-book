@@ -10,8 +10,10 @@ const allowedStages: Record<NovelOperation, Stage[]> = {
 };
 
 export function assertOperationAllowed(project: ProjectState, operation: NovelOperation): void {
-  if (!allowedStages[operation].includes(project.current_stage)) {
-    throw new Error(`${operation} is not allowed during ${project.current_stage}. Allowed stage(s): ${allowedStages[operation].join(", ")}.`);
+  const required = allowedStages[operation];
+  if (!required.includes(project.current_stage)) {
+    const requirement = required.length === 1 ? `the ${required[0]} stage` : `one of these stages: ${required.join(", ")}`;
+    throw new Error(`${operation} requires ${requirement}; current stage is ${project.current_stage}.`);
   }
   if (project.next_gate && project.gates[project.next_gate] === "pending" && operation !== "review-act" && operation !== "review-manuscript" && operation !== "revise") {
     throw new Error(`Human approval required before ${operation}: ${project.next_gate}.`);
