@@ -40,6 +40,7 @@ test("status reports dishonest validated reader evidence as a blocker", () => {
         blind: true,
         target_reader: "core thriller readers",
         sample_path: "books/book-01/manuscript/chapters/01-opening.md",
+        minimum_reader_count: 3,
         immediate_responses: [],
         delayed_after_hours: 48,
         delayed_responses: [],
@@ -57,7 +58,7 @@ test("status reports dishonest validated reader evidence as a blocker", () => {
     }), "utf8");
 
     const status = getProjectStatus(root);
-    assert.ok(status.blockers.some((item) => /validated verdict|delayed responses/i.test(item)));
+    assert.ok(status.blockers.some((item) => /validated verdict|delayed responses|minimum reader count/i.test(item)));
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
