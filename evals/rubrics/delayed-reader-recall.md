@@ -1,6 +1,8 @@
 # Delayed Reader Recall Rubric
 
-Use this protocol with real, de-identified readers 24–72 hours after they read the assigned sample. Do not let them reopen the sample before answering. Simulated personas and model reviewers are not eligible responses.
+Use this protocol with real, de-identified human readers 24–72 hours after they read the assigned sample. Do not let them reopen the sample before answering. Simulated personas and model reviewers are not eligible responses.
+
+Before collecting responses, predeclare the target-reader segment, exact sample/variant, blind protocol, delay, and minimum reader count. Do not lower the minimum after seeing weak results.
 
 ## Reader segmentation
 
@@ -29,7 +31,7 @@ Ask in this order without suggesting answers:
 
 ## Derived measures
 
-Calculate rates only from eligible real responses:
+Calculate rates directly from the recorded eligible human responses; never enter a preferred aggregate that the response rows do not support:
 
 - **Delayed hook recall:** reader can state the core hook without being shown package language.
 - **Signature-moment recall:** reader independently recalls at least one planned or emergent memorable moment.
@@ -41,15 +43,17 @@ Calculate rates only from eligible real responses:
 
 ## Evidence table
 
-| Reader ID | Segment | Delay hours | Hook recalled? | Signature moment(s) | Friend description specific? | Productive disagreement | Lingering question | Specific recommendation? | Told someone? |
-|---|---|---:|---|---|---|---|---|---|---|
+| Reader ID | Source | Segment | Delay hours | Hook recalled? | Signature moment(s) | Friend description specific? | Productive disagreement | Lingering question | Specific recommendation? | Told someone? |
+|---|---|---|---:|---|---|---|---|---|---|---|
+
+Every eligible source value must be `human`.
 
 ## Verdict rules
 
 - `blocked`: no eligible real readers or the testing method exposed answers.
-- `insufficient-signal`: immediate evidence exists, but delayed evidence or target-reader coverage is too small.
+- `insufficient-signal`: immediate evidence exists, but delayed evidence or target-reader coverage is below the predeclared minimum.
 - `promising`: target readers show concrete recall or recommendation, but the sample is not yet broad enough for a validation claim.
-- `validated`: enough intended readers independently recall and retell the intended identity, with no repeated trust break that invalidates the promise.
+- `validated`: the predeclared minimum is met in both sessions, intended readers independently recall and retell the intended identity, recorded aggregate rates match the response rows, and no repeated trust break invalidates the promise.
 - `rejected`: the intended identity is repeatedly forgotten, misdescribed, or displaced by an unintended trust break.
 
 A validated verdict is evidence for a specific sample and reader segment, not proof that the full book or market will succeed.
