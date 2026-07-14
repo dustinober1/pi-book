@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { BookState, ProjectState } from "../domain/schemas.js";
-import { gitState, commitWorkflowEvent, type GitCheckpointResult } from "../infrastructure/git.js";
+import { gitState, type GitCheckpointResult } from "../infrastructure/git.js";
 import { applyTransaction, type FileChange } from "../infrastructure/transaction.js";
 import { readBook, readProject } from "../project/store.js";
 import { projectStateHash } from "./project-hash.js";
@@ -41,8 +41,8 @@ export function renderHandoff(project: ProjectState, book: BookState, status: Pr
   const continuation = [
     `Continue the Novel Forge project ${project.project_name}.`,
     `The active book is ${book.book_id} (${book.profile}) at stage ${project.current_stage}.`,
-    `Read STATUS.md and HANDOFF.md first, then follow the exact recommended action through /novel.`,
-    `Do not edit PROJECT.yaml, BOOK.yaml, or STATUS.md directly and do not bypass the active human gate ${gate}.`,
+    "Read STATUS.md and HANDOFF.md first, then follow the exact recommended action through /novel.",
+    `Do not edit PROJECT.yaml, BOOK.yaml, STATUS.md, or HANDOFF.md directly and do not bypass the active human gate ${gate}.`,
   ].join(" ");
 
   return [
@@ -89,26 +89,40 @@ export function renderHandoff(project: ProjectState, book: BookState, status: Pr
   ].join("\n");
 }
 
-export function refreshGuidance(root: string, options: HandoffOptions = {}): ProjectStatus {
+function buildGuidance(root: string, options: HandoffOptions = {}): { status: ProjectStatus; changes: FileChange[] } {
   const project = readProject(root);
   const book = readBook(root);
   const status = getProjectStatus(root);
-  applyTransaction(root, [
-    { path: "STATUS.md", content: status.markdown },
-    { path: "HANDOFF.md", content: renderHandoff(project, book, status, options, root) },
-  ], { gitCheckpoint: false });
-  return status;
+  return {
+    status,
+    changes: [
+      { path: "STATUS.md", content: status.markdown },
+      { path: "HANDOFF.md", content: renderHandoff(project, book, status, options, root) },
+    ],
+  };
+}
+
+export function refreshGuidance(root: string, options: HandoffOptions = {}): ProjectStatus {
+  const guidance = buildGuidance(root, options);
+  applyTransaction(root, guidance.changes, { gitCheckpoint: false });
+  return guidance.status;
 }
 
 export function applyGuidedProjectEvent(root: string, changes: FileChange[], message: string, options: HandoffOptions = {}): GuidedProjectEventResult {
-  const transaction = applyTransaction(root, changes, { gitCheckpoint: false });
-  const status = refreshGuidance(root, { lastAction: options.lastAction ?? message.replace(/^Novel Forge:\s*/, "") });
-  const changed = [...new Set([...transaction.changed, "STATUS.md", "HANDOFF.md"])];
-  const project = readProject(root);
-  const git = project.automation.git_checkpoints
-    ? commitWorkflowEvent(root, changed, message)
-    : { initialized: gitState(root).initialized, committed: false, message: "Git checkpoints disabled." };
-  return { changed, git, status };
+  const checkpointEnabled = readProject(root).automation.git_checkpoints;
+  let finalStatus: ProjectStatus | null = null;
+  const transaction = applyTransaction(root, changes, {
+    gitCheckpoint: checkpointEnabled,
+    commitMessage: message,
+    deriveChanges() {
+      const guidance = buildGuidance(root, { lastAction: options.lastAction ?? message.replace(/^Novel Forge:\s*/, "") });
+      finalStatus = guidance.status;
+      return guidance.changes;
+    },
+  });
+  const git = transaction.git ?? { initialized: gitState(root).initialized, committed: false, message: "Git checkpoints disabled." };
+  if (!finalStatus) throw new Error("Novel Forge could not derive the final project status.");
+  return { changed: transaction.changed, git, status: finalStatus };
 }
 
 export function guidancePaths(root: string): string[] {
