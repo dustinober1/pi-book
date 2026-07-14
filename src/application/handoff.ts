@@ -89,10 +89,10 @@ export function renderHandoff(project: ProjectState, book: BookState, status: Pr
   ].join("\n");
 }
 
-function buildGuidance(root: string, options: HandoffOptions = {}): { status: ProjectStatus; changes: FileChange[] } {
+function buildGuidance(root: string, options: HandoffOptions = {}, ignoreGitDirty = false): { status: ProjectStatus; changes: FileChange[] } {
   const project = readProject(root);
   const book = readBook(root);
-  const status = getProjectStatus(root);
+  const status = getProjectStatus(root, { ignoreGitDirty });
   return {
     status,
     changes: [
@@ -115,7 +115,7 @@ export function applyGuidedProjectEvent(root: string, changes: FileChange[], mes
     gitCheckpoint: checkpointEnabled,
     commitMessage: message,
     deriveChanges() {
-      const guidance = buildGuidance(root, { lastAction: options.lastAction ?? message.replace(/^Novel Forge:\s*/, "") });
+      const guidance = buildGuidance(root, { lastAction: options.lastAction ?? message.replace(/^Novel Forge:\s*/, "") }, true);
       finalStatus = guidance.status;
       return guidance.changes;
     },
