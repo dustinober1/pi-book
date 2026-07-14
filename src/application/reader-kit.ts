@@ -177,8 +177,12 @@ function csvRecords(text: string): CsvRecord[] {
   const rows = parseCsv(text);
   const header = rows.shift();
   if (!header) throw new Error("Reader response CSV is empty.");
+  if (header.length !== csvHeaders.length) throw new Error(`Reader response CSV header expected ${csvHeaders.length} columns but received ${header.length}.`);
   for (const required of csvHeaders) if (!header.includes(required)) throw new Error(`Reader response CSV is missing column ${required}.`);
-  return rows.map((row) => Object.fromEntries(header.map((name, index) => [name, row[index] ?? ""])));
+  return rows.map((row, index) => {
+    if (row.length !== header.length) throw new Error(`Reader response CSV row ${index + 2} expected ${header.length} columns but received ${row.length}.`);
+    return Object.fromEntries(header.map((name, column) => [name, row[column] ?? ""]));
+  });
 }
 
 function nullableBoolean(value: string, label: string): boolean | null {
