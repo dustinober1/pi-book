@@ -17,13 +17,13 @@ Novel Forge uses seven durable concepts: voice, canon, story threads, plot grid,
 - Convert concrete review findings into evidence-backed revision tickets.
 - Never bypass active human gates.
 - Treat `remarkability.yaml` as ambition to protect, not proof that the manuscript achieved it.
-- Treat only de-identified real-reader responses as outside-reader evidence. Personas and models never count as human validation.
+- Treat only de-identified real-reader responses with `source: human` as outside-reader evidence. Personas and models never count as human validation.
 
 ## Transaction rule
 
 For voice, series plan, book plan, chapter queue, drafting, review, reader testing, revision, canon lock, and packaging work, prepare the allowed file contents and call `novel_apply_event`. Do not edit `PROJECT.yaml`, `BOOK.yaml`, or `STATUS.md` directly. The tool owns validation, state transitions, rollback, and Git checkpointing.
 
-A `reader-test` event may update only the active book's `reader-experiments.yaml` and evidence-backed `revision-tickets.yaml`. It must not rewrite manuscript prose or advance workflow state.
+A `reader-test` event may update only the active book's `reader-experiments.yaml` and evidence-backed `revision-tickets.yaml`. It must not rewrite manuscript prose or advance workflow state. It also rejects model/simulated response sources, undersized validation claims, and aggregate rates that do not match the recorded response rows.
 
 ## Normal commands
 
@@ -55,7 +55,7 @@ During book planning, define the safe obvious version to avoid, author-only adva
 
 ## Reader evidence
 
-Use `/novel-readers` to prepare or record blind immediate and delayed experiments. The delayed session should occur 24–72 hours later without reopening the sample and should measure unprompted hook recall, signature-moment recall, friend-description specificity, productive disagreement, lingering questions, specific recommendation language, and whether the reader independently told someone. Keep results segmented by reader type and leave the verdict blocked or insufficient when real delayed evidence is missing.
+Use `/novel-readers` to prepare or record blind immediate and delayed experiments. Before collection, predeclare the target segment, exact sample/variant, delay, and `minimum_reader_count`. The delayed session should occur 24–72 hours later without reopening the sample and should measure unprompted hook recall, signature-moment recall, friend-description specificity, productive disagreement, lingering questions, specific recommendation language, and whether the reader independently told someone. Compute aggregate rates from the recorded human rows. Keep results segmented by reader type and leave the verdict blocked or insufficient when the predeclared minimum or real delayed evidence is missing.
 
 ## Approval gates
 
