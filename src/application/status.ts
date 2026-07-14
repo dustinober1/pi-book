@@ -24,6 +24,10 @@ export interface ProjectStatus {
   markdown: string;
 }
 
+export interface ProjectStatusOptions {
+  ignoreGitDirty?: boolean;
+}
+
 function nextActionForStage(stage: string): string {
   const actions: Record<string, string> = {
     "voice-intake": "Build the voice profile from the writer's evidence.",
@@ -78,7 +82,7 @@ function decisionText(project: ReturnType<typeof readProject>, blockers: string[
   };
 }
 
-export function getProjectStatus(root: string): ProjectStatus {
+export function getProjectStatus(root: string, options: ProjectStatusOptions = {}): ProjectStatus {
   const project = readProject(root);
   const book = readBook(root);
   const tickets = readTickets(root);
@@ -142,7 +146,7 @@ export function getProjectStatus(root: string): ProjectStatus {
 
   const git = gitState(root);
   if (!git.initialized) warnings.push("Git is not initialized; workflow checkpoints are unavailable.");
-  else if (git.dirty) warnings.push(`${git.dirty} uncommitted file(s) exist.`);
+  else if (git.dirty && !options.ignoreGitDirty) warnings.push(`${git.dirty} uncommitted file(s) exist.`);
 
   const words = manuscriptWordCount(root, book.book_id);
   const decision = decisionText(project, blockers);
