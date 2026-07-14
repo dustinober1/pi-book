@@ -67,6 +67,104 @@ export const BookSchema = Type.Object({
 }, { additionalProperties: false });
 export type BookState = Static<typeof BookSchema>;
 
+export const SignatureMomentSchema = Type.Object({
+  id: Type.String({ minLength: 1 }),
+  description: Type.String(),
+  intended_reader_memory: Type.String(),
+  planned_location: Type.Union([Type.String(), Type.Null()]),
+  status: Type.Union([Type.Literal("planned"), Type.Literal("seeded"), Type.Literal("delivered"), Type.Literal("cut")]),
+}, { additionalProperties: false });
+
+export const ProductiveDisagreementSchema = Type.Object({
+  question: Type.String(),
+  competing_readings: Type.Array(Type.String(), { minItems: 2 }),
+}, { additionalProperties: false });
+
+export const RecurringMotifSchema = Type.Object({
+  id: Type.String({ minLength: 1 }),
+  element: Type.String(),
+  function: Type.String(),
+  restraint_rule: Type.String(),
+}, { additionalProperties: false });
+
+export const RemarkabilitySchema = Type.Object({
+  schema_version: Type.Literal("1.0.0"),
+  safe_obvious_version: Type.String(),
+  author_only_advantage: Type.String(),
+  productive_discomfort: Type.String(),
+  retellable_hook: Type.String(),
+  signature_moments: Type.Array(SignatureMomentSchema),
+  productive_disagreements: Type.Array(ProductiveDisagreementSchema),
+  recurring_motifs: Type.Array(RecurringMotifSchema),
+  lingering_question: Type.String(),
+  hand_sell_reason: Type.String(),
+  accepted_reader_costs: Type.Array(Type.String()),
+}, { additionalProperties: false });
+export type RemarkabilityState = Static<typeof RemarkabilitySchema>;
+
+const NullableRateSchema = Type.Union([Type.Number({ minimum: 0, maximum: 1 }), Type.Null()]);
+
+export const ReaderResponseSchema = Type.Object({
+  reader_id: Type.String({ minLength: 1 }),
+  source: Type.Literal("human"),
+  segment: Type.String(),
+  recorded_at: Type.String(),
+  continued_reading: Type.Union([Type.Boolean(), Type.Null()]),
+  would_buy: Type.Union([Type.Boolean(), Type.Null()]),
+  confusions: Type.Array(Type.String()),
+  trust_breaks: Type.Array(Type.String()),
+  lines_that_worked: Type.Array(Type.String()),
+  remembered_hook: Type.String(),
+  remembered_moments: Type.Array(Type.String()),
+  friend_description: Type.String(),
+  disagreement_question: Type.String(),
+  lingering_question: Type.String(),
+  recommendation_target: Type.String(),
+  recommendation_reason: Type.String(),
+  told_someone: Type.Union([Type.Boolean(), Type.Null()]),
+}, { additionalProperties: false });
+
+export const ReaderExperimentMetricsSchema = Type.Object({
+  continuation_rate: NullableRateSchema,
+  purchase_intent_rate: NullableRateSchema,
+  delayed_hook_recall_rate: NullableRateSchema,
+  signature_moment_recall_rate: NullableRateSchema,
+  specific_recommendation_rate: NullableRateSchema,
+  talkability_rate: NullableRateSchema,
+}, { additionalProperties: false });
+
+export const ReaderExperimentSchema = Type.Object({
+  id: Type.String({ minLength: 1 }),
+  status: Type.Union([
+    Type.Literal("planned"), Type.Literal("recruiting"), Type.Literal("immediate-complete"),
+    Type.Literal("delayed-pending"), Type.Literal("complete"), Type.Literal("cancelled"),
+  ]),
+  scope: Type.Union([
+    Type.Literal("first-page"), Type.Literal("first-chapter"), Type.Literal("sample"),
+    Type.Literal("act"), Type.Literal("manuscript"),
+  ]),
+  variant: Type.String(),
+  blind: Type.Boolean(),
+  target_reader: Type.String(),
+  sample_path: Type.String(),
+  minimum_reader_count: Type.Integer({ minimum: 1, maximum: 1000 }),
+  immediate_responses: Type.Array(ReaderResponseSchema),
+  delayed_after_hours: Type.Integer({ minimum: 24, maximum: 168 }),
+  delayed_responses: Type.Array(ReaderResponseSchema),
+  metrics: ReaderExperimentMetricsSchema,
+  verdict: Type.Union([
+    Type.Literal("blocked"), Type.Literal("insufficient-signal"), Type.Literal("promising"),
+    Type.Literal("validated"), Type.Literal("rejected"),
+  ]),
+  next_action: Type.String(),
+}, { additionalProperties: false });
+
+export const ReaderExperimentsSchema = Type.Object({
+  schema_version: Type.Literal("1.0.0"),
+  experiments: Type.Array(ReaderExperimentSchema),
+}, { additionalProperties: false });
+export type ReaderExperimentsState = Static<typeof ReaderExperimentsSchema>;
+
 export const CanonFactSchema = Type.Object({
   id: Type.String({ minLength: 1 }), category: Type.String({ minLength: 1 }), subject: Type.String({ minLength: 1 }),
   fact: Type.String({ minLength: 1 }), source: Type.String({ minLength: 1 }),
@@ -162,6 +260,7 @@ const schemaByPath: Array<[RegExp, TSchema]> = [
   [/(^|\/)story-threads\.yaml$/, StoryThreadsSchema], [/(^|\/)plot-grid\.yaml$/, PlotGridSchema],
   [/(^|\/)chapter-queue\.yaml$/, ChapterQueueSchema], [/(^|\/)continuity-delta\.yaml$/, ContinuityDeltaSchema],
   [/(^|\/)revision-tickets\.yaml$/, RevisionTicketsSchema], [/(^|\/)genre\.yaml$/, GenreConfigSchema],
+  [/(^|\/)remarkability\.yaml$/, RemarkabilitySchema], [/(^|\/)reader-experiments\.yaml$/, ReaderExperimentsSchema],
   [/(^|\/)series-arc\.yaml$/, SeriesArcSchema], [/(^|\/)source-register\.yaml$/, SourceRegisterSchema],
 ];
 export function schemaForPath(path: string): TSchema | null { return schemaByPath.find(([pattern]) => pattern.test(path))?.[1] ?? null; }

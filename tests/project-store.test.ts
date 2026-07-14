@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initializeProject, readBook, readProject } from "../src/project/store.js";
@@ -18,7 +18,9 @@ test("initialization creates a compact series-capable thriller project", () => {
     assert.equal(book.target_words, 95000);
     assert.equal(book.profile, "thriller");
     const controls = listFilesRecursive(root, (path) => !path.includes("/.git/") && !path.includes("manuscript/chapters"));
-    assert.ok(controls.length <= 18, `expected compact controls, found ${controls.length}`);
+    assert.ok(controls.length <= 20, `expected compact controls, found ${controls.length}`);
+    assert.equal(existsSync(join(root, "books", "book-01", "remarkability.yaml")), true);
+    assert.equal(existsSync(join(root, "books", "book-01", "reader-experiments.yaml")), true);
     assert.match(readFileSync(join(root, "series", "voice-profile.md"), "utf8"), /Not-this-author evidence/);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
