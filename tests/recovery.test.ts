@@ -15,7 +15,8 @@ function configuredProject(name: string): string {
   const root = initializeProject(parent, { projectName: name, projectType: "standalone", profile: "thriller" });
   git(root, ["config", "user.email", "novel-forge@example.test"]);
   git(root, ["config", "user.name", "Novel Forge Test"]);
-  git(root, ["add", "."]);
+  writeFileSync(join(root, "manual-note.txt"), "Manual repository change.\n", "utf8");
+  git(root, ["add", "manual-note.txt"]);
   git(root, ["commit", "-m", "Initial project"]);
   return root;
 }
