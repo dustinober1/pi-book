@@ -49,7 +49,7 @@ Planning, drafting, review, reader-evidence, revision, canon lock, and packaging
 
 1. verifies the expected stage and project hash;
 2. enforces an event-specific file allowlist;
-3. validates YAML, profile values, canon/thread/research references, and packet state;
+3. validates YAML, profile values, canon/thread/research references, packet state, reader source, sample minimums, and aggregate reader metrics;
 4. derives PROJECT.yaml and BOOK.yaml transitions in code;
 5. applies the files as one rollback-capable transaction;
 6. creates one Git checkpoint for the workflow event.
@@ -106,6 +106,8 @@ The contract is created during book planning and included in drafting context on
 
 Use `/novel-readers first-page|first-chapter|sample|act|manuscript|record` to prepare or update `reader-experiments.yaml`.
 
+Before collection, each experiment records its exact target-reader segment, sample or variant, blind protocol, delay, and `minimum_reader_count`. Every eligible response is explicitly typed as `source: human`; model, persona, or simulated responses fail schema validation.
+
 A complete experiment separates:
 
 - immediate continuation, purchase intent, confusion, trust breaks, and lines that worked;
@@ -116,7 +118,7 @@ A complete experiment separates:
 - a specific recommendation target and reason;
 - whether the reader independently told someone about the sample.
 
-Results remain segmented by reader type. Personas and model reviewers may prepare questions, but they never count as outside-reader evidence. Missing real or delayed responses leave the verdict `blocked` or `insufficient-signal`; Novel Forge does not fake validation.
+Aggregate rates are recomputed from the recorded response rows and rejected when they do not match. A `validated` verdict must meet the predeclared minimum in both immediate and delayed sessions. Results remain segmented by reader type. Personas and model reviewers may prepare questions, but they never count as outside-reader evidence. Missing real or delayed responses leave the verdict `blocked` or `insufficient-signal`; Novel Forge does not fake validation.
 
 ## Context policy
 
