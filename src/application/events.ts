@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { basename, join } from "node:path";
-import { BookSchema, CanonSchema, ChapterQueueSchema, GenreConfigSchema, PlotGridSchema, ProjectSchema, RevisionTicketsSchema, SourceRegisterSchema, StoryThreadsSchema, type BookState, type CanonState, type ChapterQueueState, type GenreConfig, type PlotGridState, type ProjectState, type RevisionTicketsState, type SourceRegisterState, type Stage, type StoryThreadsState } from "../domain/schemas.js";
+import { BookSchema, CanonSchema, ChapterQueueSchema, GenreConfigSchema, PlotGridSchema, ProjectSchema, ReaderExperimentsSchema, RemarkabilitySchema, RevisionTicketsSchema, SourceRegisterSchema, StoryThreadsSchema, type BookState, type CanonState, type ChapterQueueState, type GenreConfig, type PlotGridState, type ProjectState, type ReaderExperimentsState, type RemarkabilityState, type RevisionTicketsState, type SourceRegisterState, type Stage, type StoryThreadsState } from "../domain/schemas.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import { commitWorkflowEvent } from "../infrastructure/git.js";
 import { applyTransaction, type FileChange } from "../infrastructure/transaction.js";
@@ -9,6 +9,7 @@ import { getProfile } from "../profiles/index.js";
 import { readBook, readProject } from "../project/store.js";
 import { openBlockingTickets } from "../review/review.js";
 import { packetReferenceFindings } from "./integrity.js";
+import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 
 export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "revise" | "canon-lock" | "package";
 export interface NovelEventInput { eventType: NovelEventType; expectedStage: Stage; expectedProjectHash: string; files: FileChange[]; chapter?: number; scope?: string }
@@ -66,7 +67,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
   const required: Partial<Record<NovelEventType, RegExp>> = {
     "voice-profile": /series\/voice-profile\.md$/,
     "series-plan": /series\/(series-bible\.md|series-arc\.yaml)$/,
-    "book-plan": /book-bible\.md$|plot-grid\.yaml$|remarkability\.yaml$/,
+    "book-plan": /remarkability\.yaml$/,
     "chapter-queue": /chapter-queue\.yaml$/,
     "draft-chapter": /manuscript\/chapters\/.*\.md$/,
     review: /review-report\.md$|revision-tickets\.yaml$/,
@@ -80,6 +81,14 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     const requiredBookPlan = [`books/${book.book_id}/book-bible.md`, `books/${book.book_id}/plot-grid.yaml`, `books/${book.book_id}/remarkability.yaml`];
     const missing = requiredBookPlan.filter((path) => !input.files.some((file) => file.path === path));
     if (missing.length) throw new Error(`book-plan event is missing required output: ${missing.join(", ")}`);
+    const remarkability = parseOverlay<RemarkabilityState>(root, input.files, `books/${book.book_id}/remarkability.yaml`, RemarkabilitySchema);
+    const blockers = remarkabilityFindings(remarkability).filter((finding) => finding.severity === "blocker");
+    if (blockers.length) throw new Error(`Remarkability validation blocked book-plan:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+  }
+  if (input.eventType === "reader-test") {
+    const experiments = parseOverlay<ReaderExperimentsState>(root, input.files, `books/${book.book_id}/reader-experiments.yaml`, ReaderExperimentsSchema);
+    const blockers = readerExperimentFindings(experiments).filter((finding) => finding.severity === "blocker");
+    if (blockers.length) throw new Error(`Reader-evidence validation blocked reader-test:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
 }
 function chapterNumber(path: string): number | null { const match = basename(path).match(/^0*(\d+)(?:[-_ .]|$)/); return match ? Number.parseInt(match[1] ?? "", 10) : null; }
