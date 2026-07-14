@@ -8,6 +8,7 @@ import { getProjectStatus, type ProjectStatus } from "./status.js";
 
 export interface HandoffOptions {
   lastAction?: string;
+  checkpoint?: boolean;
 }
 
 export interface GuidedProjectEventResult {
@@ -102,9 +103,18 @@ function buildGuidance(root: string, options: HandoffOptions = {}, ignoreGitDirt
   };
 }
 
+function checkpointMessage(lastAction: string): string {
+  return `Novel Forge: ${lastAction.trim().replace(/^[A-Z]/, (letter) => letter.toLowerCase())}`;
+}
+
 export function refreshGuidance(root: string, options: HandoffOptions = {}): ProjectStatus {
   const guidance = buildGuidance(root, options);
-  applyTransaction(root, guidance.changes, { gitCheckpoint: false });
+  const project = readProject(root);
+  const shouldCheckpoint = options.checkpoint ?? Boolean(options.lastAction);
+  applyTransaction(root, guidance.changes, {
+    gitCheckpoint: shouldCheckpoint && project.automation.git_checkpoints,
+    ...(shouldCheckpoint && options.lastAction ? { commitMessage: checkpointMessage(options.lastAction) } : {}),
+  });
   return guidance.status;
 }
 
