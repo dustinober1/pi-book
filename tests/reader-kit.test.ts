@@ -57,7 +57,7 @@ test("imports quoted human CSV rows and computes metrics from them", () => {
     const csv = join(root, "books", "book-01", "reader-kit", "responses.csv");
     writeFileSync(csv, [
       "phase,reader_id,source,segment,recorded_at,continued_reading,would_buy,confusions,trust_breaks,lines_that_worked,remembered_hook,remembered_moments,friend_description,disagreement_question,lingering_question,recommendation_target,recommendation_reason,told_someone",
-      'immediate,R-001,human,core,2026-07-14T12:00:00Z,true,true,"one, small confusion",,"line one;line two",,,,,,,,,',
+      'immediate,R-001,human,core,2026-07-14T12:00:00Z,true,true,"one, small confusion",,"line one;line two",,,,,,,,',
       'delayed,R-001,human,core,2026-07-16T12:00:00Z,,,,,,"the clean signal","the van;the cutoff","A fugitive analyst finds a manufactured war trigger",Who authorized it?,Will India fire?,thriller readers,"specific institutional pressure",true',
     ].join("\n"), "utf8");
     importReaderResponses(root, prepared.experimentId, csv);
@@ -90,6 +90,9 @@ test("CSV import rejects simulated, duplicate, malformed, and unmatched rows", (
     assert.throws(() => importReaderResponses(root, prepared.experimentId, csv), /source.*human/i);
     writeFileSync(csv, `${header}\nimmediate,R-001,human,core,now,maybe,true,,,,,,,,,,,\n`, "utf8");
     assert.throws(() => importReaderResponses(root, prepared.experimentId, csv), /boolean/i);
+    const extraColumn = ["immediate", "R-001", "human", "core", "now", "true", "true", "", "", "", "", "", "", "", "", "", "", "", "extra"].join(",");
+    writeFileSync(csv, `${header}\n${extraColumn}\n`, "utf8");
+    assert.throws(() => importReaderResponses(root, prepared.experimentId, csv), /expected 18 columns.*received 19/i);
     const unmatched = ["delayed", "R-002", "human", "core", "now", "", "", "", "", "", "hook", "moment", "description", "question", "linger", "target", "reason", "true"].join(",");
     writeFileSync(csv, `${header}\n${unmatched}\n`, "utf8");
     assert.throws(() => importReaderResponses(root, prepared.experimentId, csv), /matching immediate/i);
