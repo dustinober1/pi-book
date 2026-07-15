@@ -3,6 +3,14 @@ import { stringifyYaml } from "../infrastructure/yaml.js";
 import { getProfile } from "../profiles/index.js";
 import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
 import { defaultMarketingMetadata, defaultPublishingMetadata } from "../domain/v1-2-schemas.js";
+import {
+  defaultBookStrategy,
+  defaultResearchLedger,
+  defaultTasteProfile,
+  defaultVoiceAudits,
+  defaultVoiceExperimentIndex,
+  defaultVoiceGuardrails,
+} from "../domain/v1-3-schemas.js";
 
 export interface ProjectTemplateOptions { projectName: string; projectType: ProjectType; profile: ProfileId; targetWords?: number }
 
@@ -69,6 +77,9 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
     [`${base}/publishing.yaml`]: stringifyYaml(defaultPublishingMetadata(book, bookNumber)),
     [`${base}/marketing.yaml`]: stringifyYaml(defaultMarketingMetadata()),
     [`${base}/reader-kits/index.yaml`]: stringifyYaml({ schema_version: "1.0.0", experiments: [] }),
+    [`${base}/research-ledger.yaml`]: stringifyYaml(defaultResearchLedger()),
+    [`${base}/book-strategy.yaml`]: stringifyYaml(defaultBookStrategy()),
+    [`${base}/voice-audits.yaml`]: stringifyYaml(defaultVoiceAudits()),
   };
 }
 
@@ -147,6 +158,9 @@ Each installment closes its immediate conflict while preserving only earned long
 
 status: pending
 `,
+    "series/taste-profile.yaml": stringifyYaml(defaultTasteProfile()),
+    "series/voice-guardrails.yaml": stringifyYaml(defaultVoiceGuardrails()),
+    "series/voice-experiments/index.yaml": stringifyYaml(defaultVoiceExperimentIndex()),
     "series/series-arc.yaml": stringifyYaml({ schema_version: "1.0.0", books: [{ id: "book-01", status: "active", role: "establish the series promise", closes: [], carries: [] }], long_arcs: [] }),
     "series/canon.yaml": stringifyYaml({ schema_version: "1.0.0", facts: [], relationships: [] }),
     "series/story-threads.yaml": stringifyYaml({ schema_version: "1.0.0", threads: [] }),
