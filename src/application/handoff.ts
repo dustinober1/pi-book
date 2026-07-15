@@ -1,8 +1,12 @@
 import { join } from "node:path";
 import type { BookState, ProjectState } from "../domain/schemas.js";
+import { TasteProfileSchema, VoiceGuardrailsSchema, defaultTasteProfile, defaultVoiceGuardrails, type TasteProfile, type VoiceGuardrails } from "../domain/v1-3-schemas.js";
+import { readText } from "../infrastructure/files.js";
 import { gitState, type GitCheckpointResult } from "../infrastructure/git.js";
 import { applyTransaction, type FileChange, type TransactionFileChange } from "../infrastructure/transaction.js";
+import { parseYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject } from "../project/store.js";
+import { voiceSafetyFindings } from "./influence-palette.js";
 import { projectStateHash } from "./project-hash.js";
 import { getProjectStatus, type ProjectStatus } from "./status.js";
 
@@ -27,6 +31,25 @@ function readFirstPaths(project: ProjectState, book: BookState): string[] {
     paths.push(`${base}/chapter-queue.yaml`, `${base}/continuity-delta.yaml`, `${base}/revision-tickets.yaml`);
   }
   return paths;
+}
+
+function overlayText(root: string, changes: TransactionFileChange[], path: string): string | null {
+  const changed = changes.find((item) => item.path.replace(/\\/g, "/").replace(/^\.\//, "") === path);
+  if (changed) return typeof changed.content === "string" ? changed.content : null;
+  return readText(join(root, path));
+}
+
+function validateVoiceEvidence(root: string, changes: TransactionFileChange[]): void {
+  const watched = new Set(["series/taste-profile.yaml", "series/voice-guardrails.yaml", "series/voice-profile.md"]);
+  if (!changes.some((item) => watched.has(item.path.replace(/\\/g, "/").replace(/^\.\//, "")))) return;
+
+  const tasteText = overlayText(root, changes, "series/taste-profile.yaml");
+  const guardrailsText = overlayText(root, changes, "series/voice-guardrails.yaml");
+  const taste = tasteText ? parseYaml<TasteProfile>(tasteText, TasteProfileSchema, "series/taste-profile.yaml") : defaultTasteProfile();
+  const guardrails = guardrailsText ? parseYaml<VoiceGuardrails>(guardrailsText, VoiceGuardrailsSchema, "series/voice-guardrails.yaml") : defaultVoiceGuardrails();
+  const voiceProfile = overlayText(root, changes, "series/voice-profile.md") ?? "";
+  const findings = voiceSafetyFindings({ taste, voiceProfile, guardrails });
+  if (findings.length) throw new Error(`Voice originality validation blocked the guided event:\n${findings.map((item) => `- ${item.message}`).join("\n")}`);
 }
 
 export function renderHandoff(project: ProjectState, book: BookState, status: ProjectStatus, options: HandoffOptions = {}, root?: string): string {
@@ -119,6 +142,7 @@ export function refreshGuidance(root: string, options: HandoffOptions = {}): Pro
 }
 
 export function applyGuidedProjectEvent(root: string, changes: TransactionFileChange[], message: string, options: HandoffOptions = {}): GuidedProjectEventResult {
+  validateVoiceEvidence(root, changes);
   const checkpointEnabled = readProject(root).automation.git_checkpoints;
   const preexistingDirty = gitState(root).dirty;
   let finalStatus: ProjectStatus | null = null;
