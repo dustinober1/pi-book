@@ -1,3 +1,4 @@
+import { readBook } from "../../project/store.js";
 import type { WizardProposalEnvelope } from "../../wizard/types.js";
 import type { WizardWorkflowHandler } from "../wizard.js";
 import { applyAdoption } from "./apply.js";
@@ -38,7 +39,7 @@ export function createAdoptionWizardHandler(root: string, resolver: AdoptionSour
       if (action === "map") {
         const preview = store.get(String(value.preview_id ?? ""));
         const mapped = applyMapping(preview, (value.mapping ?? { operations: [] }) as AdoptionMappingProposal);
-        return publicMapping(mapped, root.split("/").pop() ?? "book-01");
+        return publicMapping(mapped, readBook(root).book_id);
       }
       throw new Error(`Unknown adoption preview action: ${action}`);
     },
