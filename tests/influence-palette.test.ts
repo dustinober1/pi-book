@@ -1,8 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
-import { TasteProfileSchema, defaultTasteProfile } from "../src/domain/v1-3-schemas.js";
-import { VOICE_PRECEDENCE, compileVoiceGuardrails } from "../src/application/influence-palette.js";
+import { TasteProfileSchema, defaultTasteProfile, defaultVoiceGuardrails } from "../src/domain/v1-3-schemas.js";
+import { VOICE_PRECEDENCE, compileVoiceGuardrails, voiceSafetyFindings } from "../src/application/influence-palette.js";
+
+function tasteWithExampleReference() {
+  const taste = defaultTasteProfile();
+  taste.influences.push({
+    id: "INF-001",
+    reference: "Example Author — Example Book",
+    influence_type: "voice",
+    admired_for: ["compression"],
+    not_for: ["signature phrasing"],
+    derived_traits: ["compressed interiority"],
+    status: "approved",
+  });
+  return taste;
+}
 
 test("taste profiles require the canonical evidence precedence", () => {
   const valid = defaultTasteProfile();
@@ -42,4 +56,33 @@ test("compiled rules retain stable precedence order while removing duplicates", 
   assert.deepEqual(result.guardrails.must, ["concrete sensory detail"]);
   assert.deepEqual(result.guardrails.prefer, ["controlled interiority", "compressed paragraphs", "clear causality"]);
   assert.equal(result.suppressed.length, 1);
+});
+
+test("direct imitation language is blocked while neutral craft language is accepted", () => {
+  const taste = tasteWithExampleReference();
+  assert.ok(voiceSafetyFindings({
+    taste,
+    voiceProfile: "Write in the style of Example Author.",
+    guardrails: defaultVoiceGuardrails(),
+  }).some((item) => item.code === "direct-imitation"));
+
+  assert.deepEqual(voiceSafetyFindings({
+    taste,
+    voiceProfile: "Use compressed interiority and concrete sensory detail.",
+    guardrails: { ...defaultVoiceGuardrails(), prefer: ["compressed interiority"] },
+  }), []);
+});
+
+test("raw influence names are blocked from compiled guardrails and voice profile", () => {
+  const taste = tasteWithExampleReference();
+  assert.ok(voiceSafetyFindings({
+    taste,
+    voiceProfile: "Example Author is the model.",
+    guardrails: defaultVoiceGuardrails(),
+  }).some((item) => item.code === "raw-reference"));
+  assert.ok(voiceSafetyFindings({
+    taste,
+    voiceProfile: "Neutral project voice.",
+    guardrails: { ...defaultVoiceGuardrails(), prefer: ["Use Example Book pacing"] },
+  }).some((item) => item.code === "raw-reference"));
 });
