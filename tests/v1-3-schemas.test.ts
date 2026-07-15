@@ -22,29 +22,26 @@ import {
 } from "../src/domain/v1-3-schemas.js";
 import { v13SchemaForPath } from "../src/domain/v1-3-schema-registry.js";
 
-test("1.3 defaults validate as strict empty evidence artifacts", () => {
-  parseYaml(stringifyYaml(defaultTasteProfile()), TasteProfileSchema, "taste-profile.yaml");
-  parseYaml(stringifyYaml(defaultVoiceGuardrails()), VoiceGuardrailsSchema, "voice-guardrails.yaml");
-  parseYaml(stringifyYaml(defaultVoiceExperimentIndex()), VoiceExperimentIndexSchema, "voice-experiments/index.yaml");
-  parseYaml(stringifyYaml(defaultResearchLedger()), ResearchLedgerSchema, "research-ledger.yaml");
-  parseYaml(stringifyYaml(defaultBookStrategy()), BookStrategySchema, "book-strategy.yaml");
-  parseYaml(stringifyYaml(defaultVoiceAudits()), VoiceAuditsSchema, "voice-audits.yaml");
-});
+function researchItem(status: "planned" | "ready", dramaticUses: string[]) {
+  return {
+    id: "RES-001",
+    lane: "story-world",
+    claim: status === "ready" ? "The system requires two operators." : "",
+    source_ids: status === "ready" ? ["SRC-001"] : [],
+    confidence: status === "ready" ? "high" : "low",
+    verified_on: status === "ready" ? "2026-07-15" : null,
+    fictionalization: { status: "unchanged", reason: "" },
+    knowledge_scope: { known_by: [], incorrectly_believed_by: [], unknown_to: [] },
+    risk: status === "ready" ? ["Procedure varies by jurisdiction."] : [],
+    dramatic_uses: dramaticUses,
+    story_use: { chapters: [], decision_affected: "" },
+    notes: "",
+    status,
+  };
+}
 
-test("1.3 schemas reject unknown fields and incomplete ready research", () => {
-  assert.throws(
-    () => parseYaml(stringifyYaml({ ...defaultTasteProfile(), extra: true }), TasteProfileSchema, "taste-profile.yaml"),
-    /schema validation/i,
-  );
-  const ledger = {
-    ...defaultResearchLedger(),
-    items: [{ id: "RES-001", lane: "story-world", status: "ready" }],
-  } as any;
-  assert.throws(() => parseYaml(stringifyYaml(ledger), ResearchLedgerSchema, "research-ledger.yaml"), /schema validation/i);
-});
-
-test("voice experiment files require anonymous variants and a stable baseline record", () => {
-  const value = {
+function acceptedVoiceExperiment() {
+  return {
     schema_version: "1.0.0",
     id: "VE-001",
     status: "accepted",
@@ -60,19 +57,58 @@ test("voice experiment files require anonymous variants and a stable baseline re
     baseline_path: "series/voice-experiments/VE-001/baseline.md",
     baseline_hash: "e".repeat(64),
   };
+}
+
+test("1.3 defaults validate as strict empty evidence artifacts", () => {
+  parseYaml(stringifyYaml(defaultTasteProfile()), TasteProfileSchema, "taste-profile.yaml");
+  parseYaml(stringifyYaml(defaultVoiceGuardrails()), VoiceGuardrailsSchema, "voice-guardrails.yaml");
+  parseYaml(stringifyYaml(defaultVoiceExperimentIndex()), VoiceExperimentIndexSchema, "voice-experiments/index.yaml");
+  parseYaml(stringifyYaml(defaultResearchLedger()), ResearchLedgerSchema, "research-ledger.yaml");
+  parseYaml(stringifyYaml(defaultBookStrategy()), BookStrategySchema, "book-strategy.yaml");
+  parseYaml(stringifyYaml(defaultVoiceAudits()), VoiceAuditsSchema, "voice-audits.yaml");
+});
+
+test("1.3 schemas reject unknown fields while allowing incomplete planned research", () => {
+  assert.throws(
+    () => parseYaml(stringifyYaml({ ...defaultTasteProfile(), extra: true }), TasteProfileSchema, "taste-profile.yaml"),
+    /schema validation/i,
+  );
+  parseYaml(stringifyYaml({ schema_version: "1.0.0", items: [researchItem("planned", [])] }), ResearchLedgerSchema, "research-ledger.yaml");
+});
+
+test("ready research requires at least one dramatic use", () => {
+  assert.throws(
+    () => parseYaml(stringifyYaml({ schema_version: "1.0.0", items: [researchItem("ready", [])] }), ResearchLedgerSchema, "research-ledger.yaml"),
+    /schema validation/i,
+  );
+  parseYaml(
+    stringifyYaml({ schema_version: "1.0.0", items: [researchItem("ready", ["procedural-constraint"])] }),
+    ResearchLedgerSchema,
+    "research-ledger.yaml",
+  );
+});
+
+test("accepted voice experiments require anonymous variants and a non-null baseline", () => {
+  const value = acceptedVoiceExperiment();
   parseYaml(stringifyYaml(value), VoiceExperimentFileSchema, "experiment.yaml");
-  assert.throws(
-    () => parseYaml(stringifyYaml({ ...value, variants: undefined }), VoiceExperimentFileSchema, "experiment.yaml"),
-    /schema validation/i,
-  );
-  assert.throws(
-    () => parseYaml(stringifyYaml({ ...value, baseline_path: undefined }), VoiceExperimentFileSchema, "experiment.yaml"),
-    /schema validation/i,
-  );
-  assert.throws(
-    () => parseYaml(stringifyYaml({ ...value, baseline_hash: undefined }), VoiceExperimentFileSchema, "experiment.yaml"),
-    /schema validation/i,
-  );
+  for (const invalid of [
+    { ...value, variants: undefined },
+    { ...value, baseline_path: undefined },
+    { ...value, baseline_hash: undefined },
+    { ...value, baseline_path: null },
+    { ...value, baseline_hash: null },
+  ]) assert.throws(() => parseYaml(stringifyYaml(invalid), VoiceExperimentFileSchema, "experiment.yaml"), /schema validation/i);
+});
+
+test("planned voice experiments may exist before variants or a baseline are produced", () => {
+  const value = {
+    ...acceptedVoiceExperiment(),
+    status: "planned",
+    variants: [],
+    baseline_path: null,
+    baseline_hash: null,
+  };
+  parseYaml(stringifyYaml(value), VoiceExperimentFileSchema, "experiment.yaml");
 });
 
 test("the 1.3 registry recognizes every new canonical YAML path", () => {
