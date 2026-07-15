@@ -16,6 +16,8 @@
 - Browser packaging checklist with evidence paths, blocking/advisory status, and exact repair actions.
 - Complete package generation: manuscript Markdown, DOCX, EPUB, publishing CSV/XLSX, reader CSV/XLSX, retailer copy, launch copy, social posts, ad variants, audiobook metadata, series-page copy, manifest, and conversion report.
 - Context-aware next-book proposals with locked canon, unresolved threads, reader limitations, author decisions, `inherited-context.yaml`, and `inheritance-report.md`.
+- A deterministic, in-memory continuity graph derived from approved canon, story threads, chapter packets, plot entries, and research sources.
+- Explainable graph-context reports with bounded paths, selected records, and policy-blocked provisional, inactive, or future-book candidates.
 
 ### Changed
 
@@ -24,12 +26,14 @@
 - Empty manuscripts expose **Adopt an existing manuscript** directly in the guided `/novel` menu.
 - Packaging source files are canonical YAML; generated documents are reproducible derivatives and do not become sources of truth.
 - Existing package outputs are source-hashed and cannot be silently overwritten after manuscript or metadata changes.
+- Drafting context now follows at most two safe continuity links from explicit chapter references, while preserving direct provisional references and preventing unsafe automatic discoveries.
 
 ### Compatibility
 
 - Version 1.1 projects remain readable before migration.
 - Legacy reader evidence can be copied into isolated v1.2 experiment directories without changing accepted response fields, metrics, verdicts, timestamps, or source claims.
 - Legacy `reader-experiments.yaml`, `reader-kit/`, Markdown/text adoption, and all specialist planning/drafting/review commands remain supported.
+- The continuity graph requires no new project files, schema migration, external service, or runtime dependency.
 
 ### Safety retained
 
@@ -39,6 +43,7 @@
 - Reader evidence requires accepted `source: human` rows; non-human rows never affect metrics or claims.
 - Undo creates a revert commit and never rewrites history.
 - Adoption never changes the source manuscript or overwrites occupied manuscript destinations.
+- Canonical YAML remains authoritative; the continuity graph is rebuilt in memory and never mutates canon or story state.
 
 ## 1.1.0 — Guided author workflow
 
