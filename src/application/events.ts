@@ -13,7 +13,7 @@ import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact
 
 export { projectStateHash } from "./project-hash.js";
 
-export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "revise" | "canon-lock" | "package";
+export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "research-update" | "revise" | "canon-lock" | "package";
 export interface NovelEventInput { eventType: NovelEventType; expectedStage: Stage; expectedProjectHash: string; files: FileChange[]; chapter?: number; scope?: string }
 export interface NovelEventResult { changed: string[]; stage: Stage; projectHash: string; gitMessage: string }
 
@@ -25,6 +25,7 @@ const eventStages: Record<NovelEventType, Stage[]> = {
   "draft-chapter": ["drafting"],
   review: ["drafting", "act-review", "revision", "manuscript-review"],
   "reader-test": ["drafting", "act-review", "revision", "manuscript-review", "packaging"],
+  "research-update": ["voice-intake", "series-planning", "book-planning", "chapter-queue", "drafting", "act-review", "revision", "manuscript-review", "canon-lock", "packaging"],
   revise: ["revision"],
   "canon-lock": ["canon-lock"],
   package: ["packaging"],
@@ -35,19 +36,21 @@ function normalized(path: string): string { return path.replace(/\\/g, "/").repl
 function allowedPath(event: NovelEventType, path: string, bookId: string, chapter?: number): boolean {
   const book = `books/${bookId}`;
   const exact: Record<NovelEventType, string[]> = {
-    "voice-profile": ["series/voice-profile.md"],
+    "voice-profile": ["series/voice-profile.md", "series/taste-profile.yaml", "series/voice-guardrails.yaml"],
     "series-plan": ["series/series-bible.md", "series/series-arc.yaml", "series/canon.yaml", "series/story-threads.yaml"],
-    "book-plan": [`${book}/book-bible.md`, `${book}/genre.yaml`, `${book}/plot-grid.yaml`, `${book}/chapter-queue.yaml`, `${book}/continuity-delta.yaml`, `${book}/remarkability.yaml`, "series/story-threads.yaml"],
+    "book-plan": [`${book}/book-bible.md`, `${book}/genre.yaml`, `${book}/plot-grid.yaml`, `${book}/chapter-queue.yaml`, `${book}/continuity-delta.yaml`, `${book}/remarkability.yaml`, `${book}/research-ledger.yaml`, `${book}/book-strategy.yaml`, "series/story-threads.yaml"],
     "chapter-queue": [`${book}/chapter-queue.yaml`, `${book}/plot-grid.yaml`],
     "draft-chapter": [`${book}/continuity-delta.yaml`, "series/story-threads.yaml", `${book}/revision-tickets.yaml`],
     review: [`${book}/review-report.md`, `${book}/revision-tickets.yaml`],
     "reader-test": [`${book}/reader-experiments.yaml`, `${book}/revision-tickets.yaml`],
+    "research-update": ["series/taste-profile.yaml", "series/voice-guardrails.yaml", "series/voice-experiments/index.yaml", `${book}/research-ledger.yaml`, `${book}/book-strategy.yaml`, `${book}/voice-audits.yaml`, "research/source-register.yaml"],
     revise: [`${book}/continuity-delta.yaml`, "series/story-threads.yaml", `${book}/revision-tickets.yaml`],
     "canon-lock": ["series/canon.yaml", "series/story-threads.yaml", "series/series-arc.yaml"],
     package: [`${book}/package.md`],
   };
   if (exact[event].includes(path)) return true;
   if (event === "reader-test" && path.startsWith(`${book}/reader-kit/`) && /\.(md|csv)$/i.test(path)) return true;
+  if (event === "research-update" && /^series\/voice-experiments\/VE-[0-9]{3}\/.+\.(md|yaml)$/i.test(path)) return true;
   if (["draft-chapter", "revise"].includes(event) && path.startsWith(`${book}/manuscript/chapters/`) && /\.md$/i.test(path)) {
     if (event === "revise" || chapter === undefined) return true;
     const match = basename(path).match(/^0*(\d+)(?:[-_ .]|$)/);
@@ -91,13 +94,19 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     "draft-chapter": /manuscript\/chapters\/.*\.md$/,
     review: /review-report\.md$|revision-tickets\.yaml$/,
     "reader-test": /reader-experiments\.yaml$/,
+    "research-update": /(^|\/)(taste-profile|voice-guardrails|research-ledger|book-strategy|voice-audits|source-register|index|experiment)\.yaml$|^series\/voice-experiments\/VE-[0-9]{3}\/.+\.md$/,
     "canon-lock": /series\/canon\.yaml$/,
     package: /package\.md$/,
   };
   const pattern = required[input.eventType];
   if (pattern && !input.files.some((file) => pattern.test(file.path))) throw new Error(`${input.eventType} event is missing its required output file.`);
+  if (input.eventType === "voice-profile") {
+    const requiredVoice = ["series/voice-profile.md", "series/taste-profile.yaml", "series/voice-guardrails.yaml"];
+    const missing = requiredVoice.filter((path) => !input.files.some((file) => file.path === path));
+    if (missing.length) throw new Error(`voice-profile event is missing required output: ${missing.join(", ")}`);
+  }
   if (input.eventType === "book-plan") {
-    const requiredBookPlan = [`books/${book.book_id}/book-bible.md`, `books/${book.book_id}/plot-grid.yaml`, `books/${book.book_id}/remarkability.yaml`];
+    const requiredBookPlan = [`books/${book.book_id}/book-bible.md`, `books/${book.book_id}/plot-grid.yaml`, `books/${book.book_id}/remarkability.yaml`, `books/${book.book_id}/research-ledger.yaml`, `books/${book.book_id}/book-strategy.yaml`];
     const missing = requiredBookPlan.filter((path) => !input.files.some((file) => file.path === path));
     if (missing.length) throw new Error(`book-plan event is missing required output: ${missing.join(", ")}`);
     const remarkability = parseOverlay<RemarkabilityState>(root, input.files, `books/${book.book_id}/remarkability.yaml`, RemarkabilitySchema);
@@ -233,6 +242,7 @@ export function applyNovelEvent(root: string, input: NovelEventInput): NovelEven
       break;
     }
     case "reader-test":
+    case "research-update":
       break;
     case "revise": {
       const tickets = parseOverlay<RevisionTicketsState>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsSchema);
