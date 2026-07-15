@@ -1,0 +1,37 @@
+name: Regenerate v1.2 lockfile
+
+on:
+  push:
+    branches:
+      - agent/v1.2-existing-project-reader-usability
+    paths:
+      - package.json
+      - package-lock.json
+      - .github/workflows/v12-lockfile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1.2-existing-project-reader-usability
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm install --package-lock-only --ignore-scripts
+      - name: Commit regenerated lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "Lockfile already current."
+            exit 0
+          fi
+          git config user.name "Novel Forge CI"
+          git config user.email "novel-forge@localhost"
+          git add package-lock.json
+          git commit -m "chore: regenerate v1.2 lockfile"
+          git push origin HEAD:agent/v1.2-existing-project-reader-usability
