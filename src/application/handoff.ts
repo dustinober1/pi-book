@@ -89,9 +89,7 @@ function validateVoiceOriginality(root: string, changes: TransactionFileChange[]
 function expectedExperimentPaths(directory: string, experiment: VoiceExperimentFile): string[] {
   return [
     `${directory}/source-scene.md`,
-    `${directory}/variant-a.md`,
-    `${directory}/variant-b.md`,
-    `${directory}/variant-c.md`,
+    ...experiment.variants.map((variant) => `${directory}/variant-${variant.id.toLowerCase()}.md`),
     ...(experiment.baseline_path !== null ? [`${directory}/baseline.md`] : []),
   ];
 }
@@ -105,6 +103,11 @@ function actualExperimentPaths(experiment: VoiceExperimentFile): string[] {
 }
 
 function validateExperimentPathContract(directory: string, experiment: VoiceExperimentFile): void {
+  const ids = experiment.variants.map((variant) => variant.id);
+  const expectedOrder = (["A", "B", "C"] as const).slice(0, ids.length);
+  if (new Set(ids).size !== ids.length || ids.some((id, index) => id !== expectedOrder[index])) {
+    throw new Error(`Voice experiment ${experiment.id} variants must be unique and appear in A, B, C order.`);
+  }
   const expected = expectedExperimentPaths(directory, experiment);
   const actual = actualExperimentPaths(experiment);
   if (expected.length !== actual.length || expected.some((path, index) => actual[index] !== path)) {
