@@ -7,6 +7,8 @@ import {
   ReaderExperimentIndexSchema,
   defaultMarketingMetadata,
   defaultPublishingMetadata,
+  type MarketingMetadata,
+  type PublishingMetadata,
 } from "../src/domain/v1-2-schemas.js";
 
 const book = {
@@ -24,7 +26,7 @@ const book = {
 
 test("publishing metadata is strict and leaves unknown values blank", () => {
   const value = defaultPublishingMetadata(book, 1);
-  const parsed = parseYaml(stringifyYaml(value), PublishingMetadataSchema, "publishing.yaml");
+  const parsed = parseYaml<PublishingMetadata>(stringifyYaml(value), PublishingMetadataSchema, "publishing.yaml");
   assert.equal(parsed.title, "The Clean Signal");
   assert.equal(parsed.series.number, 1);
   assert.equal(parsed.author.name, "");
@@ -34,7 +36,7 @@ test("publishing metadata is strict and leaves unknown values blank", () => {
 
 test("marketing metadata requires explicit approval state for every group", () => {
   const value = defaultMarketingMetadata();
-  const parsed = parseYaml(stringifyYaml(value), MarketingMetadataSchema, "marketing.yaml");
+  const parsed = parseYaml<MarketingMetadata>(stringifyYaml(value), MarketingMetadataSchema, "marketing.yaml");
   assert.equal(parsed.social.approval.status, "draft");
   const invalid = structuredClone(value) as any;
   delete invalid.social.approval;
