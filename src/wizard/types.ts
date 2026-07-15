@@ -23,6 +23,12 @@ export interface WizardSource {
   byteSize: number;
 }
 
+export interface WizardInitialSource {
+  absolutePath: string;
+  originalName?: string;
+  mediaType?: string;
+}
+
 export interface WizardSessionOptions {
   projectRoot: string;
   registry: WizardActionRegistry;
@@ -30,6 +36,7 @@ export interface WizardSessionOptions {
   idleTimeoutMs?: number;
   uploadLimitBytes?: number;
   openBrowser?: boolean;
+  initialSources?: WizardInitialSource[];
 }
 
 export interface WizardSessionHandle {
