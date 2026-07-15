@@ -13,6 +13,15 @@ import { initializeProject, readProject } from "../src/project/store.js";
 
 function temp(): string { return mkdtempSync(join(tmpdir(), "novel-forge-guided-")); }
 
+function voiceFiles(root: string, profile: string) {
+  return [
+    { path: "series/voice-profile.md", content: profile },
+    { path: "series/taste-profile.yaml", content: readFileSync(join(root, "series", "taste-profile.yaml"), "utf8") },
+    { path: "series/voice-guardrails.yaml", content: readFileSync(join(root, "series", "voice-guardrails.yaml"), "utf8") },
+    { path: "series/voice-experiments/index.yaml", content: readFileSync(join(root, "series", "voice-experiments", "index.yaml"), "utf8") },
+  ];
+}
+
 test("new projects expose versioned author entry files", () => {
   const parent = temp();
   try {
@@ -99,7 +108,7 @@ test("guarded events refresh status and handoff without recording their own in-f
       eventType: "voice-profile",
       expectedStage: "voice-intake",
       expectedProjectHash: projectStateHash(root),
-      files: [{ path: "series/voice-profile.md", content: "# Voice Profile\n\nSpecific, compressed, and human.\n" }],
+      files: voiceFiles(root, "# Voice Profile\n\nSpecific, compressed, and human.\n"),
     });
     assert.ok(result.changed.includes("STATUS.md"));
     assert.ok(result.changed.includes("HANDOFF.md"));
@@ -117,7 +126,7 @@ test("guarded events preserve warnings for unrelated pre-existing dirty files", 
       eventType: "voice-profile",
       expectedStage: "voice-intake",
       expectedProjectHash: projectStateHash(root),
-      files: [{ path: "series/voice-profile.md", content: "# Voice Profile\n\nEvidence-specific restraint.\n" }],
+      files: voiceFiles(root, "# Voice Profile\n\nEvidence-specific restraint.\n"),
     });
     assert.match(readFileSync(join(root, "STATUS.md"), "utf8"), /1 uncommitted file\(s\) exist/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
