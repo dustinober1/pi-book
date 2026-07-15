@@ -5,11 +5,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { applyNovelEvent, projectStateHash } from "../src/application/events.js";
 import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
-import { VoiceExperimentFileSchema, defaultTasteProfile } from "../src/domain/v1-3-schemas.js";
+import { VoiceExperimentFileSchema, defaultTasteProfile, type VoiceExperimentFile } from "../src/domain/v1-3-schemas.js";
 import { stableContentHash, summarizeVoiceScores, voiceExperimentFindings, type VoiceExperimentAssetMap } from "../src/application/voice-experiment.js";
 import { initializeProject } from "../src/project/store.js";
 
 const base = "series/voice-experiments/VE-001";
+type AcceptedVoiceExperiment = Extract<VoiceExperimentFile, { status: "accepted" }>;
 
 function words(count: number, prefix = "word"): string {
   return Array.from({ length: count }, (_, index) => `${prefix}${index}`).join(" ");
@@ -25,22 +26,22 @@ function validAssets(): VoiceExperimentAssetMap {
   };
 }
 
-function acceptedExperiment(assets = validAssets()) {
+function acceptedExperiment(assets = validAssets()): AcceptedVoiceExperiment {
   return {
-    schema_version: "1.0.0" as const,
+    schema_version: "1.0.0",
     id: "VE-001",
-    status: "accepted" as const,
+    status: "accepted",
     source_scene_path: `${base}/source-scene.md`,
     source_scene_hash: stableContentHash(assets[`${base}/source-scene.md`] ?? ""),
     variants: [
-      { id: "A" as const, path: `${base}/variant-a.md`, content_hash: stableContentHash(assets[`${base}/variant-a.md`] ?? "") },
-      { id: "B" as const, path: `${base}/variant-b.md`, content_hash: stableContentHash(assets[`${base}/variant-b.md`] ?? "") },
-      { id: "C" as const, path: `${base}/variant-c.md`, content_hash: stableContentHash(assets[`${base}/variant-c.md`] ?? "") },
-    ] as const,
+      { id: "A", path: `${base}/variant-a.md`, content_hash: stableContentHash(assets[`${base}/variant-a.md`] ?? "") },
+      { id: "B", path: `${base}/variant-b.md`, content_hash: stableContentHash(assets[`${base}/variant-b.md`] ?? "") },
+      { id: "C", path: `${base}/variant-c.md`, content_hash: stableContentHash(assets[`${base}/variant-c.md`] ?? "") },
+    ],
     scores: [
-      { evaluator_id: "writer", variant_id: "A" as const, feels_like_book: 4, desire_to_continue: 4, character_intimacy: 4, prose_naturalness: 4, distinctiveness: 4, density: 0, note: "" },
-      { evaluator_id: "writer", variant_id: "B" as const, feels_like_book: 5, desire_to_continue: 5, character_intimacy: 5, prose_naturalness: 5, distinctiveness: 5, density: 1, note: "" },
-      { evaluator_id: "writer", variant_id: "C" as const, feels_like_book: 3, desire_to_continue: 3, character_intimacy: 3, prose_naturalness: 3, distinctiveness: 3, density: -1, note: "" },
+      { evaluator_id: "writer", variant_id: "A", feels_like_book: 4, desire_to_continue: 4, character_intimacy: 4, prose_naturalness: 4, distinctiveness: 4, density: 0, note: "" },
+      { evaluator_id: "writer", variant_id: "B", feels_like_book: 5, desire_to_continue: 5, character_intimacy: 5, prose_naturalness: 5, distinctiveness: 5, density: 1, note: "" },
+      { evaluator_id: "writer", variant_id: "C", feels_like_book: 3, desire_to_continue: 3, character_intimacy: 3, prose_naturalness: 3, distinctiveness: 3, density: -1, note: "" },
     ],
     accepted_traits: ["compressed interiority"],
     baseline_path: `${base}/baseline.md`,
