@@ -1,11 +1,13 @@
+import { join } from "node:path";
 import type { Stage } from "../domain/schemas.js";
+import { listChapterFiles } from "../infrastructure/files.js";
 import { readBook, readProject } from "../project/store.js";
 import { gateDetail, gateEvidencePaths } from "./gate-metadata.js";
 import { getProjectStatus } from "./status.js";
 
 export type GuideActionId =
   | "continue" | "approve" | "request-changes" | "view-evidence" | "repair"
-  | "status" | "readers" | "add-book" | "advanced";
+  | "status" | "readers" | "adopt" | "add-book" | "advanced";
 
 export interface GuideAction {
   id: GuideActionId;
@@ -64,7 +66,7 @@ export function buildGuideScreen(root: string): GuideScreen {
         action("request-changes", "Request changes", `Reject the current ${detail.title.toLowerCase()} evidence and record a repair note.`, "danger"),
         action("view-evidence", "View evidence files", "Show the exact files covered by this gate."),
         action("status", "View full status", "Show blockers, warnings, and progress."),
-        action("advanced", "Advanced options", "Recovery, adoption, metadata, and integrity tools."),
+        action("advanced", "Advanced options", "Recovery, browser workflows, metadata, and integrity tools."),
       ],
     };
   }
@@ -81,18 +83,22 @@ export function buildGuideScreen(root: string): GuideScreen {
         repair,
         action("view-evidence", "View evidence files", "Show the files that must be repaired."),
         action("status", "View full status", "Show blockers, warnings, and progress."),
-        action("advanced", "Advanced options", "Recovery, adoption, metadata, and integrity tools."),
+        action("advanced", "Advanced options", "Recovery, browser workflows, metadata, and integrity tools."),
       ],
     };
   }
 
   const primary = project.current_stage === "complete"
-    ? action("add-book", "Add the next book", "Create the next series-capable book with inherited context.", "primary")
+    ? action("add-book", "Add the next book", "Review inherited canon and unresolved threads before creating the next book.", "primary")
     : action("continue", "Continue recommended work", status.nextAction, "primary");
   const actions: GuideAction[] = [primary];
-  if (readerStage(project.current_stage)) actions.push(action("readers", "Reader evidence", "Prepare a reader kit or import human responses."));
+  const manuscriptEmpty = listChapterFiles(join(root, "books", book.book_id)).length === 0;
+  if (manuscriptEmpty && ["voice-intake", "series-planning", "book-planning", "chapter-queue"].includes(project.current_stage)) {
+    actions.push(action("adopt", "Adopt an existing manuscript", "Preview and map DOCX, EPUB, Markdown, text, or chapter files without changing the source."));
+  }
+  if (readerStage(project.current_stage)) actions.push(action("readers", "Reader evidence", "Prepare isolated reader kits or preview and merge human-response CSVs."));
   actions.push(action("status", "View full status", "Show blockers, warnings, and progress."));
-  actions.push(action("advanced", "Advanced options", "Recovery, adoption, metadata, and integrity tools."));
+  actions.push(action("advanced", "Advanced options", "Recovery, browser workflows, metadata, and integrity tools."));
 
   return {
     title: `${book.title || project.project_name} — ${stageTitles[project.current_stage]}`,
