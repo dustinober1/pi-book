@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { applyNovelEvent, projectStateHash } from "../src/application/events.js";
 import { gateEvidenceHash } from "../src/application/gates.js";
+import { gateEvidencePaths } from "../src/application/gate-metadata.js";
 import { approveProjectGate, rejectProjectGate } from "../src/application/run.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readProject } from "../src/project/store.js";
@@ -51,15 +52,47 @@ test("a writer can request changes, repair the active gate, and approve without 
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
-test("book-plan approval evidence hash includes the displayed remarkability contract", () => {
+test("voice approval evidence covers the complete v1.3 voice bundle", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Voice Evidence", projectType: "standalone", profile: "thriller" });
+    const project = readProject(root);
+    assert.deepEqual(gateEvidencePaths(project, "voice-approval"), [
+      "series/voice-profile.md",
+      "series/taste-profile.yaml",
+      "series/voice-guardrails.yaml",
+      "series/voice-experiments/index.yaml",
+    ]);
+    const before = gateEvidenceHash(root, project, "voice-approval");
+    const path = join(root, "series", "taste-profile.yaml");
+    writeFileSync(path, `${readFileSync(path, "utf8")}\n# writer-approved influence boundary\n`, "utf8");
+    assert.notEqual(gateEvidenceHash(root, project, "voice-approval"), before);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("book-plan approval evidence covers research and reader strategy", () => {
   const parent = temp();
   try {
     const root = initializeProject(parent, { projectName: "Book Evidence", projectType: "standalone", profile: "thriller" });
     const project = readProject(root);
-    const before = gateEvidenceHash(root, project, "book-plan-approval");
-    const path = join(root, "books", "book-01", "remarkability.yaml");
-    writeFileSync(path, `${readFileSync(path, "utf8")}\n# writer-approved distinction\n`, "utf8");
-    const after = gateEvidenceHash(root, project, "book-plan-approval");
-    assert.notEqual(after, before);
+    const paths = gateEvidencePaths(project, "book-plan-approval");
+    for (const expected of [
+      "books/book-01/remarkability.yaml",
+      "books/book-01/research-ledger.yaml",
+      "books/book-01/book-strategy.yaml",
+    ]) assert.ok(paths.includes(expected), expected);
+
+    let before = gateEvidenceHash(root, project, "book-plan-approval");
+    for (const relativePath of [
+      "books/book-01/remarkability.yaml",
+      "books/book-01/research-ledger.yaml",
+      "books/book-01/book-strategy.yaml",
+    ]) {
+      const path = join(root, relativePath);
+      writeFileSync(path, `${readFileSync(path, "utf8")}\n# writer-approved evidence\n`, "utf8");
+      const after = gateEvidenceHash(root, project, "book-plan-approval");
+      assert.notEqual(after, before, relativePath);
+      before = after;
+    }
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
