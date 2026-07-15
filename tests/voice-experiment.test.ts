@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { applyNovelEvent, projectStateHash } from "../src/application/events.js";
 import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
-import { VoiceExperimentFileSchema, defaultTasteProfile, type VoiceExperimentFile } from "../src/domain/v1-3-schemas.js";
+import { VoiceExperimentFileSchema, defaultTasteProfile, defaultVoiceExperimentIndex, defaultVoiceGuardrails, type VoiceExperimentFile } from "../src/domain/v1-3-schemas.js";
 import { stableContentHash, summarizeVoiceScores, voiceExperimentFindings, type VoiceExperimentAssetMap } from "../src/application/voice-experiment.js";
 import { initializeProject } from "../src/project/store.js";
 
@@ -47,6 +47,13 @@ function acceptedExperiment(assets = validAssets()): AcceptedVoiceExperiment {
     baseline_path: `${base}/baseline.md`,
     baseline_hash: stableContentHash(assets[`${base}/baseline.md`] ?? ""),
   };
+}
+
+function experimentFiles(experiment: AcceptedVoiceExperiment, assets: VoiceExperimentAssetMap) {
+  return [
+    { path: `${base}/experiment.yaml`, content: stringifyYaml(experiment) },
+    ...Object.entries(assets).map(([path, content]) => ({ path, content })),
+  ];
 }
 
 test("stable content hashes normalize line endings but not prose changes", () => {
@@ -102,16 +109,77 @@ test("research-update rejects a syntactically valid experiment with false conten
     const root = initializeProject(parent, { projectName: "Voice Evidence", projectType: "standalone", profile: "thriller" });
     const assets = validAssets();
     const experiment = { ...acceptedExperiment(assets), baseline_hash: "0".repeat(64) };
-    const files = [
-      { path: `${base}/experiment.yaml`, content: stringifyYaml(experiment) },
-      ...Object.entries(assets).map(([path, content]) => ({ path, content })),
-    ];
     assert.throws(() => applyNovelEvent(root, {
       eventType: "research-update",
       expectedStage: "voice-intake",
       expectedProjectHash: projectStateHash(root),
-      files,
+      files: experimentFiles(experiment, assets),
     }), /voice experiment|hash/i);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("voice experiments cannot reference assets outside their own directory", () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-voice-path-"));
+  try {
+    const root = initializeProject(parent, { projectName: "Voice Paths", projectType: "standalone", profile: "thriller" });
+    const assets = validAssets();
+    const borrowedPath = "series/borrowed-source.md";
+    const borrowed = words(700, "borrowed");
+    writeFileSync(join(root, borrowedPath), borrowed, "utf8");
+    const experiment = { ...acceptedExperiment(assets), source_scene_path: borrowedPath, source_scene_hash: stableContentHash(borrowed) };
+    assert.throws(() => applyNovelEvent(root, {
+      eventType: "research-update",
+      expectedStage: "voice-intake",
+      expectedProjectHash: projectStateHash(root),
+      files: experimentFiles(experiment, assets),
+    }), /directory|path|asset/i);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("final voice evidence must select one internally consistent accepted baseline", () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-voice-baseline-"));
+  try {
+    const root = initializeProject(parent, { projectName: "Voice Baseline", projectType: "standalone", profile: "thriller" });
+    const assets = validAssets();
+    const experiment = acceptedExperiment(assets);
+    applyNovelEvent(root, {
+      eventType: "research-update",
+      expectedStage: "voice-intake",
+      expectedProjectHash: projectStateHash(root),
+      files: experimentFiles(experiment, assets),
+    });
+
+    const taste = defaultTasteProfile();
+    taste.opening_experiment = { status: "accepted", experiment_id: "VE-001", baseline_path: experiment.baseline_path };
+    const guardrails = { ...defaultVoiceGuardrails(), prefer: ["compressed interiority"], baseline: { path: experiment.baseline_path, content_hash: experiment.baseline_hash, metrics: {} } };
+    const index = defaultVoiceExperimentIndex();
+    index.experiments.push({ id: "VE-001", path: `${base}/experiment.yaml`, status: "accepted", baseline_hash: "f".repeat(64) });
+
+    const bundle = [
+      { path: "series/voice-profile.md", content: "# Voice Profile\n\nUse compressed interiority.\n" },
+      { path: "series/taste-profile.yaml", content: stringifyYaml(taste) },
+      { path: "series/voice-guardrails.yaml", content: stringifyYaml(guardrails) },
+      { path: "series/voice-experiments/index.yaml", content: stringifyYaml(index) },
+    ];
+    assert.throws(() => applyNovelEvent(root, {
+      eventType: "voice-profile",
+      expectedStage: "voice-intake",
+      expectedProjectHash: projectStateHash(root),
+      files: bundle,
+    }), /baseline|index|hash/i);
+
+    index.experiments[0] = { id: "VE-001", path: `${base}/experiment.yaml`, status: "accepted", baseline_hash: experiment.baseline_hash };
+    const result = applyNovelEvent(root, {
+      eventType: "voice-profile",
+      expectedStage: "voice-intake",
+      expectedProjectHash: projectStateHash(root),
+      files: bundle.map((file) => file.path.endsWith("index.yaml") ? { ...file, content: stringifyYaml(index) } : file),
+    });
+    assert.equal(result.stage, "voice-intake");
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
