@@ -1,19 +1,18 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 import ExcelJS from "exceljs";
 import { strToU8, zipSync } from "fflate";
-import type { PackageManifest, PublishingMetadata, MarketingMetadata, ReaderExperimentFile } from "../../domain/v1-2-schemas.js";
+import type { PackageManifest, PublishingMetadata, ReaderExperimentFile } from "../../domain/v1-2-schemas.js";
 import type { TransactionFileChange } from "../../infrastructure/transaction.js";
 import { countWords, listChapterFiles, readText } from "../../infrastructure/files.js";
 import { stringifyYaml } from "../../infrastructure/yaml.js";
 import { readBook, readProject } from "../../project/store.js";
-import { detectPandoc } from "../../conversion/pandoc.js";
+import { exportWithPandoc } from "../../conversion/pandoc-export.js";
 import { readReaderExperiment, readReaderIndex } from "../readers/store.js";
 import { readMarketingMetadata, readPublishingMetadata } from "./metadata.js";
 
-export interface PackageBuildOptions { preferPandoc?: boolean }
+export interface PackageBuildOptions { preferPandoc?: boolean; pandocBinary?: string }
 export interface PackageBuildResult { changes: TransactionFileChange[]; sourceHash: string; engine: string; chapters: number; words: number }
 
 interface Artifact { path: string; format: string; content: string | Uint8Array; required: boolean; warning?: string }
@@ -56,7 +55,7 @@ function markdownParagraphs(markdown: string): Paragraph[] {
   return paragraphs;
 }
 
-async function docxBytes(markdown: string, metadata: PublishingMetadata): Promise<Uint8Array> {
+async function nodeDocxBytes(markdown: string, metadata: PublishingMetadata): Promise<Uint8Array> {
   const document = new Document({
     creator: metadata.author.pen_name || metadata.author.name,
     title: metadata.title,
@@ -66,7 +65,13 @@ async function docxBytes(markdown: string, metadata: PublishingMetadata): Promis
   return new Uint8Array(await Packer.toBuffer(document));
 }
 
-function epubBytes(chapters: Array<{ title: string; markdown: string }>, metadata: PublishingMetadata): Uint8Array {
+function stableModifiedDate(metadata: PublishingMetadata): string {
+  const value = metadata.publication.date.trim();
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}T00:00:00Z` : "2000-01-01T00:00:00Z";
+}
+
+function nodeEpubBytes(chapters: Array<{ title: string; markdown: string }>, metadata: PublishingMetadata): Uint8Array {
   const chapterFiles: Record<string, Uint8Array> = {};
   const manifest: string[] = [];
   const spine: string[] = [];
@@ -81,7 +86,7 @@ function epubBytes(chapters: Array<{ title: string; markdown: string }>, metadat
     nav.push(`<li><a href="${id}.xhtml">${xml(chapter.title)}</a></li>`);
   });
   const identifier = metadata.identifiers.epub_isbn || `urn:uuid:${sha(metadata.title).slice(0, 32)}`;
-  const opf = `<?xml version="1.0" encoding="utf-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="book-id"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="book-id">${xml(identifier)}</dc:identifier><dc:title>${xml(metadata.title)}</dc:title><dc:creator>${xml(metadata.author.pen_name || metadata.author.name)}</dc:creator><dc:language>${xml(metadata.language || "en")}</dc:language><meta property="dcterms:modified">${new Date().toISOString().replace(/\.\d{3}Z$/, "Z")}</meta></metadata><manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>${manifest.join("")}</manifest><spine>${spine.join("")}</spine></package>`;
+  const opf = `<?xml version="1.0" encoding="utf-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="book-id"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="book-id">${xml(identifier)}</dc:identifier><dc:title>${xml(metadata.title)}</dc:title><dc:creator>${xml(metadata.author.pen_name || metadata.author.name)}</dc:creator><dc:language>${xml(metadata.language || "en")}</dc:language><meta property="dcterms:modified">${stableModifiedDate(metadata)}</meta></metadata><manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>${manifest.join("")}</manifest><spine>${spine.join("")}</spine></package>`;
   const navDoc = `<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>Contents</title></head><body><nav epub:type="toc" xmlns:epub="http://www.idpf.org/2007/ops"><h1>Contents</h1><ol>${nav.join("")}</ol></nav></body></html>`;
   return zipSync({
     mimetype: [strToU8("application/epub+zip"), { level: 0 }],
@@ -92,14 +97,17 @@ function epubBytes(chapters: Array<{ title: string; markdown: string }>, metadat
   }, { level: 6 });
 }
 
-function publishingCsv(metadata: PublishingMetadata): string {
-  const rows: Array<[string, string]> = [
+function publishingRows(metadata: PublishingMetadata): Array<[string, string]> {
+  return [
     ["title", metadata.title], ["subtitle", metadata.subtitle], ["series_name", metadata.series.name], ["series_number", String(metadata.series.number)],
     ["author", metadata.author.pen_name || metadata.author.name], ["language", metadata.language], ["copyright_holder", metadata.copyright.holder], ["copyright_year", metadata.copyright.year],
     ["paperback_isbn", metadata.identifiers.paperback_isbn], ["hardcover_isbn", metadata.identifiers.hardcover_isbn], ["epub_isbn", metadata.identifiers.epub_isbn], ["audiobook_isbn", metadata.identifiers.audiobook_isbn],
     ["short_description", metadata.descriptions.short], ["long_description", metadata.descriptions.long], ["keywords", metadata.keywords.join("; ")], ["categories", metadata.categories.join("; ")],
   ];
-  return `field,value\n${rows.map(([key, value]) => `${csv(key)},${csv(value)}`).join("\n")}\n`;
+}
+
+function publishingCsv(metadata: PublishingMetadata): string {
+  return `field,value\n${publishingRows(metadata).map(([key, value]) => `${csv(key)},${csv(value)}`).join("\n")}\n`;
 }
 
 async function publishingWorkbook(metadata: PublishingMetadata): Promise<Uint8Array> {
@@ -107,10 +115,7 @@ async function publishingWorkbook(metadata: PublishingMetadata): Promise<Uint8Ar
   workbook.creator = "Novel Forge";
   const sheet = workbook.addWorksheet("Publishing metadata");
   sheet.addRow(["field", "value"]);
-  for (const line of publishingCsv(metadata).trim().split("\n").slice(1)) {
-    const comma = line.indexOf(",");
-    sheet.addRow([line.slice(0, comma).replace(/^"|"$/g, ""), line.slice(comma + 1).replace(/^"|"$/g, "").replaceAll('""', '"')]);
-  }
+  for (const row of publishingRows(metadata)) sheet.addRow(row);
   sheet.getRow(1).font = { bold: true };
   sheet.columns = [{ width: 30 }, { width: 90 }];
   return new Uint8Array(await workbook.xlsx.writeBuffer());
@@ -150,13 +155,34 @@ export async function buildPackageArtifacts(root: string, options: PackageBuildO
   const readerIndex = readReaderIndex(root, book.book_id);
   const experiments = readerIndex.experiments.map((entry) => readReaderExperiment(root, book.book_id, entry.id));
   const sourceHash = sourceDigest([manuscript.markdown, stringifyYaml(publishing), stringifyYaml(marketing), ...experiments.map((experiment) => stringifyYaml(experiment))]);
-  const pandoc = options.preferPandoc === false ? { available: false, version: "", path: "" } : await detectPandoc();
-  const engine = pandoc.available ? `pandoc ${pandoc.version} with Node fallbacks` : "Node fallback";
+
+  let docx: Uint8Array;
+  let epub: Uint8Array;
+  let engine = "Node fallback";
+  const conversionWarnings: string[] = [];
+  if (options.preferPandoc !== false) {
+    try {
+      const pandoc = await exportWithPandoc(manuscript.markdown, publishing, options.pandocBinary ?? "pandoc");
+      docx = pandoc.docx;
+      epub = pandoc.epub;
+      engine = pandoc.engine;
+    } catch (error) {
+      conversionWarnings.push(`${error instanceof Error ? error.message : "Pandoc export failed."} Node DOCX and EPUB fallbacks were used.`);
+      docx = await nodeDocxBytes(manuscript.markdown, publishing);
+      epub = nodeEpubBytes(manuscript.chapters, publishing);
+    }
+  } else {
+    conversionWarnings.push("Pandoc was disabled; Node DOCX and EPUB fallbacks were used.");
+    docx = await nodeDocxBytes(manuscript.markdown, publishing);
+    epub = nodeEpubBytes(manuscript.chapters, publishing);
+  }
+
   const base = `books/${book.book_id}/exports`;
+  const conversionWarning = conversionWarnings.join(" ");
   const artifacts: Artifact[] = [
     { path: `${base}/manuscript.md`, format: "markdown", content: manuscript.markdown, required: true },
-    { path: `${base}/manuscript.docx`, format: "docx", content: await docxBytes(manuscript.markdown, publishing), required: true, warning: pandoc.available ? "Node DOCX fallback used for deterministic in-memory staging." : "Pandoc unavailable; Node DOCX fallback used." },
-    { path: `${base}/manuscript.epub`, format: "epub", content: epubBytes(manuscript.chapters, publishing), required: true, warning: pandoc.available ? "Node EPUB fallback used for deterministic in-memory staging." : "Pandoc unavailable; Node EPUB fallback used." },
+    { path: `${base}/manuscript.docx`, format: "docx", content: docx, required: true, warning: conversionWarning },
+    { path: `${base}/manuscript.epub`, format: "epub", content: epub, required: true, warning: conversionWarning },
     { path: `${base}/publishing-metadata.csv`, format: "csv", content: publishingCsv(publishing), required: true },
     { path: `${base}/publishing-metadata.xlsx`, format: "xlsx", content: await publishingWorkbook(publishing), required: true },
     { path: `${base}/reader-evidence.csv`, format: "csv", content: readerEvidenceCsv(experiments), required: false },
@@ -175,7 +201,7 @@ export async function buildPackageArtifacts(root: string, options: PackageBuildO
     source_hash: sourceHash,
     engine,
     outputs: artifacts.map((artifact) => ({ path: artifact.path, format: artifact.format, hash: sha(artifact.content), required: artifact.required, status: "generated", warning: artifact.warning ?? "" })),
-    warnings: artifacts.map((artifact) => artifact.warning ?? "").filter(Boolean),
+    warnings: [...new Set(artifacts.map((artifact) => artifact.warning ?? "").filter(Boolean))],
   };
   const report = [
     "# Novel Forge Packaging Report",
