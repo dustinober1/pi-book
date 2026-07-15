@@ -78,7 +78,7 @@ function receiveUpload(request: IncomingMessage, uploadRoot: string, limit: numb
       result = { sourceId, absolutePath: storedPath, originalName, mediaType: info.mimeType || "application/octet-stream", byteSize, storedName };
       output.on("finish", () => { if (result) result.byteSize = byteSize; });
     });
-    parser.on("error", (error) => { pendingError = error; });
+    parser.on("error", (error: Error) => { pendingError = error; });
     parser.on("finish", async () => {
       try {
         if (writeFinished) await writeFinished;
