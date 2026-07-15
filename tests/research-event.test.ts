@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { applyNovelEvent, projectStateHash } from "../src/application/events.js";
@@ -120,6 +120,46 @@ test("research-update is not available after the project is complete", () => {
       expectedProjectHash: projectStateHash(root),
       files: [{ path: "books/book-01/research-ledger.yaml", content: researchLedger() }],
     }), /not allowed during complete/i);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("rebuilding a voice profile requires the new voice evidence artifacts", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Voice Rebuild", projectType: "standalone", profile: "thriller" });
+    assert.throws(() => applyNovelEvent(root, {
+      eventType: "voice-profile",
+      expectedStage: "voice-intake",
+      expectedProjectHash: projectStateHash(root),
+      files: [{ path: "series/voice-profile.md", content: "# Voice Profile\n\nControlled and specific.\n" }],
+    }), /taste-profile\.yaml/);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("rebuilding a book plan requires research ledger and book strategy evidence", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Book Rebuild", projectType: "standalone", profile: "thriller" });
+    const project = readProject(root);
+    project.current_stage = "book-planning";
+    project.next_gate = null;
+    writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
+    const bookRoot = join(root, "books", "book-01");
+    const files = [
+      "book-bible.md", "genre.yaml", "plot-grid.yaml", "chapter-queue.yaml", "continuity-delta.yaml", "remarkability.yaml",
+    ].map((name) => ({ path: `books/book-01/${name}`, content: readFileSync(join(bookRoot, name), "utf8") }));
+    files.push({ path: "series/story-threads.yaml", content: readFileSync(join(root, "series", "story-threads.yaml"), "utf8") });
+
+    assert.throws(() => applyNovelEvent(root, {
+      eventType: "book-plan",
+      expectedStage: "book-planning",
+      expectedProjectHash: projectStateHash(root),
+      files,
+    }), /book-strategy\.yaml/);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
