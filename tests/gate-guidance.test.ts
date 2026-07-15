@@ -11,6 +11,15 @@ import { initializeProject, readProject } from "../src/project/store.js";
 
 function temp(): string { return mkdtempSync(join(tmpdir(), "novel-forge-gate-guidance-")); }
 
+function voiceFiles(root: string, profile: string) {
+  return [
+    { path: "series/voice-profile.md", content: profile },
+    { path: "series/taste-profile.yaml", content: readFileSync(join(root, "series", "taste-profile.yaml"), "utf8") },
+    { path: "series/voice-guardrails.yaml", content: readFileSync(join(root, "series", "voice-guardrails.yaml"), "utf8") },
+    { path: "series/voice-experiments/index.yaml", content: readFileSync(join(root, "series", "voice-experiments", "index.yaml"), "utf8") },
+  ];
+}
+
 test("a writer can request changes, repair the active gate, and approve without typing an internal transition", () => {
   const parent = temp();
   try {
@@ -29,7 +38,7 @@ test("a writer can request changes, repair the active gate, and approve without 
       eventType: "voice-profile",
       expectedStage: "voice-intake",
       expectedProjectHash: projectStateHash(root),
-      files: [{ path: "series/voice-profile.md", content: "# Voice Profile\n\nPreserve clipped interiority and evidence-specific restraint.\n" }],
+      files: voiceFiles(root, "# Voice Profile\n\nPreserve clipped interiority and evidence-specific restraint.\n"),
     });
     assert.equal(readProject(root).gates["voice-approval"], "pending");
 
