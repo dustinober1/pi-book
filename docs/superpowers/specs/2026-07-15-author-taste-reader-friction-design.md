@@ -10,7 +10,7 @@ The release must help writers learn from authors and books they admire without a
 
 The normal author flow remains `/novel-start` followed by `/novel`. An optional `/novel-wizard research` surface may make influence, voice-comparison, review-import, and research-ledger work easier to inspect. The browser remains loopback-only, read/propose-only, and returns accepted mutations through typed application services, stale-stage/hash validation, rollback, one Git checkpoint, `STATUS.md`, and `HANDOFF.md`.
 
-Do not add a new top-level creative stage. Add a non-transitioning `research-update` event that can operate during voice intake, planning, drafting, milestone review, revision, manuscript review, and packaging. It must never write manuscript prose, change gates, or advance stage.
+Do not add a new top-level creative stage. Add a non-transitioning `research-update` event that can operate during `voice-intake`, `series-planning`, `book-planning`, `drafting`, `act-review`, `revision`, `manuscript-review`, and `packaging`. It must never write manuscript prose, change gates, or advance stage.
 
 ## Evidence separation
 
@@ -55,7 +55,7 @@ Create `books/<book-id>/research-ledger.yaml` with four lanes:
 - human-authenticity;
 - reader-and-market.
 
-Every ready research item must include source IDs, confidence, verification date, fictionalization status, knowledge scope, and at least one dramatic use: obstacle, false assumption, hidden capability, deadline, vulnerability, forensic clue, procedural constraint, credibility detail, relationship pressure, or moral choice.
+Every ready research item must include source IDs, confidence, verification date, fictionalization status, knowledge scope, risk, and at least one dramatic use: obstacle, false assumption, hidden capability, deadline, vulnerability, forensic clue, procedural constraint, credibility detail, relationship pressure, or moral choice.
 
 Chapter packets continue to use `required_research`, but the IDs refer to ready research-ledger items. A ready packet that references missing or unready research is blocked.
 
