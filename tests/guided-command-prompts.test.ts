@@ -19,11 +19,21 @@ test("planning prompts conduct short one-at-a-time author interviews", () => {
       assert.match(prompt, /no more than four/i);
       assert.match(prompt, /complete typed|complete required/i);
     }
+    const voice = voicePlanPrompt(root);
+    for (const path of [
+      "series/voice-profile.md",
+      "series/taste-profile.yaml",
+      "series/voice-guardrails.yaml",
+      "series/voice-experiments/index.yaml",
+    ]) assert.match(voice, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), path);
+
     const book = bookPlanPrompt(root);
     assert.match(book, /safe, predictable version/i);
     assert.match(book, /uniquely deliver/i);
     assert.match(book, /moment should readers retell/i);
     assert.match(book, /remain alive after the ending/i);
+    assert.match(book, /research-ledger\.yaml/);
+    assert.match(book, /book-strategy\.yaml/);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
