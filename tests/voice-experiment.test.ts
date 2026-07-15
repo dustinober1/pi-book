@@ -1,0 +1,91 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
+import { VoiceExperimentFileSchema, defaultTasteProfile } from "../src/domain/v1-3-schemas.js";
+import { stableContentHash, summarizeVoiceScores, voiceExperimentFindings, type VoiceExperimentAssetMap } from "../src/application/voice-experiment.js";
+
+const base = "series/voice-experiments/VE-001";
+
+function words(count: number, prefix = "word"): string {
+  return Array.from({ length: count }, (_, index) => `${prefix}${index}`).join(" ");
+}
+
+function validAssets(): VoiceExperimentAssetMap {
+  return {
+    [`${base}/source-scene.md`]: words(700, "source"),
+    [`${base}/variant-a.md`]: words(600, "alpha"),
+    [`${base}/variant-b.md`]: words(650, "bravo"),
+    [`${base}/variant-c.md`]: words(700, "charlie"),
+    [`${base}/baseline.md`]: words(675, "baseline"),
+  };
+}
+
+function acceptedExperiment(assets = validAssets()) {
+  return {
+    schema_version: "1.0.0" as const,
+    id: "VE-001",
+    status: "accepted" as const,
+    source_scene_path: `${base}/source-scene.md`,
+    source_scene_hash: stableContentHash(assets[`${base}/source-scene.md`] ?? ""),
+    variants: [
+      { id: "A" as const, path: `${base}/variant-a.md`, content_hash: stableContentHash(assets[`${base}/variant-a.md`] ?? "") },
+      { id: "B" as const, path: `${base}/variant-b.md`, content_hash: stableContentHash(assets[`${base}/variant-b.md`] ?? "") },
+      { id: "C" as const, path: `${base}/variant-c.md`, content_hash: stableContentHash(assets[`${base}/variant-c.md`] ?? "") },
+    ],
+    scores: [
+      { evaluator_id: "writer", variant_id: "A" as const, feels_like_book: 4, desire_to_continue: 4, character_intimacy: 4, prose_naturalness: 4, distinctiveness: 4, density: 0, note: "" },
+      { evaluator_id: "writer", variant_id: "B" as const, feels_like_book: 5, desire_to_continue: 5, character_intimacy: 5, prose_naturalness: 5, distinctiveness: 5, density: 1, note: "" },
+      { evaluator_id: "writer", variant_id: "C" as const, feels_like_book: 3, desire_to_continue: 3, character_intimacy: 3, prose_naturalness: 3, distinctiveness: 3, density: -1, note: "" },
+    ],
+    accepted_traits: ["compressed interiority"],
+    baseline_path: `${base}/baseline.md`,
+    baseline_hash: stableContentHash(assets[`${base}/baseline.md`] ?? ""),
+  };
+}
+
+test("stable content hashes normalize line endings but not prose changes", () => {
+  assert.equal(stableContentHash("one\r\ntwo\r\n"), stableContentHash("one\ntwo\n"));
+  assert.notEqual(stableContentHash("one two"), stableContentHash("one three"));
+});
+
+test("accepted experiments require distinct ordered A B and C variants", () => {
+  const experiment = acceptedExperiment() as any;
+  experiment.variants = [experiment.variants[0], { ...experiment.variants[1], id: "A" }, experiment.variants[2]];
+  assert.throws(() => parseYaml(stringifyYaml(experiment), VoiceExperimentFileSchema, "experiment.yaml"), /schema validation/i);
+});
+
+test("variants remain within 600 to 900 words and contain no influence labels", () => {
+  const assets = validAssets();
+  assets[`${base}/variant-a.md`] = words(599, "short");
+  assets[`${base}/variant-c.md`] = `Example Author ${words(600, "named")}`;
+  const experiment = acceptedExperiment(assets);
+  const taste = defaultTasteProfile();
+  taste.influences.push({
+    id: "INF-001",
+    reference: "Example Author — Example Book",
+    influence_type: "voice",
+    admired_for: ["compression"],
+    not_for: ["signature phrasing"],
+    derived_traits: ["compressed interiority"],
+    status: "approved",
+  });
+
+  const findings = voiceExperimentFindings(experiment, assets, taste);
+  assert.ok(findings.some((item) => item.code === "variant-word-count" && item.variantId === "A"));
+  assert.ok(findings.some((item) => item.code === "variant-reference" && item.variantId === "C"));
+});
+
+test("stored hashes and accepted baseline hash must match exact normalized content", () => {
+  const assets = validAssets();
+  const experiment = acceptedExperiment(assets);
+  assert.deepEqual(voiceExperimentFindings(experiment, assets, defaultTasteProfile()), []);
+  assert.ok(voiceExperimentFindings({ ...experiment, baseline_hash: "0".repeat(64) }, assets, defaultTasteProfile()).some((item) => item.code === "hash-mismatch"));
+});
+
+test("voice score summaries are deterministic and ordered by score", () => {
+  assert.deepEqual(summarizeVoiceScores(acceptedExperiment()).map((item) => [item.variantId, item.average, item.densityAverage]), [
+    ["B", 5, 1],
+    ["A", 4, 0],
+    ["C", 3, -1],
+  ]);
+});
