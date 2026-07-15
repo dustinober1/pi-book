@@ -13,7 +13,7 @@ import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact
 
 export { projectStateHash } from "./project-hash.js";
 
-export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "revise" | "canon-lock" | "package";
+export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "research-update" | "revise" | "canon-lock" | "package";
 export interface NovelEventInput { eventType: NovelEventType; expectedStage: Stage; expectedProjectHash: string; files: FileChange[]; chapter?: number; scope?: string }
 export interface NovelEventResult { changed: string[]; stage: Stage; projectHash: string; gitMessage: string }
 
@@ -25,6 +25,7 @@ const eventStages: Record<NovelEventType, Stage[]> = {
   "draft-chapter": ["drafting"],
   review: ["drafting", "act-review", "revision", "manuscript-review"],
   "reader-test": ["drafting", "act-review", "revision", "manuscript-review", "packaging"],
+  "research-update": ["voice-intake", "series-planning", "book-planning", "drafting", "act-review", "revision", "manuscript-review", "packaging"],
   revise: ["revision"],
   "canon-lock": ["canon-lock"],
   package: ["packaging"],
@@ -42,11 +43,22 @@ function allowedPath(event: NovelEventType, path: string, bookId: string, chapte
     "draft-chapter": [`${book}/continuity-delta.yaml`, "series/story-threads.yaml", `${book}/revision-tickets.yaml`],
     review: [`${book}/review-report.md`, `${book}/revision-tickets.yaml`],
     "reader-test": [`${book}/reader-experiments.yaml`, `${book}/revision-tickets.yaml`],
+    "research-update": [
+      "series/taste-profile.yaml",
+      "series/voice-guardrails.yaml",
+      "series/voice-experiments/index.yaml",
+      `${book}/research-ledger.yaml`,
+      `${book}/book-strategy.yaml`,
+      `${book}/voice-audits.yaml`,
+      "research/source-register.yaml",
+    ],
     revise: [`${book}/continuity-delta.yaml`, "series/story-threads.yaml", `${book}/revision-tickets.yaml`],
     "canon-lock": ["series/canon.yaml", "series/story-threads.yaml", "series/series-arc.yaml"],
     package: [`${book}/package.md`],
   };
   if (exact[event].includes(path)) return true;
+  if (event === "research-update" && /^series\/voice-experiments\/VE-[0-9]{3}\/experiment\.yaml$/.test(path)) return true;
+  if (event === "research-update" && /^series\/voice-experiments\/VE-[0-9]{3}\/[^/]+\.md$/i.test(path)) return true;
   if (event === "reader-test" && path.startsWith(`${book}/reader-kit/`) && /\.(md|csv)$/i.test(path)) return true;
   if (["draft-chapter", "revise"].includes(event) && path.startsWith(`${book}/manuscript/chapters/`) && /\.md$/i.test(path)) {
     if (event === "revise" || chapter === undefined) return true;
@@ -76,6 +88,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
   if (!eventStages[input.eventType].includes(project.current_stage)) throw new Error(`${input.eventType} is not allowed during ${project.current_stage}.`);
   if (input.expectedStage !== project.current_stage) throw new Error(`Stale event stage: expected ${input.expectedStage}, current ${project.current_stage}.`);
   if (input.expectedProjectHash !== projectStateHash(root)) throw new Error("Stale project hash; reload state before applying this event.");
+  if (input.eventType === "research-update" && input.files.length === 0) throw new Error("research-update requires at least one evidence file.");
   const seen = new Set<string>();
   for (const file of input.files) {
     file.path = normalized(file.path);
@@ -233,6 +246,7 @@ export function applyNovelEvent(root: string, input: NovelEventInput): NovelEven
       break;
     }
     case "reader-test":
+    case "research-update":
       break;
     case "revise": {
       const tickets = parseOverlay<RevisionTicketsState>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsSchema);
@@ -257,8 +271,10 @@ export function applyNovelEvent(root: string, input: NovelEventInput): NovelEven
       break;
   }
 
-  setChange(changes, "PROJECT.yaml", stringifyYaml(project));
-  setChange(changes, `books/${book.book_id}/BOOK.yaml`, stringifyYaml(book));
+  if (input.eventType !== "research-update") {
+    setChange(changes, "PROJECT.yaml", stringifyYaml(project));
+    setChange(changes, `books/${book.book_id}/BOOK.yaml`, stringifyYaml(book));
+  }
   const message = `Novel Forge: ${input.eventType}${input.chapter ? ` chapter-${input.chapter}` : ""}`;
   const applied = applyGuidedProjectEvent(root, changes, message, { lastAction: `${input.eventType}${input.chapter ? ` chapter ${input.chapter}` : ""}` });
   return { changed: applied.changed, stage: project.current_stage, projectHash: projectStateHash(root), gitMessage: applied.git.message };
