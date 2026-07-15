@@ -1,8 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { applyNovelEvent, projectStateHash } from "../src/application/events.js";
 import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
 import { VoiceExperimentFileSchema, defaultTasteProfile } from "../src/domain/v1-3-schemas.js";
 import { stableContentHash, summarizeVoiceScores, voiceExperimentFindings, type VoiceExperimentAssetMap } from "../src/application/voice-experiment.js";
+import { initializeProject } from "../src/project/store.js";
 
 const base = "series/voice-experiments/VE-001";
 
@@ -31,7 +36,7 @@ function acceptedExperiment(assets = validAssets()) {
       { id: "A" as const, path: `${base}/variant-a.md`, content_hash: stableContentHash(assets[`${base}/variant-a.md`] ?? "") },
       { id: "B" as const, path: `${base}/variant-b.md`, content_hash: stableContentHash(assets[`${base}/variant-b.md`] ?? "") },
       { id: "C" as const, path: `${base}/variant-c.md`, content_hash: stableContentHash(assets[`${base}/variant-c.md`] ?? "") },
-    ],
+    ] as const,
     scores: [
       { evaluator_id: "writer", variant_id: "A" as const, feels_like_book: 4, desire_to_continue: 4, character_intimacy: 4, prose_naturalness: 4, distinctiveness: 4, density: 0, note: "" },
       { evaluator_id: "writer", variant_id: "B" as const, feels_like_book: 5, desire_to_continue: 5, character_intimacy: 5, prose_naturalness: 5, distinctiveness: 5, density: 1, note: "" },
@@ -88,4 +93,25 @@ test("voice score summaries are deterministic and ordered by score", () => {
     ["A", 4, 0],
     ["C", 3, -1],
   ]);
+});
+
+test("research-update rejects a syntactically valid experiment with false content hashes", () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-voice-event-"));
+  try {
+    const root = initializeProject(parent, { projectName: "Voice Evidence", projectType: "standalone", profile: "thriller" });
+    const assets = validAssets();
+    const experiment = { ...acceptedExperiment(assets), baseline_hash: "0".repeat(64) };
+    const files = [
+      { path: `${base}/experiment.yaml`, content: stringifyYaml(experiment) },
+      ...Object.entries(assets).map(([path, content]) => ({ path, content })),
+    ];
+    assert.throws(() => applyNovelEvent(root, {
+      eventType: "research-update",
+      expectedStage: "voice-intake",
+      expectedProjectHash: projectStateHash(root),
+      files,
+    }), /voice experiment|hash/i);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
 });
