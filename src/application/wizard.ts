@@ -2,7 +2,8 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { listChapterFiles } from "../infrastructure/files.js";
 import { readBook, readProject } from "../project/store.js";
-import { buildPackagingChecklist, nextBookProposal } from "./package-checklist.js";
+import { buildNextBookInheritanceProposal } from "./next-book.js";
+import { buildPackagingChecklist } from "./package-checklist.js";
 import { projectStateHash } from "./project-hash.js";
 import { getProjectStatus } from "./status.js";
 import type { WizardActionRegistry, WizardProposalEnvelope, WizardWorkflow } from "../wizard/types.js";
@@ -62,7 +63,7 @@ function workflowSnapshot(root: string, workflow: WizardWorkflow): unknown {
     return { ...base, workflow: { id: workflow, checklist: buildPackagingChecklist(root) } };
   }
   let proposal: unknown;
-  try { proposal = nextBookProposal(root); }
+  try { proposal = buildNextBookInheritanceProposal(root); }
   catch (error) { proposal = { eligible: false, reason: error instanceof Error ? error.message : "Next book is not available." }; }
   return { ...base, workflow: { id: workflow, proposal } };
 }
