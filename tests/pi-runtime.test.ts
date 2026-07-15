@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerNovelForge } from "../src/pi/extension.js";
@@ -9,6 +9,15 @@ import { defaultResearchLedger } from "../src/domain/v1-3-schemas.js";
 import { gitHeadInfo, gitState } from "../src/infrastructure/git.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { readProject } from "../src/project/store.js";
+
+function voiceFiles(root: string, profile: string) {
+  return [
+    { path: "series/voice-profile.md", content: profile },
+    { path: "series/taste-profile.yaml", content: readFileSync(join(root, "series", "taste-profile.yaml"), "utf8") },
+    { path: "series/voice-guardrails.yaml", content: readFileSync(join(root, "series", "voice-guardrails.yaml"), "utf8") },
+    { path: "series/voice-experiments/index.yaml", content: readFileSync(join(root, "series", "voice-experiments", "index.yaml"), "utf8") },
+  ];
+}
 
 test("real Pi command and tool boundary creates a clean checkpointed project and applies voice and research events", async () => {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-pi-runtime-"));
@@ -57,7 +66,7 @@ test("real Pi command and tool boundary creates a clean checkpointed project and
       event_type: "voice-profile",
       expected_stage: "voice-intake",
       expected_project_hash: projectStateHash(root),
-      files: [{ path: "series/voice-profile.md", content: "# Voice Profile\n\nDistinct compression and withheld emotion.\n" }],
+      files: voiceFiles(root, "# Voice Profile\n\nDistinct compression and withheld emotion.\n"),
     }, new AbortController().signal, undefined, { cwd: root });
     assert.match(result.content[0].text, /Applied voice-profile/);
     assert.equal(readProject(root).gates["voice-approval"], "pending");
