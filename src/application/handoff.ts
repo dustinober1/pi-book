@@ -3,11 +3,14 @@ import type { BookState, ProjectState } from "../domain/schemas.js";
 import {
   TasteProfileSchema,
   VoiceExperimentFileSchema,
+  VoiceExperimentIndexSchema,
   VoiceGuardrailsSchema,
   defaultTasteProfile,
+  defaultVoiceExperimentIndex,
   defaultVoiceGuardrails,
   type TasteProfile,
   type VoiceExperimentFile,
+  type VoiceExperimentIndex,
   type VoiceGuardrails,
 } from "../domain/v1-3-schemas.js";
 import { readText } from "../infrastructure/files.js";
@@ -58,14 +61,24 @@ function tasteOverlay(root: string, changes: TransactionFileChange[]): TasteProf
   return tasteText ? parseYaml<TasteProfile>(tasteText, TasteProfileSchema, "series/taste-profile.yaml") : defaultTasteProfile();
 }
 
-function validateVoiceOriginality(root: string, changes: TransactionFileChange[], taste: TasteProfile): void {
+function guardrailsOverlay(root: string, changes: TransactionFileChange[]): VoiceGuardrails {
+  const guardrailsText = overlayText(root, changes, "series/voice-guardrails.yaml");
+  return guardrailsText
+    ? parseYaml<VoiceGuardrails>(guardrailsText, VoiceGuardrailsSchema, "series/voice-guardrails.yaml")
+    : defaultVoiceGuardrails();
+}
+
+function experimentIndexOverlay(root: string, changes: TransactionFileChange[]): VoiceExperimentIndex {
+  const indexText = overlayText(root, changes, "series/voice-experiments/index.yaml");
+  return indexText
+    ? parseYaml<VoiceExperimentIndex>(indexText, VoiceExperimentIndexSchema, "series/voice-experiments/index.yaml")
+    : defaultVoiceExperimentIndex();
+}
+
+function validateVoiceOriginality(root: string, changes: TransactionFileChange[], taste: TasteProfile, guardrails: VoiceGuardrails): void {
   const watched = new Set(["series/taste-profile.yaml", "series/voice-guardrails.yaml", "series/voice-profile.md"]);
   if (!changes.some((item) => watched.has(normalizedPath(item.path)))) return;
 
-  const guardrailsText = overlayText(root, changes, "series/voice-guardrails.yaml");
-  const guardrails = guardrailsText
-    ? parseYaml<VoiceGuardrails>(guardrailsText, VoiceGuardrailsSchema, "series/voice-guardrails.yaml")
-    : defaultVoiceGuardrails();
   const voiceProfile = overlayText(root, changes, "series/voice-profile.md") ?? "";
   const findings = voiceSafetyFindings({ taste, voiceProfile, guardrails });
   if (findings.length) {
@@ -73,45 +86,133 @@ function validateVoiceOriginality(root: string, changes: TransactionFileChange[]
   }
 }
 
-function validateVoiceExperiments(root: string, changes: TransactionFileChange[], taste: TasteProfile): void {
+function expectedExperimentPaths(directory: string, experiment: VoiceExperimentFile): string[] {
+  return [
+    `${directory}/source-scene.md`,
+    `${directory}/variant-a.md`,
+    `${directory}/variant-b.md`,
+    `${directory}/variant-c.md`,
+    ...(experiment.baseline_path !== null ? [`${directory}/baseline.md`] : []),
+  ];
+}
+
+function actualExperimentPaths(experiment: VoiceExperimentFile): string[] {
+  return [
+    experiment.source_scene_path,
+    ...experiment.variants.map((variant) => variant.path),
+    ...(experiment.baseline_path !== null ? [experiment.baseline_path] : []),
+  ];
+}
+
+function validateExperimentPathContract(directory: string, experiment: VoiceExperimentFile): void {
+  const expected = expectedExperimentPaths(directory, experiment);
+  const actual = actualExperimentPaths(experiment);
+  if (expected.length !== actual.length || expected.some((path, index) => actual[index] !== path)) {
+    throw new Error(`Voice experiment ${experiment.id} assets must use the canonical paths inside ${directory}/.`);
+  }
+}
+
+function validateExperimentDirectory(
+  root: string,
+  changes: TransactionFileChange[],
+  taste: TasteProfile,
+  directory: string,
+  directoryId: string,
+): VoiceExperimentFile {
+  const experimentPath = `${directory}/experiment.yaml`;
+  const experimentText = overlayText(root, changes, experimentPath);
+  if (!experimentText) throw new Error(`Voice experiment validation requires ${experimentPath}.`);
+  const experiment = parseYaml<VoiceExperimentFile>(experimentText, VoiceExperimentFileSchema, experimentPath);
+  if (experiment.id !== directoryId) {
+    throw new Error(`Voice experiment ${experiment.id} must be stored under series/voice-experiments/${experiment.id}/.`);
+  }
+  validateExperimentPathContract(directory, experiment);
+
+  const assets: VoiceExperimentAssetMap = {};
+  for (const assetPath of actualExperimentPaths(experiment)) {
+    const content = overlayText(root, changes, assetPath);
+    if (content !== null) assets[assetPath] = content;
+  }
+
+  const findings = voiceExperimentFindings(experiment, assets, taste);
+  if (findings.length) {
+    throw new Error(`Voice experiment validation blocked ${experiment.id}:\n${findings.map((item) => `- ${item.message}`).join("\n")}`);
+  }
+  return experiment;
+}
+
+function validateVoiceExperiments(
+  root: string,
+  changes: TransactionFileChange[],
+  taste: TasteProfile,
+  guardrails: VoiceGuardrails,
+  index: VoiceExperimentIndex,
+): void {
+  const changedPaths = changes.map((item) => normalizedPath(item.path));
   const directoryPattern = /^(series\/voice-experiments\/(VE-[0-9]{3}))\/[^/]+\.(?:md|yaml)$/i;
+  const indexedPathPattern = /^(series\/voice-experiments\/(VE-[0-9]{3}))\/experiment\.yaml$/;
   const changedDirectories = new Map<string, string>();
-  for (const change of changes) {
-    const match = normalizedPath(change.path).match(directoryPattern);
+  for (const path of changedPaths) {
+    const match = path.match(directoryPattern);
     if (match?.[1] && match[2]) changedDirectories.set(match[1], match[2].toUpperCase());
   }
 
+  const selectionWatched = changedPaths.some((path) => [
+    "series/taste-profile.yaml",
+    "series/voice-guardrails.yaml",
+    "series/voice-experiments/index.yaml",
+  ].includes(path));
+  if (selectionWatched) {
+    for (const item of index.experiments) {
+      const match = item.path.match(indexedPathPattern);
+      if (!match?.[1] || !match[2] || match[2] !== item.id) {
+        throw new Error(`Voice experiment index entry ${item.id} must point to series/voice-experiments/${item.id}/experiment.yaml.`);
+      }
+      changedDirectories.set(match[1], item.id);
+    }
+  }
+
+  const validated = new Map<string, VoiceExperimentFile>();
   for (const [directory, directoryId] of changedDirectories) {
-    const experimentPath = `${directory}/experiment.yaml`;
-    const experimentText = overlayText(root, changes, experimentPath);
-    if (!experimentText) throw new Error(`Voice experiment validation requires ${experimentPath}.`);
-    const experiment = parseYaml<VoiceExperimentFile>(experimentText, VoiceExperimentFileSchema, experimentPath);
-    if (experiment.id !== directoryId) {
-      throw new Error(`Voice experiment ${experiment.id} must be stored under series/voice-experiments/${experiment.id}/.`);
-    }
+    validated.set(directoryId, validateExperimentDirectory(root, changes, taste, directory, directoryId));
+  }
 
-    const assets: VoiceExperimentAssetMap = {};
-    const referencedPaths = [
-      experiment.source_scene_path,
-      ...experiment.variants.map((variant) => variant.path),
-      ...(experiment.baseline_path ? [experiment.baseline_path] : []),
-    ];
-    for (const assetPath of referencedPaths) {
-      const content = overlayText(root, changes, assetPath);
-      if (content !== null) assets[assetPath] = content;
-    }
+  if (!selectionWatched) return;
 
-    const findings = voiceExperimentFindings(experiment, assets, taste);
-    if (findings.length) {
-      throw new Error(`Voice experiment validation blocked ${experiment.id}:\n${findings.map((item) => `- ${item.message}`).join("\n")}`);
+  for (const item of index.experiments) {
+    const experiment = validated.get(item.id);
+    if (!experiment) throw new Error(`Voice experiment index entry ${item.id} could not be validated.`);
+    if (experiment.status !== item.status) {
+      throw new Error(`Voice experiment index status for ${item.id} does not match its experiment record.`);
     }
+    if (experiment.baseline_hash !== item.baseline_hash) {
+      throw new Error(`Voice experiment index baseline hash for ${item.id} does not match its experiment record.`);
+    }
+  }
+
+  const selected = taste.opening_experiment;
+  if (selected.status === "accepted") {
+    const experiment = validated.get(selected.experiment_id);
+    if (!experiment || experiment.status !== "accepted") {
+      throw new Error(`Taste profile selects ${selected.experiment_id}, but the experiment is not accepted in the index.`);
+    }
+    if (selected.baseline_path !== experiment.baseline_path) {
+      throw new Error(`Taste profile baseline path for ${selected.experiment_id} does not match the accepted experiment.`);
+    }
+    if (guardrails.baseline.path !== experiment.baseline_path || guardrails.baseline.content_hash !== experiment.baseline_hash) {
+      throw new Error(`Voice guardrails baseline does not match accepted experiment ${selected.experiment_id}.`);
+    }
+  } else if (guardrails.baseline.path !== null || guardrails.baseline.content_hash !== null) {
+    throw new Error("Voice guardrails cannot select a baseline until the taste profile accepts an experiment.");
   }
 }
 
 function validateGuidedVoiceEvidence(root: string, changes: TransactionFileChange[]): void {
   const taste = tasteOverlay(root, changes);
-  validateVoiceOriginality(root, changes, taste);
-  validateVoiceExperiments(root, changes, taste);
+  const guardrails = guardrailsOverlay(root, changes);
+  const index = experimentIndexOverlay(root, changes);
+  validateVoiceOriginality(root, changes, taste, guardrails);
+  validateVoiceExperiments(root, changes, taste, guardrails, index);
 }
 
 export function renderHandoff(project: ProjectState, book: BookState, status: ProjectStatus, options: HandoffOptions = {}, root?: string): string {
