@@ -132,3 +132,21 @@ export function voiceSafetyFindings(input: VoiceSafetyInput): VoiceSafetyFinding
 
   return findings;
 }
+
+export function renderContextGuardrails(guardrails: VoiceGuardrails, pov?: string): string {
+  const lines = [
+    ...guardrails.must.map((rule) => `MUST: ${rule}`),
+    ...guardrails.prefer.map((rule) => `PREFER: ${rule}`),
+    ...guardrails.avoid.map((rule) => `AVOID: ${rule}`),
+    ...guardrails.monitor.map((rule) => `MONITOR: ${rule}`),
+  ];
+  const signature = pov ? guardrails.pov_signatures.find((item) => item.pov === pov) : undefined;
+  if (signature) {
+    lines.push(
+      ...signature.must.map((rule) => `POV MUST: ${rule}`),
+      ...signature.prefer.map((rule) => `POV PREFER: ${rule}`),
+      ...signature.avoid.map((rule) => `POV AVOID: ${rule}`),
+    );
+  }
+  return lines.join("\n");
+}
