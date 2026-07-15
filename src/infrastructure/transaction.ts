@@ -6,15 +6,15 @@ import { schemaForPath } from "../domain/schemas.js";
 import { v12SchemaForPath } from "../domain/v1-2-schema-registry.js";
 import { commitWorkflowEvent, type GitCheckpointResult } from "./git.js";
 
-export type TextFileChange = { path: string; content: string; encoding?: "utf8" };
-export type BinaryFileChange = { path: string; content: Uint8Array; encoding: "binary" };
-export type FileChange = TextFileChange | BinaryFileChange;
+export interface FileChange { path: string; content: string; encoding?: "utf8" }
+export interface BinaryFileChange { path: string; content: Uint8Array; encoding: "binary" }
+export type TransactionFileChange = FileChange | BinaryFileChange;
 
 export interface TransactionOptions {
   commitMessage?: string;
   gitCheckpoint?: boolean;
   simulateFailureAfter?: number;
-  deriveChanges?: () => FileChange[];
+  deriveChanges?: () => TransactionFileChange[];
 }
 
 export interface TransactionResult {
@@ -22,7 +22,7 @@ export interface TransactionResult {
   git: GitCheckpointResult | null;
 }
 
-function validateChange(change: FileChange): void {
+function validateChange(change: TransactionFileChange): void {
   if (change.path.startsWith("/") || change.path.includes("..")) throw new Error(`Unsafe transaction path: ${change.path}`);
   if (/\.(yaml|yml)$/i.test(change.path)) {
     if (typeof change.content !== "string") throw new Error(`YAML changes must be UTF-8 text: ${change.path}`);
@@ -31,7 +31,7 @@ function validateChange(change: FileChange): void {
   }
 }
 
-export function applyTransaction(root: string, changes: FileChange[], options: TransactionOptions = {}): TransactionResult {
+export function applyTransaction(root: string, changes: TransactionFileChange[], options: TransactionOptions = {}): TransactionResult {
   if (!changes.length && !options.deriveChanges) return { changed: [], git: null };
   const transactionRoot = join(root, `.novel-forge-txn-${randomUUID()}`);
   const stagedRoot = join(transactionRoot, "staged");
@@ -39,12 +39,12 @@ export function applyTransaction(root: string, changes: FileChange[], options: T
   mkdirSync(stagedRoot, { recursive: true });
   mkdirSync(backupRoot, { recursive: true });
 
-  const allChanges: FileChange[] = [];
+  const allChanges: TransactionFileChange[] = [];
   const knownPaths = new Set<string>();
   const applied: string[] = [];
   let appliedCount = 0;
 
-  function stage(batch: FileChange[]): void {
+  function stage(batch: TransactionFileChange[]): void {
     for (const change of batch) {
       validateChange(change);
       if (knownPaths.has(change.path)) throw new Error(`Duplicate transaction path: ${change.path}`);
@@ -57,7 +57,7 @@ export function applyTransaction(root: string, changes: FileChange[], options: T
     }
   }
 
-  function apply(batch: FileChange[]): void {
+  function apply(batch: TransactionFileChange[]): void {
     for (const change of batch) {
       const destination = join(root, change.path);
       const backup = join(backupRoot, change.path);
