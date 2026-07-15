@@ -25,6 +25,16 @@ The primary author-facing files are:
 - `HANDOFF.md` — the exact resume state and a continuation prompt for another session.
 - `books/<book-id>/manuscript/chapters/` — accepted chapter files.
 
+## Graph-aware continuity context
+
+When Novel Forge prepares an approved chapter for drafting, it derives a local continuity graph from the validated project files already in use: canon facts, relationship state, story threads, chapter packets, plot setup/payoff IDs, and research sources.
+
+The resolver starts with the chapter packet's explicit canon, thread, character, and research references, then follows at most two safe links. It may add locked facts and relationships, open or advancing threads, and supporting source provenance that the packet did not list directly. Chapter and source nodes are terminal, so a shared chapter or research document cannot pull unrelated records into the prompt.
+
+Automatic discovery blocks provisional relationships and facts, inactive threads, and canon introduced in a later `book-NN`. An explicitly referenced provisional record retains the existing packet behavior but cannot act as a bridge to additional context. Every selected or blocked graph record carries its depth, source path, and traversal path in the context report.
+
+The graph is deterministic, rebuilt in memory, and disposable. Canonical YAML remains the only source of truth. No graph database, hosted service, embeddings, Python runtime, schema migration, or additional dependency is required.
+
 ## Temporary local browser wizard
 
 Novel Forge 1.2 opens a browser when a workflow is materially easier to review visually:
