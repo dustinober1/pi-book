@@ -110,6 +110,12 @@ const VoiceVariantSchema = Type.Object({
   path: Type.String({ minLength: 1 }),
   content_hash: HashSchema,
 }, { additionalProperties: false });
+const VoiceVariantFor = (id: "A" | "B" | "C") => Type.Object({
+  id: Type.Literal(id),
+  path: Type.String({ minLength: 1 }),
+  content_hash: HashSchema,
+}, { additionalProperties: false });
+const CompleteVoiceVariantsSchema = Type.Tuple([VoiceVariantFor("A"), VoiceVariantFor("B"), VoiceVariantFor("C")]);
 const VoiceScoreSchema = Type.Object({
   evaluator_id: Type.String({ minLength: 1 }),
   variant_id: VariantIdSchema,
@@ -134,14 +140,14 @@ export const VoiceExperimentFileSchema = Type.Union([
   Type.Object({
     ...VoiceExperimentSharedFields,
     status: Type.Literal("accepted"),
-    variants: Type.Array(VoiceVariantSchema, { minItems: 3, maxItems: 3 }),
+    variants: CompleteVoiceVariantsSchema,
     baseline_path: Type.String({ minLength: 1 }),
     baseline_hash: HashSchema,
   }, { additionalProperties: false }),
   Type.Object({
     ...VoiceExperimentSharedFields,
     status: Type.Literal("scoring"),
-    variants: Type.Array(VoiceVariantSchema, { minItems: 3, maxItems: 3 }),
+    variants: CompleteVoiceVariantsSchema,
     baseline_path: Type.Null(),
     baseline_hash: Type.Null(),
   }, { additionalProperties: false }),
