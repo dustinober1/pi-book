@@ -31,8 +31,8 @@ test("wizard apply rejects stale stage and hash before handler execution", async
     const registry = createWizardRegistry(root, {
       adoption: { apply() { called = true; return { ok: true }; } },
     });
-    await assert.rejects(() => registry.apply({ proposal_id: "p1", workflow: "adoption", action: "apply", expected_stage: "drafting", expected_project_hash: projectStateHash(root), payload: {} }), /stale.*stage/i);
-    await assert.rejects(() => registry.apply({ proposal_id: "p2", workflow: "adoption", action: "apply", expected_stage: readProject(root).current_stage, expected_project_hash: "bad", payload: {} }), /stale.*hash/i);
+    await assert.rejects(Promise.resolve().then(() => registry.apply({ proposal_id: "p1", workflow: "adoption", action: "apply", expected_stage: "drafting", expected_project_hash: projectStateHash(root), payload: {} })), /stale.*stage/i);
+    await assert.rejects(Promise.resolve().then(() => registry.apply({ proposal_id: "p2", workflow: "adoption", action: "apply", expected_stage: readProject(root).current_stage, expected_project_hash: "bad", payload: {} })), /stale.*hash/i);
     assert.equal(called, false);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
