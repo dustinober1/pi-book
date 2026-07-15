@@ -5,8 +5,20 @@ import { parseYaml } from "../infrastructure/yaml.js";
 import { getProfile } from "../profiles/index.js";
 import { readBook, readProject } from "../project/store.js";
 import { packetReferenceFindings } from "../application/integrity.js";
+import { buildStoryGraph, resolveDraftingGraphContext, type StoryGraphBlockedSelection, type StoryGraphSelection } from "./story-graph.js";
 
-export interface ChapterContext { root: string; bookId: string; packet: ChapterPacket; text: string; report: { estimatedTokens: number; included: string[]; excluded: string[] } }
+export interface ChapterContextReport {
+  estimatedTokens: number;
+  included: string[];
+  excluded: string[];
+  graph: {
+    maxDepth: 1 | 2;
+    selections: StoryGraphSelection[];
+    blocked: StoryGraphBlockedSelection[];
+  };
+}
+
+export interface ChapterContext { root: string; bookId: string; packet: ChapterPacket; text: string; report: ChapterContextReport }
 function excerpt(text: string, maxChars: number, fromEnd = false): string { if (text.length <= maxChars) return text; return fromEnd ? text.slice(-maxChars) : text.slice(0, maxChars); }
 function selectPacket(queue: ChapterQueueState, requestedChapter?: number): ChapterPacket {
   const packet = requestedChapter ? queue.packets.find((item) => item.chapter === requestedChapter) : queue.packets.find((item) => item.status === "ready");
@@ -45,9 +57,23 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
   const referenceBlockers = packetReferenceFindings(packet, canon, threads, sources, plot).filter((finding) => finding.severity === "blocker");
   const blockers = [...profileBlockers.map((item) => item.message), ...referenceBlockers.map((item) => item.message)];
   if (blockers.length) throw new Error(`Chapter packet is not draftable:\n${blockers.map((item) => `- ${item}`).join("\n")}`);
-  const relevantFacts = canon.facts.filter((fact) => packet.continuity_refs.includes(fact.id));
-  const relevantRelationships = canon.relationships.filter((relationship) => packet.continuity_refs.includes(relationship.id) || relationship.characters.some((character) => packet.character_refs.includes(character)));
-  const relevantThreads = threads.threads.filter((thread) => packet.story_thread_refs.includes(thread.id));
+
+  const graphResolution = resolveDraftingGraphContext(buildStoryGraph({
+    bookId: book.book_id,
+    canon,
+    threads,
+    queue,
+    plot,
+    sources,
+  }), packet);
+  const factIds = new Set(graphResolution.factIds);
+  const relationshipIds = new Set(graphResolution.relationshipIds);
+  const threadIds = new Set(graphResolution.threadIds);
+  const sourceIds = new Set(graphResolution.sourceIds);
+  const relevantFacts = canon.facts.filter((fact) => factIds.has(fact.id));
+  const relevantRelationships = canon.relationships.filter((relationship) => relationshipIds.has(relationship.id));
+  const relevantThreads = threads.threads.filter((thread) => threadIds.has(thread.id));
+  const relevantSources = sources.sources.filter((source) => sourceIds.has(source.id));
   const plotEntry = plot.chapters.find((item) => item.chapter === packet.chapter) ?? null;
   const chapterFiles = listChapterFiles(bookRoot); const previousPath = previousChapterPath(chapterFiles, packet.chapter);
   const previous = previousPath ? readText(previousPath) ?? "" : "_No prior chapter exists._";
@@ -58,6 +84,7 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     { title: "Relevant story threads", body: JSON.stringify(relevantThreads, null, 2), required: true, cap: 7000 },
     { title: "Plot-grid entry", body: JSON.stringify(plotEntry, null, 2), required: true, cap: 5000 },
     { title: "Previous chapter ending/context", body: previous, required: true, cap: 12000 },
+    ...(relevantSources.length ? [{ title: "Graph-selected research provenance", body: JSON.stringify(relevantSources, null, 2), required: false, cap: 4000 }] : []),
     { title: "Remarkability contract", body: JSON.stringify(remarkability, null, 2), required: false, cap: 6000 },
     { title: "Profile rules", body: profile.draftingRules.map((rule) => `- ${rule}`).join("\n"), required: false, cap: 5000 },
     { title: "Voice profile excerpt", body: readText(join(root, "series", "voice-profile.md")) ?? "", required: false, cap: 14000 },
@@ -65,7 +92,39 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     { title: "Genre configuration", body: readText(join(bookRoot, "genre.yaml")) ?? "", required: false, cap: 6000 },
   ];
   const text = `# Drafting Context — Chapter ${packet.chapter}` + buildBudgetedSections(sections, maxChars);
-  const included = [`chapter packet ${packet.chapter}`, ...relevantFacts.map((fact) => `canon ${fact.id}`), ...relevantRelationships.map((relationship) => `relationship ${relationship.id}`), ...relevantThreads.map((thread) => `thread ${thread.id}`), "remarkability contract", previousPath ? `previous chapter ${previousPath.slice(bookRoot.length + 1)}` : "no previous chapter"];
-  return { root, bookId: project.active_book, packet, text, report: { estimatedTokens: Math.ceil(text.length / 4), included, excluded: ["unreferenced canon", "unreferenced story threads", "non-adjacent chapters", "future books", "reader experiment responses", "packaging files", "legacy artifacts"] } };
+  const graphIncluded = graphResolution.selections
+    .filter((selection) => selection.reason === "graph-discovered")
+    .map((selection) => {
+      if (selection.type === "canon-fact") return `graph canon ${selection.refId}`;
+      if (selection.type === "story-thread") return `graph thread ${selection.refId}`;
+      if (selection.type === "research-source") return `graph source ${selection.refId}`;
+      return `graph relationship ${selection.refId}`;
+    });
+  const included = [
+    `chapter packet ${packet.chapter}`,
+    ...relevantFacts.map((fact) => `canon ${fact.id}`),
+    ...relevantRelationships.map((relationship) => `relationship ${relationship.id}`),
+    ...relevantThreads.map((thread) => `thread ${thread.id}`),
+    ...relevantSources.map((source) => `source ${source.id}`),
+    ...graphIncluded,
+    "remarkability contract",
+    previousPath ? `previous chapter ${previousPath.slice(bookRoot.length + 1)}` : "no previous chapter",
+  ];
+  return {
+    root,
+    bookId: project.active_book,
+    packet,
+    text,
+    report: {
+      estimatedTokens: Math.ceil(text.length / 4),
+      included,
+      excluded: ["unreferenced canon", "unreferenced story threads", "non-adjacent chapters", "future books", "graph-blocked unsafe records", "reader experiment responses", "packaging files", "legacy artifacts"],
+      graph: {
+        maxDepth: graphResolution.maxDepth,
+        selections: graphResolution.selections,
+        blocked: graphResolution.blocked,
+      },
+    },
+  };
 }
 export function manuscriptWordCount(root: string, bookId?: string): number { const project = readProject(root); const bookRoot = join(root, "books", bookId ?? project.active_book); return listChapterFiles(bookRoot).reduce((total, path) => total + countWords(readText(path) ?? ""), 0); }
