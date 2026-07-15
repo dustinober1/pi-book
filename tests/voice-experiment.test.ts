@@ -49,7 +49,7 @@ function acceptedExperiment(assets = validAssets()): AcceptedVoiceExperiment {
   };
 }
 
-function experimentFiles(experiment: AcceptedVoiceExperiment, assets: VoiceExperimentAssetMap) {
+function experimentFiles(experiment: VoiceExperimentFile, assets: VoiceExperimentAssetMap) {
   return [
     { path: `${base}/experiment.yaml`, content: stringifyYaml(experiment) },
     ...Object.entries(assets).map(([path, content]) => ({ path, content })),
@@ -101,6 +101,35 @@ test("voice score summaries are deterministic and ordered by score", () => {
     ["A", 4, 0],
     ["C", 3, -1],
   ]);
+});
+
+test("research-update preserves a planned experiment before variants exist", () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-voice-planned-"));
+  try {
+    const root = initializeProject(parent, { projectName: "Planned Voice", projectType: "standalone", profile: "thriller" });
+    const source = words(700, "source");
+    const experiment: VoiceExperimentFile = {
+      schema_version: "1.0.0",
+      id: "VE-001",
+      status: "planned",
+      source_scene_path: `${base}/source-scene.md`,
+      source_scene_hash: stableContentHash(source),
+      variants: [],
+      scores: [],
+      accepted_traits: [],
+      baseline_path: null,
+      baseline_hash: null,
+    };
+    const result = applyNovelEvent(root, {
+      eventType: "research-update",
+      expectedStage: "voice-intake",
+      expectedProjectHash: projectStateHash(root),
+      files: experimentFiles(experiment, { [`${base}/source-scene.md`]: source }),
+    });
+    assert.equal(result.stage, "voice-intake");
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
 });
 
 test("research-update rejects a syntactically valid experiment with false content hashes", () => {
