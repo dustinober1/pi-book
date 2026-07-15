@@ -108,7 +108,7 @@ test("discovers safe character-linked continuity with explainable paths", () => 
   const input = fixture();
   const resolution = resolveDraftingGraphContext(buildStoryGraph(input), currentPacket(input));
 
-  assert.deepEqual(resolution.factIds, ["CAN-1", "CAN-2", "CAN-CHAPTER-A", "CAN-SOURCE-A"]);
+  assert.deepEqual(resolution.factIds, ["CAN-1", "CAN-CHAPTER-A", "CAN-SOURCE-A", "CAN-2"]);
   assert.deepEqual(resolution.relationshipIds, ["REL-1"]);
   assert.deepEqual(resolution.threadIds, ["ST-1", "ST-2"]);
   assert.deepEqual(resolution.sourceIds, ["SRC-1"]);
