@@ -55,7 +55,7 @@
 ```bash
 npm ci
 npm run typecheck
-node --import tsx --test tests/v1.3-schemas.test.ts tests/research-event.test.ts tests/v1.3-compatibility.test.ts tests/project-store.test.ts
+node --import tsx --test tests/v1-3-schemas.test.ts tests/research-event.test.ts tests/v1-3-compatibility.test.ts tests/project-store.test.ts
 ```
 
 Expected: all pass with no changes outside documented paths.
