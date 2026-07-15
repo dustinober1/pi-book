@@ -22,10 +22,20 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - name: Regenerate package lock metadata
-        run: npm install --package-lock-only --ignore-scripts --legacy-peer-deps
-      - run: npm ci
+        id: lock
+        shell: bash
+        run: |
+          set +e
+          npm install --package-lock-only --ignore-scripts --legacy-peer-deps > lock.log 2>&1
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          cat lock.log
+          exit 0
+      - if: steps.lock.outputs.code == '0'
+        run: npm ci
       - name: Run TypeScript check
         id: typecheck
+        if: steps.lock.outputs.code == '0'
         shell: bash
         run: |
           set +e
@@ -36,7 +46,7 @@ jobs:
           exit 0
       - name: Run tests
         id: tests
-        if: steps.typecheck.outputs.code == '0'
+        if: steps.lock.outputs.code == '0' && steps.typecheck.outputs.code == '0'
         shell: bash
         run: |
           set +e
@@ -51,14 +61,20 @@ jobs:
         with:
           name: novel-forge-ci-node-${{ matrix.node }}
           path: |
+            lock.log
             typecheck.log
             test.log
             package-lock.json
+      - name: Enforce package lock result
+        if: steps.lock.outputs.code != '0'
+        run: exit 1
       - name: Enforce TypeScript result
-        if: steps.typecheck.outputs.code != '0'
+        if: steps.lock.outputs.code == '0' && steps.typecheck.outputs.code != '0'
         run: exit 1
       - name: Enforce test result
-        if: steps.typecheck.outputs.code == '0' && steps.tests.outputs.code != '0'
+        if: steps.lock.outputs.code == '0' && steps.typecheck.outputs.code == '0' && steps.tests.outputs.code != '0'
         run: exit 1
-      - run: npm run eval
-      - run: npm pack --dry-run
+      - if: steps.lock.outputs.code == '0'
+        run: npm run eval
+      - if: steps.lock.outputs.code == '0'
+        run: npm pack --dry-run
