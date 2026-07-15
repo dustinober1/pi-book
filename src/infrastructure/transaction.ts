@@ -3,12 +3,12 @@ import { dirname, join, relative } from "node:path";
 import { randomUUID } from "node:crypto";
 import { parseYaml } from "./yaml.js";
 import { schemaForPath } from "../domain/schemas.js";
+import { v12SchemaForPath } from "../domain/v1-2-schema-registry.js";
 import { commitWorkflowEvent, type GitCheckpointResult } from "./git.js";
 
-export interface FileChange {
-  path: string;
-  content: string;
-}
+export type TextFileChange = { path: string; content: string; encoding?: "utf8" };
+export type BinaryFileChange = { path: string; content: Uint8Array; encoding: "binary" };
+export type FileChange = TextFileChange | BinaryFileChange;
 
 export interface TransactionOptions {
   commitMessage?: string;
@@ -25,7 +25,8 @@ export interface TransactionResult {
 function validateChange(change: FileChange): void {
   if (change.path.startsWith("/") || change.path.includes("..")) throw new Error(`Unsafe transaction path: ${change.path}`);
   if (/\.(yaml|yml)$/i.test(change.path)) {
-    const schema = schemaForPath(change.path);
+    if (typeof change.content !== "string") throw new Error(`YAML changes must be UTF-8 text: ${change.path}`);
+    const schema = v12SchemaForPath(change.path) ?? schemaForPath(change.path);
     parseYaml(change.content, schema ?? undefined, change.path);
   }
 }
@@ -51,7 +52,8 @@ export function applyTransaction(root: string, changes: FileChange[], options: T
       allChanges.push(change);
       const staged = join(stagedRoot, change.path);
       mkdirSync(dirname(staged), { recursive: true });
-      writeFileSync(staged, change.content, "utf8");
+      if (typeof change.content === "string") writeFileSync(staged, change.content, "utf8");
+      else writeFileSync(staged, change.content);
     }
   }
 
