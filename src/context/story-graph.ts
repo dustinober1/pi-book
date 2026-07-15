@@ -673,8 +673,7 @@ export function resolveDraftingGraphContext(
   const orderedBlocked = [...blocked.values()].sort(compareBlocked);
   const idsByType = (type: StoryGraphRecordNodeType): string[] => orderedSelections
     .filter((selection) => selection.type === type)
-    .map((selection) => selection.refId)
-    .sort((a, b) => a.localeCompare(b));
+    .map((selection) => selection.refId);
 
   return {
     maxDepth,
