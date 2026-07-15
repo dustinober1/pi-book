@@ -32,8 +32,10 @@ test("1.3 schemas reject unknown fields and incomplete ready research", () => {
     () => parseYaml(stringifyYaml({ ...defaultTasteProfile(), extra: true }), TasteProfileSchema, "taste-profile.yaml"),
     /schema validation/i,
   );
-  const ledger = defaultResearchLedger() as any;
-  ledger.items.push({ id: "RES-001", lane: "story-world", status: "ready" });
+  const ledger = {
+    ...defaultResearchLedger(),
+    items: [{ id: "RES-001", lane: "story-world", status: "ready" }],
+  } as any;
   assert.throws(() => parseYaml(stringifyYaml(ledger), ResearchLedgerSchema, "research-ledger.yaml"), /schema validation/i);
 });
 
@@ -55,6 +57,18 @@ test("voice experiment files require anonymous variants and a stable baseline re
     baseline_hash: "e".repeat(64),
   };
   parseYaml(stringifyYaml(value), VoiceExperimentFileSchema, "experiment.yaml");
+  assert.throws(
+    () => parseYaml(stringifyYaml({ ...value, variants: undefined }), VoiceExperimentFileSchema, "experiment.yaml"),
+    /schema validation/i,
+  );
+  assert.throws(
+    () => parseYaml(stringifyYaml({ ...value, baseline_path: undefined }), VoiceExperimentFileSchema, "experiment.yaml"),
+    /schema validation/i,
+  );
+  assert.throws(
+    () => parseYaml(stringifyYaml({ ...value, baseline_hash: undefined }), VoiceExperimentFileSchema, "experiment.yaml"),
+    /schema validation/i,
+  );
 });
 
 test("the 1.3 registry recognizes every new canonical YAML path", () => {
