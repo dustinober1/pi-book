@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.3.0 — Author-taste and research foundation
+
+### Added
+
+- Strict typed contracts for author taste, voice guardrails, anonymous voice-experiment records, research ledgers, book strategy, and voice-audit evidence.
+- A `research-update` workflow event that can save allowlisted evidence during active creative stages without changing project stage, gates, approvals, active-book state, or manuscript prose.
+- New-project templates for `series/taste-profile.yaml`, `series/voice-guardrails.yaml`, and `series/voice-experiments/index.yaml`.
+- New-book templates for `research-ledger.yaml`, `book-strategy.yaml`, and `voice-audits.yaml`.
+- Transaction-level validation for every new 1.3 YAML artifact.
+- One consolidated optional-backfill warning when an older project does not yet contain the 1.3 evidence files.
+
+### Changed
+
+- Package version and new-project metadata are now `1.3.0`.
+- Rebuilding a voice profile requires the readable voice profile, taste profile, voice guardrails, and voice-experiment index in one guarded event.
+- Rebuilding a book plan requires its research ledger and book strategy in the same guarded event as the existing architecture files.
+- Voice and book planning prompts now request the complete evidence bundle and explicitly prohibit invented public-review evidence or named-author imitation instructions.
+- Review events may write typed `voice-audits.yaml` evidence without making it mandatory during this foundation phase.
+
+### Compatibility
+
+- Existing 1.2 projects remain readable and unblocked when the new evidence files are absent.
+- Metadata-only upgrades do not create evidence, change approvals, or hide the optional-backfill warning.
+- Existing manuscript prose, reader experiments, publishing metadata, marketing metadata, and continuity-graph behavior remain unchanged.
+- No dependency or external service is added.
+
+### Safety retained
+
+- `research-update` rejects manuscript, project-state, book-state, guidance, reader-evidence, publishing, marketing, and package-output paths.
+- Every accepted evidence update still requires the current stage and project hash, schema validation, rollback, one Git checkpoint, and refreshed status and handoff files.
+- Public market evidence remains separate from real human responses to the current manuscript.
+
 ## 1.2.0 — Existing-project and reader usability
 
 ### Added

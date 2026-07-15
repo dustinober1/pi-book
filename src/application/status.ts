@@ -82,6 +82,17 @@ function decisionText(project: ReturnType<typeof readProject>, blockers: string[
   };
 }
 
+function optionalV13ArtifactPaths(bookId: string): string[] {
+  return [
+    "series/taste-profile.yaml",
+    "series/voice-guardrails.yaml",
+    "series/voice-experiments/index.yaml",
+    `books/${bookId}/research-ledger.yaml`,
+    `books/${bookId}/book-strategy.yaml`,
+    `books/${bookId}/voice-audits.yaml`,
+  ];
+}
+
 export function getProjectStatus(root: string, options: ProjectStatusOptions = {}): ProjectStatus {
   const project = readProject(root);
   const book = readBook(root);
@@ -116,6 +127,11 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     `books/${book.book_id}/revision-tickets.yaml`,
   ];
   for (const path of required) if (!existsSync(join(root, path))) blockers.push(`Missing required control file: ${path}`);
+
+  const missingOptionalV13 = optionalV13ArtifactPaths(book.book_id).filter((path) => !existsSync(join(root, path)));
+  if (missingOptionalV13.length) {
+    warnings.push(`Optional Novel Forge 1.3 research setup is incomplete: ${missingOptionalV13.join(", ")}. Existing approvals and manuscript prose remain valid; backfill these files through the guided research workflow when available.`);
+  }
 
   const genrePath = join(bookRoot, "genre.yaml");
   if (existsSync(genrePath)) {

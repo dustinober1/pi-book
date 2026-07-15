@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { buildPackagingChecklist } from "../src/application/package-checklist.js";
 import { buildPackageArtifacts } from "../src/application/packaging/export.js";
 import { applyPackageArtifacts } from "../src/application/packaging/apply.js";
+import { NOVEL_FORGE_VERSION } from "../src/application/version-core.js";
 import { PublishingMetadataSchema, MarketingMetadataSchema, type PublishingMetadata, type MarketingMetadata } from "../src/domain/v1-2-schemas.js";
 import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readProject } from "../src/project/store.js";
@@ -69,6 +70,6 @@ test("package application commits all outputs and blocks stale overwrite without
     writeFileSync(join(root, "books/book-01/manuscript/chapters/01-opening.md"), "# Chapter 1\n\nChanged manuscript.\n", "utf8");
     await assert.rejects(() => applyPackageArtifacts(root, { preferPandoc: false, regenerate: false, bypassWorkflowChecklist: true }), /stale.*regenerat/i);
     assert.ok(first.changed.includes("STATUS.md"));
-    assert.equal(readProject(root).novel_forge_version, "1.2.0");
+    assert.equal(readProject(root).novel_forge_version, NOVEL_FORGE_VERSION);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
