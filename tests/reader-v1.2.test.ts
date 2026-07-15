@@ -30,7 +30,7 @@ test("v1.1 reader migration preserves evidence and original files", () => {
     assert.deepEqual(result.migratedIds, ["RE-001"]);
     const migrated = readReaderExperiment(root, "book-01", "RE-001");
     assert.equal(migrated.immediate_responses[0]?.reader_id, "R-001");
-    assert.deepEqual(migrated.metrics, legacy.experiments[0].metrics);
+    assert.deepEqual(migrated.metrics, legacy.experiments[0]!.metrics);
     assert.equal(migrated.verdict, "validated");
     assert.equal(createHash("sha256").update(readFileSync(legacyPath)).digest("hex"), originalHash);
     assert.deepEqual(migrateReaderEvidenceV1ToV2(root).migratedIds, []);
