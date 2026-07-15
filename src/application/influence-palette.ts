@@ -1,4 +1,4 @@
-import { VOICE_PRECEDENCE_VALUES } from "../domain/v1-3-schemas.js";
+import { VOICE_PRECEDENCE_VALUES, type TasteProfile, type VoiceGuardrails } from "../domain/v1-3-schemas.js";
 
 export type VoiceEvidenceLayer = typeof VOICE_PRECEDENCE_VALUES[number];
 export const VOICE_PRECEDENCE: readonly VoiceEvidenceLayer[] = VOICE_PRECEDENCE_VALUES;
@@ -31,8 +31,44 @@ export interface VoiceCompilationResult {
   suppressed: SuppressedVoiceRule[];
 }
 
+export interface VoiceSafetyFinding {
+  code: "direct-imitation" | "raw-reference";
+  path: string;
+  message: string;
+}
+
+export interface VoiceSafetyInput {
+  taste: TasteProfile;
+  voiceProfile: string;
+  guardrails: VoiceGuardrails;
+}
+
+const IMITATION_PATTERNS = [
+  /\bwrite like\b/i,
+  /\bimitate\b/i,
+  /\bin the style of\b/i,
+  /\bsound like\b/i,
+  /\bchannel (?:the voice of )?\b/i,
+];
+
 function normalizedRule(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function guardrailStrings(value: VoiceGuardrails): string[] {
+  return [
+    ...value.must,
+    ...value.prefer,
+    ...value.avoid,
+    ...value.monitor,
+    ...value.pov_signatures.flatMap((item) => [...item.must, ...item.prefer, ...item.avoid]),
+  ];
+}
+
+function referenceTokens(taste: TasteProfile): string[] {
+  return [...taste.influences.map((item) => item.reference), ...taste.negative_references.map((item) => item.reference)]
+    .flatMap((reference) => [reference, ...reference.split(/[—–:\-]/).map((item) => item.trim())])
+    .filter((item, index, values) => item.length >= 4 && values.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
 }
 
 export function compileVoiceGuardrails(input: VoiceCompilationInput): VoiceCompilationResult {
@@ -66,4 +102,33 @@ export function compileVoiceGuardrails(input: VoiceCompilationInput): VoiceCompi
   }
 
   return { guardrails, suppressed };
+}
+
+export function voiceSafetyFindings(input: VoiceSafetyInput): VoiceSafetyFinding[] {
+  const targets = [
+    { path: "series/voice-profile.md", text: input.voiceProfile },
+    ...guardrailStrings(input.guardrails).map((text) => ({ path: "series/voice-guardrails.yaml", text })),
+  ];
+  const references = referenceTokens(input.taste);
+  const findings: VoiceSafetyFinding[] = [];
+  const seen = new Set<string>();
+
+  for (const target of targets) {
+    if (IMITATION_PATTERNS.some((pattern) => pattern.test(target.text))) {
+      const key = `direct-imitation:${target.path}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        findings.push({ code: "direct-imitation", path: target.path, message: `${target.path} contains direct imitation language.` });
+      }
+    }
+    for (const reference of references) {
+      if (!target.text.toLowerCase().includes(reference.toLowerCase())) continue;
+      const key = `raw-reference:${target.path}:${reference.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      findings.push({ code: "raw-reference", path: target.path, message: `${target.path} exposes raw influence reference ${reference}.` });
+    }
+  }
+
+  return findings;
 }
