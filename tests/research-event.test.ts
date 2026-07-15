@@ -54,6 +54,31 @@ test("research-update writes evidence without changing project or book creative 
   }
 });
 
+test("research-update changes the guarded hash and rejects a stale evidence proposal", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Research Hash", projectType: "standalone", profile: "thriller" });
+    const originalHash = projectStateHash(root);
+    const first = applyNovelEvent(root, {
+      eventType: "research-update",
+      expectedStage: "voice-intake",
+      expectedProjectHash: originalHash,
+      files: [{ path: "books/book-01/research-ledger.yaml", content: researchLedger() }],
+    });
+    assert.notEqual(first.projectHash, originalHash);
+    assert.equal(first.projectHash, projectStateHash(root));
+
+    assert.throws(() => applyNovelEvent(root, {
+      eventType: "research-update",
+      expectedStage: "voice-intake",
+      expectedProjectHash: originalHash,
+      files: [{ path: "books/book-01/book-strategy.yaml", content: readFileSync(join(root, "books", "book-01", "book-strategy.yaml"), "utf8") }],
+    }), /stale project hash/i);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
 test("research-update rejects manuscript and protected state submissions", () => {
   const parent = temp();
   try {
