@@ -24,8 +24,20 @@ export function gateDetail(gate: string): GateDetail {
 
 export function gateEvidencePaths(project: ProjectState, gate: string): string[] {
   const book = `books/${project.active_book}`;
-  if (gate === "voice-approval") return ["series/voice-profile.md"];
-  if (gate === "book-plan-approval") return [`${book}/book-bible.md`, `${book}/genre.yaml`, `${book}/plot-grid.yaml`, `${book}/remarkability.yaml`];
+  if (gate === "voice-approval") return [
+    "series/voice-profile.md",
+    "series/taste-profile.yaml",
+    "series/voice-guardrails.yaml",
+    "series/voice-experiments/index.yaml",
+  ];
+  if (gate === "book-plan-approval") return [
+    `${book}/book-bible.md`,
+    `${book}/genre.yaml`,
+    `${book}/plot-grid.yaml`,
+    `${book}/remarkability.yaml`,
+    `${book}/research-ledger.yaml`,
+    `${book}/book-strategy.yaml`,
+  ];
   if (gate === "first-chapter-approval") return [`${book}/manuscript/chapters/01-opening.md`, `${book}/review-report.md`];
   if (["act-1-review", "midpoint-review", "pre-final-act-review", "manuscript-approval"].includes(gate)) return [`${book}/review-report.md`, `${book}/revision-tickets.yaml`];
   if (gate === "package-approval") return [`${book}/package.md`];
