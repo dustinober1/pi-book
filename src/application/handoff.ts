@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import type { BookState, ProjectState } from "../domain/schemas.js";
 import { gitState, type GitCheckpointResult } from "../infrastructure/git.js";
-import { applyTransaction, type FileChange } from "../infrastructure/transaction.js";
+import { applyTransaction, type FileChange, type TransactionFileChange } from "../infrastructure/transaction.js";
 import { readBook, readProject } from "../project/store.js";
 import { projectStateHash } from "./project-hash.js";
 import { getProjectStatus, type ProjectStatus } from "./status.js";
@@ -118,7 +118,7 @@ export function refreshGuidance(root: string, options: HandoffOptions = {}): Pro
   return guidance.status;
 }
 
-export function applyGuidedProjectEvent(root: string, changes: FileChange[], message: string, options: HandoffOptions = {}): GuidedProjectEventResult {
+export function applyGuidedProjectEvent(root: string, changes: TransactionFileChange[], message: string, options: HandoffOptions = {}): GuidedProjectEventResult {
   const checkpointEnabled = readProject(root).automation.git_checkpoints;
   const preexistingDirty = gitState(root).dirty;
   let finalStatus: ProjectStatus | null = null;
