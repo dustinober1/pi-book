@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Novel Forge Wizard</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">Novel Forge 1.2</p>
+        <h1>Author workflow review</h1>
+        <p id="session-summary">Connecting to the local project session…</p>
+      </div>
+      <button id="close-session" class="secondary">Close wizard</button>
+    </header>
+
+    <nav class="workflow-tabs" aria-label="Workflow">
+      <button data-workflow="adoption">Adopt manuscript</button>
+      <button data-workflow="readers">Reader evidence</button>
+      <button data-workflow="packaging">Package book</button>
+      <button data-workflow="next-book">Next book</button>
+    </nav>
+
+    <section class="workspace">
+      <aside>
+        <h2>Project state</h2>
+        <pre id="snapshot">Select a workflow to load its sanitized project snapshot.</pre>
+      </aside>
+      <article>
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow" id="workflow-label">Review surface</p>
+            <h2 id="workflow-title">Choose a workflow</h2>
+          </div>
+          <span id="connection-state" class="badge">Local only</span>
+        </div>
+        <div id="workflow-content" class="empty-state">
+          <p>The browser prepares previews and proposals. Novel Forge applies confirmed changes through validation, rollback, Git checkpoints, STATUS.md, and HANDOFF.md.</p>
+        </div>
+        <details class="advanced">
+          <summary>Proposal console</summary>
+          <label>Action <input id="proposal-action" value="preview"></label>
+          <label>JSON payload <textarea id="proposal-payload" rows="8">{}</textarea></label>
+          <div class="button-row">
+            <button id="preview-proposal">Preview</button>
+            <button id="apply-proposal" class="danger">Apply confirmed proposal</button>
+          </div>
+          <pre id="proposal-result"></pre>
+        </details>
+      </article>
+    </section>
+  </main>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

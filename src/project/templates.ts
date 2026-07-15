@@ -2,6 +2,7 @@ import type { ProfileId, ProjectState, ProjectType, BookState } from "../domain/
 import { stringifyYaml } from "../infrastructure/yaml.js";
 import { getProfile } from "../profiles/index.js";
 import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
+import { defaultMarketingMetadata, defaultPublishingMetadata } from "../domain/v1-2-schemas.js";
 
 export interface ProjectTemplateOptions { projectName: string; projectType: ProjectType; profile: ProfileId; targetWords?: number }
 
@@ -65,6 +66,9 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
       accepted_reader_costs: [],
     }),
     [`${base}/reader-experiments.yaml`]: stringifyYaml({ schema_version: "1.0.0", experiments: [] }),
+    [`${base}/publishing.yaml`]: stringifyYaml(defaultPublishingMetadata(book, bookNumber)),
+    [`${base}/marketing.yaml`]: stringifyYaml(defaultMarketingMetadata()),
+    [`${base}/reader-kits/index.yaml`]: stringifyYaml({ schema_version: "1.0.0", experiments: [] }),
   };
 }
 
