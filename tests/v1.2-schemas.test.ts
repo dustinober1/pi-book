@@ -31,7 +31,8 @@ test("publishing metadata is strict and leaves unknown values blank", () => {
   assert.equal(parsed.series.number, 1);
   assert.equal(parsed.author.name, "");
   assert.equal(parsed.identifiers.epub_isbn, "");
-  assert.throws(() => parseYaml(`${stringifyYaml(value)}unknown: true\n`, PublishingMetadataSchema, "publishing.yaml"), /schema validation/i);
+  const invalid = { ...value, unknown: true } as any;
+  assert.throws(() => parseYaml(stringifyYaml(invalid), PublishingMetadataSchema, "publishing.yaml"), /schema validation/i);
 });
 
 test("marketing metadata requires explicit approval state for every group", () => {
