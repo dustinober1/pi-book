@@ -1,11 +1,11 @@
 ---
 name: novel-forge-for-pi
-description: "Use for guided, series-capable thriller and romantasy planning, drafting, review, real-reader evidence, revision, canon control, recovery, high-fidelity manuscript adoption, publishing/marketing packaging, and next-book inheritance."
+description: "Use for guided, series-capable thriller and romantasy planning, drafting, review, author-taste and research evidence, real-reader evidence, revision, canon control, recovery, high-fidelity manuscript adoption, publishing/marketing packaging, and next-book inheritance."
 ---
 
 # Novel Forge for Pi
 
-Novel Forge uses durable voice, canon, story threads, plot grid, remarkability, reader evidence, revision tickets, publishing metadata, and marketing metadata. Thriller and romantasy are typed profiles over one guarded workflow.
+Novel Forge uses durable voice, author-taste evidence, research ledgers, book strategy, canon, story threads, plot grid, remarkability, reader evidence, revision tickets, publishing metadata, and marketing metadata. Thriller and romantasy are typed profiles over one guarded workflow.
 
 ## Normal author workflow
 
@@ -22,22 +22,45 @@ The primary author-facing files are `STATUS.md`, `HANDOFF.md`, and the active bo
 ## Core rules
 
 - Optimize for reader trust and author-specific voice, not AI-detector evasion.
-- Never invent missing canon, thread, research, character, remarkability, reader-evidence, publishing, marketing, or inheritance facts.
+- Never invent missing canon, thread, research, character, remarkability, reader-evidence, public-review, publishing, marketing, or inheritance facts.
+- Translate named author or book influences into neutral, high-level craft traits; never place exact imitation instructions in drafting context.
+- Keep author-taste evidence, public market evidence, and real human responses to the current manuscript separate.
 - Draft only from a ready, profile-valid chapter packet.
 - Run heavy review at milestones and convert concrete findings into revision tickets.
 - Never bypass active human gates.
-- Treat only accepted, de-identified `source: human` rows as outside-reader evidence.
+- Treat only accepted, de-identified `source: human` rows as outside-reader evidence for the current manuscript.
 - Treat generated marketing as draft until explicitly approved.
 - Use `git revert` for undo. Never reset or rewrite project history.
 - Never overwrite occupied manuscript destinations or change an adoption source.
 
 ## Transaction rule
 
-For model-authored voice, series plan, book plan, chapter queue, drafting, review, reader testing, revision, canon lock, and package state transitions, call `novel_apply_event`. Do not edit `PROJECT.yaml`, `BOOK.yaml`, `STATUS.md`, or `HANDOFF.md` directly.
+For model-authored voice, series plan, book plan, chapter queue, drafting, review, reader testing, research evidence, revision, canon lock, and package state transitions, call `novel_apply_event`. Do not edit `PROJECT.yaml`, `BOOK.yaml`, `STATUS.md`, or `HANDOFF.md` directly.
+
+Use event type `research-update` only for its allowlisted taste, voice-guardrail, voice-experiment, research-ledger, book-strategy, voice-audit, and source-register evidence. It is state-neutral: it must not write manuscript prose, advance stage, alter gates or approvals, or change book status.
 
 `novel_apply_event` remains UTF-8 text-only. It owns stage/hash checks, file allowlists, schema/reference validation, state transitions, rollback, status/handoff generation, and Git checkpoints.
 
 Trusted internal application services may use the same transaction engine for binary adopted assets and generated DOCX, EPUB, and XLSX files. Do not expose binary writes through the model-facing tool.
+
+## Author taste and research foundation
+
+New projects use:
+
+```text
+series/taste-profile.yaml
+series/voice-guardrails.yaml
+series/voice-experiments/index.yaml
+books/<book-id>/research-ledger.yaml
+books/<book-id>/book-strategy.yaml
+books/<book-id>/voice-audits.yaml
+```
+
+A rebuilt voice profile must submit `voice-profile.md`, `taste-profile.yaml`, `voice-guardrails.yaml`, and the voice-experiment index together. A rebuilt book plan must submit its research ledger and book strategy with the existing architecture files. The corresponding approval gate hashes the complete bundle.
+
+Planned or researching claims may remain incomplete. A claim marked `ready` requires source provenance, verification, risk, knowledge scope, and at least one dramatic use. An experiment marked `accepted` requires three anonymous variants and a non-null baseline record.
+
+Do not scrape retailer or social platforms from this package. Do not store reviewer identity or full public-review bodies as project reader evidence. Existing 1.2 projects without these files remain readable and receive only an optional-backfill warning.
 
 ## Temporary browser wizard
 
