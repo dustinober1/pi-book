@@ -65,7 +65,7 @@ export function applyAdoption(root: string, preview: AdoptionPreview, mapped: Ma
   const accepted = mapped.sections.filter((section) => section.included);
   const usedNumbers = new Set(accepted.map((section) => section.number).filter((value): value is number => value !== null));
   let nextNumber = 1;
-  const sectionRows: Array<{ id: string; kind: string; number: number | null; title: string; destination: string; source_refs: string[]; included: boolean }> = [];
+  const sectionRows: Array<{ id: string; source_order: number; kind: string; number: number | null; title: string; destination: string; source_refs: string[]; included: boolean }> = [];
   let chapterCount = 0;
   let words = 0;
   for (let index = 0; index < accepted.length; index += 1) {
@@ -88,7 +88,7 @@ export function applyAdoption(root: string, preview: AdoptionPreview, mapped: Ma
     const content = `${replaceAssetReferences(section.markdown, assetDestinations).trim()}\n`;
     words += countWords(content);
     changes.push({ path: destination, content });
-    sectionRows.push({ id: section.id, kind: section.kind, number, title: section.title, destination, source_refs: section.sourceRefs, included: true });
+    sectionRows.push({ id: section.id, source_order: section.sourceOrder, kind: section.kind, number, title: section.title, destination, source_refs: section.sourceRefs, included: true });
   }
 
   book.current_chapter = Math.max(0, ...sectionRows.map((row) => row.number ?? 0));
