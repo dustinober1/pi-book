@@ -25,9 +25,9 @@ test("1.1 projects warn while newer projects block", () => {
   try {
     const root = initializeProject(parent, { projectName: "Compatibility", projectType: "standalone", profile: "thriller" });
     const project = readProject(root);
-    project.novel_forge_version = "1.1.0";
-    assert.ok(versionFindings(project).some((finding) => finding.severity === "warning" && /older/i.test(finding.message)));
-    project.novel_forge_version = "1.3.0";
-    assert.ok(versionFindings(project).some((finding) => finding.severity === "blocker" && /newer/i.test(finding.message)));
+    const project11 = { ...project, novel_forge_version: "1.1.0" };
+    assert.ok(versionFindings(project11).some((finding) => finding.severity === "warning" && /older/i.test(finding.message)));
+    const project13 = { ...project, novel_forge_version: "1.3.0" };
+    assert.ok(versionFindings(project13).some((finding) => finding.severity === "blocker" && /newer/i.test(finding.message)));
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
