@@ -177,15 +177,15 @@ export function registerNovelForge(pi: ExtensionAPI): void {
   pi.registerTool({
     name: "novel_apply_event",
     label: "Novel Forge Apply Event",
-    description: "Apply one allowlisted Novel Forge workflow event transactionally with schema, reference, stage, and stale-write validation.",
+    description: "Apply one allowlisted Novel Forge workflow or research evidence event transactionally with schema, reference, stage, and stale-write validation.",
     promptSnippet: "Apply the prepared Novel Forge files as one guarded workflow event.",
-    promptGuidelines: ["Use novel_apply_event for Novel Forge planning, drafting, review, reader evidence, revision, canon lock, and packaging changes. Never write Novel Forge state files directly."],
+    promptGuidelines: ["Use novel_apply_event for Novel Forge planning, drafting, review, reader evidence, research evidence, revision, canon lock, and packaging changes. Never write Novel Forge state files directly."],
     parameters: Type.Object({
       project_root: Type.Optional(Type.String()),
       event_type: Type.Union([
         Type.Literal("voice-profile"), Type.Literal("series-plan"), Type.Literal("book-plan"),
         Type.Literal("chapter-queue"), Type.Literal("draft-chapter"), Type.Literal("review"),
-        Type.Literal("reader-test"), Type.Literal("revise"), Type.Literal("canon-lock"), Type.Literal("package"),
+        Type.Literal("reader-test"), Type.Literal("research-update"), Type.Literal("revise"), Type.Literal("canon-lock"), Type.Literal("package"),
       ]),
       expected_stage: Type.String(),
       expected_project_hash: Type.String(),
