@@ -1,14 +1,17 @@
 import { join } from "node:path";
-import { ReaderExperimentsSchema, type ReaderExperimentsState, type ReaderResponse } from "../../domain/schemas.js";
+import { ReaderExperimentsSchema, type ReaderExperimentsState } from "../../domain/schemas.js";
 import type { ReaderExperimentFile, ReaderExperimentIndex, ReaderResponseV2 } from "../../domain/v1-2-schemas.js";
 import { readText } from "../../infrastructure/files.js";
+import { gitHeadInfo } from "../../infrastructure/git.js";
 import { parseYaml, stringifyYaml } from "../../infrastructure/yaml.js";
 import { readProject } from "../../project/store.js";
 import { applyGuidedProjectEvent } from "../handoff.js";
 import { readReaderIndex, readerExperimentDirectory, readerResponsesCsv, sourceHash } from "./store.js";
 import type { ReaderMigrationResult } from "./types.js";
 
-function responseV2(response: ReaderResponse, experimentId: string, phase: "immediate" | "delayed", acceptedAt: string): ReaderResponseV2 {
+type LegacyReaderResponse = ReaderExperimentsState["experiments"][number]["immediate_responses"][number];
+
+function responseV2(response: LegacyReaderResponse, experimentId: string, phase: "immediate" | "delayed", acceptedAt: string): ReaderResponseV2 {
   return { experiment_id: experimentId, questionnaire_version: "legacy-v1.1", phase, accepted_at: acceptedAt, ...response };
 }
 
@@ -83,5 +86,10 @@ export function migrateReaderEvidenceV1ToV2(root: string): ReaderMigrationResult
   project.migration_history.push(marker);
   changes.push({ path: "PROJECT.yaml", content: stringifyYaml(project) });
   const result = applyGuidedProjectEvent(root, changes, "Novel Forge: migrate reader evidence to v1.2", { lastAction: `Migrated ${legacy.experiments.length} reader experiments` });
-  return { migratedIds: legacy.experiments.map((experiment) => experiment.id), legacyHash, changed: result.changed, gitSha: result.git.committed ? result.git.sha ?? null : null };
+  return {
+    migratedIds: legacy.experiments.map((experiment) => experiment.id),
+    legacyHash,
+    changed: result.changed,
+    gitSha: result.git.committed ? gitHeadInfo(root)?.sha ?? null : null,
+  };
 }
