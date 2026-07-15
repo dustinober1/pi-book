@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test:
@@ -17,12 +17,27 @@ jobs:
         node: ['22.19.0', '24']
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           cache: npm
       - name: Install and regenerate lockfile during v1.2 development
         run: npm install --ignore-scripts
+      - name: Commit generated lockfile
+        if: matrix.node == '24'
+        shell: bash
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "Lockfile already current."
+            exit 0
+          fi
+          git config user.name "Novel Forge CI"
+          git config user.email "novel-forge@localhost"
+          git add package-lock.json
+          git commit -m "chore: regenerate v1.2 lockfile"
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
       - name: Run TypeScript check
         id: typecheck
         shell: bash
