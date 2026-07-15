@@ -41,7 +41,9 @@ export function requireApiAuthorization(request: IncomingMessage, response: Serv
     sendJson(response, 401, { error: "Unauthorized." });
     return false;
   }
-  if (request.headers.origin !== origin) {
+  const browserOrigin = request.headers.origin;
+  const declaredOrigin = request.headers["x-novel-forge-origin"];
+  if ((browserOrigin !== undefined && browserOrigin !== origin) || declaredOrigin !== origin) {
     sendJson(response, 403, { error: "Unexpected request origin." });
     return false;
   }
