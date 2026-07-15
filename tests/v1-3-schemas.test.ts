@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
+import { applyTransaction } from "../src/infrastructure/transaction.js";
 import {
   BookStrategySchema,
   ResearchLedgerSchema,
@@ -82,4 +86,16 @@ test("the 1.3 registry recognizes every new canonical YAML path", () => {
     "books/book-01/voice-audits.yaml",
   ]) assert.ok(v13SchemaForPath(path), path);
   assert.equal(v13SchemaForPath("books/book-01/manuscript/chapters/001.md"), null);
+});
+
+test("transactions enforce the 1.3 schema registry", () => {
+  const root = mkdtempSync(join(tmpdir(), "novel-forge-v13-schema-"));
+  try {
+    assert.throws(() => applyTransaction(root, [{
+      path: "series/taste-profile.yaml",
+      content: stringifyYaml({ ...defaultTasteProfile(), extra: true }),
+    }]), /schema validation/i);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
