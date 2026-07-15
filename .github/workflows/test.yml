@@ -21,7 +21,8 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-      - run: npm ci
+      - name: Install and regenerate lockfile during v1.2 development
+        run: npm install --ignore-scripts
       - name: Run TypeScript check
         id: typecheck
         shell: bash
@@ -43,7 +44,7 @@ jobs:
           echo "code=$code" >> "$GITHUB_OUTPUT"
           cat test.log
           exit 0
-      - name: Upload diagnostics
+      - name: Upload diagnostics and generated lockfile
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -51,6 +52,7 @@ jobs:
           path: |
             typecheck.log
             test.log
+            package-lock.json
       - name: Enforce TypeScript result
         if: steps.typecheck.outputs.code != '0'
         run: exit 1
