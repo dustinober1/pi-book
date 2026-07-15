@@ -36,12 +36,12 @@ function normalized(path: string): string { return path.replace(/\\/g, "/").repl
 function allowedPath(event: NovelEventType, path: string, bookId: string, chapter?: number): boolean {
   const book = `books/${bookId}`;
   const exact: Record<NovelEventType, string[]> = {
-    "voice-profile": ["series/voice-profile.md"],
+    "voice-profile": ["series/voice-profile.md", "series/taste-profile.yaml", "series/voice-guardrails.yaml", "series/voice-experiments/index.yaml"],
     "series-plan": ["series/series-bible.md", "series/series-arc.yaml", "series/canon.yaml", "series/story-threads.yaml"],
-    "book-plan": [`${book}/book-bible.md`, `${book}/genre.yaml`, `${book}/plot-grid.yaml`, `${book}/chapter-queue.yaml`, `${book}/continuity-delta.yaml`, `${book}/remarkability.yaml`, "series/story-threads.yaml"],
+    "book-plan": [`${book}/book-bible.md`, `${book}/genre.yaml`, `${book}/plot-grid.yaml`, `${book}/chapter-queue.yaml`, `${book}/continuity-delta.yaml`, `${book}/remarkability.yaml`, `${book}/research-ledger.yaml`, `${book}/book-strategy.yaml`, "series/story-threads.yaml"],
     "chapter-queue": [`${book}/chapter-queue.yaml`, `${book}/plot-grid.yaml`],
     "draft-chapter": [`${book}/continuity-delta.yaml`, "series/story-threads.yaml", `${book}/revision-tickets.yaml`],
-    review: [`${book}/review-report.md`, `${book}/revision-tickets.yaml`],
+    review: [`${book}/review-report.md`, `${book}/revision-tickets.yaml`, `${book}/voice-audits.yaml`],
     "reader-test": [`${book}/reader-experiments.yaml`, `${book}/revision-tickets.yaml`],
     "research-update": [
       "series/taste-profile.yaml",
@@ -84,6 +84,11 @@ function parseOverlay<T>(root: string, files: FileChange[], path: string, schema
   return parseYaml<T>(content, schema as never, label);
 }
 
+function missingRequiredPaths(files: FileChange[], requiredPaths: string[]): string[] {
+  const submitted = new Set(files.map((file) => file.path));
+  return requiredPaths.filter((path) => !submitted.has(path));
+}
+
 function validateFiles(root: string, input: NovelEventInput, project: ProjectState, book: BookState): void {
   if (!eventStages[input.eventType].includes(project.current_stage)) throw new Error(`${input.eventType} is not allowed during ${project.current_stage}.`);
   if (input.expectedStage !== project.current_stage) throw new Error(`Stale event stage: expected ${input.expectedStage}, current ${project.current_stage}.`);
@@ -109,9 +114,24 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
   };
   const pattern = required[input.eventType];
   if (pattern && !input.files.some((file) => pattern.test(file.path))) throw new Error(`${input.eventType} event is missing its required output file.`);
+  if (input.eventType === "voice-profile") {
+    const missing = missingRequiredPaths(input.files, [
+      "series/voice-profile.md",
+      "series/taste-profile.yaml",
+      "series/voice-guardrails.yaml",
+      "series/voice-experiments/index.yaml",
+    ]);
+    if (missing.length) throw new Error(`voice-profile event is missing required output: ${missing.join(", ")}`);
+  }
   if (input.eventType === "book-plan") {
-    const requiredBookPlan = [`books/${book.book_id}/book-bible.md`, `books/${book.book_id}/plot-grid.yaml`, `books/${book.book_id}/remarkability.yaml`];
-    const missing = requiredBookPlan.filter((path) => !input.files.some((file) => file.path === path));
+    const requiredBookPlan = [
+      `books/${book.book_id}/book-bible.md`,
+      `books/${book.book_id}/plot-grid.yaml`,
+      `books/${book.book_id}/remarkability.yaml`,
+      `books/${book.book_id}/research-ledger.yaml`,
+      `books/${book.book_id}/book-strategy.yaml`,
+    ];
+    const missing = missingRequiredPaths(input.files, requiredBookPlan);
     if (missing.length) throw new Error(`book-plan event is missing required output: ${missing.join(", ")}`);
     const remarkability = parseOverlay<RemarkabilityState>(root, input.files, `books/${book.book_id}/remarkability.yaml`, RemarkabilitySchema);
     const blockers = remarkabilityFindings(remarkability).filter((finding) => finding.severity === "blocker");
