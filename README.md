@@ -4,10 +4,10 @@ Novel Forge is a guided, series-capable production workflow for high-quality **t
 
 ## Install
 
-After the verified 1.2.0 release tag is published:
+After the verified 1.3.0 release tag is published:
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.2.0
+pi install git:github.com/dustinober1/pi-book@v1.3.0
 ```
 
 ## Two-minute quick start
@@ -25,6 +25,27 @@ The primary author-facing files are:
 - `HANDOFF.md` — the exact resume state and a continuation prompt for another session.
 - `books/<book-id>/manuscript/chapters/` — accepted chapter files.
 
+## 1.3 author-taste and research foundation
+
+Novel Forge 1.3 adds typed evidence contracts beneath the existing `/novel` workflow. New projects receive:
+
+```text
+series/taste-profile.yaml
+series/voice-guardrails.yaml
+series/voice-experiments/index.yaml
+books/book-01/research-ledger.yaml
+books/book-01/book-strategy.yaml
+books/book-01/voice-audits.yaml
+```
+
+These files keep raw author preferences, neutral voice rules, research claims, reader-facing strategy, and later voice-audit evidence separate from manuscript prose and real-reader experiments.
+
+A guarded `research-update` event may save only allowlisted evidence files during active creative stages. It does not advance the project, change gates or approvals, alter book status, or write manuscript prose. Every accepted update still requires the current stage and project hash, strict schema validation, rollback, one Git checkpoint, and regenerated `STATUS.md` and `HANDOFF.md`.
+
+Rebuilding a voice profile now submits the readable voice profile, taste profile, voice guardrails, and voice-experiment index together. Rebuilding a book plan submits its research ledger and book strategy with the existing architecture files. Planning prompts must translate named influences into neutral craft traits and must not invent public-review evidence.
+
+Existing 1.2 projects remain readable when these files are absent. Novel Forge reports one optional-backfill warning; it does not invalidate existing approvals or manuscript prose. A metadata-only upgrade records the installed version but does not manufacture evidence or hide the warning.
+
 ## Graph-aware continuity context
 
 When Novel Forge prepares an approved chapter for drafting, it derives a local continuity graph from the validated project files already in use: canon facts, relationship state, story threads, chapter packets, plot setup/payoff IDs, and research sources.
@@ -37,7 +58,7 @@ The graph is deterministic, rebuilt in memory, and disposable. Canonical YAML re
 
 ## Temporary local browser wizard
 
-Novel Forge 1.2 opens a browser when a workflow is materially easier to review visually:
+Novel Forge opens a browser when a workflow is materially easier to review visually:
 
 ```text
 /novel-wizard adoption
@@ -204,7 +225,7 @@ Selected IDs are validated against locked sources. Novel Forge records provenanc
 
 Pending gates show friendly approve, request-changes, and evidence actions. Approval records writer identity, time, evidence hash, and note. Rejection records a specific repair note and keeps the correct gate active.
 
-Every guarded planning, drafting, review, reader, revision, canon-lock, package, adoption, migration, metadata, and next-book event refreshes `STATUS.md` and `HANDOFF.md` inside the same rollback-capable transaction and Git checkpoint.
+Every guarded planning, drafting, review, reader, research, revision, canon-lock, package, adoption, migration, metadata, and next-book event refreshes `STATUS.md` and `HANDOFF.md` inside the same rollback-capable transaction and Git checkpoint.
 
 Advanced options include:
 
@@ -221,7 +242,7 @@ Undo requires initialized Git, a clean worktree, and a `Novel Forge:` commit at 
 
 ## Transactional agent changes
 
-The model-facing `novel_apply_event` tool remains UTF-8 text-only. It owns voice, series plan, book plan, chapter queue, drafting, review, reader testing, revision, canon lock, and package state transitions. It verifies the expected stage and project hash, enforces event-specific file allowlists, validates schemas and references, applies rollback-capable changes, refreshes guidance, and creates one checkpoint.
+The model-facing `novel_apply_event` tool remains UTF-8 text-only. It owns voice, series plan, book plan, chapter queue, drafting, review, reader testing, research evidence, revision, canon lock, and package transitions. It verifies the expected stage and project hash, enforces event-specific file allowlists, validates schemas and references, applies rollback-capable changes, refreshes guidance, and creates one checkpoint.
 
 Binary files are accepted only by trusted internal application services for adopted images and generated DOCX, EPUB, and XLSX outputs. The browser cannot turn the public event tool into a binary upload interface.
 
@@ -250,8 +271,9 @@ New projects record both the stable project schema and the installed Novel Forge
 - Missing or older `novel_forge_version`: readable, with a guided upgrade warning.
 - Malformed version: warning and repair path.
 - Project written by a newer package: blocker until Novel Forge is upgraded.
+- Missing 1.3 taste, strategy, research, or audit files: optional-backfill warning, not a blocker for an existing project.
 
-A metadata upgrade does not change creative stage, gates, approvals, manuscript prose, canon, or reader evidence.
+A metadata upgrade does not change creative stage, gates, approvals, manuscript prose, canon, reader evidence, or research evidence. It does not create missing evidence files.
 
 ## Verification and release
 
@@ -263,4 +285,4 @@ npm run eval
 npm pack --dry-run
 ```
 
-See `CHANGELOG.md` and `RELEASE.md`. Create `v1.2.0` only after the feature PR is merged and the resulting `main` commit passes the full Node 22.19.0 and Node 24 matrix.
+See `CHANGELOG.md` and `RELEASE.md`. Create `v1.3.0` only after the feature PR is merged and the resulting `main` commit passes the full Node 22.19.0 and Node 24 matrix.
