@@ -1,0 +1,138 @@
+name: Integrate typed intake and decision provenance
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/v1.4-3-intake-decisions'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1.4-3-intake-decisions
+          fetch-depth: 0
+      - name: Apply coordinated integration
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              file = Path(path)
+              text = file.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'anchor missing in {path}: {old[:100]!r}')
+              file.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          # Template defaults.
+          path = Path('src/project/templates.ts')
+          text = path.read_text(encoding='utf-8')
+          anchor = 'import { defaultPhase4StressTest } from "../domain/v1-3-architecture-schemas.js";\n'
+          line = 'import { defaultDecisionLedger, defaultIntake } from "../domain/v1-4-schemas.js";\n'
+          if line not in text:
+              text = text.replace(anchor, anchor + line, 1)
+          anchor = '    "series/taste-profile.yaml": stringifyYaml(defaultTasteProfile()),\n'
+          addition = '    "series/intake.yaml": stringifyYaml(defaultIntake()),\n    "series/decision-ledger.yaml": stringifyYaml(defaultDecisionLedger()),\n'
+          if addition not in text:
+              text = text.replace(anchor, addition + anchor, 1)
+          path.write_text(text, encoding='utf-8')
+
+          # Consolidated compatibility warning.
+          path = Path('src/application/status.ts')
+          text = path.read_text(encoding='utf-8')
+          anchor = '''  const missingOptionalV13 = optionalV13ArtifactPaths(book.book_id).filter((path) => !existsSync(join(root, path)));\n  if (missingOptionalV13.length) {\n    warnings.push(`Optional Novel Forge 1.3 research setup is incomplete: ${missingOptionalV13.join(", ")}. Existing approvals and manuscript prose remain valid; backfill these files through the guided research workflow when available.`);\n  }\n'''
+          addition = '''\n  const missingOptionalV14 = ["series/intake.yaml", "series/decision-ledger.yaml"].filter((path) => !existsSync(join(root, path)));\n  if (missingOptionalV14.length) {\n    warnings.push(`Optional Novel Forge 1.4 intake setup is incomplete: ${missingOptionalV14.join(", ")}. Existing approvals and manuscript prose remain valid; backfill these files only through the explicit intake workflow.`);\n  }\n'''
+          if addition.strip() not in text:
+              if anchor not in text:
+                  raise SystemExit('status optional warning anchor missing')
+              text = text.replace(anchor, anchor + addition, 1)
+          path.write_text(text, encoding='utf-8')
+
+          # Guarded hash paths.
+          path = Path('src/application/project-hash.ts')
+          text = path.read_text(encoding='utf-8')
+          anchor = '    "series/taste-profile.yaml",\n'
+          addition = '    "series/intake.yaml",\n    "series/decision-ledger.yaml",\n'
+          if addition not in text:
+              text = text.replace(anchor, addition + anchor, 1)
+          path.write_text(text, encoding='utf-8')
+
+          # Event boundary.
+          path = Path('src/application/events.ts')
+          text = path.read_text(encoding='utf-8')
+          anchor = 'import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";\n'
+          lines = 'import { DecisionLedgerSchema, IntakeSchema, intakeDecisionFindings, type DecisionLedger, type IntakeState } from "../domain/v1-4-schemas.js";\n'
+          if lines not in text:
+              text = text.replace(anchor, anchor + lines, 1)
+          text = text.replace('export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "research-update" | "revise" | "canon-lock" | "package";', 'export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "research-update" | "intake-update" | "revise" | "canon-lock" | "package";', 1)
+          anchor = '  "research-update": ["voice-intake", "series-planning", "book-planning", "drafting", "act-review", "revision", "manuscript-review", "packaging"],\n'
+          addition = '  "intake-update": ["voice-intake", "series-planning", "book-planning"],\n'
+          if addition not in text:
+              text = text.replace(anchor, anchor + addition, 1)
+          anchor = '''    "research-update": [\n      "series/taste-profile.yaml",\n'''
+          replacement = '''    "intake-update": ["series/intake.yaml", "series/decision-ledger.yaml"],\n    "research-update": [\n      "series/taste-profile.yaml",\n'''
+          if '"intake-update": ["series/intake.yaml", "series/decision-ledger.yaml"]' not in text:
+              if anchor not in text:
+                  raise SystemExit('event allowlist anchor missing')
+              text = text.replace(anchor, replacement, 1)
+          old = '  if (input.eventType === "research-update" && input.files.length === 0) throw new Error("research-update requires at least one evidence file.");\n'
+          new = old + '  if (input.eventType === "intake-update" && input.files.length === 0) throw new Error("intake-update requires at least one intake evidence file.");\n'
+          if 'intake-update requires at least one intake evidence file' not in text:
+              text = text.replace(old, new, 1)
+          anchor = '''  if (input.eventType === "book-plan" || input.eventType === "research-update") {\n    validateResearchAndFriction(root, input.files, book, input.eventType);\n    validateRevisionLearning(root, input.files, book);\n  }\n'''
+          addition = '''  if (input.eventType === "intake-update") {\n    const intake = parseOverlay<IntakeState>(root, input.files, "series/intake.yaml", IntakeSchema);\n    const ledger = parseOverlay<DecisionLedger>(root, input.files, "series/decision-ledger.yaml", DecisionLedgerSchema);\n    const blockers = intakeDecisionFindings(intake, ledger).filter((finding) => finding.severity === "blocker");\n    if (blockers.length) throw new Error(`Intake and decision ledger validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);\n  }\n'''
+          if addition.strip() not in text:
+              if anchor not in text:
+                  raise SystemExit('event validation anchor missing')
+              text = text.replace(anchor, anchor + addition, 1)
+          anchor = '''    case "research-update":\n      appendMilestoneVoiceAudit(root, changes, book, { eventType: "research-update", scope: input.scope });\n      break;\n'''
+          addition = '''    case "intake-update":\n      break;\n'''
+          if addition.strip() not in text:
+              if anchor not in text:
+                  raise SystemExit('event switch anchor missing')
+              text = text.replace(anchor, anchor + addition, 1)
+          text = text.replace('  if (input.eventType !== "research-update") {', '  if (input.eventType !== "research-update" && input.eventType !== "intake-update") {', 1)
+          path.write_text(text, encoding='utf-8')
+
+          # Planning prompts.
+          path = Path('src/application/prompts.ts')
+          text = path.read_text(encoding='utf-8')
+          anchor = 'import { readText } from "../infrastructure/files.js";\n'
+          lines = 'import { DecisionLedgerSchema, IntakeSchema, type DecisionLedger, type IntakeState } from "../domain/v1-4-schemas.js";\nimport { parseYaml } from "../infrastructure/yaml.js";\nimport { intakePromptContext } from "./intake.js";\n'
+          if 'intakePromptContext' not in text:
+              text = text.replace(anchor, anchor + lines, 1)
+          helper = '''\nfunction planningIntakeContext(root: string): string {\n  const intakeText = readText(join(root, "series", "intake.yaml"));\n  const ledgerText = readText(join(root, "series", "decision-ledger.yaml"));\n  const intake = intakeText ? parseYaml<IntakeState>(intakeText, IntakeSchema, "series/intake.yaml") : null;\n  const ledger = ledgerText ? parseYaml<DecisionLedger>(ledgerText, DecisionLedgerSchema, "series/decision-ledger.yaml") : null;\n  return intakePromptContext(intake, ledger);\n}\n'''
+          anchor = 'const interviewRule = `Inspect existing evidence first.'
+          if helper.strip() not in text:
+              text = text.replace(anchor, helper + '\n' + anchor, 1)
+          text = text.replace('export function voicePlanPrompt(root: string): string {\n  const researchRule', 'export function voicePlanPrompt(root: string): string {\n  const intakeContext = planningIntakeContext(root);\n  const researchRule', 1)
+          text = text.replace('Project root: ${root}\n\n${interviewRule}\n\nFor voice intake', 'Project root: ${root}\n\n${intakeContext ? `${intakeContext}\\n\\n` : ""}${interviewRule}\n\nFor voice intake', 1)
+          text = text.replace('Produce complete required artifacts, not a questionnaire transcript.\n\n${eventRule(root, "voice-profile"', 'Use the state-neutral `intake-update` event for any intake or decision-ledger evidence. Never silently rewrite assumption or decision history.\n\nProduce complete required artifacts, not a questionnaire transcript.\n\n${eventRule(root, "voice-profile"', 1)
+          text = text.replace('export function bookPlanPrompt(root: string): string {\n  const book = readBook(root);', 'export function bookPlanPrompt(root: string): string {\n  const intakeContext = planningIntakeContext(root);\n  const book = readBook(root);', 1)
+          text = text.replace('Active book: ${book.book_id}\n\n${interviewRule}\n\nThe four primary', 'Active book: ${book.book_id}\n\n${intakeContext ? `${intakeContext}\\n\\n` : ""}${interviewRule}\n\nThe four primary', 1)
+          text = text.replace('Prepare only books/${book.book_id}/book-bible.md', 'Use the state-neutral `intake-update` event for any intake or decision-ledger evidence. Never silently rewrite assumption or decision history.\n\nPrepare only books/${book.book_id}/book-bible.md', 1)
+          path.write_text(text, encoding='utf-8')
+
+          # Enforce the both-or-neither inferred slot contract directly in the schema.
+          path = Path('src/domain/v1-4-schemas.ts')
+          text = path.read_text(encoding='utf-8')
+          old = '''const StringInferenceSchema = Type.Object({\n  value: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),\n  assumption_id: Type.Union([Type.String({ pattern: "^ASM-[0-9]{3}$" }), Type.Null()]),\n}, { additionalProperties: false });\n\nconst TargetWordsInferenceSchema = Type.Object({\n  value: Type.Union([Type.Integer({ minimum: 1000 }), Type.Null()]),\n  assumption_id: Type.Union([Type.String({ pattern: "^ASM-[0-9]{3}$" }), Type.Null()]),\n}, { additionalProperties: false });\n'''
+          new = '''const StringInferenceSchema = Type.Union([\n  Type.Object({ value: Type.Null(), assumption_id: Type.Null() }, { additionalProperties: false }),\n  Type.Object({ value: Type.String({ minLength: 1 }), assumption_id: Type.String({ pattern: "^ASM-[0-9]{3}$" }) }, { additionalProperties: false }),\n]);\n\nconst TargetWordsInferenceSchema = Type.Union([\n  Type.Object({ value: Type.Null(), assumption_id: Type.Null() }, { additionalProperties: false }),\n  Type.Object({ value: Type.Integer({ minimum: 1000 }), assumption_id: Type.String({ pattern: "^ASM-[0-9]{3}$" }) }, { additionalProperties: false }),\n]);\n'''
+          if old not in text:
+              raise SystemExit('inference schema anchor missing')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit and remove helper
+        run: |
+          rm -f .github/workflows/v1-4-3-integration-apply.yml
+          touch docs/.v1-4-3-integration-ready
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: integrate typed intake and decision provenance"
+          git push origin HEAD:agent/v1.4-3-intake-decisions
