@@ -1,7 +1,7 @@
 import { basename, join } from "node:path";
 import { CanonSchema, ChapterQueueSchema, GenreConfigSchema, PlotGridSchema, ReaderExperimentsSchema, RemarkabilitySchema, RevisionTicketsSchema, StoryThreadsSchema, type BookState, type CanonState, type ChapterQueueState, type GenreConfig, type PlotGridState, type ProjectState, type ReaderExperimentsState, type RemarkabilityState, type RevisionTicketsState, type Stage, type StoryThreadsState } from "../domain/schemas.js";
-import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
-import { BookStrategySchema, ResearchLedgerSchema, type BookStrategy, type ResearchLedger } from "../domain/v1-3-schemas.js";
+import { BookStrategyPhase3Schema, SourceRegisterV13Schema, type BookStrategyPhase3, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
+import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import type { FileChange } from "../infrastructure/transaction.js";
 import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
@@ -42,7 +42,7 @@ function allowedPath(event: NovelEventType, path: string, bookId: string, chapte
   const exact: Record<NovelEventType, string[]> = {
     "voice-profile": ["series/voice-profile.md", "series/taste-profile.yaml", "series/voice-guardrails.yaml", "series/voice-experiments/index.yaml"],
     "series-plan": ["series/series-bible.md", "series/series-arc.yaml", "series/canon.yaml", "series/story-threads.yaml"],
-    "book-plan": [`${book}/book-bible.md`, `${book}/genre.yaml`, `${book}/plot-grid.yaml`, `${book}/chapter-queue.yaml`, `${book}/continuity-delta.yaml`, `${book}/remarkability.yaml`, `${book}/research-ledger.yaml`, `${book}/book-strategy.yaml`, "series/story-threads.yaml"],
+    "book-plan": [`${book}/book-bible.md`, `${book}/genre.yaml`, `${book}/plot-grid.yaml`, `${book}/chapter-queue.yaml`, `${book}/continuity-delta.yaml`, `${book}/remarkability.yaml`, `${book}/research-ledger.yaml`, `${book}/book-strategy.yaml`, "research/source-register.yaml", "series/story-threads.yaml"],
     "chapter-queue": [`${book}/chapter-queue.yaml`, `${book}/plot-grid.yaml`],
     "draft-chapter": [`${book}/continuity-delta.yaml`, "series/story-threads.yaml", `${book}/revision-tickets.yaml`],
     review: [`${book}/review-report.md`, `${book}/revision-tickets.yaml`, `${book}/voice-audits.yaml`],
@@ -93,12 +93,21 @@ function missingRequiredPaths(files: FileChange[], requiredPaths: string[]): str
   return requiredPaths.filter((path) => !submitted.has(path));
 }
 
-function validatePhase3Evidence(root: string, files: FileChange[], book: BookState): void {
+function validatePhase3Evidence(root: string, files: FileChange[], book: BookState, eventType: NovelEventType): void {
   const base = `books/${book.book_id}`;
-  const ledger = parseOverlay<ResearchLedger>(root, files, `${base}/research-ledger.yaml`, ResearchLedgerSchema);
-  const sources = parseOverlay<SourceRegisterV13>(root, files, "research/source-register.yaml", SourceRegisterV13Schema);
-  const strategy = parseOverlay<BookStrategy>(root, files, `${base}/book-strategy.yaml`, BookStrategySchema);
-  const findings = [...researchEvidenceFindings(ledger, sources), ...readerFrictionFindings(strategy)];
+  const paths = new Set(files.map((file) => normalized(file.path)));
+  const validateResearch = eventType === "book-plan" || paths.has(`${base}/research-ledger.yaml`) || paths.has("research/source-register.yaml");
+  const validateFriction = eventType === "book-plan" || paths.has(`${base}/book-strategy.yaml`);
+  const findings = [];
+  if (validateResearch) {
+    const ledger = parseOverlay<ResearchLedger>(root, files, `${base}/research-ledger.yaml`, ResearchLedgerSchema);
+    const sources = parseOverlay<SourceRegisterV13>(root, files, "research/source-register.yaml", SourceRegisterV13Schema);
+    findings.push(...researchEvidenceFindings(ledger, sources));
+  }
+  if (validateFriction) {
+    const strategy = parseOverlay<BookStrategyPhase3>(root, files, `${base}/book-strategy.yaml`, BookStrategyPhase3Schema);
+    findings.push(...readerFrictionFindings(strategy));
+  }
   const blockers = findings.filter((finding) => finding.severity === "blocker");
   if (blockers.length) throw new Error(`Research and reader-friction validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
 }
@@ -156,7 +165,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     const blockers = readerExperimentFindings(experiments).filter((finding) => finding.severity === "blocker");
     if (blockers.length) throw new Error(`Reader-evidence validation blocked reader-test:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
-  if (input.eventType === "book-plan" || input.eventType === "research-update") validatePhase3Evidence(root, input.files, book);
+  if (input.eventType === "book-plan" || input.eventType === "research-update") validatePhase3Evidence(root, input.files, book, input.eventType);
 }
 
 function chapterNumber(path: string): number | null {
