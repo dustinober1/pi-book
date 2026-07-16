@@ -10,7 +10,7 @@ import { openWizardBrowser } from "./browser.js";
 import { readJson, requireApiAuthorization, sendJson, sendText } from "./server.js";
 import type { WizardProposalEnvelope, WizardSessionHandle, WizardSessionOptions, WizardSource, WizardWorkflow } from "./types.js";
 
-const workflows = new Set<WizardWorkflow>(["adoption", "readers", "packaging", "next-book"]);
+const workflows = new Set<WizardWorkflow>(["adoption", "readers", "packaging", "next-book", "research"]);
 const allowedExtensions = new Set([".docx", ".epub", ".md", ".txt", ".csv", ".xlsx"]);
 const staticRoot = fileURLToPath(new URL("../../wizard/", import.meta.url));
 
@@ -36,66 +36,28 @@ function staticPath(urlPath: string): string | null {
   return null;
 }
 
-function safeOriginalName(value: string): string {
-  const normalized = value.replace(/\\/g, "/");
-  return basename(normalized).replace(/[\u0000-\u001f\u007f]/g, "").trim() || "upload";
-}
-
-interface UploadResult extends WizardSource { storedName: string }
-
-function receiveUpload(request: IncomingMessage, uploadRoot: string, limit: number): Promise<UploadResult> {
+async function upload(req: IncomingMessage, uploadRoot: string, limit: number): Promise<WizardSource> {
   return new Promise((resolve, reject) => {
-    let seen = false;
-    let pendingError: (Error & { statusCode?: number }) | null = null;
-    let result: UploadResult | null = null;
-    let writeFinished: Promise<void> | null = null;
-    let tooLarge = false;
-    let storedPath = "";
-
-    const parser = Busboy({ headers: request.headers, limits: { files: 1, fileSize: limit, fields: 0, parts: 1 } });
-    parser.on("file", (_field, stream, info) => {
-      seen = true;
-      const originalName = safeOriginalName(info.filename);
-      const extension = extname(originalName).toLowerCase();
-      if (!allowedExtensions.has(extension)) {
-        pendingError = statusError(415, `Unsupported upload extension: ${extension || "none"}.`);
-        stream.resume();
-        return;
-      }
-      const sourceId = `source_${randomBytes(18).toString("base64url")}`;
-      const storedName = `${sourceId}${extension}`;
-      storedPath = join(uploadRoot, storedName);
-      const output = createWriteStream(storedPath, { flags: "wx", mode: 0o600 });
-      let byteSize = 0;
-      stream.on("data", (chunk: Buffer) => { byteSize += chunk.length; });
-      stream.on("limit", () => { tooLarge = true; });
-      writeFinished = new Promise<void>((done, fail) => {
-        output.on("finish", done);
-        output.on("error", fail);
-        stream.on("error", fail);
+    const parser = Busboy({ headers: req.headers, limits: { files: 1, fileSize: limit, fields: 4 } });
+    let record: WizardSource | null = null;
+    let rejected = false;
+    parser.on("file", (_name, stream, info) => {
+      const extension = extname(info.filename).toLowerCase();
+      if (!allowedExtensions.has(extension)) { rejected = true; stream.resume(); reject(statusError(415, `Unsupported upload type ${extension || "unknown"}.`)); return; }
+      const sourceId = `upload-${randomBytes(12).toString("hex")}`;
+      const absolutePath = join(uploadRoot, `${sourceId}${extension}`);
+      let size = 0;
+      stream.on("data", (chunk: Buffer) => { size += chunk.length; });
+      stream.on("limit", () => { rejected = true; unlinkSync(absolutePath); reject(statusError(413, "Upload exceeds the session size limit.")); });
+      stream.pipe(createWriteStream(absolutePath));
+      stream.on("end", () => {
+        if (rejected) return;
+        record = { sourceId, absolutePath, originalName: basename(info.filename), mediaType: info.mimeType, byteSize: size };
       });
-      stream.pipe(output);
-      result = { sourceId, absolutePath: storedPath, originalName, mediaType: info.mimeType || "application/octet-stream", byteSize, storedName };
-      output.on("finish", () => { if (result) result.byteSize = byteSize; });
     });
-    parser.on("error", (error: Error) => { pendingError = error; });
-    parser.on("finish", async () => {
-      try {
-        if (writeFinished) await writeFinished;
-        if (tooLarge) pendingError = statusError(413, `Upload exceeds ${limit} bytes.`);
-        if (pendingError) {
-          if (storedPath) { try { unlinkSync(storedPath); } catch { /* already absent */ } }
-          reject(pendingError);
-          return;
-        }
-        if (!seen || !result) { reject(statusError(400, "Exactly one upload file is required.")); return; }
-        resolve(result);
-      } catch (error) {
-        if (storedPath) { try { unlinkSync(storedPath); } catch { /* already absent */ } }
-        reject(error);
-      }
-    });
-    request.pipe(parser);
+    parser.on("error", reject);
+    parser.on("finish", () => { if (!rejected && record) resolve(record); else if (!rejected) reject(statusError(400, "No upload file received.")); });
+    req.pipe(parser);
   });
 }
 
@@ -103,89 +65,74 @@ export async function startWizardSession(options: WizardSessionOptions): Promise
   const token = randomBytes(32).toString("base64url");
   const uploadRoot = mkdtempSync(join(tmpdir(), "novel-forge-wizard-"));
   const sources = new Map<string, WizardSource>();
+  for (const initial of options.initialSources ?? []) {
+    const sourceId = `authorized-${randomBytes(12).toString("hex")}`;
+    sources.set(sourceId, { sourceId, absolutePath: initial.absolutePath, originalName: initial.originalName ?? basename(initial.absolutePath), mediaType: initial.mediaType ?? "application/octet-stream", byteSize: 0 });
+  }
   const idleTimeoutMs = options.idleTimeoutMs ?? 15 * 60 * 1000;
-  const uploadLimitBytes = options.uploadLimitBytes ?? 100 * 1024 * 1024;
-  let origin = "";
-  let idleTimer: NodeJS.Timeout | null = null;
+  const uploadLimitBytes = options.uploadLimitBytes ?? 50 * 1024 * 1024;
+  let lastActivity = Date.now();
   let closed = false;
+  let timer: ReturnType<typeof setInterval>;
+  let origin = "";
 
-  const server = createServer(async (request: IncomingMessage, response: ServerResponse) => {
-    const requestUrl = new URL(request.url ?? "/", origin || "http://127.0.0.1");
-    const file = staticPath(requestUrl.pathname);
-    if (file && request.method === "GET") {
-      try { sendText(response, 200, contentType(file), readFileSync(file, "utf8")); }
-      catch { sendJson(response, 404, { error: "Wizard asset not found." }); }
-      return;
-    }
-    if (!requestUrl.pathname.startsWith("/api/")) { sendJson(response, 404, { error: "Not found." }); return; }
-    if (!requireApiAuthorization(request, response, token, origin)) return;
-    touch();
+  const server = createServer(async (req, res) => {
     try {
-      if (requestUrl.pathname === "/api/session" && request.method === "GET") {
-        sendJson(response, 200, { workflow: options.workflow ?? null, idle_timeout_ms: idleTimeoutMs });
+      const requestUrl = new URL(req.url ?? "/", origin || "http://127.0.0.1");
+      const file = staticPath(requestUrl.pathname);
+      if (req.method === "GET" && file) { sendText(res, 200, readFileSync(file, "utf8"), contentType(file)); return; }
+      requireApiAuthorization(req, token, origin);
+      lastActivity = Date.now();
+      if (req.method === "POST" && requestUrl.pathname === "/api/session") {
+        sendJson(res, 200, { workflow: options.workflow ?? null, project: options.projectRoot, expires_at: new Date(lastActivity + idleTimeoutMs).toISOString() });
         return;
       }
-      if (requestUrl.pathname === "/api/upload" && request.method === "POST") {
-        const uploaded = await receiveUpload(request, uploadRoot, uploadLimitBytes);
-        const source: WizardSource = { sourceId: uploaded.sourceId, absolutePath: uploaded.absolutePath, originalName: uploaded.originalName, mediaType: uploaded.mediaType, byteSize: uploaded.byteSize };
-        sources.set(source.sourceId, source);
-        sendJson(response, 201, { source_id: source.sourceId, original_name: source.originalName, media_type: source.mediaType, byte_size: source.byteSize });
+      if (req.method === "POST" && requestUrl.pathname === "/api/snapshot") {
+        const body = await readJson(req) as { workflow?: unknown };
+        sendJson(res, 200, await options.registry.snapshot(workflow(body.workflow ?? options.workflow)));
         return;
       }
-      if (requestUrl.pathname === "/api/close" && request.method === "POST") {
-        sendJson(response, 200, { closed: true });
-        setImmediate(() => { void close(); });
+      if (req.method === "POST" && requestUrl.pathname === "/api/preview") {
+        const body = await readJson(req) as { workflow?: unknown; action?: unknown; payload?: unknown };
+        if (typeof body.action !== "string" || !body.action) throw statusError(400, "Preview action is required.");
+        sendJson(res, 200, await options.registry.preview(workflow(body.workflow ?? options.workflow), body.action, body.payload));
         return;
       }
-      const body = await readJson(request);
-      if (requestUrl.pathname === "/api/snapshot" && request.method === "POST") {
-        const value = body as Record<string, unknown>;
-        sendJson(response, 200, await options.registry.snapshot(workflow(value.workflow)));
+      if (req.method === "POST" && requestUrl.pathname === "/api/apply") {
+        const body = await readJson(req) as WizardProposalEnvelope;
+        body.workflow = workflow(body.workflow ?? options.workflow);
+        sendJson(res, 200, await options.registry.apply(body));
         return;
       }
-      if (requestUrl.pathname === "/api/preview" && request.method === "POST") {
-        const value = body as Record<string, unknown>;
-        if (typeof value.action !== "string") throw statusError(400, "Preview action is required.");
-        sendJson(response, 200, await options.registry.preview(workflow(value.workflow), value.action, value.payload));
+      if (req.method === "POST" && requestUrl.pathname === "/api/upload") {
+        const record = await upload(req, uploadRoot, uploadLimitBytes);
+        sources.set(record.sourceId, record);
+        sendJson(res, 200, { source_id: record.sourceId, original_name: record.originalName, media_type: record.mediaType, byte_size: record.byteSize });
         return;
       }
-      if (requestUrl.pathname === "/api/apply" && request.method === "POST") {
-        const envelope = body as WizardProposalEnvelope;
-        if (!envelope || typeof envelope.proposal_id !== "string" || typeof envelope.action !== "string") throw statusError(400, "A typed wizard proposal envelope is required.");
-        workflow(envelope.workflow);
-        sendJson(response, 200, await options.registry.apply(envelope));
-        return;
-      }
-      sendJson(response, 404, { error: "Unknown wizard route." });
+      if (req.method === "POST" && requestUrl.pathname === "/api/close") { sendJson(res, 200, { closing: true }); setImmediate(() => void close()); return; }
+      throw statusError(404, "Wizard endpoint not found.");
     } catch (error) {
-      const statusCode = typeof error === "object" && error && "statusCode" in error ? Number((error as { statusCode: number }).statusCode) : 500;
-      sendJson(response, statusCode, { error: error instanceof Error ? error.message : "Wizard request failed." });
+      const statusCode = typeof error === "object" && error !== null && "statusCode" in error ? Number((error as { statusCode: number }).statusCode) : 500;
+      sendJson(res, statusCode, { error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  function touch(): void {
-    if (idleTimer) clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => { void close(); }, idleTimeoutMs);
-    idleTimer.unref?.();
-  }
+  await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", () => resolve()); });
+  const address = server.address() as AddressInfo;
+  origin = `http://127.0.0.1:${address.port}`;
+  const url = `${origin}/#token=${encodeURIComponent(token)}`;
 
   async function close(): Promise<void> {
     if (closed) return;
     closed = true;
-    if (idleTimer) clearTimeout(idleTimer);
+    clearInterval(timer);
     await new Promise<void>((resolve) => server.close(() => resolve()));
     rmSync(uploadRoot, { recursive: true, force: true });
-    sources.clear();
   }
 
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => { server.off("error", reject); resolve(); });
-  });
-  const address = server.address() as AddressInfo;
-  origin = `http://127.0.0.1:${address.port}`;
-  const url = `${origin}/#token=${encodeURIComponent(token)}${options.workflow ? `&workflow=${encodeURIComponent(options.workflow)}` : ""}`;
-  touch();
+  timer = setInterval(() => { if (Date.now() - lastActivity > idleTimeoutMs) void close(); }, Math.min(idleTimeoutMs, 30_000));
+  timer.unref?.();
   if (options.openBrowser !== false) await openWizardBrowser(url);
 
   return {
