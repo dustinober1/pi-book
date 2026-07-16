@@ -273,9 +273,21 @@ export function createResearchWizardHandler(root: string, options: ResearchWizar
     if (action === "voice-comparison") {
       const experimentId = requiredString(input.experiment_id, "experiment_id");
       const { experiment } = experimentFile(root, experimentId);
-      const blockers = voiceExperimentFindings({ root, taste: state.tasteValue, index: state.indexValue }).filter((item) => item.severity === "blocker" && item.message.includes(experimentId));
-      if (blockers.length) throw new Error(blockers.map((item) => item.message).join("\n"));
       const variants = variantProse(root, experiment);
+      const assets: Record<string, string> = {};
+      const sourceScene = readText(join(root, experiment.source_scene_path));
+      if (!sourceScene) throw new Error(`${experimentId} is missing its source scene.`);
+      assets[experiment.source_scene_path] = sourceScene;
+      for (const variant of experiment.variants) {
+        const prose = readText(join(root, variant.path));
+        if (prose) assets[variant.path] = prose;
+      }
+      if (experiment.baseline_path) {
+        const baseline = readText(join(root, experiment.baseline_path));
+        if (baseline) assets[experiment.baseline_path] = baseline;
+      }
+      const findings = voiceExperimentFindings(experiment, assets, state.tasteValue);
+      if (findings.length) throw new Error(findings.map((item) => item.message).join("\n"));
       const stored = save({ kind: "voice", experimentId, variants, experiment });
       return { preview_id: stored.preview_id, experiment_id: experimentId, variants, existing_scores: experiment.scores, summary: summarizeVoiceScores(experiment) };
     }
