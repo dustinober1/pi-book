@@ -19,7 +19,7 @@ test("wizard exposes a guided research workflow with five evidence surfaces", ()
 });
 
 test("research browser remains local and uses only approved API routes", () => {
-  const routes = [...app.matchAll(/api\("([^\"]+)"/g)].map((match) => match[1]);
+  const routes = [...app.matchAll(/api\("([^\"]+)"/g)].map((match) => match[1] ?? "");
   assert.ok(routes.every((route) => ["/api/snapshot", "/api/preview", "/api/apply", "/api/upload", "/api/close", "/api/session"].includes(route)));
   assert.doesNotMatch(html + app, /https?:\/\//i);
   assert.doesNotMatch(app, /\beval\s*\(|new Function|createElement\(["']script|child_process|fs\./i);
