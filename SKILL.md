@@ -62,6 +62,25 @@ Planned or researching claims may remain incomplete. A claim marked `ready` requ
 
 Do not scrape retailer or social platforms from this package. Do not store reviewer identity or full public-review bodies as project reader evidence. Existing 1.2 projects without these files remain readable and receive only an optional-backfill warning.
 
+## Influence palette and voice calibration
+
+Keep names and titles only in `series/taste-profile.yaml`. Every influence must record its role, `admired_for`, `not_for`, and neutral `derived_traits`. Never copy a reference name into `voice-profile.md`, `voice-guardrails.yaml`, a variant, an accepted baseline, or drafting context.
+
+Apply voice evidence in this exact precedence order:
+
+1. explicit writer decisions;
+2. writer samples;
+3. accepted voice baseline;
+4. approved project voice profile;
+5. influence references;
+6. genre defaults.
+
+When comparison is useful, use one 600–900-word source scene and anonymous variants A, B, and C. Store the source, variants, experiment record, and later accepted baseline under `series/voice-experiments/VE-NNN/` through `research-update`. Present the variants without author or book labels. Record the writer's scores and chosen or combined traits; do not let aggregate scores select prose automatically.
+
+Experiment assets must use their canonical directory paths, hashes must match normalized content, and the accepted baseline must agree across the experiment record, index, taste selection, and voice guardrails. A planned experiment may exist before variants or a baseline are produced.
+
+Drafting context receives only validated neutral must/prefer/avoid/monitor rules and a matching POV signature. It must exclude raw influence references, the source scene, all variant prose, scores, and unapproved experiment material. Unsafe existing voice files block drafting instead of leaking into context.
+
 ## Temporary browser wizard
 
 Use `/novel` or `/novel-wizard` for adoption, reader evidence, packaging, and next-book inheritance.

@@ -6,8 +6,55 @@ import { join } from "node:path";
 import { initializeProject } from "../src/project/store.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { buildChapterContext } from "../src/context/context-builder.js";
+import { defaultTasteProfile, defaultVoiceGuardrails } from "../src/domain/v1-3-schemas.js";
 
 function temp(): string { return mkdtempSync(join(tmpdir(), "novel-forge-context-")); }
+
+function prepareReadyChapter(root: string): void {
+  const book = join(root, "books", "book-01");
+  writeFileSync(join(book, "plot-grid.yaml"), stringifyYaml({
+    schema_version: "1.0.0",
+    acts: [],
+    chapters: [{ chapter: 1, act: "I", causality: "therefore", state_change: "door locks", setup_ids: [], payoff_ids: [], profile_obligations: [] }],
+  }), "utf8");
+  writeFileSync(join(book, "chapter-queue.yaml"), stringifyYaml({
+    schema_version: "1.0.0",
+    active_window: "Act I",
+    packets: [{
+      chapter: 1,
+      title: "Locked Room",
+      status: "ready",
+      pov: "Mara",
+      purpose: "force escape",
+      scene_engine: "physical pursuit",
+      pressure_movement: "threat enters room",
+      character_movement: "Mara chooses evidence over safety",
+      relationship_movement: "",
+      story_thread_refs: [],
+      continuity_refs: [],
+      character_refs: ["Mara"],
+      required_research: [],
+      profile_fields: { threat_delta: "+2", evidence_delta: "EV-1", reader_forecast_change: "inside job", protagonist_choice: "stays" },
+      ending_hook: "second lock engages",
+      milestone_gate: "first-chapter-approval",
+      target_words: 2500,
+    }],
+  }), "utf8");
+}
+
+function tasteWithPrivateReference() {
+  const taste = defaultTasteProfile();
+  taste.influences.push({
+    id: "INF-001",
+    reference: "Example Author — Example Book",
+    influence_type: "voice",
+    admired_for: ["compression"],
+    not_for: ["signature phrasing"],
+    derived_traits: ["compressed interiority"],
+    status: "approved",
+  });
+  return taste;
+}
 
 test("chapter context includes explicit and graph-discovered continuity while blocking unsafe records", () => {
   const parent = temp();
@@ -77,5 +124,44 @@ test("chapter context includes explicit and graph-discovered continuity while bl
     assert.ok(context.report.included.includes("graph canon CAN-3"));
     assert.ok(context.report.excluded.includes("future books"));
     assert.ok(context.report.excluded.includes("graph-blocked unsafe records"));
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("chapter context includes neutral approved guardrails but excludes private references and experiments", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Guardrail Context", projectType: "standalone", profile: "thriller" });
+    prepareReadyChapter(root);
+    writeFileSync(join(root, "series", "taste-profile.yaml"), stringifyYaml(tasteWithPrivateReference()), "utf8");
+    writeFileSync(join(root, "series", "voice-guardrails.yaml"), stringifyYaml({
+      ...defaultVoiceGuardrails(),
+      must: ["concrete sensory detail"],
+      prefer: ["compressed interiority"],
+      avoid: ["ornamental metaphors"],
+      monitor: ["paragraph density"],
+      pov_signatures: [{ id: "mara", pov: "Mara", must: ["notice procedure before emotion"], prefer: [], avoid: [] }],
+    }), "utf8");
+    writeFileSync(join(root, "series", "voice-profile.md"), "# Voice Profile\n\nUse compressed interiority and concrete sensory detail.\n", "utf8");
+
+    const context = buildChapterContext(root, 1, 72000);
+    assert.match(context.text, /Approved voice guardrails/);
+    assert.match(context.text, /PREFER: compressed interiority/);
+    assert.match(context.text, /POV MUST: notice procedure before emotion/);
+    assert.doesNotMatch(context.text, /Example Author|Example Book/);
+    assert.ok(context.report.included.includes("approved voice guardrails"));
+    assert.ok(context.report.excluded.includes("raw influence references"));
+    assert.ok(context.report.excluded.includes("voice experiment source and variants"));
+    assert.ok(context.report.estimatedTokens <= 18000);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("chapter context blocks unsafe existing guardrails instead of leaking them", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Unsafe Guardrails", projectType: "standalone", profile: "thriller" });
+    prepareReadyChapter(root);
+    writeFileSync(join(root, "series", "taste-profile.yaml"), stringifyYaml(tasteWithPrivateReference()), "utf8");
+    writeFileSync(join(root, "series", "voice-guardrails.yaml"), stringifyYaml({ ...defaultVoiceGuardrails(), prefer: ["Use Example Book pacing"] }), "utf8");
+    assert.throws(() => buildChapterContext(root, 1), /voice originality|raw influence|unsafe/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });

@@ -10,19 +10,25 @@
 - New-book templates for `research-ledger.yaml`, `book-strategy.yaml`, and `voice-audits.yaml`.
 - Transaction-level validation for every new 1.3 YAML artifact.
 - One consolidated optional-backfill warning when an older project does not yet contain the 1.3 evidence files.
+- Canonical influence precedence that lets explicit writer decisions, writer samples, accepted baselines, and approved project voice outrank external references and genre defaults.
+- Direct-imitation and raw-reference validation for readable voice profiles, compiled guardrails, anonymous variants, and accepted baselines.
+- Anonymous A/B/C voice-experiment verification with 600–900-word bounds, normalized SHA-256 hashes, deterministic score summaries, canonical asset paths, and internally consistent baseline selection.
+- A bounded `Approved voice guardrails` drafting-context section that includes neutral project rules and the matching POV signature while excluding private influence evidence and experiment prose.
 
 ### Changed
 
 - Package version and new-project metadata are now `1.3.0`.
 - Rebuilding a voice profile requires the readable voice profile, taste profile, voice guardrails, and voice-experiment index in one guarded event.
 - Rebuilding a book plan requires its research ledger and book strategy in the same guarded event as the existing architecture files.
-- Voice and book planning prompts now request the complete evidence bundle and explicitly prohibit invented public-review evidence or named-author imitation instructions.
+- Voice planning now supports an optional anonymous calibration loop through `research-update`, followed by the final atomic `voice-profile` bundle.
+- Voice and book planning prompts request the complete evidence bundle and explicitly prohibit invented public-review evidence or named-author imitation instructions.
 - Review events may write typed `voice-audits.yaml` evidence without making it mandatory during this foundation phase.
 
 ### Compatibility
 
 - Existing 1.2 projects remain readable and unblocked when the new evidence files are absent.
 - Metadata-only upgrades do not create evidence, change approvals, or hide the optional-backfill warning.
+- Planned voice experiments remain valid before variants or a baseline exist; any assets already present must use canonical, unique A/B/C order and paths.
 - Existing manuscript prose, reader experiments, publishing metadata, marketing metadata, and continuity-graph behavior remain unchanged.
 - No dependency or external service is added.
 
@@ -31,6 +37,8 @@
 - `research-update` rejects manuscript, project-state, book-state, guidance, reader-evidence, publishing, marketing, and package-output paths.
 - Every accepted evidence update still requires the current stage and project hash, schema validation, rollback, one Git checkpoint, and refreshed status and handoff files.
 - Public market evidence remains separate from real human responses to the current manuscript.
+- Experiment YAML cannot borrow arbitrary project files as source, variant, or baseline assets.
+- The final taste selection, experiment index, experiment record, guardrail baseline, and baseline bytes must agree before voice approval can proceed.
 
 ## 1.2.0 — Existing-project and reader usability
 
@@ -88,6 +96,3 @@
 - Package-version compatibility checks and guided metadata upgrades.
 - Short, one-question-at-a-time planning interviews capped at four normal questions.
 - Guarded `git revert` recovery, blocker explanation, integrity summaries, and guidance rebuilds.
-- Non-destructive `/novel-adopt` manuscript import for Markdown and plain-text projects.
-- Reader-kit generation and strict human-response CSV import.
-- Packaging readiness checklist and contextual next-book creation.

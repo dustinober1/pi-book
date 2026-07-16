@@ -46,6 +46,18 @@ Rebuilding a voice profile now submits the readable voice profile, taste profile
 
 Existing 1.2 projects remain readable when these files are absent. Novel Forge reports one optional-backfill warning; it does not invalidate existing approvals or manuscript prose. A metadata-only upgrade records the installed version but does not manufacture evidence or hide the warning.
 
+### Influence palette and anonymous voice calibration
+
+Names and titles stay private inside `series/taste-profile.yaml`. Every influence records what it contributes, what must not be borrowed, and the neutral craft traits derived from it. Evidence is resolved in this order: explicit writer decisions, writer samples, accepted baseline, approved voice profile, influence references, then genre defaults.
+
+When calibration is useful, Novel Forge uses one 600–900-word source scene and anonymous variants A, B, and C. The source, variants, typed experiment record, scores, and accepted or combined baseline live under `series/voice-experiments/VE-NNN/` and are saved through `research-update`. Variants are never labeled with author or book names, and aggregate scores summarize evidence without automatically choosing prose.
+
+Source, variant, and baseline hashes must match normalized content. Experiment assets cannot point outside their own directory. Selecting a baseline for final voice approval requires the taste profile, experiment index, experiment record, guardrail baseline, and baseline bytes to agree exactly.
+
+Drafting context receives a bounded **Approved voice guardrails** section containing only neutral must/prefer/avoid/monitor rules and the matching POV signature. Raw influence references, experiment source prose, variants, scores, and unapproved material are excluded. Unsafe existing voice files block drafting instead of leaking into the chapter prompt.
+
+Public-review import, research-to-graph integration, voice-drift audits, scene-engine audits, and the browser research wizard remain later 1.3 phases.
+
 ## Graph-aware continuity context
 
 When Novel Forge prepares an approved chapter for drafting, it derives a local continuity graph from the validated project files already in use: canon facts, relationship state, story threads, chapter packets, plot setup/payoff IDs, and research sources.
@@ -277,6 +289,8 @@ A metadata upgrade does not change creative stage, gates, approvals, manuscript 
 
 ## Verification and release
 
+Run the complete matrix manually on the development computer. Do not use GitHub Actions for development or release verification.
+
 ```bash
 npm ci
 npm run typecheck
@@ -285,4 +299,4 @@ npm run eval
 npm pack --dry-run
 ```
 
-See `CHANGELOG.md` and `RELEASE.md`. Create `v1.3.0` only after the feature PR is merged and the resulting `main` commit passes the full Node 22.19.0 and Node 24 matrix.
+Run the typecheck and test suite under both Node 22.19.0 and Node 24. Record the command output in the relevant pull request before merge. See `CHANGELOG.md` and `RELEASE.md`; create `v1.3.0` only after all planned phases and the final local verification pass are complete.

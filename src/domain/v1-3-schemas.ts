@@ -6,6 +6,24 @@ const HashSchema = Type.String({ pattern: "^[a-f0-9]{64}$" });
 const NullableHashSchema = Type.Union([HashSchema, Type.Null()]);
 const EvidenceStatusSchema = Type.Union([Type.Literal("draft"), Type.Literal("approved"), Type.Literal("rejected")]);
 
+export const VOICE_PRECEDENCE_VALUES = [
+  "explicit-writer-decisions",
+  "writer-samples",
+  "accepted-voice-baseline",
+  "approved-voice-profile",
+  "influence-references",
+  "genre-defaults",
+] as const;
+
+const VoicePrecedenceSchema = Type.Tuple([
+  Type.Literal("explicit-writer-decisions"),
+  Type.Literal("writer-samples"),
+  Type.Literal("accepted-voice-baseline"),
+  Type.Literal("approved-voice-profile"),
+  Type.Literal("influence-references"),
+  Type.Literal("genre-defaults"),
+]);
+
 const InfluenceTypeSchema = Type.Union([
   Type.Literal("voice"),
   Type.Literal("reader-experience"),
@@ -24,14 +42,7 @@ const OpeningExperimentSchema = Type.Union([
 
 export const TasteProfileSchema = Type.Object({
   schema_version: Type.Literal("1.0.0"),
-  precedence: Type.Array(Type.Union([
-    Type.Literal("explicit-writer-decisions"),
-    Type.Literal("writer-samples"),
-    Type.Literal("accepted-voice-baseline"),
-    Type.Literal("approved-voice-profile"),
-    Type.Literal("influence-references"),
-    Type.Literal("genre-defaults"),
-  ])),
+  precedence: VoicePrecedenceSchema,
   influences: Type.Array(Type.Object({
     id: Type.String({ pattern: "^INF-[0-9]{3}$" }),
     reference: Type.String({ minLength: 1 }),
@@ -99,6 +110,12 @@ const VoiceVariantSchema = Type.Object({
   path: Type.String({ minLength: 1 }),
   content_hash: HashSchema,
 }, { additionalProperties: false });
+const VoiceVariantFor = (id: "A" | "B" | "C") => Type.Object({
+  id: Type.Literal(id),
+  path: Type.String({ minLength: 1 }),
+  content_hash: HashSchema,
+}, { additionalProperties: false });
+const CompleteVoiceVariantsSchema = Type.Tuple([VoiceVariantFor("A"), VoiceVariantFor("B"), VoiceVariantFor("C")]);
 const VoiceScoreSchema = Type.Object({
   evaluator_id: Type.String({ minLength: 1 }),
   variant_id: VariantIdSchema,
@@ -123,14 +140,14 @@ export const VoiceExperimentFileSchema = Type.Union([
   Type.Object({
     ...VoiceExperimentSharedFields,
     status: Type.Literal("accepted"),
-    variants: Type.Array(VoiceVariantSchema, { minItems: 3, maxItems: 3 }),
+    variants: CompleteVoiceVariantsSchema,
     baseline_path: Type.String({ minLength: 1 }),
     baseline_hash: HashSchema,
   }, { additionalProperties: false }),
   Type.Object({
     ...VoiceExperimentSharedFields,
     status: Type.Literal("scoring"),
-    variants: Type.Array(VoiceVariantSchema, { minItems: 3, maxItems: 3 }),
+    variants: CompleteVoiceVariantsSchema,
     baseline_path: Type.Null(),
     baseline_hash: Type.Null(),
   }, { additionalProperties: false }),

@@ -1,10 +1,12 @@
 import { basename, join } from "node:path";
 import { CanonSchema, ChapterQueueSchema, PlotGridSchema, RemarkabilitySchema, SourceRegisterSchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type PlotGridState, type RemarkabilityState, type SourceRegisterState, type StoryThreadsState } from "../domain/schemas.js";
+import { TasteProfileSchema, VoiceGuardrailsSchema, defaultTasteProfile, defaultVoiceGuardrails, type TasteProfile, type VoiceGuardrails } from "../domain/v1-3-schemas.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { getProfile } from "../profiles/index.js";
 import { readBook, readProject } from "../project/store.js";
 import { packetReferenceFindings } from "../application/integrity.js";
+import { renderContextGuardrails, voiceSafetyFindings } from "../application/influence-palette.js";
 import { buildStoryGraph, resolveDraftingGraphContext, type StoryGraphBlockedSelection, type StoryGraphSelection } from "./story-graph.js";
 
 export interface ChapterContextReport {
@@ -58,6 +60,15 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
   const blockers = [...profileBlockers.map((item) => item.message), ...referenceBlockers.map((item) => item.message)];
   if (blockers.length) throw new Error(`Chapter packet is not draftable:\n${blockers.map((item) => `- ${item}`).join("\n")}`);
 
+  const tasteText = readText(join(root, "series", "taste-profile.yaml"));
+  const guardrailsText = readText(join(root, "series", "voice-guardrails.yaml"));
+  const voiceProfileText = readText(join(root, "series", "voice-profile.md")) ?? "";
+  const taste = tasteText ? parseYaml<TasteProfile>(tasteText, TasteProfileSchema, "series/taste-profile.yaml") : defaultTasteProfile();
+  const guardrails = guardrailsText ? parseYaml<VoiceGuardrails>(guardrailsText, VoiceGuardrailsSchema, "series/voice-guardrails.yaml") : null;
+  const voiceFindings = voiceSafetyFindings({ taste, voiceProfile: voiceProfileText, guardrails: guardrails ?? defaultVoiceGuardrails() });
+  if (voiceFindings.length) throw new Error(`Voice originality validation blocked drafting:\n${voiceFindings.map((item) => `- ${item.message}`).join("\n")}`);
+  const contextGuardrails = guardrails ? renderContextGuardrails(guardrails, packet.pov) : "";
+
   const graphResolution = resolveDraftingGraphContext(buildStoryGraph({
     bookId: book.book_id,
     canon,
@@ -87,7 +98,8 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     ...(relevantSources.length ? [{ title: "Graph-selected research provenance", body: JSON.stringify(relevantSources, null, 2), required: false, cap: 4000 }] : []),
     { title: "Remarkability contract", body: JSON.stringify(remarkability, null, 2), required: false, cap: 6000 },
     { title: "Profile rules", body: profile.draftingRules.map((rule) => `- ${rule}`).join("\n"), required: false, cap: 5000 },
-    { title: "Voice profile excerpt", body: readText(join(root, "series", "voice-profile.md")) ?? "", required: false, cap: 14000 },
+    ...(contextGuardrails ? [{ title: "Approved voice guardrails", body: contextGuardrails, required: true, cap: 6000 }] : []),
+    { title: "Voice profile excerpt", body: voiceProfileText, required: false, cap: 14000 },
     { title: "Active book bible excerpt", body: readText(join(bookRoot, "book-bible.md")) ?? "", required: false, cap: 12000 },
     { title: "Genre configuration", body: readText(join(bookRoot, "genre.yaml")) ?? "", required: false, cap: 6000 },
   ];
@@ -108,6 +120,7 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     ...relevantSources.map((source) => `source ${source.id}`),
     ...graphIncluded,
     "remarkability contract",
+    ...(contextGuardrails ? ["approved voice guardrails"] : []),
     previousPath ? `previous chapter ${previousPath.slice(bookRoot.length + 1)}` : "no previous chapter",
   ];
   return {
@@ -118,7 +131,7 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     report: {
       estimatedTokens: Math.ceil(text.length / 4),
       included,
-      excluded: ["unreferenced canon", "unreferenced story threads", "non-adjacent chapters", "future books", "graph-blocked unsafe records", "reader experiment responses", "packaging files", "legacy artifacts"],
+      excluded: ["unreferenced canon", "unreferenced story threads", "non-adjacent chapters", "future books", "graph-blocked unsafe records", "raw influence references", "voice experiment source and variants", "reader experiment responses", "packaging files", "legacy artifacts"],
       graph: {
         maxDepth: graphResolution.maxDepth,
         selections: graphResolution.selections,

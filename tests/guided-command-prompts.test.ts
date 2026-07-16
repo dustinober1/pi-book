@@ -26,6 +26,14 @@ test("planning prompts conduct short one-at-a-time author interviews", () => {
       "series/voice-guardrails.yaml",
       "series/voice-experiments/index.yaml",
     ]) assert.match(voice, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), path);
+    assert.match(voice, /admired_for/i);
+    assert.match(voice, /not_for/i);
+    assert.match(voice, /neutral derived traits/i);
+    assert.match(voice, /600[–-]900 words/i);
+    assert.match(voice, /anonymous variants A, B, and C/i);
+    assert.match(voice, /never label a variant with an author or book/i);
+    assert.match(voice, /research-update/i);
+    assert.match(voice, /writer samples.*outrank/i);
 
     const book = bookPlanPrompt(root);
     assert.match(book, /safe, predictable version/i);

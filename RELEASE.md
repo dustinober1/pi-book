@@ -2,7 +2,7 @@
 
 ## Version 1.3.0
 
-Do not create the `v1.3.0` tag after the foundation PR alone. Create it only after all planned 1.3 phases are merged and the resulting `main` commit passes the complete Node 22.19.0 and Node 24 verification matrix.
+Do not create the `v1.3.0` tag after the foundation PR alone. Create it only after all planned 1.3 phases are merged and the final `main` commit passes the complete Node 22.19.0 and Node 24 verification matrix through the repository's `Novel Forge tests` GitHub Actions workflow.
 
 ### Version and compatibility
 
@@ -22,7 +22,7 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 - [ ] Planned and researching claims may remain incomplete.
 - [ ] Ready claims require source provenance, verification, knowledge scope, risk, and at least one dramatic use.
 - [ ] Planned voice experiments may exist before variants or a baseline are produced.
-- [ ] Accepted voice experiments require three anonymous variants and a non-null baseline record.
+- [ ] Accepted voice experiments require exact anonymous variants A, B, and C plus a non-null baseline record.
 - [ ] Voice approval hashes the voice profile, taste profile, voice guardrails, and experiment index.
 - [ ] Book-plan approval hashes the book architecture, remarkability contract, research ledger, and book strategy.
 
@@ -39,9 +39,12 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 
 - [ ] Every influence records a specific role, admired qualities, excluded qualities, and neutral derived traits.
 - [ ] Writer decisions, writer samples, and an accepted baseline outrank external references.
-- [ ] Named-author imitation instructions are rejected from drafting guardrails and chapter context.
-- [ ] Anonymous voice variants and scoring produce a stable accepted baseline.
-- [ ] Raw influence references never enter chapter drafting context.
+- [ ] Named-author imitation instructions are rejected from voice profiles, guardrails, experiment assets, and chapter context.
+- [ ] Anonymous A/B/C variants and the accepted baseline each contain 600–900 words.
+- [ ] Stored source, variant, and baseline hashes match normalized content exactly.
+- [ ] Score summaries are deterministic evidence and never select prose automatically.
+- [ ] Drafting context includes only validated neutral guardrails and a matching POV signature.
+- [ ] Raw influence references and voice-experiment prose never enter chapter drafting context.
 
 ### Public-review and research acceptance
 
@@ -83,7 +86,9 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 - [ ] The continuity graph preserves bounded depth, explicit-before-discovered ordering, provisional restrictions, inactive-thread restrictions, later-book exclusions, and provenance reporting.
 - [ ] Undo continues to create revert commits and never rewrites history.
 
-### Verification
+### GitHub Actions verification
+
+Use the repository's `Novel Forge tests` workflow as the authoritative verification record. Every phase PR and the final merged `main` commit must pass both Node jobs before merge or release.
 
 - [ ] `npm ci` passes strictly from the committed lockfile.
 - [ ] `npm run typecheck` passes on Node 22.19.0 and Node 24.
@@ -92,13 +97,13 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 - [ ] Real Pi command/tool lifecycle tests pass.
 - [ ] Packed-extension install/import/registration smoke tests pass.
 - [ ] `npm pack --dry-run` contains the new source contracts and bundled wizard assets.
-- [ ] The final diff contains no temporary lockfile workflow, generated diagnostics, local artifacts, imported review corpora, or generated book outputs.
+- [ ] The final diff contains no temporary workflow files, generated diagnostics, local artifacts, imported review corpora, or generated book outputs.
 
 ### Publish
 
-1. Merge every verified 1.3 phase pull request to `main`.
-2. Confirm the final merged `main` commit's `Novel Forge tests` workflow is green on both Node versions.
-3. Create annotated tag `v1.3.0` on that final commit.
+1. Merge every GitHub-Actions-verified 1.3 phase pull request to `main`.
+2. Confirm the final merged `main` commit's `Novel Forge tests` workflow is green under Node 22.19.0 and Node 24.
+3. Create annotated tag `v1.3.0` only on that verified `main` commit.
 4. Confirm installation with:
 
    ```bash
