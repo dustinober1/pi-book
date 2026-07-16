@@ -1,20 +1,31 @@
 import { join } from "node:path";
 import { buildChapterContext } from "../context/context-builder.js";
+import { BookStrategyPhase5Schema, type BookStrategyPhase5, type RevisionTicketsPhase5 } from "../domain/v1-3-audit-schemas.js";
 import { readText } from "../infrastructure/files.js";
-import { stringifyYaml } from "../infrastructure/yaml.js";
+import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject, readTickets } from "../project/store.js";
 import { openBlockingTickets } from "../review/review.js";
 import { getProjectStatus } from "./status.js";
 import { approveGate } from "./gates.js";
 import { assertOperationAllowed } from "./authorization.js";
-import { automationDraftPrompt, bookPlanPrompt, canonLockPrompt, draftPrompt, packagePrompt, queuePrompt, reviewPrompt, revisionPrompt, seriesPlanPrompt, voicePlanPrompt } from "./prompts.js";
+import { automationDraftPrompt, bookPlanPrompt, canonLockPrompt, draftPrompt, guardrailPromotionPrompt, packagePrompt, queuePrompt, reviewPrompt, revisionPrompt, seriesPlanPrompt, voiceAuditPrompt, voicePlanPrompt } from "./prompts.js";
 import { compileActiveBook } from "./package.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
+import { promotionCandidates } from "./revision-learning.js";
+import { assertVoiceAuditCompleteForGate, nextVoiceAuditRequirement } from "./voice-drift.js";
 
 export interface RunOptions { approve?: string; until?: string; maxChapters?: number; noProse?: boolean; reviewOnly?: boolean; stopOnWarning?: boolean }
 export interface RunDecision { action: string; prompt: string | null; message: string }
 
+function readStrategy(root: string): BookStrategyPhase5 | null {
+  const book = readBook(root);
+  const path = join(root, "books", book.book_id, "book-strategy.yaml");
+  const text = readText(path);
+  return text ? parseYaml<BookStrategyPhase5>(text, BookStrategyPhase5Schema, "book-strategy.yaml") : null;
+}
+
 export function approveProjectGate(root: string, gate: string, note = ""): RunDecision {
+  assertVoiceAuditCompleteForGate(root, gate);
   const project = approveGate(root, structuredClone(readProject(root)), gate, note);
   applyGuidedProjectEvent(root, [{ path: "PROJECT.yaml", content: stringifyYaml(project) }], `Novel Forge: approve ${gate}`, { lastAction: `Approved ${gate}` });
   return { action: "approved", prompt: null, message: `Approved ${gate}. Current stage: ${project.current_stage}.` };
@@ -40,6 +51,12 @@ export function rejectProjectGate(root: string, gate: string, note: string): Run
 
 export function decideNextRun(root: string, options: RunOptions = {}): RunDecision {
   if (options.approve) return approveProjectGate(root, options.approve);
+
+  const dueAudit = nextVoiceAuditRequirement(root);
+  if (dueAudit) {
+    return { action: "voice-audit", prompt: voiceAuditPrompt(root, dueAudit), message: `Queued required voice audit ${dueAudit.milestone_ref}.` };
+  }
+
   const status = getProjectStatus(root);
   if (status.blockers.length) return { action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." };
   if (options.stopOnWarning && status.warnings.length) return { action: "warning-stop", prompt: null, message: status.warnings[0] ?? "Project warning." };
@@ -49,6 +66,13 @@ export function decideNextRun(root: string, options: RunOptions = {}): RunDecisi
     if (project.current_stage === "manuscript-review") return { action: "review", prompt: reviewPrompt(root, "manuscript"), message: "Queued manuscript review." };
     return { action: "blocked", prompt: null, message: `Review-only mode is not available during ${project.current_stage}.` };
   }
+
+  const candidates = promotionCandidates(readTickets(root) as RevisionTicketsPhase5, readStrategy(root) ?? undefined);
+  if (candidates.length) {
+    const candidate = candidates[0]!;
+    return { action: "guardrail-promotion", prompt: guardrailPromotionPrompt(root, candidate), message: `Queued writer decision for recurring pattern ${candidate.pattern_key}.` };
+  }
+
   switch (project.current_stage) {
     case "voice-intake": return { action: "voice", prompt: voicePlanPrompt(root), message: "Queued voice intake." };
     case "series-planning": return { action: "series-plan", prompt: seriesPlanPrompt(root), message: "Queued series plan." };
