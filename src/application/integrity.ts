@@ -1,11 +1,21 @@
 import { join } from "node:path";
-import { CanonSchema, ChapterQueueSchema, PlotGridSchema, SourceRegisterSchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type PlotGridState, type SourceRegisterState, type StoryThreadsState } from "../domain/schemas.js";
+import { CanonSchema, ChapterQueueSchema, PlotGridSchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type PlotGridState, type StoryThreadsState } from "../domain/schemas.js";
+import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
+import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
 import { readText } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { readBook } from "../project/store.js";
 
 export interface IntegrityFinding { severity: "blocker" | "warning"; message: string }
-export function packetReferenceFindings(packet: ChapterPacket, canon: CanonState, threads: StoryThreadsState, sources: SourceRegisterState, plot: PlotGridState): IntegrityFinding[] {
+
+export function packetReferenceFindings(
+  packet: ChapterPacket,
+  canon: CanonState,
+  threads: StoryThreadsState,
+  sources: SourceRegisterV13,
+  plot: PlotGridState,
+  research?: ResearchLedger,
+): IntegrityFinding[] {
   const findings: IntegrityFinding[] = [];
   const canonIds = new Set([...canon.facts.map((item) => item.id), ...canon.relationships.map((item) => item.id)]);
   for (const id of packet.continuity_refs) if (!canonIds.has(id)) findings.push({ severity: "blocker", message: `Missing continuity reference ${id} for Chapter ${packet.chapter}.` });
@@ -15,8 +25,22 @@ export function packetReferenceFindings(packet: ChapterPacket, canon: CanonState
     if (!thread) findings.push({ severity: "blocker", message: `Missing story-thread reference ${id} for Chapter ${packet.chapter}.` });
     else if (["paid-off", "abandoned"].includes(thread.status)) findings.push({ severity: "blocker", message: `Story thread ${id} is already ${thread.status}; reopen or replace it before Chapter ${packet.chapter}.` });
   }
+
+  const researchById = new Map((research?.items ?? []).map((item) => [item.id, item]));
   const sourceIds = new Set(sources.sources.map((source) => source.id));
-  for (const id of packet.required_research) if (!sourceIds.has(id)) findings.push({ severity: "blocker", message: `Missing required research source ${id} for Chapter ${packet.chapter}.` });
+  for (const id of packet.required_research) {
+    const item = researchById.get(id);
+    if (item) {
+      if (item.status !== "ready") findings.push({ severity: "blocker", message: `Required research ${id} for Chapter ${packet.chapter} is ${item.status}, not ready.` });
+      continue;
+    }
+    if (sourceIds.has(id)) {
+      findings.push({ severity: "warning", message: `Chapter ${packet.chapter} uses legacy research source reference ${id}; migrate it to a ready RES-NNN item during the next book-plan rebuild.` });
+      continue;
+    }
+    findings.push({ severity: "blocker", message: `Missing required research ${id} for Chapter ${packet.chapter}.` });
+  }
+
   const plotEntry = plot.chapters.find((item) => item.chapter === packet.chapter);
   if (!plotEntry) findings.push({ severity: "blocker", message: `Plot grid has no entry for Chapter ${packet.chapter}.` });
   else {
@@ -27,14 +51,20 @@ export function packetReferenceFindings(packet: ChapterPacket, canon: CanonState
 }
 
 export function collectProjectIntegrityFindings(root: string): IntegrityFinding[] {
-  const book = readBook(root); const bookRoot = join(root, "books", book.book_id);
-  const queueText = readText(join(bookRoot, "chapter-queue.yaml")); const canonText = readText(join(root, "series", "canon.yaml"));
-  const threadsText = readText(join(root, "series", "story-threads.yaml")); const sourcesText = readText(join(root, "research", "source-register.yaml")); const plotText = readText(join(bookRoot, "plot-grid.yaml"));
-  if (!queueText || !canonText || !threadsText || !sourcesText || !plotText) return [];
+  const book = readBook(root);
+  const bookRoot = join(root, "books", book.book_id);
+  const queueText = readText(join(bookRoot, "chapter-queue.yaml"));
+  const canonText = readText(join(root, "series", "canon.yaml"));
+  const threadsText = readText(join(root, "series", "story-threads.yaml"));
+  const sourcesText = readText(join(root, "research", "source-register.yaml"));
+  const researchText = readText(join(bookRoot, "research-ledger.yaml"));
+  const plotText = readText(join(bookRoot, "plot-grid.yaml"));
+  if (!queueText || !canonText || !threadsText || !sourcesText || !researchText || !plotText) return [];
   const queue = parseYaml<ChapterQueueState>(queueText, ChapterQueueSchema, "chapter-queue.yaml");
   const canon = parseYaml<CanonState>(canonText, CanonSchema, "canon.yaml");
   const threads = parseYaml<StoryThreadsState>(threadsText, StoryThreadsSchema, "story-threads.yaml");
-  const sources = parseYaml<SourceRegisterState>(sourcesText, SourceRegisterSchema, "source-register.yaml");
+  const sources = parseYaml<SourceRegisterV13>(sourcesText, SourceRegisterV13Schema, "source-register.yaml");
+  const research = parseYaml<ResearchLedger>(researchText, ResearchLedgerSchema, "research-ledger.yaml");
   const plot = parseYaml<PlotGridState>(plotText, PlotGridSchema, "plot-grid.yaml");
-  return queue.packets.filter((packet) => packet.status === "ready").flatMap((packet) => packetReferenceFindings(packet, canon, threads, sources, plot));
+  return queue.packets.filter((packet) => packet.status === "ready").flatMap((packet) => packetReferenceFindings(packet, canon, threads, sources, plot, research));
 }
