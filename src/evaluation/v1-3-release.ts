@@ -5,6 +5,7 @@ import type { ChapterQueueState } from "../domain/schemas.js";
 import { defaultBookStrategy, defaultTasteProfile, defaultVoiceGuardrails } from "../domain/v1-3-schemas.js";
 import { defaultPhase4StressTest, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
 import type { BookStrategyPhase5, RevisionTicketsPhase5 } from "../domain/v1-3-audit-schemas.js";
+import type { BookStrategyPhase3 } from "../domain/v1-3-research-schemas.js";
 import { bookPlanFindings } from "../application/book-strategy.js";
 import { compileVoiceGuardrails, voiceSafetyFindings, type VoiceRuleSet } from "../application/influence-palette.js";
 import { buildReviewCluster, maximumClusterConfidence, readerFrictionFindings, type FrictionObservation } from "../application/review-observations.js";
@@ -165,7 +166,7 @@ function evaluatePairing(input: AnyRecord, expected: AnyRecord, evidence: string
 function evaluateTradeoff(input: AnyRecord, expected: AnyRecord, evidence: string[], failures: string[]): void {
   const clusterId = text(input.cluster_id, "cluster_id");
   const tradeoffId = text(input.tradeoff_id, "tradeoff_id");
-  const strategy = defaultBookStrategy();
+  const strategy = defaultBookStrategy() as BookStrategyPhase3;
   strategy.reader_friction.observations.push(observation("OBS-001", "Comparable", 2, "negative"));
   strategy.reader_friction.clusters.push({ id: clusterId, label: "intentional friction", observation_ids: ["OBS-001"], titles_affected: ["Comparable"], confidence: "weak", positive_counterweights: [], decision: "accept-as-tradeoff", guardrail: null });
   strategy.reader_friction.accepted_tradeoffs.push({ id: tradeoffId, statement: "Preserve deliberate ambiguity.", source_cluster_ids: [clusterId], mitigation: `Clarify stakes elsewhere while preserving the intentional friction from ${clusterId}.` });
