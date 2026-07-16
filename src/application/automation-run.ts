@@ -1,4 +1,4 @@
-import type { ProjectState } from "../domain/schemas.js";
+import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import type { AutomationRunState } from "../domain/v1-4-schemas.js";
 import type { EventRejectionDetail } from "./event-rejection.js";
 
@@ -11,11 +11,11 @@ export interface StartAutomationRunInput {
   startedAt: string;
 }
 
-function clone(project: ProjectState): ProjectState {
+function clone(project: ProjectStateV14): ProjectStateV14 {
   return structuredClone(project);
 }
 
-function activeRun(project: ProjectState): AutomationRunState {
+function activeRun(project: ProjectStateV14): AutomationRunState {
   const run = project.automation.active_run;
   if (!run) throw new Error("No automation run exists.");
   return run;
@@ -29,7 +29,7 @@ export function automationEventKey(action: string, chapter?: number): string {
   return `${normalized}:${chapter}`;
 }
 
-export function startAutomationRun(project: ProjectState, input: StartAutomationRunInput): ProjectState {
+export function startAutomationRun(project: ProjectStateV14, input: StartAutomationRunInput): ProjectStateV14 {
   const existing = project.automation.active_run;
   if (existing && ["active", "paused"].includes(existing.status)) {
     throw new Error(`Automation run ${existing.id} is ${existing.status}; cancel it before starting another run.`);
@@ -62,7 +62,7 @@ export function startAutomationRun(project: ProjectState, input: StartAutomation
   return result;
 }
 
-export function pauseAutomationRun(project: ProjectState, updatedAt: string): ProjectState {
+export function pauseAutomationRun(project: ProjectStateV14, updatedAt: string): ProjectStateV14 {
   const run = activeRun(project);
   if (run.status === "paused") return project;
   if (run.status !== "active") throw new Error(`Automation run ${run.id} is ${run.status} and cannot be paused.`);
@@ -72,7 +72,7 @@ export function pauseAutomationRun(project: ProjectState, updatedAt: string): Pr
   return result;
 }
 
-export function cancelAutomationRun(project: ProjectState, updatedAt: string): ProjectState {
+export function cancelAutomationRun(project: ProjectStateV14, updatedAt: string): ProjectStateV14 {
   const run = activeRun(project);
   if (run.status === "cancelled") return project;
   if (run.status === "completed") throw new Error(`Automation run ${run.id} is completed and cannot be cancelled.`);
@@ -84,11 +84,11 @@ export function cancelAutomationRun(project: ProjectState, updatedAt: string): P
 }
 
 export function resumeAutomationRun(
-  project: ProjectState,
+  project: ProjectStateV14,
   currentStage: string,
   currentCreativeHash: string,
   updatedAt: string,
-): ProjectState {
+): ProjectStateV14 {
   const run = activeRun(project);
   if (run.status === "cancelled" || run.status === "completed") {
     throw new Error(`Automation run ${run.id} is ${run.status} and cannot resume.`);
@@ -110,12 +110,12 @@ export function resumeAutomationRun(
 }
 
 export function completeAutomationEvent(
-  project: ProjectState,
+  project: ProjectStateV14,
   eventKey: string,
   nextAction: string,
   creativeHash: string,
   updatedAt: string,
-): ProjectState {
+): ProjectStateV14 {
   const run = activeRun(project);
   if (run.status !== "active") throw new Error(`Automation run ${run.id} is ${run.status} and cannot record a completed event.`);
   const key = eventKey.trim();
@@ -132,12 +132,12 @@ export function completeAutomationEvent(
 }
 
 export function recordAutomationRejection(
-  project: ProjectState,
+  project: ProjectStateV14,
   eventKey: string,
   detail: EventRejectionDetail,
   creativeHash: string,
   updatedAt: string,
-): ProjectState {
+): ProjectStateV14 {
   const run = activeRun(project);
   if (run.status !== "active") throw new Error(`Automation run ${run.id} is ${run.status} and cannot record a rejection.`);
   const result = clone(project);
