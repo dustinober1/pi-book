@@ -63,6 +63,24 @@ test("Chapter 3 audit becomes due before drafting continues", () => {
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
+test("a missed Chapter 3 audit cannot be bypassed by a later act gate", () => {
+  const { parent, root } = setup();
+  try {
+    writeAudits(root, [audit("chapter-1", "chapter-1", [1])]);
+    const project = readProject(root);
+    project.current_stage = "act-review";
+    project.next_gate = "act-1-review";
+    project.gates["act-1-review"] = "pending";
+    writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
+    const book = readBook(root);
+    book.current_chapter = 8;
+    writeFileSync(join(root, "books", "book-01", "BOOK.yaml"), stringifyYaml(book), "utf8");
+    const due = nextVoiceAuditRequirement(root);
+    assert.equal(due?.milestone_ref, "chapter-3");
+    assert.throws(() => assertVoiceAuditCompleteForGate(root, "act-1-review"), /chapter-3/i);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
 test("each act boundary uses the active gate as its stable milestone reference", () => {
   const { parent, root } = setup();
   try {
