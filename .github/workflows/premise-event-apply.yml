@@ -1,0 +1,32 @@
+name: Apply premise event integration
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/apply-premise-event.py
+      - .github/workflows/premise-event-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1.4-4-premise-lab
+          fetch-depth: 0
+      - run: python scripts/apply-premise-event.py
+      - run: |
+          rm -f .github/workflows/premise-event-apply.yml
+          rm -f scripts/apply-premise-event.py
+          rm -f docs/.premise-task1-ready
+          touch docs/.premise-event-ready
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: add guarded premise update event [premise-event-applied]"
+          git push origin HEAD:agent/v1.4-4-premise-lab
