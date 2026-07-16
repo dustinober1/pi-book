@@ -44,7 +44,7 @@ async function upload(req: IncomingMessage, uploadRoot: string, limit: number): 
     parser.on("file", (_name, stream, info) => {
       const extension = extname(info.filename).toLowerCase();
       if (!allowedExtensions.has(extension)) { rejected = true; stream.resume(); reject(statusError(415, `Unsupported upload type ${extension || "unknown"}.`)); return; }
-      const sourceId = `upload-${randomBytes(12).toString("hex")}`;
+      const sourceId = `source_${randomBytes(12).toString("hex")}`;
       const absolutePath = join(uploadRoot, `${sourceId}${extension}`);
       let size = 0;
       stream.on("data", (chunk: Buffer) => { size += chunk.length; });

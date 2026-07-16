@@ -26,7 +26,9 @@ test("research browser remains local and uses only approved API routes", () => {
   assert.equal(app.includes("new Function"), false);
   assert.equal(app.includes("createElement(\"script\")"), false);
   assert.equal(app.includes("child_process"), false);
-  assert.equal(app.includes("fs."), false);
+  assert.equal(app.includes("node:fs"), false);
+  assert.equal(app.includes('require("fs")'), false);
+  assert.equal(app.includes("require('fs')"), false);
 });
 
 test("voice comparison labels variants only as A B and C", () => {

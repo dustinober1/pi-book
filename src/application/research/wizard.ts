@@ -268,7 +268,8 @@ export function createResearchWizardHandler(root: string, options: ResearchWizar
       parseYaml(stringifyYaml(taste), TasteProfileSchema, "taste-profile candidate");
       const safety = voiceSafetyFindings({ taste, voiceProfile: influence.derived_traits.join("\n"), guardrails: state.guardrailsValue });
       if (safety.length) throw new Error(safety.map((item) => item.message).join("\n"));
-      return save({ kind: "influence", taste, influence });
+      const stored = save({ kind: "influence", taste, influence });
+      return { preview_id: stored.preview_id, candidate: influence, findings: [] };
     }
     if (action === "voice-comparison") {
       const experimentId = requiredString(input.experiment_id, "experiment_id");
