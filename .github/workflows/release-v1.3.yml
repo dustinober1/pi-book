@@ -1,0 +1,79 @@
+name: Release Novel Forge 1.3.0
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/releases/v1.3.0.md
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: release verify (${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22.19.0, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run eval
+      - run: npm run verify:release
+      - run: npm pack --dry-run
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Confirm release identity
+        run: |
+          test "$(node -p "require('./package.json').version")" = "1.3.0"
+          test "$(node -p "require('./package-lock.json').version")" = "1.3.0"
+          test "$(node -p "require('./package-lock.json').packages[''].version")" = "1.3.0"
+          if git rev-parse -q --verify refs/tags/v1.3.0 >/dev/null; then
+            echo "v1.3.0 already exists" >&2
+            exit 1
+          fi
+      - name: Build local annotated release tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a v1.3.0 "$GITHUB_SHA" -m "Novel Forge 1.3.0 — Author Taste and Research Foundation"
+          git checkout v1.3.0
+          test "$(git rev-list -n 1 v1.3.0)" = "$GITHUB_SHA"
+      - name: Smoke-test the exact tag before publication
+        run: |
+          npm run typecheck
+          npm test
+          npm run eval
+          npm run verify:release
+          npm pack --dry-run
+      - name: Publish tag and GitHub release
+        run: |
+          git push origin v1.3.0
+          gh release create v1.3.0 \
+            --target "$GITHUB_SHA" \
+            --title "Novel Forge 1.3.0 — Author Taste and Research Foundation" \
+            --notes-file docs/releases/v1.3.0.md
