@@ -13,6 +13,8 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 - [ ] New books contain research-ledger, book-strategy, and voice-audit files in addition to the retained 1.2 publishing, marketing, and reader-kit files.
 - [ ] Version 1.2 projects remain readable without mandatory migration.
 - [ ] Missing 1.3 evidence produces one optional-backfill warning rather than a blocker.
+- [ ] Existing audit, revision-ticket, and strategy files without Phase 5 fields remain readable.
+- [ ] Projects without `voice-audits.yaml` are not retroactively blocked by milestone enforcement.
 - [ ] Metadata-only upgrades do not invent evidence or hide missing-evidence warnings.
 - [ ] Projects written by a newer package version are blocked safely.
 
@@ -25,6 +27,7 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 - [ ] Accepted voice experiments require exact anonymous variants A, B, and C plus a non-null baseline record.
 - [ ] Voice approval hashes the voice profile, taste profile, voice guardrails, and experiment index.
 - [ ] Book-plan approval hashes the book architecture, remarkability contract, research ledger, and book strategy.
+- [ ] First-chapter, act, and manuscript approvals hash their corresponding voice-audit evidence.
 
 ### Research-update safety
 
@@ -32,6 +35,7 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 - [ ] It accepts only allowlisted taste, voice, research, strategy, audit, and source-register evidence.
 - [ ] It rejects empty, stale, duplicate, unsafe, manuscript, project-state, book-state, guidance, reader-evidence, publishing, marketing, and package-output submissions.
 - [ ] It does not advance stage, change gates or approvals, alter active-book status, or write manuscript prose.
+- [ ] Learned-guardrail approval or rejection changes only book-strategy evidence.
 - [ ] Accepted updates still use schema validation, rollback, one Git checkpoint, `STATUS.md`, and `HANDOFF.md`.
 - [ ] The public `novel_apply_event` tool remains UTF-8 text-only.
 
@@ -61,9 +65,20 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 - [ ] Book strategy includes the reader promise, expectation decisions, friction decisions, accepted tradeoffs, originality risks, and approved guardrails.
 - [ ] Plot decisions track immediate gain, deferred cost, irreversible effect, and payoff window.
 - [ ] Voice-drift metrics are evidence rather than mechanical prose quotas.
-- [ ] Repeated scene engines and state-neutral repeated conversations are flagged.
-- [ ] Recurring revision problems become guardrail candidates only at the exact threshold.
-- [ ] Guardrail promotion requires writer approval and does not retroactively rewrite unrelated prose.
+- [ ] Voice metrics include sentence/paragraph distributions, dialogue, fragments, rhetorical questions, filter words, repeated body language, and interiority.
+- [ ] Required audits occur after Chapter 1, Chapter 3, every act boundary, manuscript review, and explicit recalibration.
+- [ ] A missed Chapter 1 or Chapter 3 audit cannot be bypassed by a later gate.
+- [ ] Required milestone audits must be approved before the matching gate may be approved.
+- [ ] `npm run audit:voice -- <project-root> [milestone]` produces read-only JSON and writes no project files.
+- [ ] More than two consecutive identical scene engines are flagged.
+- [ ] Whole-book scene-engine dominance is surfaced only as a diagnostic review finding.
+- [ ] Dialogue-led scenes without case, relationship, power, character, pressure, or plot-state movement are flagged.
+- [ ] Adjacent chapters with indistinguishable state-change vectors are flagged.
+- [ ] Repeated findings in one chapter count once toward recurrence.
+- [ ] Recurring revision problems become guardrail candidates only after three distinct chapters or two distinct milestone reviews.
+- [ ] Guardrail promotion requires writer approval or rejection.
+- [ ] Proposed and rejected rules never enter drafting context.
+- [ ] Guardrail promotion does not retroactively rewrite unrelated prose or change stage/gates.
 
 ### Wizard and transaction safety
 
@@ -96,7 +111,7 @@ Use the repository's `Novel Forge tests` workflow as the authoritative verificat
 - [ ] `npm run eval` passes.
 - [ ] Real Pi command/tool lifecycle tests pass.
 - [ ] Packed-extension install/import/registration smoke tests pass.
-- [ ] `npm pack --dry-run` contains the new source contracts and bundled wizard assets.
+- [ ] `npm pack --dry-run` contains the new source contracts, audit CLI, and bundled wizard assets.
 - [ ] The final diff contains no temporary workflow files, generated diagnostics, local artifacts, imported review corpora, or generated book outputs.
 
 ### Publish
@@ -111,4 +126,4 @@ Use the repository's `Novel Forge tests` workflow as the authoritative verificat
    ```
 
 5. Run a clean `/novel-start` and `/novel` smoke test from the tagged package.
-6. Exercise taste intake, voice baseline, research update, review-observation analysis, chapter context, voice audit, one DOCX adoption, one reader CSV merge, one package export, and one next-book creation from the tagged package.
+6. Exercise taste intake, voice baseline, research update, review-observation analysis, chapter context, every required voice-audit milestone, one learned-rule approve/reject flow, one DOCX adoption, one reader CSV merge, one package export, and one next-book creation from the tagged package.
