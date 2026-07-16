@@ -11,6 +11,7 @@ Allow an author to start from one idea or an authorized brief, persist the evide
 - Extracted idea/setup fields enter `series/intake.yaml` as author input.
 - Missing setup fields remain visible assumptions or blockers; they never become confirmed facts automatically.
 - `--auto-to` starts a persistent run after initialization.
+- It reuses the existing `allowedUntilTargets` contract: `voice-approval`, `book-plan-approval`, `first-chapter-approval`, `act-1-review`, `midpoint-review`, `pre-final-act-review`, `manuscript-review`, and `next-milestone`.
 - Autopilot uses the existing stage prompts and guarded events, reloading state after every accepted event.
 - It stops at every human gate, unselected premise, nonretryable rejection, missing evidence, or requested target.
 - It never approves a gate or selects a premise.
