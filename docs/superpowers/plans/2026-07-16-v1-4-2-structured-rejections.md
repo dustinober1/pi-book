@@ -18,6 +18,7 @@
 - `retryable` describes policy eligibility; `canRetryEvent(detail, previousRetries)` enforces the maximum of one retry.
 - Existing event validators remain authoritative. Do not duplicate schema/reference validation logic in the rejection module.
 - Current stage and project hash in rejection details come from canonical project state whenever it can be read safely.
+- When canonical state cannot be read safely, both public fields remain non-null and use the literal `"unknown"`; normalization must never throw while trying to populate them.
 - The public Pi tool returns both concise text and `EventRejectionDetail`.
 - Wizard stale proposals use the same rejection class and envelope as normal events.
 - Existing tests that assert error messages continue to pass.
