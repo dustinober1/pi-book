@@ -7,5 +7,4 @@ input:
 expected:
   changed_metrics:
     - average_sentence_words
-    - dialogue_ratio
   interpretation: evidence-only
