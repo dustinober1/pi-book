@@ -44,8 +44,7 @@ test("resume reloads persisted state and returns the current action", () => {
   try {
     beginPersistentRun(root, { target: "voice-approval", maxChapters: 3, now: "2026-07-16T12:00:00Z" });
     pausePersistentRun(root, "2026-07-16T12:01:00Z");
-    const reloaded = readProject(root);
-    assert.equal(reloaded.automation.active_run?.id, "RUN-001");
+    assert.equal(activeRun(root)?.id, "RUN-001");
     const decision = resumePersistentRun(root, "2026-07-16T12:02:00Z");
     assert.equal(activeRun(root)?.status, "active");
     assert.equal(decision.action, "voice");
