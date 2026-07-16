@@ -1,7 +1,12 @@
 from pathlib import Path
 
 root = Path('.')
-# Triggered after workflow installation so the branch-only patch job can run.
+
+# The PR workflow may run more than once. Exit cleanly after the patch is present.
+events_text = (root / 'src/application/events.ts').read_text(encoding='utf-8')
+prompts_text = (root / 'src/application/prompts.ts').read_text(encoding='utf-8')
+if 'import { compactPacketWindow, packetWindowDecision, packetWindowFindings } from "./packet-window.js";' in events_text and 'Maintain a rolling active window of at most six ready chapter packets.' in prompts_text:
+    raise SystemExit(0)
 
 # Event integration.
 path = root / 'src/application/events.ts'
