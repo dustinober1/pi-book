@@ -26,6 +26,7 @@ test("a clean project exercises the honest 1.3 evidence journey", async () => {
     assert.ok(report.skippedChecks.some((item) => item.id === "accepted-voice-baseline" && /writer-selected prose/i.test(item.reason)));
     assert.ok(report.skippedChecks.some((item) => item.id === "human-reader-merge" && /real human/i.test(item.reason)));
     assert.ok(report.skippedChecks.some((item) => item.id === "docx-adoption" && /source file/i.test(item.reason)));
+    await new Promise<void>((resolve) => setTimeout(resolve, 25));
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }

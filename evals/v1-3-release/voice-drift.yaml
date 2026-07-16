@@ -6,6 +6,6 @@ input:
   current_text: Mara moved through the corridor and listened for the elevator before Jonah said, "Go now, before they see us."
 expected:
   changed_metrics:
-    - sentence_mean
+    - average_sentence_words
     - dialogue_ratio
   interpretation: evidence-only

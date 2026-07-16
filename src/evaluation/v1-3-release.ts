@@ -168,7 +168,7 @@ function evaluateTradeoff(input: AnyRecord, expected: AnyRecord, evidence: strin
   const strategy = defaultBookStrategy();
   strategy.reader_friction.observations.push(observation("OBS-001", "Comparable", 2, "negative"));
   strategy.reader_friction.clusters.push({ id: clusterId, label: "intentional friction", observation_ids: ["OBS-001"], titles_affected: ["Comparable"], confidence: "weak", positive_counterweights: [], decision: "accept-as-tradeoff", guardrail: null });
-  strategy.reader_friction.accepted_tradeoffs.push({ id: tradeoffId, statement: "Preserve deliberate ambiguity.", mitigation: `Source cluster ${clusterId}; clarify stakes elsewhere.` });
+  strategy.reader_friction.accepted_tradeoffs.push({ id: tradeoffId, statement: "Preserve deliberate ambiguity.", source_cluster_ids: [clusterId], mitigation: `Clarify stakes elsewhere while preserving the intentional friction from ${clusterId}.` });
   const findings = readerFrictionFindings(strategy);
   equality("visible_tradeoff", strategy.reader_friction.accepted_tradeoffs.some((item) => item.id === tradeoffId) && !findings.some((item) => item.severity === "blocker"), expected.visible_tradeoff, evidence, failures);
   equality("approved_guardrail", strategy.review_derived_guardrails.some((item) => item.status === "approved" && item.source_cluster_ids.includes(clusterId)), expected.approved_guardrail, evidence, failures);
