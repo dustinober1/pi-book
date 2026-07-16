@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { Stage } from "../domain/schemas.js";
-import { listChapterFiles } from "../infrastructure/files.js";
+import { listChapterFiles, readText } from "../infrastructure/files.js";
 import { readBook, readProject } from "../project/store.js";
 import { gateDetail, gateEvidencePaths } from "./gate-metadata.js";
 import { getProjectStatus } from "./status.js";
