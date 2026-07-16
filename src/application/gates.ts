@@ -5,6 +5,7 @@ import { nextStageAfterGate } from "../domain/workflow.js";
 import { readText } from "../infrastructure/files.js";
 import { assertGateApprovalAllowed } from "./authorization.js";
 import { gateEvidencePaths } from "./gate-metadata.js";
+import { assertVoiceAuditCompleteForGate } from "./voice-drift.js";
 
 export function gateEvidenceHash(root: string, project: ProjectState, gate: string): string {
   const hash = createHash("sha256");
@@ -14,6 +15,7 @@ export function gateEvidenceHash(root: string, project: ProjectState, gate: stri
 
 export function approveGate(root: string, project: ProjectState, gate: string, note = ""): ProjectState {
   assertGateApprovalAllowed(project, gate);
+  assertVoiceAuditCompleteForGate(root, gate);
   project.gates[gate] = "approved";
   project.approvals.push({ gate, approved_at: new Date().toISOString(), approved_by: "writer", evidence_hash: gateEvidenceHash(root, project, gate), note });
   project.current_stage = nextStageAfterGate(gate);
