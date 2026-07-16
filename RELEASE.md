@@ -64,6 +64,15 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 - [ ] Repeated scene engines and state-neutral repeated conversations are flagged.
 - [ ] Recurring revision problems become guardrail candidates only at the exact threshold.
 - [ ] Guardrail promotion requires writer approval and does not retroactively rewrite unrelated prose.
+- [ ] Chapter 1 and Chapter 3 create voice-audit evidence only when accepted baseline hash and metrics exist.
+- [ ] Missing baseline evidence skips voice auditing without blocking drafting.
+- [ ] Act and manuscript reviews append deterministic voice evidence without assigning automatic ticket severity.
+- [ ] Intentional voice exceptions remain recorded and protected.
+- [ ] Three distinct chapters or two distinct milestone reviews are the exact learning thresholds.
+- [ ] Duplicate tickets within one chapter count as one chapter occurrence.
+- [ ] Proposed and rejected learning rules never enter drafting context.
+- [ ] Approved learning rules match the exact ticket, chapter, and milestone evidence.
+- [ ] Audit and promotion paths do not modify existing manuscript files.
 
 ### Wizard and transaction safety
 
@@ -94,6 +103,7 @@ Use the repository's `Novel Forge tests` workflow as the authoritative verificat
 - [ ] `npm run typecheck` passes on Node 22.19.0 and Node 24.
 - [ ] `npm test` passes on Node 22.19.0 and Node 24.
 - [ ] `npm run eval` passes.
+- [ ] `npm run audit:voice -- <fixture-root>` returns deterministic JSON evidence or a clear non-mutating no-baseline result.
 - [ ] Real Pi command/tool lifecycle tests pass.
 - [ ] Packed-extension install/import/registration smoke tests pass.
 - [ ] `npm pack --dry-run` contains the new source contracts and bundled wizard assets.

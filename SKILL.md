@@ -107,6 +107,18 @@ For each project-relevant cluster, the writer chooses exactly one decision: `pre
 
 New chapter packets use ready `RES-NNN` IDs in `required_research`. Existing `SRC-NNN` references remain draftable with an advisory until a plan rebuild migrates them. Phase 3 validates readiness but does not add research-ledger nodes to the continuity graph; graph integration remains a later phase.
 
+## Voice, scene, and revision learning
+
+Treat voice metrics as evidence, never as prose quotas or automatic severity. When approved baseline hash and metrics exist, append deterministic voice-audit evidence after Chapter 1, Chapter 3, act review, manuscript review, and explicit recalibration. Missing baseline evidence is non-blocking. Preserve explicit intentional exceptions rather than forcing every chapter toward the same metric profile.
+
+Voice audits may record sentence and paragraph distributions, dialogue ratio, fragment frequency, rhetorical questions, filter-word rate, repeated body-language vocabulary, interiority, baseline values, deltas, POV, chapter scope, and protected exceptions. Do not convert metric deltas directly into revision tickets.
+
+Run the deterministic scene audit during review. Flag more than two consecutive identical scene engines, engine dominance only when at least six packets exist and one engine exceeds half, conversational engines without case/relationship/power/knowledge movement, and adjacent indistinguishable state changes. Convert findings to revision tickets through the guarded review event; never edit prose automatically.
+
+Use stable recurrence pattern IDs only for genuinely repeated problems. A pattern is promotion-eligible after three distinct chapters or two distinct milestone reviews. Eligibility never activates a rule. Store proposed, approved, or rejected learning rules in `book-strategy.yaml`; validate approved rules against the exact supporting ticket IDs, distinct chapters, and milestone reviews. Only writer-approved rules enter future drafting context, and promotion must not trigger a retroactive rewrite.
+
+The read-only `npm run audit:voice -- <project-root>` command may print diagnostics but must not mutate project state or replace guarded workflow events.
+
 ## Temporary browser wizard
 
 Use `/novel` or `/novel-wizard` for adoption, reader evidence, packaging, and next-book inheritance.

@@ -24,6 +24,12 @@
 - Deterministic book-plan validation for reader promise, approved expectation decisions, stress-test evidence, setup-before-payoff order, decision consequences, and repeated scene engines.
 - Safe `research-item` graph records that connect explicitly required ready claims to mutually registered source provenance while keeping source nodes terminal.
 - Bounded `Required ready research claims` and `Approved book guardrails` drafting-context sections that exclude public-review bodies, unrequired claims, and unapproved rules.
+- Deterministic voice-metric extraction for sentence and paragraph distribution, dialogue, fragments, rhetorical questions, filter words, repeated body-language vocabulary, and interiority.
+- Baseline- and POV-aware voice-audit evidence at Chapter 1, Chapter 3, act review, manuscript review, and explicit recalibration milestones when an accepted baseline exists.
+- Deterministic scene audits for more than two consecutive identical engines, whole-plan engine dominance, state-neutral conversations, and adjacent indistinguishable state changes.
+- Revision-ticket recurrence metadata and exact promotion eligibility after three distinct chapters or two distinct milestone reviews.
+- Writer-approved revision-learning guardrails that enter future drafting context without triggering retroactive prose changes.
+- A read-only `npm run audit:voice -- <project-root>` command that prints deterministic JSON evidence and never mutates project files.
 
 ### Changed
 
@@ -38,6 +44,9 @@
 - Chapter context reports selected research claims and their source provenance separately from canon, threads, and public market observations.
 - Review and reader-test prompts explicitly separate public market observations from accepted human responses to the current manuscript.
 - Review events may write typed `voice-audits.yaml` evidence without making it mandatory during this foundation phase.
+- Chapter 1 and Chapter 3 draft events append voice-audit evidence automatically when accepted baseline metrics exist; missing baselines remain non-blocking.
+- Act and manuscript review events append voice-audit evidence and synthesize deterministic scene findings into revision tickets rather than editing prose.
+- Approved learning rules are validated against exact recurrence evidence before `research-update` accepts them.
 
 ### Compatibility
 
@@ -48,6 +57,8 @@
 - Unrelated voice or audit evidence updates do not force a legacy research backfill.
 - Existing `SRC-NNN` packet references remain draftable with an advisory until a later plan rebuild migrates them to ready `RES-NNN` items.
 - Existing plot grids and book strategies without Phase 4 fields remain readable. New projects receive empty decision ledgers and pending stress-test templates; a deliberate book-plan rebuild must complete them before approval.
+- Legacy revision tickets, voice-audit records, and book strategies without Phase 5 fields remain readable; recurrence and learning fields are optional until used.
+- New books begin with an empty revision-learning guardrail list. No existing ticket, audit, approval, or manuscript is backfilled or rewritten.
 - Existing manuscript prose, reader experiments, publishing metadata, marketing metadata, and continuity-graph safety behavior remain unchanged.
 - No dependency or external service is added.
 
@@ -62,6 +73,9 @@
 - Research-source graph nodes remain terminal, so a shared source cannot pull unrelated claims into chapter context.
 - Unready research is blocked from ready packets and automatic graph discovery.
 - Raw review observations, raw influence references, unapproved guardrails, and unrelated research claims never enter drafting context.
+- Voice metrics never create automatic severity, prose quotas, or revision tickets by themselves.
+- Promotion eligibility never activates a rule; only a writer-approved guardrail enters future drafting context.
+- Audit and promotion workflows never rewrite earlier manuscript prose automatically.
 - Experiment YAML cannot borrow arbitrary project files as source, variant, or baseline assets.
 - The final taste selection, experiment index, experiment record, guardrail baseline, and baseline bytes must agree before voice approval can proceed.
 

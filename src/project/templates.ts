@@ -29,7 +29,11 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
     act_checkpoint: null,
     canon_locked: false,
   };
-  const strategy = { ...defaultBookStrategy(), plan_stress_test: defaultPhase4StressTest() };
+  const strategy = {
+    ...defaultBookStrategy(),
+    plan_stress_test: defaultPhase4StressTest(),
+    revision_learning_guardrails: [],
+  };
   const base = `books/${bookId}`;
   return {
     [`${base}/BOOK.yaml`]: stringifyYaml(book),
