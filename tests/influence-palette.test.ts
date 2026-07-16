@@ -77,7 +77,7 @@ test("raw influence names are blocked from compiled guardrails and voice profile
   const taste = tasteWithExampleReference();
   assert.ok(voiceSafetyFindings({
     taste,
-    voiceProfile: "Example Author is the model.",
+    voiceProfile: "example author is the model.",
     guardrails: defaultVoiceGuardrails(),
   }).some((item) => item.code === "raw-reference"));
   assert.ok(voiceSafetyFindings({
@@ -85,4 +85,37 @@ test("raw influence names are blocked from compiled guardrails and voice profile
     voiceProfile: "Neutral project voice.",
     guardrails: { ...defaultVoiceGuardrails(), prefer: ["Use Example Book pacing"] },
   }).some((item) => item.code === "raw-reference"));
+});
+
+test("short work titles do not collide with ordinary lowercase prose", () => {
+  const taste = defaultTasteProfile();
+  taste.influences.push({
+    id: "INF-001",
+    reference: "Cormac McCarthy — The Road",
+    influence_type: "voice",
+    admired_for: ["restraint"],
+    not_for: ["signature phrasing"],
+    derived_traits: ["restrained description"],
+    status: "approved",
+  });
+
+  assert.deepEqual(voiceSafetyFindings({
+    taste,
+    voiceProfile: "The character walked down the road without looking back.",
+    guardrails: defaultVoiceGuardrails(),
+  }), []);
+
+  assert.ok(voiceSafetyFindings({
+    taste,
+    voiceProfile: "The Road is the model for this project's pacing.",
+    guardrails: defaultVoiceGuardrails(),
+  }).some((item) => item.code === "raw-reference"));
+});
+
+test("missing voice profile text is treated as empty rather than throwing", () => {
+  assert.doesNotThrow(() => voiceSafetyFindings({
+    taste: tasteWithExampleReference(),
+    voiceProfile: null,
+    guardrails: defaultVoiceGuardrails(),
+  }));
 });
