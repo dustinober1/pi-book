@@ -1,0 +1,48 @@
+name: Repair Phase 7 evaluator contract
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.head_ref == 'agent/v1.3-phase7-release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1.3-phase7-release
+          fetch-depth: 0
+      - name: Correct extended strategy type
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/evaluation/v1-3-release.ts')
+          text = path.read_text(encoding='utf-8')
+          import_anchor = 'import type { BookStrategyPhase5, RevisionTicketsPhase5 } from "../domain/v1-3-audit-schemas.js";\n'
+          import_line = 'import type { BookStrategyPhase3 } from "../domain/v1-3-research-schemas.js";\n'
+          if import_line not in text:
+              if import_anchor not in text:
+                  raise SystemExit('Phase 3 import anchor missing')
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+          old = '  const strategy = defaultBookStrategy();\n  strategy.reader_friction.observations.push(observation("OBS-001", "Comparable", 2, "negative"));\n'
+          new = '  const strategy = defaultBookStrategy() as BookStrategyPhase3;\n  strategy.reader_friction.observations.push(observation("OBS-001", "Comparable", 2, "negative"));\n'
+          if old not in text:
+              raise SystemExit('Tradeoff strategy anchor missing')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Remove temporary proof workflows and commit
+        run: |
+          rm -f .github/workflows/phase7-contract-repair.yml
+          rm -f .github/workflows/phase7-finalize.yml
+          rm -f .github/workflows/phase7-merge.yml
+          rm -f .github/workflows/phase7-proof.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: align Phase 7 tradeoff evaluation contract"
+          git push origin HEAD:agent/v1.3-phase7-release
