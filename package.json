@@ -43,7 +43,7 @@
     "@earendil-works/pi-coding-agent": "0.80.3",
     "@types/busboy": "^1.5.4",
     "@types/node": "^24.0.0",
-    "@types/turndown": "^7.1.0",
+    "@types/turndown": "^1.5.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   },
