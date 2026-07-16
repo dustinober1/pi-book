@@ -221,9 +221,9 @@ Expected: PASS.
 ### Task 4: Add the local research browser surface
 
 **Files:**
-- Modify: `wizard/index.html`
-- Modify: `wizard/app.js`
-- Modify: `wizard/styles.css`
+- Modify wizard markup: `wizard/index.html`
+- Modify wizard behavior: `wizard/app.js`
+- Modify wizard presentation: `wizard/styles.css`
 - Test: `tests/research-wizard-assets.test.ts`
 - Test: `tests/e2e/research-wizard.test.ts`
 
@@ -270,9 +270,9 @@ Expected: PASS.
 ### Task 5: Commands, guided labels, package smoke, and final verification
 
 **Files:**
-- Modify: `src/pi/extension.ts`
-- Modify: `src/application/guide.ts`
-- Modify: `src/application/status.ts`
+- Modify command registration: `src/pi/extension.ts`
+- Modify guided action labels: `src/application/guide.ts`
+- Modify status guidance: `src/application/status.ts`
 - Modify: `README.md`
 - Modify: `SKILL.md`
 - Modify: `CHANGELOG.md`

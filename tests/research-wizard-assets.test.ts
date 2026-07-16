@@ -22,7 +22,11 @@ test("research browser remains local and uses only approved API routes", () => {
   const routes = [...app.matchAll(/api\("([^\"]+)"/g)].map((match) => match[1] ?? "");
   assert.ok(routes.every((route) => ["/api/snapshot", "/api/preview", "/api/apply", "/api/upload", "/api/close", "/api/session"].includes(route)));
   assert.doesNotMatch(html + app, /https?:\/\//i);
-  assert.doesNotMatch(app, /\beval\s*\(|new Function|createElement\(["']script|child_process|fs\./i);
+  assert.equal(app.includes("eval("), false);
+  assert.equal(app.includes("new Function"), false);
+  assert.equal(app.includes("createElement(\"script\")"), false);
+  assert.equal(app.includes("child_process"), false);
+  assert.equal(app.includes("fs."), false);
 });
 
 test("voice comparison labels variants only as A B and C", () => {

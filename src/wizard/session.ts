@@ -1,6 +1,6 @@
 import Busboy from "busboy";
 import { randomBytes } from "node:crypto";
-import { createWriteStream, mkdtempSync, readFileSync, rmSync, unlinkSync } from "node:fs";
+import { createWriteStream, existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -48,7 +48,7 @@ async function upload(req: IncomingMessage, uploadRoot: string, limit: number): 
       const absolutePath = join(uploadRoot, `${sourceId}${extension}`);
       let size = 0;
       stream.on("data", (chunk: Buffer) => { size += chunk.length; });
-      stream.on("limit", () => { rejected = true; unlinkSync(absolutePath); reject(statusError(413, "Upload exceeds the session size limit.")); });
+      stream.on("limit", () => { rejected = true; if (existsSync(absolutePath)) unlinkSync(absolutePath); reject(statusError(413, "Upload exceeds the session size limit.")); });
       stream.pipe(createWriteStream(absolutePath));
       stream.on("end", () => {
         if (rejected) return;
@@ -83,7 +83,7 @@ export async function startWizardSession(options: WizardSessionOptions): Promise
       if (req.method === "GET" && file) { sendText(res, 200, contentType(file), readFileSync(file, "utf8")); return; }
       if (!requireApiAuthorization(req, res, token, origin)) return;
       lastActivity = Date.now();
-      if (req.method === "POST" && requestUrl.pathname === "/api/session") {
+      if ((req.method === "GET" || req.method === "POST") && requestUrl.pathname === "/api/session") {
         sendJson(res, 200, { workflow: options.workflow ?? null, project: options.projectRoot, expires_at: new Date(lastActivity + idleTimeoutMs).toISOString() });
         return;
       }
@@ -107,7 +107,7 @@ export async function startWizardSession(options: WizardSessionOptions): Promise
       if (req.method === "POST" && requestUrl.pathname === "/api/upload") {
         const record = await upload(req, uploadRoot, uploadLimitBytes);
         sources.set(record.sourceId, record);
-        sendJson(res, 200, { source_id: record.sourceId, original_name: record.originalName, media_type: record.mediaType, byte_size: record.byteSize });
+        sendJson(res, 201, { source_id: record.sourceId, original_name: record.originalName, media_type: record.mediaType, byte_size: record.byteSize });
         return;
       }
       if (req.method === "POST" && requestUrl.pathname === "/api/close") { sendJson(res, 200, { closing: true }); setImmediate(() => void close()); return; }
