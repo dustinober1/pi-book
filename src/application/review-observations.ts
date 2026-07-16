@@ -47,6 +47,7 @@ const CATEGORIES = new Set<FrictionCategory>([
 ]);
 const RELEVANCE = new Set<Relevance>(["low", "medium", "high"]);
 const SENTIMENTS = new Set<ReviewSentiment>(["negative", "mixed", "positive"]);
+const CONFIDENCE_RANK = { weak: 0, moderate: 1, strong: 2 } as const;
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -62,6 +63,26 @@ function cleanIdentity(text: string, values: readonly string[]): string {
     .replace(/\s+([,.;:!?])/g, "$1")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
+}
+
+function distinct(values: readonly string[]): string[] {
+  return [...new Set(values)].sort();
+}
+
+function sameValues(left: readonly string[], right: readonly string[]): boolean {
+  const a = distinct(left);
+  const b = distinct(right);
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function duplicateIds(values: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const repeated = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) repeated.add(value);
+    else seen.add(value);
+  }
+  return [...repeated].sort();
 }
 
 export function deriveReviewSentiment(rating: number | null, explicit?: ReviewSentiment): ReviewSentiment {
@@ -206,10 +227,6 @@ export function importReviewObservationCsv(csv: string, existingIds: readonly st
   return { observations, discardedIdentityFields, warnings: [] };
 }
 
-function distinct(values: readonly string[]): string[] {
-  return [...new Set(values)].sort();
-}
-
 export function maximumClusterConfidence(
   observations: readonly FrictionObservation[],
   positiveCounterweightIds: readonly string[],
@@ -254,23 +271,20 @@ export function buildReviewCluster(
   };
 }
 
-const CONFIDENCE_RANK = { weak: 0, moderate: 1, strong: 2 } as const;
-
-function duplicateIds(values: readonly string[]): string[] {
-  const seen = new Set<string>();
-  const repeated = new Set<string>();
-  for (const value of values) { if (seen.has(value)) repeated.add(value); else seen.add(value); }
-  return [...repeated].sort();
-}
-
 export function readerFrictionFindings(strategy: BookStrategy): ReaderFrictionFinding[] {
   const findings: ReaderFrictionFinding[] = [];
   const observations = strategy.reader_friction.observations;
   const clusters = strategy.reader_friction.clusters;
   const observationById = new Map(observations.map((item) => [item.id, item]));
   const clusterById = new Map(clusters.map((item) => [item.id, item]));
+
   for (const id of duplicateIds(observations.map((item) => item.id))) findings.push({ severity: "blocker", code: "duplicate-observation-id", message: `Duplicate review observation id: ${id}.` });
   for (const id of duplicateIds(clusters.map((item) => item.id))) findings.push({ severity: "blocker", code: "duplicate-cluster-id", message: `Duplicate review cluster id: ${id}.` });
+  for (const observation of observations) {
+    if (observation.rating !== null && deriveReviewSentiment(observation.rating) !== observation.sentiment) {
+      findings.push({ severity: "blocker", code: "rating-band-mismatch", message: `${observation.id} sentiment ${observation.sentiment} does not match rating ${observation.rating}.` });
+    }
+  }
 
   for (const cluster of clusters) {
     const selected: FrictionObservation[] = [];
@@ -279,10 +293,20 @@ export function readerFrictionFindings(strategy: BookStrategy): ReaderFrictionFi
       if (!item) findings.push({ severity: "blocker", code: "missing-observation", message: `${cluster.id} references missing observation ${id}.` });
       else selected.push(item);
     }
+    const selectedCategories = distinct(selected.map((item) => item.category));
+    const selectedTitles = distinct(selected.map((item) => item.title));
+    if (selectedCategories.length > 1) findings.push({ severity: "blocker", code: "mixed-cluster-categories", message: `${cluster.id} mixes categories: ${selectedCategories.join(", ")}.` });
+    if (!sameValues(cluster.titles_affected, selectedTitles)) findings.push({ severity: "blocker", code: "cluster-title-mismatch", message: `${cluster.id} titles_affected does not match its observation evidence.` });
+
     for (const id of cluster.positive_counterweights) {
       const item = observationById.get(id);
-      if (!item || item.sentiment !== "positive") findings.push({ severity: "blocker", code: "invalid-counterweight", message: `${cluster.id} counterweight ${id} must reference a positive observation.` });
+      const eligible = item
+        && item.sentiment === "positive"
+        && (selectedCategories.length !== 1 || item.category === selectedCategories[0])
+        && selectedTitles.includes(item.title);
+      if (!eligible) findings.push({ severity: "blocker", code: "invalid-counterweight", message: `${cluster.id} counterweight ${id} must reference matching positive evidence.` });
     }
+
     const maximum = maximumClusterConfidence(selected, cluster.positive_counterweights);
     if (CONFIDENCE_RANK[cluster.confidence] > CONFIDENCE_RANK[maximum]) {
       findings.push({ severity: "blocker", code: "confidence-inflation", message: `${cluster.id} records ${cluster.confidence} confidence but its evidence supports at most ${maximum}.` });
