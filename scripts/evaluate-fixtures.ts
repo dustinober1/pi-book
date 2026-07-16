@@ -5,6 +5,7 @@ import { ChapterPacketSchema, GenreConfigSchema, PlotGridSchema, ProfileIdSchema
 import { countWords } from "../src/infrastructure/files.js";
 import { getProfile } from "../src/profiles/index.js";
 import { regressionChecklist, synthesizeTickets, type ReviewFinding } from "../src/review/review.js";
+import { evaluateV13ReleaseFixture, loadV13ReleaseFixtures } from "../src/evaluation/v1-3-release.js";
 
 interface Fixture {
   schema_version: "1.0.0";
@@ -18,7 +19,10 @@ interface Fixture {
 }
 
 const root = resolve(process.cwd(), "evals");
-const names = readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory() && entry.name !== "rubrics").map((entry) => entry.name).sort();
+const names = readdirSync(root, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && entry.name !== "rubrics" && entry.name !== "v1-3-release")
+  .map((entry) => entry.name)
+  .sort();
 let failures = 0;
 console.log("# Novel Forge architecture and revision evaluation\n");
 for (const name of names) {
@@ -44,5 +48,15 @@ for (const name of names) {
   console.log(`- ${name}: ${errors.length ? `FAIL (${errors.join("; ")})` : "PASS"}`);
   failures += errors.length ? 1 : 0;
 }
-console.log(`\n${names.length - failures}/${names.length} fixtures passed.`);
-if (failures) process.exitCode = 1;
+console.log(`\n${names.length - failures}/${names.length} architecture fixtures passed.`);
+
+const releaseFixtures = loadV13ReleaseFixtures(join(root, "v1-3-release"));
+let releaseFailures = 0;
+console.log("\n# Novel Forge 1.3 release evaluation\n");
+for (const fixture of releaseFixtures) {
+  const result = evaluateV13ReleaseFixture(fixture);
+  console.log(`- ${result.id}: ${result.passed ? "PASS" : `FAIL (${result.failures.join("; ")})`}`);
+  if (!result.passed) releaseFailures += 1;
+}
+console.log(`\n${releaseFixtures.length - releaseFailures}/${releaseFixtures.length} release fixtures passed.`);
+if (failures || releaseFailures) process.exitCode = 1;
