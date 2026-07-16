@@ -4,6 +4,7 @@ import { listChapterFiles } from "../infrastructure/files.js";
 import { readBook, readProject } from "../project/store.js";
 import { gateDetail, gateEvidencePaths } from "./gate-metadata.js";
 import { getProjectStatus } from "./status.js";
+import { nextVoiceAuditRequirement } from "./voice-drift.js";
 
 export type GuideActionId =
   | "continue" | "approve" | "request-changes" | "view-evidence" | "repair"
@@ -52,6 +53,25 @@ export function buildGuideScreen(root: string): GuideScreen {
   const status = getProjectStatus(root);
   const gate = project.next_gate;
   const gateState = gate ? project.gates[gate] : undefined;
+  const dueAudit = nextVoiceAuditRequirement(root);
+
+  if (gate && gateState === "pending" && dueAudit) {
+    const detail = gateDetail(gate);
+    const runAudit = action("continue", "Run required voice audit", `Record evidence for ${dueAudit.milestone_ref} before deciding ${detail.title}.`, "primary");
+    return {
+      title: `${detail.title} — Audit Required`,
+      summary: `A voice audit for ${dueAudit.milestone_ref} is required before approval.`,
+      primary: runAudit,
+      evidencePaths: gateEvidencePaths(project, gate),
+      actions: [
+        runAudit,
+        action("request-changes", "Request other changes", `Reject the current ${detail.title.toLowerCase()} evidence and record a repair note.`, "danger"),
+        action("view-evidence", "View evidence files", "Show the exact files covered by this gate."),
+        action("status", "View full status", "Show blockers, warnings, and progress."),
+        action("advanced", "Advanced options", "Recovery, browser workflows, metadata, and integrity tools."),
+      ],
+    };
+  }
 
   if (gate && gateState === "pending") {
     const detail = gateDetail(gate);
@@ -90,7 +110,7 @@ export function buildGuideScreen(root: string): GuideScreen {
 
   const primary = project.current_stage === "complete"
     ? action("add-book", "Add the next book", "Review inherited canon and unresolved threads before creating the next book.", "primary")
-    : action("continue", "Continue recommended work", status.nextAction, "primary");
+    : action("continue", dueAudit ? "Run required voice audit" : "Continue recommended work", dueAudit ? `Record ${dueAudit.milestone_ref} evidence.` : status.nextAction, "primary");
   const actions: GuideAction[] = [primary];
   const manuscriptEmpty = listChapterFiles(join(root, "books", book.book_id)).length === 0;
   if (manuscriptEmpty && ["voice-intake", "series-planning", "book-planning", "chapter-queue"].includes(project.current_stage)) {
