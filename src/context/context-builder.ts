@@ -1,6 +1,7 @@
 import { basename, join } from "node:path";
-import { CanonSchema, ChapterQueueSchema, PlotGridSchema, RemarkabilitySchema, SourceRegisterSchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type PlotGridState, type RemarkabilityState, type SourceRegisterState, type StoryThreadsState } from "../domain/schemas.js";
-import { TasteProfileSchema, VoiceGuardrailsSchema, defaultTasteProfile, defaultVoiceGuardrails, type TasteProfile, type VoiceGuardrails } from "../domain/v1-3-schemas.js";
+import { CanonSchema, ChapterQueueSchema, PlotGridSchema, RemarkabilitySchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type PlotGridState, type RemarkabilityState, type StoryThreadsState } from "../domain/schemas.js";
+import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
+import { ResearchLedgerSchema, TasteProfileSchema, VoiceGuardrailsSchema, defaultTasteProfile, defaultVoiceGuardrails, type ResearchLedger, type TasteProfile, type VoiceGuardrails } from "../domain/v1-3-schemas.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { getProfile } from "../profiles/index.js";
@@ -46,17 +47,19 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
   const project = readProject(root); const book = readBook(root); const bookRoot = join(root, "books", book.book_id);
   const queueText = readText(join(bookRoot, "chapter-queue.yaml")); const canonText = readText(join(root, "series", "canon.yaml"));
   const threadsText = readText(join(root, "series", "story-threads.yaml")); const plotText = readText(join(bookRoot, "plot-grid.yaml"));
-  const sourcesText = readText(join(root, "research", "source-register.yaml")); const remarkabilityText = readText(join(bookRoot, "remarkability.yaml"));
-  if (!queueText || !canonText || !threadsText || !plotText || !sourcesText || !remarkabilityText) throw new Error("Chapter context is missing queue, canon, thread, plot-grid, research, or remarkability state.");
+  const sourcesText = readText(join(root, "research", "source-register.yaml")); const researchText = readText(join(bookRoot, "research-ledger.yaml"));
+  const remarkabilityText = readText(join(bookRoot, "remarkability.yaml"));
+  if (!queueText || !canonText || !threadsText || !plotText || !sourcesText || !researchText || !remarkabilityText) throw new Error("Chapter context is missing queue, canon, thread, plot-grid, research ledger, research source, or remarkability state.");
   const queue = parseYaml<ChapterQueueState>(queueText, ChapterQueueSchema, "chapter-queue.yaml");
   const canon = parseYaml<CanonState>(canonText, CanonSchema, "canon.yaml");
   const threads = parseYaml<StoryThreadsState>(threadsText, StoryThreadsSchema, "story-threads.yaml");
   const plot = parseYaml<PlotGridState>(plotText, PlotGridSchema, "plot-grid.yaml");
-  const sources = parseYaml<SourceRegisterState>(sourcesText, SourceRegisterSchema, "source-register.yaml");
+  const sources = parseYaml<SourceRegisterV13>(sourcesText, SourceRegisterV13Schema, "source-register.yaml");
+  const research = parseYaml<ResearchLedger>(researchText, ResearchLedgerSchema, "research-ledger.yaml");
   const remarkability = parseYaml<RemarkabilityState>(remarkabilityText, RemarkabilitySchema, "remarkability.yaml");
   const packet = selectPacket(queue, requestedChapter); const profile = getProfile(book.profile);
   const profileBlockers = profile.validatePacket(packet).filter((finding) => finding.severity === "blocker");
-  const referenceBlockers = packetReferenceFindings(packet, canon, threads, sources, plot).filter((finding) => finding.severity === "blocker");
+  const referenceBlockers = packetReferenceFindings(packet, canon, threads, sources, plot, research).filter((finding) => finding.severity === "blocker");
   const blockers = [...profileBlockers.map((item) => item.message), ...referenceBlockers.map((item) => item.message)];
   if (blockers.length) throw new Error(`Chapter packet is not draftable:\n${blockers.map((item) => `- ${item}`).join("\n")}`);
 
@@ -131,7 +134,7 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     report: {
       estimatedTokens: Math.ceil(text.length / 4),
       included,
-      excluded: ["unreferenced canon", "unreferenced story threads", "non-adjacent chapters", "future books", "graph-blocked unsafe records", "raw influence references", "voice experiment source and variants", "reader experiment responses", "packaging files", "legacy artifacts"],
+      excluded: ["unreferenced canon", "unreferenced story threads", "unrequired research claims", "non-adjacent chapters", "future books", "graph-blocked unsafe records", "raw public reviews", "raw influence references", "voice experiment source and variants", "reader experiment responses", "packaging files", "legacy artifacts"],
       graph: {
         maxDepth: graphResolution.maxDepth,
         selections: graphResolution.selections,
