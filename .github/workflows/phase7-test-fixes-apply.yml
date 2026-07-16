@@ -1,0 +1,32 @@
+name: Apply Phase 7 test fixes
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/apply-phase7-test-fixes.py
+      - .github/workflows/phase7-test-fixes-apply.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1.3-phase7-release
+          fetch-depth: 0
+      - run: python scripts/apply-phase7-test-fixes.py
+      - run: |
+          rm -f .github/workflows/phase7-test-fixes-apply.yml
+          rm -f scripts/apply-phase7-test-fixes.py
+          touch docs/.phase7-test-fixes-ready
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: align Phase 7 release evaluations and cleanup [phase7-test-fixes-applied]"
+          git push origin HEAD:agent/v1.3-phase7-release
