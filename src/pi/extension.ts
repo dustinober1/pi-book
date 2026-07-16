@@ -221,7 +221,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
             // The normalizer sanitizes project lookup failures.
           }
         }
-        const rejection = normalizeEventRejection(error, { root, currentStage, currentProjectHash });
+        const rejection = normalizeEventRejection(error, { currentStage, currentProjectHash, ...(root ? { root } : {}) });
         const detail = rejection.detail;
         const text = `Novel Forge event rejected: ${detail.message}\n${rejectionInstruction(detail)}`;
         return { content: [{ type: "text", text }], details: { error: detail.message, rejection: detail } };
