@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
-import { SourceRegisterSchema, type SourceRegisterState } from "../src/domain/schemas.js";
+import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../src/domain/v1-3-research-schemas.js";
 import { ResearchLedgerSchema, defaultResearchLedger, type ResearchLedger } from "../src/domain/v1-3-schemas.js";
 import { researchEvidenceFindings } from "../src/application/research-evidence.js";
 
@@ -25,7 +25,7 @@ function readyLedger(sourceIds: string[] = ["SRC-001"]): ResearchLedger {
   return ledger;
 }
 
-function sources(values: SourceRegisterState["sources"]): SourceRegisterState {
+function sources(values: SourceRegisterV13["sources"]): SourceRegisterV13 {
   return { schema_version: "1.0.0", sources: values };
 }
 
@@ -69,7 +69,7 @@ test("provenance-complete ready research passes evidence validation", () => {
   const register = sources([{
     id: "SRC-001", type: "primary-document", title: "Operations Manual", location: "local", verified_on: "2026-07-15", supports: [], notes: "",
     reliability: "primary", observed_on: "2026-07-15", supports_research_ids: ["RES-001"],
-  } as SourceRegisterState["sources"][number]]);
+  }]);
   assert.deepEqual(researchEvidenceFindings(readyLedger(), register).filter((item) => item.severity === "blocker"), []);
 });
 
@@ -77,5 +77,5 @@ test("legacy source-register records remain schema-readable", () => {
   const legacy = sources([{
     id: "SRC-001", type: "book", title: "Legacy", location: "local", verified_on: null, supports: [], notes: "",
   }]);
-  parseYaml(stringifyYaml(legacy), SourceRegisterSchema, "source-register.yaml");
+  parseYaml(stringifyYaml(legacy), SourceRegisterV13Schema, "source-register.yaml");
 });
