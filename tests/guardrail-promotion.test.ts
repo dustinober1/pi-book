@@ -16,6 +16,7 @@ function finding(chapter: number): ReviewFinding {
     evidence: `Chapter ${chapter} repeats a state-neutral interview.`,
     problem: "Interview does not change case, relationship, or power state",
     requiredChange: "Make the interview change case, relationship, or power state.",
+    guardrailCandidate: "Every interview must change case, relationship, or power state.",
     protectedConstraints: [], acceptanceTests: ["The scene changes state."],
   };
 }
