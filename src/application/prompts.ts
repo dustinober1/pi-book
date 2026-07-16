@@ -84,7 +84,7 @@ Active book: ${book.book_id}
 
 Maintain a rolling active window of at most six ready chapter packets. Refill only when fewer than two ready packets remain. Drafted, reviewed, and revised packets must not remain in the active window. ${refillInstruction}
 
-Every new packet must define purpose, causality, state change, scene engine, relevant IDs, research needs, target words, and an honest ending hook. Use remarkability.yaml to protect the retellable hook and planned signature moments without forcing every chapter to perform them. New required_research entries use only ready RES-NNN research-ledger IDs. Carry approved book guardrails into drafting context; never copy raw public-review observations into a packet. Do not rebuild the entire book queue.
+Every new packet must define purpose, causality, state change, scene engine, relevant IDs, research needs, target words, and an honest ending hook. Use remarkability.yaml to protect the retellable hook and planned signature moments without forcing every chapter to perform them. New required_research entries use only ready RES-NNN research-ledger IDs. Existing SRC-NNN references remain readable as legacy advisories and should be migrated during the next plan rebuild. Carry approved book guardrails into drafting context; never copy raw public-review observations into a packet. Generate only the requested refill packets.
 
 Required ${profile.label} profile fields:
 ${profile.chapterPacketRequirements.map((item) => `- ${item}`).join("\n")}
