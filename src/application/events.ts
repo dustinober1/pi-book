@@ -1,6 +1,7 @@
 import { basename, join } from "node:path";
-import { CanonSchema, ChapterQueueSchema, GenreConfigSchema, PlotGridSchema, ReaderExperimentsSchema, RemarkabilitySchema, RevisionTicketsSchema, StoryThreadsSchema, type BookState, type CanonState, type ChapterQueueState, type GenreConfig, type PlotGridState, type ProjectState, type ReaderExperimentsState, type RemarkabilityState, type RevisionTicketsState, type Stage, type StoryThreadsState } from "../domain/schemas.js";
-import { BookStrategyPhase3Schema, SourceRegisterV13Schema, type BookStrategyPhase3, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
+import { CanonSchema, ChapterQueueSchema, GenreConfigSchema, ReaderExperimentsSchema, RemarkabilitySchema, RevisionTicketsSchema, StoryThreadsSchema, type BookState, type CanonState, type ChapterQueueState, type GenreConfig, type ProjectState, type ReaderExperimentsState, type RemarkabilityState, type RevisionTicketsState, type Stage, type StoryThreadsState } from "../domain/schemas.js";
+import { BookStrategyPhase4Schema, PlotGridPhase4Schema, type BookStrategyPhase4, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
+import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
 import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import type { FileChange } from "../infrastructure/transaction.js";
@@ -8,6 +9,7 @@ import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
 import { getProfile } from "../profiles/index.js";
 import { readBook, readProject } from "../project/store.js";
 import { openBlockingTickets } from "../review/review.js";
+import { bookPlanFindings } from "./book-strategy.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
 import { packetReferenceFindings } from "./integrity.js";
 import { projectStateHash } from "./project-hash.js";
@@ -93,7 +95,7 @@ function missingRequiredPaths(files: FileChange[], requiredPaths: string[]): str
   return requiredPaths.filter((path) => !submitted.has(path));
 }
 
-function validatePhase3Evidence(root: string, files: FileChange[], book: BookState, eventType: NovelEventType): void {
+function validateResearchAndFriction(root: string, files: FileChange[], book: BookState, eventType: NovelEventType): void {
   const base = `books/${book.book_id}`;
   const paths = new Set(files.map((file) => normalized(file.path)));
   const validateResearch = eventType === "book-plan" || paths.has(`${base}/research-ledger.yaml`) || paths.has("research/source-register.yaml");
@@ -105,7 +107,7 @@ function validatePhase3Evidence(root: string, files: FileChange[], book: BookSta
     findings.push(...researchEvidenceFindings(ledger, sources));
   }
   if (validateFriction) {
-    const strategy = parseOverlay<BookStrategyPhase3>(root, files, `${base}/book-strategy.yaml`, BookStrategyPhase3Schema);
+    const strategy = parseOverlay<BookStrategyPhase4>(root, files, `${base}/book-strategy.yaml`, BookStrategyPhase4Schema);
     findings.push(...readerFrictionFindings(strategy));
   }
   const blockers = findings.filter((finding) => finding.severity === "blocker");
@@ -165,7 +167,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     const blockers = readerExperimentFindings(experiments).filter((finding) => finding.severity === "blocker");
     if (blockers.length) throw new Error(`Reader-evidence validation blocked reader-test:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
-  if (input.eventType === "book-plan" || input.eventType === "research-update") validatePhase3Evidence(root, input.files, book, input.eventType);
+  if (input.eventType === "book-plan" || input.eventType === "research-update") validateResearchAndFriction(root, input.files, book, input.eventType);
 }
 
 function chapterNumber(path: string): number | null {
@@ -187,11 +189,11 @@ function projectedWordCount(root: string, bookId: string, changes: FileChange[])
   return [...content.values()].reduce((sum, text) => sum + countWords(text), 0);
 }
 
-function validateArchitecture(root: string, files: FileChange[], book: BookState, event: NovelEventType, chapter?: number): { queue: ChapterQueueState; plot: PlotGridState } {
+function validateArchitecture(root: string, files: FileChange[], book: BookState, event: NovelEventType, chapter?: number): { queue: ChapterQueueState; plot: PlotGridPhase4 } {
   const bookRoot = `books/${book.book_id}`;
   const profile = getProfile(book.profile);
   const genre = parseOverlay<GenreConfig>(root, files, `${bookRoot}/genre.yaml`, GenreConfigSchema);
-  const plot = parseOverlay<PlotGridState>(root, files, `${bookRoot}/plot-grid.yaml`, PlotGridSchema);
+  const plot = parseOverlay<PlotGridPhase4>(root, files, `${bookRoot}/plot-grid.yaml`, PlotGridPhase4Schema);
   const queue = parseOverlay<ChapterQueueState>(root, files, `${bookRoot}/chapter-queue.yaml`, ChapterQueueSchema);
   const findings = [...profile.validateGenreConfig(genre), ...(event === "book-plan" || event === "chapter-queue" ? profile.validatePlot(plot) : [])];
   const packets = chapter ? queue.packets.filter((packet) => packet.chapter === chapter) : event === "book-plan" || event === "chapter-queue" ? queue.packets.filter((packet) => packet.status === "ready") : [];
@@ -204,9 +206,16 @@ function validateArchitecture(root: string, files: FileChange[], book: BookState
     const threads = parseOverlay<StoryThreadsState>(root, files, "series/story-threads.yaml", StoryThreadsSchema);
     const sources = parseOverlay<SourceRegisterV13>(root, files, "research/source-register.yaml", SourceRegisterV13Schema);
     const research = parseOverlay<ResearchLedger>(root, files, `${bookRoot}/research-ledger.yaml`, ResearchLedgerSchema);
-    const references = packets.flatMap((packet) => packetReferenceFindings(packet, canon, threads, sources, plot, research));
-    const referenceBlockers = references.filter((finding) => finding.severity === "blocker");
+    const referenceBlockers = packets
+      .flatMap((packet) => packetReferenceFindings(packet, canon, threads, sources, plot, research))
+      .filter((finding) => finding.severity === "blocker");
     if (referenceBlockers.length) throw new Error(`Reference validation blocked ${event}:\n${referenceBlockers.map((item) => `- ${item.message}`).join("\n")}`);
+  }
+
+  if (event === "book-plan") {
+    const strategy = parseOverlay<BookStrategyPhase4>(root, files, `${bookRoot}/book-strategy.yaml`, BookStrategyPhase4Schema);
+    const planBlockers = bookPlanFindings({ strategy, plot, queue }).filter((finding) => finding.severity === "blocker");
+    if (planBlockers.length) throw new Error(`Book strategy validation blocked book-plan:\n${planBlockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
   return { queue, plot };
 }
@@ -217,7 +226,7 @@ export function applyNovelEvent(root: string, input: NovelEventInput): NovelEven
   validateFiles(root, input, project, book);
   const changes = input.files.map((file) => ({ path: normalized(file.path), content: file.content }));
   let queue: ChapterQueueState | null = null;
-  let plot: PlotGridState | null = null;
+  let plot: PlotGridPhase4 | null = null;
   if (["book-plan", "chapter-queue", "draft-chapter"].includes(input.eventType)) ({ queue, plot } = validateArchitecture(root, changes, book, input.eventType, input.chapter));
 
   switch (input.eventType) {
