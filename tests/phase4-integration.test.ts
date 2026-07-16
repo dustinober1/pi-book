@@ -8,8 +8,7 @@ import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readProject } from "../src/project/store.js";
 import { completePlot, completeStrategy, queueFixture, researchFixture, sourcesFixture } from "./phase4-fixtures.js";
 
-function setup(stage: "book-planning" | "chapter-queue") {
-  const parent = mkdtempSync(join(tmpdir(), "novel-forge-phase4-event-"));
+function setup(parent: string, stage: "book-planning" | "chapter-queue"): string {
   const root = initializeProject(parent, { projectName: "Phase 4 Event", projectType: "standalone", profile: "thriller" });
   const project = readProject(root);
   project.current_stage = stage;
@@ -24,7 +23,7 @@ function setup(stage: "book-planning" | "chapter-queue") {
   }), "utf8");
   writeFileSync(join(root, "research", "source-register.yaml"), stringifyYaml(sourcesFixture()), "utf8");
   writeFileSync(join(root, "books", "book-01", "research-ledger.yaml"), stringifyYaml(researchFixture()), "utf8");
-  return { parent, root };
+  return root;
 }
 
 function validRemarkability() {
@@ -57,8 +56,9 @@ function bookPlanFiles(root: string, strategy = completeStrategy(), plot = compl
 }
 
 test("book-plan rejects an unresolved stress test", () => {
-  const { parent, root } = setup("book-planning");
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-phase4-event-"));
   try {
+    const root = setup(parent, "book-planning");
     const strategy = completeStrategy();
     strategy.plan_stress_test![0]!.status = "pending";
     assert.throws(() => applyNovelEvent(root, {
@@ -68,8 +68,9 @@ test("book-plan rejects an unresolved stress test", () => {
 });
 
 test("book-plan rejects an invalid decision payoff window", () => {
-  const { parent, root } = setup("book-planning");
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-phase4-event-"));
   try {
+    const root = setup(parent, "book-planning");
     const plot = completePlot();
     plot.decisions![0]!.payoff_window = { start_chapter: 1, end_chapter: 1 };
     assert.throws(() => applyNovelEvent(root, {
@@ -79,8 +80,9 @@ test("book-plan rejects an invalid decision payoff window", () => {
 });
 
 test("chapter queue rejects a ready packet whose research item is unready", () => {
-  const { parent, root } = setup("chapter-queue");
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-phase4-event-"));
   try {
+    const root = setup(parent, "chapter-queue");
     writeFileSync(join(root, "books", "book-01", "research-ledger.yaml"), stringifyYaml(researchFixture("researching")), "utf8");
     assert.throws(() => applyNovelEvent(root, {
       eventType: "chapter-queue", expectedStage: "chapter-queue", expectedProjectHash: projectStateHash(root),
