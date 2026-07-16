@@ -5,6 +5,7 @@ import { createAdoptionWizardHandler } from "./adoption/wizard.js";
 import { createNextBookWizardHandler } from "./next-book-wizard.js";
 import { createPackagingWizardHandler } from "./packaging/wizard.js";
 import { createReaderWizardHandler } from "./readers/wizard.js";
+import { createResearchWizardHandler } from "./research/wizard.js";
 import { createWizardRegistry } from "./wizard.js";
 
 export interface LaunchNovelWizardOptions {
@@ -34,6 +35,7 @@ export async function launchNovelWizard(root: string, workflow?: WizardWorkflow,
     readers: createReaderWizardHandler(key, { resolveSource: resolveUpload }),
     packaging: createPackagingWizardHandler(key),
     "next-book": createNextBookWizardHandler(key),
+    research: createResearchWizardHandler(key, { resolveSource: resolveUpload }),
   });
   session = await startWizardSession({
     projectRoot: key,
