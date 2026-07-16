@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { buildChapterContext } from "../context/context-builder.js";
+import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import { readText } from "../infrastructure/files.js";
 import { stringifyYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject, readTickets } from "../project/store.js";
@@ -11,9 +12,40 @@ import { automationDraftPrompt, bookPlanPrompt, canonLockPrompt, draftPrompt, pa
 import { compileActiveBook } from "./package.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
 import { canRetryEvent, rejectionInstruction, type EventRejectionDetail } from "./event-rejection.js";
+import { creativeProjectStateHash } from "./project-hash.js";
+import { cancelAutomationRun, pauseAutomationRun, resumeAutomationRun, startAutomationRun } from "./automation-run.js";
 
-export interface RunOptions { approve?: string; until?: string; maxChapters?: number; noProse?: boolean; reviewOnly?: boolean; stopOnWarning?: boolean }
+export interface RunOptions {
+  approve?: string;
+  until?: string;
+  maxChapters?: number;
+  noProse?: boolean;
+  reviewOnly?: boolean;
+  stopOnWarning?: boolean;
+  resume?: boolean;
+  pause?: boolean;
+  cancel?: boolean;
+}
 export interface RunDecision { action: string; prompt: string | null; message: string }
+export interface BeginPersistentRunOptions { target: string; maxChapters: number; now?: string }
+
+function projectV14(root: string): ProjectStateV14 {
+  return readProject(root) as ProjectStateV14;
+}
+
+function nextRunId(project: ProjectStateV14): string {
+  const current = project.automation.active_run?.id.match(/^RUN-(\d+)$/)?.[1];
+  return `RUN-${String((current ? Number(current) : 0) + 1).padStart(3, "0")}`;
+}
+
+function persistRunProject(root: string, project: ProjectStateV14, subject: string, lastAction: string): void {
+  applyGuidedProjectEvent(
+    root,
+    [{ path: "PROJECT.yaml", content: stringifyYaml(project) }],
+    `Novel Forge: ${subject}`,
+    { lastAction },
+  );
+}
 
 export function approveProjectGate(root: string, gate: string, note = ""): RunDecision {
   const project = approveGate(root, structuredClone(readProject(root)), gate, note);
@@ -73,6 +105,50 @@ export function decideNextRun(root: string, options: RunOptions = {}): RunDecisi
     }
     case "complete": return { action: "complete", prompt: null, message: "Project is complete." };
   }
+}
+
+export function beginPersistentRun(root: string, options: BeginPersistentRunOptions): RunDecision {
+  const initial = decideNextRun(root, { until: options.target, maxChapters: options.maxChapters });
+  if (!initial.prompt) return initial;
+  const project = projectV14(root);
+  const now = options.now ?? new Date().toISOString();
+  const updated = startAutomationRun(project, {
+    id: nextRunId(project),
+    target: options.target,
+    currentAction: initial.action,
+    requestedMaxChapters: options.maxChapters,
+    creativeHash: creativeProjectStateHash(root),
+    startedAt: now,
+  });
+  persistRunProject(root, updated, `start automation ${updated.automation.active_run!.id}`, `Started automation run ${updated.automation.active_run!.id}`);
+  return { ...initial, message: `${initial.message} Persistent run ${updated.automation.active_run!.id} started.` };
+}
+
+export function pausePersistentRun(root: string, now = new Date().toISOString()): RunDecision {
+  const project = projectV14(root);
+  const updated = pauseAutomationRun(project, now);
+  if (updated !== project) persistRunProject(root, updated, `pause automation ${updated.automation.active_run!.id}`, `Paused automation run ${updated.automation.active_run!.id}`);
+  return { action: "paused-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is paused.` };
+}
+
+export function cancelPersistentRun(root: string, now = new Date().toISOString()): RunDecision {
+  const project = projectV14(root);
+  const updated = cancelAutomationRun(project, now);
+  if (updated !== project) persistRunProject(root, updated, `cancel automation ${updated.automation.active_run!.id}`, `Cancelled automation run ${updated.automation.active_run!.id}`);
+  return { action: "cancelled-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is cancelled.` };
+}
+
+export function resumePersistentRun(root: string, now = new Date().toISOString()): RunDecision {
+  const project = projectV14(root);
+  const updated = resumeAutomationRun(project, project.current_stage, creativeProjectStateHash(root), now);
+  if (updated.automation.active_run?.status === "stopped") {
+    persistRunProject(root, updated, `stop automation ${updated.automation.active_run.id}`, `Stopped automation run ${updated.automation.active_run.id}`);
+    return { action: "blocked", prompt: null, message: `Automation run ${updated.automation.active_run.id} stopped because creative state changed. Reload and start a new run.` };
+  }
+  if (updated !== project) persistRunProject(root, updated, `resume automation ${updated.automation.active_run!.id}`, `Resumed automation run ${updated.automation.active_run!.id}`);
+  const run = updated.automation.active_run!;
+  const decision = decideNextRun(root, { until: run.target, maxChapters: run.requestedMaxChapters });
+  return { ...decision, message: `${decision.message} Resumed ${run.id}.` };
 }
 
 export function directDraftDecision(root: string, chapter?: number): RunDecision {
