@@ -199,6 +199,18 @@ function gateRequirement(root: string, gate: string): VoiceAuditRequirement | nu
   return null;
 }
 
+function prerequisiteRequirements(root: string, gate?: string): VoiceAuditRequirement[] {
+  const book = readBook(root);
+  const required: VoiceAuditRequirement[] = [];
+  if (book.current_chapter >= 1) required.push(requirement("chapter-1", "chapter-1", [1], "chapter"));
+  if (book.current_chapter >= 3) required.push(requirement("chapter-3", "chapter-3", [3], "chapter"));
+  if (gate) {
+    const gateAudit = gateRequirement(root, gate);
+    if (gateAudit && !required.some((item) => item.milestone_ref === gateAudit.milestone_ref)) required.push(gateAudit);
+  }
+  return required;
+}
+
 export function nextVoiceAuditRequirement(root: string): VoiceAuditRequirement | null {
   const audits = readAudits(root);
   if (!audits) return null;
@@ -206,12 +218,12 @@ export function nextVoiceAuditRequirement(root: string): VoiceAuditRequirement |
   const project = readProject(root);
   const book = readBook(root);
 
+  for (const due of prerequisiteRequirements(root)) if (!approved.has(due.milestone_ref)) return due;
+
   if (project.next_gate && ["pending", "rejected"].includes(project.gates[project.next_gate] ?? "")) {
     const due = gateRequirement(root, project.next_gate);
     if (due && !approved.has(due.milestone_ref)) return due;
   }
-  if (book.current_chapter >= 1 && !approved.has("chapter-1")) return requirement("chapter-1", "chapter-1", [1], "chapter");
-  if (book.current_chapter >= 3 && !approved.has("chapter-3")) return requirement("chapter-3", "chapter-3", [3], "chapter");
   if (project.current_stage === "act-review") {
     const ref = project.next_gate ?? book.act_checkpoint ?? `act-boundary-${book.current_chapter}`;
     if (!approved.has(ref)) return requirement("act-boundary", ref, book.current_chapter ? [book.current_chapter] : [], "act");
@@ -234,10 +246,10 @@ export function voiceAuditRequirementForScope(root: string, scope: string): Voic
 export function assertVoiceAuditCompleteForGate(root: string, gate: string): void {
   const audits = readAudits(root);
   if (!audits) return;
-  const due = gateRequirement(root, gate);
-  if (!due) return;
-  if (!approvedMilestoneRefs(audits).has(due.milestone_ref)) {
-    throw new Error(`Required voice audit is incomplete for ${gate}: ${due.milestone_ref}. Run the guided voice audit before approval.`);
+  const approved = approvedMilestoneRefs(audits);
+  const missing = prerequisiteRequirements(root, gate).find((due) => !approved.has(due.milestone_ref));
+  if (missing) {
+    throw new Error(`Required voice audit is incomplete for ${gate}: ${missing.milestone_ref}. Run the guided voice audit before approval.`);
   }
 }
 
