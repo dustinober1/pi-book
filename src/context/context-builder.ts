@@ -3,7 +3,7 @@ import { CanonSchema, ChapterQueueSchema, RemarkabilitySchema, StoryThreadsSchem
 import { BookStrategyPhase4Schema, PlotGridPhase4Schema, type BookStrategyPhase4, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
 import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
 import { ResearchLedgerSchema, TasteProfileSchema, VoiceGuardrailsSchema, defaultTasteProfile, defaultVoiceGuardrails, type ResearchLedger, type TasteProfile, type VoiceGuardrails } from "../domain/v1-3-schemas.js";
-import { bookPlanFindings, renderApprovedBookGuardrails } from "../application/book-strategy.js";
+import { renderApprovedBookGuardrails } from "../application/book-strategy.js";
 import { packetReferenceFindings } from "../application/integrity.js";
 import { renderContextGuardrails, voiceSafetyFindings } from "../application/influence-palette.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
@@ -76,15 +76,7 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
   const contextGuardrails = guardrails ? renderContextGuardrails(guardrails, packet.pov) : "";
   const bookGuardrails = renderApprovedBookGuardrails(strategy);
 
-  const graphResolution = resolveDraftingGraphContext(buildStoryGraph({
-    bookId: book.book_id,
-    canon,
-    threads,
-    queue,
-    plot,
-    sources,
-    research,
-  }), packet);
+  const graphResolution = resolveDraftingGraphContext(buildStoryGraph({ bookId: book.book_id, canon, threads, queue, plot, sources, research }), packet);
   const factIds = new Set(graphResolution.factIds);
   const relationshipIds = new Set(graphResolution.relationshipIds);
   const threadIds = new Set(graphResolution.threadIds);
@@ -104,7 +96,7 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     { title: "Relevant relationship state", body: JSON.stringify(relevantRelationships, null, 2), required: true, cap: 6000 },
     { title: "Relevant story threads", body: JSON.stringify(relevantThreads, null, 2), required: true, cap: 7000 },
     ...(relevantResearch.length ? [{ title: "Required ready research claims", body: JSON.stringify(relevantResearch, null, 2), required: true, cap: 8000 }] : []),
-    ...(relevantSources.length ? [{ title: "Research source provenance", body: JSON.stringify(relevantSources, null, 2), required: true, cap: 5000 }] : []),
+    ...(relevantSources.length ? [{ title: "Graph-selected research provenance", body: JSON.stringify(relevantSources, null, 2), required: true, cap: 5000 }] : []),
     { title: "Plot-grid entry", body: JSON.stringify(plotEntry, null, 2), required: true, cap: 5000 },
     { title: "Previous chapter ending/context", body: previous, required: true, cap: 12000 },
     { title: "Remarkability contract", body: JSON.stringify(remarkability, null, 2), required: false, cap: 6000 },
@@ -116,15 +108,13 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     { title: "Genre configuration", body: readText(join(bookRoot, "genre.yaml")) ?? "", required: false, cap: 6000 },
   ];
   const text = `# Drafting Context — Chapter ${packet.chapter}` + buildBudgetedSections(sections, maxChars);
-  const graphIncluded = graphResolution.selections
-    .filter((selection) => selection.reason === "graph-discovered")
-    .map((selection) => {
-      if (selection.type === "canon-fact") return `graph canon ${selection.refId}`;
-      if (selection.type === "story-thread") return `graph thread ${selection.refId}`;
-      if (selection.type === "research-item") return `graph research ${selection.refId}`;
-      if (selection.type === "research-source") return `graph source ${selection.refId}`;
-      return `graph relationship ${selection.refId}`;
-    });
+  const graphIncluded = graphResolution.selections.filter((selection) => selection.reason === "graph-discovered").map((selection) => {
+    if (selection.type === "canon-fact") return `graph canon ${selection.refId}`;
+    if (selection.type === "story-thread") return `graph thread ${selection.refId}`;
+    if (selection.type === "research-item") return `graph research ${selection.refId}`;
+    if (selection.type === "research-source") return `graph source ${selection.refId}`;
+    return `graph relationship ${selection.refId}`;
+  });
   const included = [
     `chapter packet ${packet.chapter}`,
     ...relevantFacts.map((fact) => `canon ${fact.id}`),
