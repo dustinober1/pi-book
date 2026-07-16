@@ -8,12 +8,14 @@ import { openBlockingTickets } from "../review/review.js";
 import { getProjectStatus } from "./status.js";
 import { approveGate } from "./gates.js";
 import { assertOperationAllowed } from "./authorization.js";
-import { automationDraftPrompt, bookPlanPrompt, canonLockPrompt, draftPrompt, packagePrompt, queuePrompt, reviewPrompt, revisionPrompt, seriesPlanPrompt, voicePlanPrompt } from "./prompts.js";
+import { automationDraftPrompt, bookPlanPrompt, canonLockPrompt, draftPrompt, packagePrompt, premisePlanPrompt, queuePrompt, reviewPrompt, revisionPrompt, seriesPlanPrompt, voicePlanPrompt } from "./prompts.js";
 import { compileActiveBook } from "./package.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
 import { canRetryEvent, rejectionInstruction, type EventRejectionDetail } from "./event-rejection.js";
 import { creativeProjectStateHash } from "./project-hash.js";
 import { cancelAutomationRun, pauseAutomationRun, resumeAutomationRun, startAutomationRun } from "./automation-run.js";
+import { PremiseLabSchema, type PremiseLab } from "../domain/v1-4-schemas.js";
+import { parseYaml } from "../infrastructure/yaml.js";
 
 export interface RunOptions {
   approve?: string;
@@ -147,7 +149,16 @@ export function resumePersistentRun(root: string, now = new Date().toISOString()
   }
   if (updated !== project) persistRunProject(root, updated, `resume automation ${updated.automation.active_run!.id}`, `Resumed automation run ${updated.automation.active_run!.id}`);
   const run = updated.automation.active_run!;
-  const decision = decideNextRun(root, { until: run.target, maxChapters: run.requestedMaxChapters });
+  let decision: RunDecision;
+  if (updated.current_stage === "book-planning") {
+    const book = readBook(root);
+    const path = join(root, "books", book.book_id, "premise-lab.yaml");
+    const text = readText(path);
+    const lab = text ? parseYaml<PremiseLab>(text, PremiseLabSchema, path) : null;
+    if (lab && lab.variants.length === 0) decision = { action: "premise-plan", prompt: premisePlanPrompt(root), message: "Queued premise comparison before book architecture." };
+    else if (lab && (!lab.selected_variant_id || !lab.selection_decision_id)) decision = { action: "premise-selection", prompt: null, message: "Automation stopped so the writer can select a premise variant." };
+    else decision = decideNextRun(root, { until: run.target, maxChapters: run.requestedMaxChapters });
+  } else decision = decideNextRun(root, { until: run.target, maxChapters: run.requestedMaxChapters });
   return { ...decision, message: `${decision.message} Resumed ${run.id}.` };
 }
 
