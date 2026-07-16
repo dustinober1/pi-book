@@ -100,7 +100,7 @@ async function upload(req: IncomingMessage, uploadRoot: string, limit: number): 
       });
       stream.pipe(writer);
     });
-    parser.on("error", (error) => fail(error));
+    parser.on("error", (error: unknown) => fail(error instanceof Error ? error : new Error(String(error))));
     parser.on("finish", () => {
       parserFinished = true;
       if (!rejected && !record && !writerFinished) return;
