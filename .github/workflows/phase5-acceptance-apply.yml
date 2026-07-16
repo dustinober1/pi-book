@@ -1,0 +1,31 @@
+name: Apply Phase 5 acceptance completion
+
+on:
+  push:
+    branches:
+      - agent/v1.3-phase5-audits-learning
+    paths:
+      - scripts/apply-phase5-acceptance.py
+      - .github/workflows/phase5-acceptance-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1.3-phase5-audits-learning
+          fetch-depth: 0
+      - run: python scripts/apply-phase5-acceptance.py
+      - run: |
+          rm -f .github/workflows/phase5-acceptance-apply.yml
+          rm -f scripts/apply-phase5-acceptance.py
+          touch docs/.phase5-acceptance-ready
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "test: complete Phase 5 acceptance coverage [phase5-acceptance-applied]"
+          git push origin HEAD:agent/v1.3-phase5-audits-learning
