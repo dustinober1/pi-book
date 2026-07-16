@@ -54,8 +54,9 @@ export function sceneAuditFindings(queue: ChapterQueueState, plot: PlotGridPhase
       current.chapters.push(packet.chapter);
       counts.set(key, current);
     }
+    const majorityThreshold = Math.floor(packets.length / 2);
     for (const [key, value] of counts) {
-      if (value.chapters.length / packets.length > 0.5) {
+      if (value.chapters.length > majorityThreshold) {
         findings.push({
           code: "scene-engine-dominance",
           chapters: value.chapters,
