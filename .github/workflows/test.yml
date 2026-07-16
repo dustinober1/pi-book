@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
@@ -17,20 +17,6 @@ jobs:
         node: ['22.19.0', '24']
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          fetch-depth: 0
-      - name: Apply brief/autopilot command patch
-        if: github.head_ref == 'agent/v1.4-7-brief-autopilot' || github.ref_name == 'agent/v1.4-7-brief-autopilot'
-        run: python scripts/apply-v1-4-7-command-integration.py
-      - name: Persist brief/autopilot command patch
-        if: matrix.node == '22.19.0' && (github.head_ref == 'agent/v1.4-7-brief-autopilot' || github.ref_name == 'agent/v1.4-7-brief-autopilot')
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src
-          git commit -m "feat: integrate brief bootstrap and autopilot commands" || exit 0
-          git push origin HEAD:agent/v1.4-7-brief-autopilot
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
