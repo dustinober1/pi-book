@@ -331,7 +331,9 @@ export function applyNovelEvent(root: string, input: NovelEventInput): NovelEven
       break;
     }
     case "reader-test":
+      break;
     case "research-update":
+      appendMilestoneVoiceAudit(root, changes, book, { eventType: "research-update", scope: input.scope });
       break;
     case "revise": {
       const tickets = parseOverlay<RevisionTicketsPhase5>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsPhase5Schema);

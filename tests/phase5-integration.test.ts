@@ -139,3 +139,26 @@ test("future chapter context includes approved learning guardrails only", () => 
     } finally { rmSync(parent, { recursive: true, force: true }); }
   }
 });
+
+
+test("explicit recalibration through research-update appends evidence without changing stage", () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-phase5-recalibration-"));
+  try {
+    const root = setup(parent);
+    writeFileSync(join(root, "books", "book-01", "manuscript", "chapters", "01-existing.md"), "# Existing\n\nMara watched the door.\n\n\"Move,\" Jonah said.", "utf8");
+    const beforeStage = readProject(root).current_stage;
+    applyNovelEvent(root, {
+      eventType: "research-update",
+      expectedStage: "drafting",
+      expectedProjectHash: projectStateHash(root),
+      scope: "recalibration",
+      files: [{
+        path: "books/book-01/voice-audits.yaml",
+        content: stringifyYaml({ schema_version: "1.0.0", audits: [] }),
+      }],
+    });
+    const audits = readFileSync(join(root, "books", "book-01", "voice-audits.yaml"), "utf8");
+    assert.match(audits, /scope: recalibration/);
+    assert.equal(readProject(root).current_stage, beforeStage);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
