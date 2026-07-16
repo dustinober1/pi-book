@@ -29,7 +29,9 @@ test("three occurrences in distinct chapters create exactly one promotion candid
   tickets = synthesizeTickets(tickets, [finding(8)], 1, { milestoneReviewId: "MR-001" }) as RevisionTicketsPhase5;
   const candidates = promotionCandidates(tickets);
   assert.equal(candidates.length, 1);
-  assert.deepEqual(candidates[0]?.occurrence_chapters, [2, 5, 8]);
+  const candidate = candidates[0];
+  assert.ok(candidate, "Expected one promotion candidate");
+  assert.deepEqual(candidate.occurrence_chapters, [2, 5, 8]);
 });
 
 test("repeated findings in one chapter count as one chapter occurrence", () => {
@@ -46,14 +48,16 @@ test("two distinct milestone reviews create a candidate even before three chapte
   tickets = synthesizeTickets(tickets, [finding(2)], 1, { milestoneReviewId: "MR-002" }) as RevisionTicketsPhase5;
   const candidates = promotionCandidates(tickets);
   assert.equal(candidates.length, 1);
-  assert.deepEqual(candidates[0]?.milestone_review_ids, ["MR-001", "MR-002"]);
+  const candidate = candidates[0];
+  assert.ok(candidate, "Expected one promotion candidate");
+  assert.deepEqual(candidate.milestone_review_ids, ["MR-001", "MR-002"]);
 });
 
 test("candidate guardrails remain inactive until writer approval", () => {
   let tickets = emptyTickets();
   for (const chapter of [2, 5, 8]) tickets = synthesizeTickets(tickets, [finding(chapter)], 1) as RevisionTicketsPhase5;
   const candidate = promotionCandidates(tickets)[0];
-  assert.ok(candidate);
+  assert.ok(candidate, "Expected a promotion candidate to be found");
   const strategy = defaultBookStrategy() as BookStrategyPhase5;
   const proposed = applyGuardrailDecision(strategy, candidate, "proposed", "2026-07-15T12:00:00Z");
   assert.equal(renderApprovedBookGuardrails(proposed), "");
@@ -64,7 +68,8 @@ test("candidate guardrails remain inactive until writer approval", () => {
 test("rejected promotion remains visible but inactive", () => {
   let tickets = emptyTickets();
   for (const chapter of [2, 5, 8]) tickets = synthesizeTickets(tickets, [finding(chapter)], 1) as RevisionTicketsPhase5;
-  const candidate = promotionCandidates(tickets)[0]!;
+  const candidate = promotionCandidates(tickets)[0];
+  assert.ok(candidate, "Expected a promotion candidate to be found");
   const strategy = applyGuardrailDecision(defaultBookStrategy() as BookStrategyPhase5, candidate, "rejected", "2026-07-15T12:00:00Z");
   assert.equal(strategy.review_derived_guardrails.some((item) => item.status === "rejected"), true);
   assert.equal(renderApprovedBookGuardrails(strategy), "");
