@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
@@ -9,7 +9,6 @@ import { defaultTasteProfile, defaultVoiceExperimentIndex, defaultVoiceGuardrail
 import { stableContentHash } from "../src/application/voice-experiment.js";
 import { createResearchWizardHandler, researchWizardSnapshot } from "../src/application/research/wizard.js";
 import { projectStateHash } from "../src/application/project-hash.js";
-import { revisionLearningCandidates } from "../src/application/revision-learning.js";
 import { completeStrategy, researchFixture, sourcesFixture } from "./phase4-fixtures.js";
 
 function words(count: number, prefix: string): string { return Array.from({ length: count }, (_, index) => `${prefix}${index}`).join(" "); }
@@ -21,6 +20,7 @@ function setup(parent: string) {
   taste.influences.push({ id: "INF-001", reference: "Private Author — Private Book", influence_type: "voice", admired_for: ["compressed tension"], not_for: ["signature phrasing"], derived_traits: ["tight causal sentences"], status: "approved" });
   writeFileSync(join(root, "series", "taste-profile.yaml"), stringifyYaml(taste), "utf8");
   const base = join(root, "series", "voice-experiments", "VE-001");
+  mkdirSync(base, { recursive: true });
   const source = words(650, "source"); const a = words(610, "alpha"); const b = words(620, "bravo"); const c = words(630, "charlie");
   writeFileSync(join(base, "source-scene.md"), source, "utf8");
   writeFileSync(join(base, "variant-a.md"), a, "utf8");
@@ -71,8 +71,8 @@ test("influence preview requires admired, excluded, and neutral traits", () => {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-research-influence-"));
   try {
     const root = setup(parent); const handler = createResearchWizardHandler(root);
-    assert.throws(() => handler.preview?.("influence", { reference: "Example", influence_type: "voice", admired_for: ["pace"], not_for: [], derived_traits: [] }), /not_for|excluded|derived/i);
-    const preview = handler.preview?.("influence", { reference: "Example Author — Example Book", influence_type: "voice", admired_for: ["compressed tension"], not_for: ["signature metaphors"], derived_traits: ["short causal transitions"] }) as any;
+    assert.throws(() => handler.preview("influence", { reference: "Example", influence_type: "voice", admired_for: ["pace"], not_for: [], derived_traits: [] }), /not_for|excluded|derived/i);
+    const preview = handler.preview("influence", { reference: "Example Author — Example Book", influence_type: "voice", admired_for: ["compressed tension"], not_for: ["signature metaphors"], derived_traits: ["short causal transitions"] }) as any;
     assert.match(preview.preview_id, /^research-preview-/);
     assert.match(JSON.stringify(preview.candidate), /short causal transitions/);
   } finally { rmSync(parent, { recursive: true, force: true }); }
@@ -82,7 +82,7 @@ test("voice comparison returns anonymous A B C prose without source or influence
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-research-voice-"));
   try {
     const root = setup(parent); const handler = createResearchWizardHandler(root);
-    const preview = handler.preview?.("voice-comparison", { experiment_id: "VE-001" }) as any;
+    const preview = handler.preview("voice-comparison", { experiment_id: "VE-001" }) as any;
     assert.deepEqual(preview.variants.map((item: any) => item.id), ["A", "B", "C"]);
     const serialized = JSON.stringify(preview);
     assert.match(serialized, /alpha0/);
@@ -102,7 +102,7 @@ test("review CSV preview strips identity and preserves rating bands", () => {
       "Two,manual,2026-07-15,3,Mixed pacing,,pacing-problem,high,high,,,,",
       "Three,manual,2026-07-15,5,Loved the pace,,pacing-problem,high,high,,,,",
     ];
-    const preview = handler.preview?.("review-csv", { csv_text: [header, ...rows].join("\n") }) as any;
+    const preview = handler.preview("review-csv", { csv_text: [header, ...rows].join("\n") }) as any;
     assert.deepEqual(preview.observations.map((item: any) => item.sentiment), ["negative", "mixed", "positive"]);
     assert.equal(JSON.stringify(preview).includes("Jane Doe"), false);
     assert.equal(preview.discarded_identity_fields, 3);
@@ -113,13 +113,13 @@ test("cluster, research, and learning previews reuse deterministic validators", 
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-research-previews-"));
   try {
     const root = setup(parent); const handler = createResearchWizardHandler(root);
-    const cluster = handler.preview?.("review-cluster", { label: "Pacing loss", observation_ids: ["OBS-001"] }) as any;
+    const cluster = handler.preview("review-cluster", { label: "Pacing loss", observation_ids: ["OBS-001"] }) as any;
     assert.equal(cluster.cluster.confidence, "weak");
-    const planned = handler.preview?.("research-item", { item: { ...researchFixture().items[0], status: "researching", source_ids: [] } }) as any;
+    const planned = handler.preview("research-item", { item: { ...researchFixture().items[0], status: "researching", source_ids: [] } }) as any;
     assert.equal(planned.findings.some((item: any) => item.severity === "blocker"), false);
-    const ready = handler.preview?.("research-item", { item: { ...researchFixture().items[0], source_ids: ["SRC-MISSING"] } }) as any;
+    const ready = handler.preview("research-item", { item: { ...researchFixture().items[0], source_ids: ["SRC-MISSING"] } }) as any;
     assert.ok(ready.findings.some((item: any) => item.severity === "blocker"));
-    const learning = handler.preview?.("learning-decision", { pattern_id: "PAT-interview", decision: "approved", rule: "Every interview changes story state." }) as any;
+    const learning = handler.preview("learning-decision", { pattern_id: "PAT-interview", decision: "approved", rule: "Every interview changes story state." }) as any;
     assert.equal(learning.candidate.eligible, true);
     assert.equal(learning.findings.some((item: any) => item.severity === "blocker"), false);
   } finally { rmSync(parent, { recursive: true, force: true }); }
@@ -130,13 +130,13 @@ test("confirmed influence and learning decisions apply through research-update w
   try {
     const root = setup(parent); const handler = createResearchWizardHandler(root);
     const manuscriptPath = join(root, "books", "book-01", "manuscript", "chapters", "01-secret.md"); const before = readFileSync(manuscriptPath, "utf8");
-    const influence = handler.preview?.("influence", { reference: "New Reference", influence_type: "atmosphere", admired_for: ["controlled dread"], not_for: ["copied imagery"], derived_traits: ["quiet environmental pressure"] }) as any;
-    const first = await handler.apply?.(envelope(root, "save-influence", { preview_id: influence.preview_id })) as any;
+    const influence = handler.preview("influence", { reference: "New Reference", influence_type: "atmosphere", admired_for: ["controlled dread"], not_for: ["copied imagery"], derived_traits: ["quiet environmental pressure"] }) as any;
+    const first = await handler.apply(envelope(root, "save-influence", { preview_id: influence.preview_id })) as any;
     assert.match(first.gitMessage, /research-update/);
-    const learning = handler.preview?.("learning-decision", { pattern_id: "PAT-interview", decision: "approved", rule: "Every interview changes story state." }) as any;
-    await handler.apply?.(envelope(root, "save-learning-decision", { preview_id: learning.preview_id }));
+    const learning = handler.preview("learning-decision", { pattern_id: "PAT-interview", decision: "approved", rule: "Every interview changes story state." }) as any;
+    await handler.apply(envelope(root, "save-learning-decision", { preview_id: learning.preview_id }));
     assert.match(readFileSync(join(root, "books", "book-01", "book-strategy.yaml"), "utf8"), /Every interview changes story state/);
     assert.equal(readFileSync(manuscriptPath, "utf8"), before);
-    await assert.rejects(() => handler.apply?.({ ...envelope(root, "save-influence", { preview_id: influence.preview_id }), expected_project_hash: "stale" }) as Promise<unknown>, /stale|expired|unknown/i);
+    await assert.rejects(() => handler.apply({ ...envelope(root, "save-influence", { preview_id: influence.preview_id }), expected_project_hash: "stale" }), /stale|expired|unknown/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
