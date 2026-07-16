@@ -78,7 +78,7 @@ export function appendMilestoneVoiceAudit(
     ? isVoiceAuditMilestone({ chapter: input.chapter })
     : input.eventType === "review"
       ? isVoiceAuditMilestone({ scope: input.scope })
-      : false;
+      : isVoiceAuditMilestone({ scope: input.scope, explicit: input.scope === "recalibration" });
   if (!milestone) return;
 
   const guardrailText = overlay(root, changes, "series/voice-guardrails.yaml");
