@@ -4,6 +4,9 @@
 
 ### Added
 
+- Nine deterministic 1.3 release evaluation fixtures, an honest clean-project journey, packed-extension clean-start coverage, and a machine-checkable release tree.
+- One-time merged-main release automation that verifies the exact commit before creating annotated tag `v1.3.0` and its GitHub release.
+
 - Strict typed contracts for author taste, voice guardrails, anonymous voice-experiment records, research ledgers, book strategy, and voice-audit evidence.
 - A `research-update` workflow event that can save allowlisted evidence during active creative stages without changing project stage, gates, approvals, active-book state, or manuscript prose.
 - New-project templates for `series/taste-profile.yaml`, `series/voice-guardrails.yaml`, and `series/voice-experiments/index.yaml`.

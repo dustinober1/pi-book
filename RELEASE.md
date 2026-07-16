@@ -92,7 +92,6 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 - [ ] Ready research claims require valid registered source support.
 - [ ] Learning eligibility never activates a rule without explicit writer approval.
 - [ ] Existing adoption, readers, packaging, and next-book wizard workflows remain passing.
-- [ ] Existing adoption, readers, packaging, and next-book wizard workflows remain passing.
 
 ### Existing 1.2 capability regression
 
@@ -117,6 +116,14 @@ Use the repository's `Novel Forge tests` workflow as the authoritative verificat
 - [ ] Packed-extension install/import/registration smoke tests pass.
 - [ ] `npm pack --dry-run` contains the new source contracts and bundled wizard assets.
 - [ ] The final diff contains no temporary workflow files, generated diagnostics, local artifacts, imported review corpora, or generated book outputs.
+
+
+### Phase 7 release qualification
+
+- [ ] Nine deterministic 1.3 release fixtures pass without claiming objective literary quality.
+- [ ] The clean-project journey records honest skips for writer prose, real human evidence, supplied adoption files, approved packaging, and locked-canon next-book creation.
+- [ ] `npm run verify:release` passes and reports all tree/package/release-note findings.
+- [ ] The one-time `release-v1.3` workflow verifies the merged main commit before creating the annotated tag and GitHub release.
 
 ### Publish
 

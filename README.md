@@ -349,3 +349,19 @@ npm pack --dry-run
 ```
 
 The matrix runs on Node 22.19.0 and Node 24. See `CHANGELOG.md` and `RELEASE.md`; create `v1.3.0` only after all planned phases and the final merged-main verification pass are complete.
+
+## Install the verified 1.3 release
+
+```text
+pi install git:github.com/dustinober1/pi-book@v1.3.0
+```
+
+Novel Forge 1.3 ships with deterministic release fixtures, a clean-project evidence journey, packed-extension install/import tests, and a read-only release-tree verifier. Run:
+
+```text
+npm run eval
+npm run verify:release
+npm run test:release
+```
+
+These checks verify contracts and safety boundaries. They do not establish objective literary quality; human editorial review and real human reader judgment remain required.
