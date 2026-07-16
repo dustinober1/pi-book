@@ -27,6 +27,7 @@ The primary author-facing files are `STATUS.md`, `HANDOFF.md`, and the active bo
 - Keep author-taste evidence, public market evidence, and real human responses to the current manuscript separate.
 - Draft only from a ready, profile-valid chapter packet.
 - Run heavy review at milestones and convert concrete findings into revision tickets.
+- Treat audit metrics as evidence, never as prose quotas or automatic severity conclusions.
 - Never bypass active human gates.
 - Treat only accepted, de-identified `source: human` rows as outside-reader evidence for the current manuscript.
 - Treat generated marketing as draft until explicitly approved.
@@ -107,6 +108,25 @@ For each project-relevant cluster, the writer chooses exactly one decision: `pre
 
 New chapter packets use ready `RES-NNN` IDs in `required_research`. Existing `SRC-NNN` references remain draftable with an advisory until a plan rebuild migrates them. Phase 3 validates readiness but does not add research-ledger nodes to the continuity graph; graph integration remains a later phase.
 
+## Voice, scene, and revision-learning audits
+
+Run deterministic voice audits after Chapter 1, Chapter 3, every act boundary, manuscript review, and an explicit `/novel-review recalibration`. An audit records sentence and paragraph distributions, dialogue ratio, fragment rate, rhetorical-question rate, filter-word rate, repeated body-language vocabulary, and interiority density. Prefer an approved POV baseline when one exists; otherwise use the project baseline.
+
+Metrics are evidence, not targets. Never convert a numeric delta into an automatic blocker, rewrite, or severity label. Preserve approved exceptions such as intentionally fragmented panic scenes. Store milestone evidence in `voice-audits.yaml` through `research-update` or the milestone review event. A required audit must be approved before its human gate can be approved. Older projects without `voice-audits.yaml` remain compatible until the artifact is intentionally backfilled.
+
+Audit chapter packets and the plot grid for scene diversity:
+
+- flag more than two consecutive chapters with the same `scene_engine`;
+- review whole-book engine dominance when one engine exceeds half of a sufficiently large plan;
+- flag interviews, conversations, meetings, briefings, debriefs, or interrogations that change no case, relationship, power, character, pressure, or plot state;
+- flag adjacent chapters with indistinguishable state-change vectors.
+
+Track recurring revision patterns with a stable normalized pattern key. Repeated findings in one chapter count once. A pattern becomes eligible for a learned guardrail only after three distinct chapters or two distinct milestone reviews. Eligibility creates a proposal, not an approval.
+
+Ask the writer to approve or reject each eligible guardrail. Only an approved, nonblank rule may enter drafting context. Rejected rules remain recorded so they are not proposed repeatedly. Promotion changes only book-strategy evidence; it must not rewrite manuscript prose, revise unrelated chapters, advance a stage, or alter a gate.
+
+Use `npm run audit:voice -- <project-root> [milestone]` for a read-only JSON metric report. The command never writes project files.
+
 ## Temporary browser wizard
 
 Use `/novel` or `/novel-wizard` for adoption, reader evidence, packaging, and next-book inheritance.
@@ -176,7 +196,7 @@ Undo requires initialized Git, a clean worktree, and a `Novel Forge:` commit at 
 /novel-plan
 /novel-run
 /novel-draft
-/novel-review
+/novel-review [chapter|act|manuscript|series|recalibration]
 /novel-readers
 /novel-revise
 /novel-package
