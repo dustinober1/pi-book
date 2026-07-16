@@ -56,7 +56,17 @@ Source, variant, and baseline hashes must match normalized content. Experiment a
 
 Drafting context receives a bounded **Approved voice guardrails** section containing only neutral must/prefer/avoid/monitor rules and the matching POV signature. Raw influence references, experiment source prose, variants, scores, and unapproved material are excluded. Unsafe existing voice files block drafting instead of leaking into the chapter prompt.
 
-Public-review import, research-to-graph integration, voice-drift audits, scene-engine audits, and the browser research wizard remain later 1.3 phases.
+### Research provenance and reader-friction analysis
+
+Research is separated into four lanes: **taste-and-voice**, **story-world**, **human-authenticity**, and **reader-and-market**. Planned and researching items may remain incomplete. A claim marked `ready` must identify registered source IDs, source reliability, an observation or verification date, confidence, fictionalization, knowledge scope, risks, at least one dramatic use, and the exact story decision it affects.
+
+Public-review observations are market evidence, not human reader evidence for the current manuscript. Novel Forge accepts user-supplied manual or CSV observations, stores paraphrases with optional short excerpts, and removes reviewer names, handles, and profile URLs before project mutation. Ratings remain distinct: 1–2 negative, 3 mixed, and 4–5 positive.
+
+Complaint and mixed observations may be clustered only with their supporting IDs. Matching praise remains attached as explicit positive counterweights. Confidence is bounded by sample coverage: fewer than three observations or only one title is weak; at least three observations across two titles is moderate; strong requires at least six observations across three titles, high execution relevance, and a positive counterweight. One-star-only evidence can never exceed moderate.
+
+For each relevant cluster, the writer chooses **prevent**, **mitigate**, **accept as tradeoff**, or **irrelevant to project**. Only prevent and mitigate decisions may become approved review-derived guardrails. Accepted tradeoffs keep their source-cluster provenance. Public observations never update `reader-experiments.yaml`, reader metrics, verdicts, or claims that the manuscript was tested.
+
+New ready chapter packets reference `RES-NNN` research-ledger items. Existing `SRC-NNN` references remain readable as compatibility advisories until the next plan rebuild migrates them. Research-to-graph discovery, voice/scene audits, and the browser research wizard remain later 1.3 phases.
 
 ## Graph-aware continuity context
 
@@ -263,7 +273,7 @@ Binary files are accepted only by trusted internal application services for adop
 | Command | Purpose |
 | --- | --- |
 | `/novel` | Show the recommended action and guided choices |
-| `/novel-wizard` | Open the temporary browser wizard |
+| `/novel-wizard` | Open the temporary local browser wizard |
 | `/novel-start` | Create a standalone or series-capable project |
 | `/novel-status` | Rebuild and show status and handoff |
 | `/novel-plan` | Build or repair voice, series, or active-book plans |
@@ -289,7 +299,7 @@ A metadata upgrade does not change creative stage, gates, approvals, manuscript 
 
 ## Verification and release
 
-Run the complete matrix manually on the development computer. Do not use GitHub Actions for development or release verification.
+The repository's **Novel Forge tests** GitHub Actions workflow is the authoritative verification record for this public repository. Every phase PR and the final merged `main` commit must pass both Node jobs:
 
 ```bash
 npm ci
@@ -299,4 +309,4 @@ npm run eval
 npm pack --dry-run
 ```
 
-Run the typecheck and test suite under both Node 22.19.0 and Node 24. Record the command output in the relevant pull request before merge. See `CHANGELOG.md` and `RELEASE.md`; create `v1.3.0` only after all planned phases and the final local verification pass are complete.
+The matrix runs on Node 22.19.0 and Node 24. See `CHANGELOG.md` and `RELEASE.md`; create `v1.3.0` only after all planned phases and the final merged-main verification pass are complete.
