@@ -207,9 +207,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     const intake = parseOverlay<IntakeState>(root, input.files, "series/intake.yaml", IntakeSchema);
     const ledger = parseOverlay<DecisionLedger>(root, input.files, "series/decision-ledger.yaml", DecisionLedgerSchema);
     const blockers = intakeDecisionFindings(intake, ledger).filter((finding) => finding.severity === "blocker");
-    if (blockers.length) throw new Error(`Intake and decision ledger validation blocked the event:
-${blockers.map((item) => `- ${item.message}`).join("
-")}`);
+    if (blockers.length) throw new Error(`Intake and decision ledger validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
 }
 
