@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getProjectStatus } from "../src/application/status.js";
 import { refreshGuidance } from "../src/application/handoff.js";
-import { parseYaml } from "../src/infrastructure/yaml.js";
+import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject } from "../src/project/store.js";
 import { DecisionLedgerSchema, IntakeSchema, type DecisionLedger, type IntakeState } from "../src/domain/v1-4-schemas.js";
 
@@ -73,8 +73,6 @@ test("guidance does not present inferred intake as a confirmed writer decision",
       }],
       decisions: [],
     };
-    const { stringifyYaml } = await import("../src/infrastructure/yaml.js");
-    const { writeFileSync } = await import("node:fs");
     writeFileSync(join(root, "series", "decision-ledger.yaml"), stringifyYaml(ledger), "utf8");
     const guidance = refreshGuidance(root).markdown;
     assert.doesNotMatch(guidance, /Confirmed writer decisions[\s\S]*romantasy/i);
