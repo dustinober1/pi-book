@@ -119,7 +119,7 @@ Each fixture contains only the minimum typed inputs required by its canonical se
 
 - [ ] **Step 5: Extend `npm run eval`**
 
-Keep the current four architecture fixtures unchanged. After the architecture summary, load `evals/v1-3-release/*.yaml`, evaluate all nine fixtures, print one PASS/FAIL line per fixture, and set a nonzero exit code for any failure.
+Keep the current four architecture fixtures unchanged. Explicitly exclude `v1-3-release` from the architecture-directory scan, then load `evals/v1-3-release/*.yaml` separately, evaluate all nine fixtures, print one PASS/FAIL line per fixture, and set a nonzero exit code for any failure.
 
 - [ ] **Step 6: Run focused and complete evaluations**
 
@@ -218,7 +218,7 @@ Prove the tarball contains:
 - all 1.3 schema and application modules;
 - the research wizard handler and bundled HTML/JS/CSS;
 - the release evaluation module;
-- README, SKILL, CHANGELOG, and RELEASE;
+- `README.md`, `SKILL.md`, `CHANGELOG.md`, and `RELEASE.md`;
 - no `evals/`, tests, temporary workflows, diagnostics, or generated project output.
 
 - [ ] **Step 2: Write a failing packed clean-start test**
