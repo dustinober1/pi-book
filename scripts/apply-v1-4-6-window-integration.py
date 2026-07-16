@@ -1,6 +1,7 @@
 from pathlib import Path
 
 root = Path('.')
+# Triggered after workflow installation so the branch-only patch job can run.
 
 # Event integration.
 path = root / 'src/application/events.ts'
