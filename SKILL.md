@@ -119,6 +119,18 @@ Use stable recurrence pattern IDs only for genuinely repeated problems. A patter
 
 The read-only `npm run audit:voice -- <project-root>` command may print diagnostics but must not mutate project state or replace guarded workflow events.
 
+## Guided research wizard
+
+`/novel-wizard research` is an optional loopback-only review surface. `/novel` remains the normal interface and may offer **Review voice and research evidence** as a non-primary action.
+
+The research wizard may expose only sanitized summaries for taste evidence, experiment metadata, public-market observations and clusters, research items and source summaries, and revision-learning candidates. Do not include manuscript prose, reader-response bodies, raw public-review bodies, reviewer names/handles/profile URLs, voice source-scene prose, or variant prose in the initial snapshot.
+
+All research-wizard changes must follow preview before apply. Store preview candidates in session memory under opaque IDs. On apply, reload canonical state, use the stored candidate rather than trusting resubmitted creative data, enforce the proposal's expected stage and project hash, and call `novel_apply_event` / `applyNovelEvent` with `event_type: research-update`. Never write project files directly from browser handlers.
+
+Influence references remain private in `taste-profile.yaml`; only neutral derived traits may become drafting rules. Voice comparison displays anonymous A/B/C labels only. Writer scores summarize evidence and never choose prose automatically. Accepting a baseline requires 600–900 words, originality validation, exact hashes, baseline metrics, and consistent experiment/index/taste/guardrail updates in one transaction.
+
+Public-review imports must remove reviewer identity and remain market evidence only. Research items marked ready must pass the existing source/readiness validator. Revision-learning candidates may be displayed, but only exact evidence plus explicit writer approval may create an approved future guardrail. No wizard action may mutate manuscript paths, reader evidence, publishing metadata, package outputs, project stage, gates, or approvals.
+
 ## Temporary browser wizard
 
 Use `/novel` or `/novel-wizard` for adoption, reader evidence, packaging, and next-book inheritance.

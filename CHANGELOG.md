@@ -31,6 +31,9 @@
 - Writer-approved revision-learning guardrails that enter future drafting context without triggering retroactive prose changes.
 - A read-only `npm run audit:voice -- <project-root>` command that prints deterministic JSON evidence and never mutates project files.
 
+- A loopback-only guided research wizard for influence evidence, anonymous voice comparison, public-review friction, research readiness, and revision-learning decisions.
+- Sanitized research snapshots and opaque in-memory preview records that exclude manuscript prose, reader-response bodies, reviewer identity, source-scene prose, and unrequested variant prose.
+- Preview-before-apply research actions that return through the guarded `research-update` transaction rather than browser filesystem writes.
 ### Changed
 
 - Package version and new-project metadata are now `1.3.0`.
@@ -47,6 +50,7 @@
 - Chapter 1 and Chapter 3 draft events append voice-audit evidence automatically when accepted baseline metrics exist; missing baselines remain non-blocking.
 - Act and manuscript review events append voice-audit evidence and synthesize deterministic scene findings into revision tickets rather than editing prose.
 - Approved learning rules are validated against exact recurrence evidence before `research-update` accepts them.
+- `/novel-wizard research` and the optional `/novel` research action now expose the five evidence workspaces without replacing the current primary stage or gate action.
 
 ### Compatibility
 
@@ -59,6 +63,7 @@
 - Existing plot grids and book strategies without Phase 4 fields remain readable. New projects receive empty decision ledgers and pending stress-test templates; a deliberate book-plan rebuild must complete them before approval.
 - Legacy revision tickets, voice-audit records, and book strategies without Phase 5 fields remain readable; recurrence and learning fields are optional until used.
 - New books begin with an empty revision-learning guardrail list. No existing ticket, audit, approval, or manuscript is backfilled or rewritten.
+- Existing adoption, readers, packaging, and next-book wizard workflows retain their routes, session security, uploads, and apply behavior.
 - Existing manuscript prose, reader experiments, publishing metadata, marketing metadata, and continuity-graph safety behavior remain unchanged.
 - No dependency or external service is added.
 
@@ -76,6 +81,8 @@
 - Voice metrics never create automatic severity, prose quotas, or revision tickets by themselves.
 - Promotion eligibility never activates a rule; only a writer-approved guardrail enters future drafting context.
 - Audit and promotion workflows never rewrite earlier manuscript prose automatically.
+- Research-wizard snapshots and applies cannot write manuscript, reader-evidence, publishing, marketing, package-output, project-state, or book-state paths.
+- The browser serves no remote scripts, fonts, analytics, scraping logic, arbitrary commands, or direct filesystem APIs.
 - Experiment YAML cannot borrow arbitrary project files as source, variant, or baseline assets.
 - The final taste selection, experiment index, experiment record, guardrail baseline, and baseline bytes must agree before voice approval can proceed.
 

@@ -7,7 +7,7 @@ import { getProjectStatus } from "./status.js";
 
 export type GuideActionId =
   | "continue" | "approve" | "request-changes" | "view-evidence" | "repair"
-  | "status" | "readers" | "adopt" | "add-book" | "advanced";
+  | "status" | "readers" | "research" | "adopt" | "add-book" | "advanced";
 
 export interface GuideAction {
   id: GuideActionId;
@@ -97,6 +97,7 @@ export function buildGuideScreen(root: string): GuideScreen {
     actions.push(action("adopt", "Adopt an existing manuscript", "Preview and map DOCX, EPUB, Markdown, text, or chapter files without changing the source."));
   }
   if (readerStage(project.current_stage)) actions.push(action("readers", "Reader evidence", "Prepare isolated reader kits or preview and merge human-response CSVs."));
+  if (project.current_stage !== "complete") actions.push(action("research", "Review voice and research evidence", "Open the local preview-and-apply workspace for influences, anonymous voice calibration, public-market friction, research readiness, and approved learning rules."));
   actions.push(action("status", "View full status", "Show blockers, warnings, and progress."));
   actions.push(action("advanced", "Advanced options", "Recovery, browser workflows, metadata, and integrity tools."));
 
