@@ -1,14 +1,10 @@
-import { Type, type Static } from "@sinclair/typebox";
-import { ProjectSchema } from "./schemas.js";
-import { AutomationRunStateSchema } from "./v1-4-schemas.js";
+import { ProjectSchema, type ProjectState } from "./schemas.js";
+import type { AutomationRunState } from "./v1-4-schemas.js";
 
-export const ProjectV14Schema = Type.Intersect([
-  ProjectSchema,
-  Type.Object({
-    automation: Type.Object({
-      active_run: Type.Optional(Type.Union([AutomationRunStateSchema, Type.Null()])),
-    }),
-  }),
-]);
+export const ProjectV14Schema = ProjectSchema;
 
-export type ProjectStateV14 = Static<typeof ProjectV14Schema>;
+export type ProjectStateV14 = Omit<ProjectState, "automation"> & {
+  automation: ProjectState["automation"] & {
+    active_run?: AutomationRunState | null;
+  };
+};
