@@ -268,9 +268,7 @@ function validateArchitecture(root: string, files: FileChange[], book: BookState
   if (event === "book-plan" || event === "chapter-queue") {
     const drafted = new Set(listChapterFiles(join(root, "books", book.book_id)).map(chapterNumber).filter((item): item is number => item !== null));
     const windowBlockers = packetWindowFindings(queue, plot, drafted).filter((finding) => finding.severity === "blocker");
-    if (windowBlockers.length) throw new Error(`Packet-window validation blocked ${event}:
-${windowBlockers.map((item) => `- ${item.message}`).join("
-")}`);
+    if (windowBlockers.length) throw new Error(`Packet-window validation blocked ${event}:\n${windowBlockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
   if (event === "book-plan") {
     const strategy = parseOverlay<BookStrategyPhase5>(root, files, `${bookRoot}/book-strategy.yaml`, BookStrategyPhase5Schema);

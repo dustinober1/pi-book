@@ -87,8 +87,7 @@ Maintain a rolling active window of at most six ready chapter packets. Refill on
 Every new packet must define purpose, causality, state change, scene engine, relevant IDs, research needs, target words, and an honest ending hook. Use remarkability.yaml to protect the retellable hook and planned signature moments without forcing every chapter to perform them. New required_research entries use only ready RES-NNN research-ledger IDs. Carry approved book guardrails into drafting context; never copy raw public-review observations into a packet. Do not rebuild the entire book queue.
 
 Required ${profile.label} profile fields:
-${profile.chapterPacketRequirements.map((item) => `- ${item}`).join("
-")}
+${profile.chapterPacketRequirements.map((item) => `- ${item}`).join("\n")}
 
 ${eventRule(root, "chapter-queue", "chapter-queue")}`;
 }
