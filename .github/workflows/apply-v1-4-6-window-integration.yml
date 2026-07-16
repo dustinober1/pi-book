@@ -1,0 +1,28 @@
+name: Apply rolling packet window integration
+
+on:
+  push:
+    branches:
+      - agent/v1.4-6-rolling-packet-windows
+    paths:
+      - scripts/apply-v1-4-6-window-integration.py
+      - .github/workflows/apply-v1-4-6-window-integration.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1.4-6-rolling-packet-windows
+          fetch-depth: 0
+      - run: python scripts/apply-v1-4-6-window-integration.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src tests
+          git commit -m "feat: integrate rolling packet windows" || exit 0
+          git push origin HEAD:agent/v1.4-6-rolling-packet-windows
