@@ -3,6 +3,7 @@ import { stringifyYaml } from "../infrastructure/yaml.js";
 import { getProfile } from "../profiles/index.js";
 import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
 import { defaultMarketingMetadata, defaultPublishingMetadata } from "../domain/v1-2-schemas.js";
+import { defaultPhase4StressTest } from "../domain/v1-3-architecture-schemas.js";
 import {
   defaultBookStrategy,
   defaultResearchLedger,
@@ -28,6 +29,7 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
     act_checkpoint: null,
     canon_locked: false,
   };
+  const strategy = { ...defaultBookStrategy(), plan_stress_test: defaultPhase4StressTest() };
   const base = `books/${bookId}`;
   return {
     [`${base}/BOOK.yaml`]: stringifyYaml(book),
@@ -56,7 +58,7 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
 ## Next-book handoff
 `,
     [`${base}/genre.yaml`]: stringifyYaml(profile.defaultGenreConfig()),
-    [`${base}/plot-grid.yaml`]: stringifyYaml({ schema_version: "1.0.0", acts: [], chapters: [] }),
+    [`${base}/plot-grid.yaml`]: stringifyYaml({ schema_version: "1.0.0", acts: [], chapters: [], decisions: [] }),
     [`${base}/chapter-queue.yaml`]: stringifyYaml({ schema_version: "1.0.0", active_window: "unplanned", packets: [] }),
     [`${base}/continuity-delta.yaml`]: stringifyYaml({ schema_version: "1.0.0", proposed_facts: [], conflicts: [] }),
     [`${base}/revision-tickets.yaml`]: stringifyYaml({ schema_version: "1.0.0", tickets: [] }),
@@ -78,7 +80,7 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
     [`${base}/marketing.yaml`]: stringifyYaml(defaultMarketingMetadata()),
     [`${base}/reader-kits/index.yaml`]: stringifyYaml({ schema_version: "1.0.0", experiments: [] }),
     [`${base}/research-ledger.yaml`]: stringifyYaml(defaultResearchLedger()),
-    [`${base}/book-strategy.yaml`]: stringifyYaml(defaultBookStrategy()),
+    [`${base}/book-strategy.yaml`]: stringifyYaml(strategy),
     [`${base}/voice-audits.yaml`]: stringifyYaml(defaultVoiceAudits()),
   };
 }
