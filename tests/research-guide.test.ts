@@ -13,8 +13,8 @@ test("guided workflow offers research without replacing the primary stage action
     const screen = buildGuideScreen(root);
     const research = screen.actions.find((action) => action.id === "research");
     assert.ok(research);
-    assert.equal(research.emphasis, "normal");
+    assert.equal(research.kind, "secondary");
     assert.notEqual(screen.actions[0]?.id, "research");
-    assert.equal(screen.actions[0]?.emphasis, "primary");
+    assert.equal(screen.actions[0]?.kind, "primary");
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
