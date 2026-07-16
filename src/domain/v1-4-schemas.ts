@@ -21,7 +21,7 @@ export const AssumptionRecordSchema = Type.Object({
   id: Type.String({ pattern: "^ASM-[0-9]{3}$" }),
   scope: IntakeScopeSchema,
   subject: Type.String({ minLength: 1 }),
-  value: Type.String({ minLength: 1 }),
+  value: Type.Union([Type.String({ minLength: 1 }), Type.Integer()]),
   status: AssumptionStatusSchema,
   source: AssumptionSourceSchema,
   confidence: Type.Union([Type.Literal("low"), Type.Literal("moderate"), Type.Literal("high")]),

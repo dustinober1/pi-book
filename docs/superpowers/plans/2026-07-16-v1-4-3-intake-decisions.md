@@ -46,7 +46,7 @@ export interface AssumptionRecord {
   id: string; // ASM-NNN
   scope: "project" | `book-${string}`;
   subject: string;
-  value: string;
+  value: string | number; // numeric setup values such as target words remain numeric
   status: AssumptionStatus;
   source: { type: "author-input" | "authorized-file" | "inference"; path: string };
   confidence: "low" | "moderate" | "high";
@@ -164,7 +164,7 @@ Prove:
 - replacing a writer decision appends a new decision linked with `replaces`; old decision remains byte-for-byte unchanged;
 - a second unresolved assumption for one scope/subject is rejected unless it explicitly supersedes the first through a service operation;
 - caller-owned input objects and original ledgers are not mutated;
-- `resolvedDecision` returns the latest unreplaced decision only;
+- `resolvedDecision` returns the latest unreplaced usable decision only and returns `null` when the current writer choice is `rejected`;
 - prompt context has separate `Confirmed writer decisions` and `Unresolved inferred assumptions` sections, and explicitly says inferred values are not facts.
 
 - [ ] **Step 2: Verify RED**

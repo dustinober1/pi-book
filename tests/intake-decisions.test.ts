@@ -84,6 +84,7 @@ test("rejecting an assumption records explicit rejection without deleting histor
   assert.equal(rejected.assumptions[0]?.status, "rejected");
   assert.equal(rejected.assumptions[0]?.value, "thriller");
   assert.equal(rejected.decisions[0]?.choice, "rejected");
+  assert.equal(resolvedDecision(rejected, "project", "profile"), null);
 });
 
 test("writer decision replacement appends a linked record and preserves the old record", () => {
@@ -152,4 +153,17 @@ test("prompt context separates settled decisions from unresolved inference", () 
 test("absent or empty intake evidence compiles to no fabricated prompt context", () => {
   assert.equal(intakePromptContext(null, null), "");
   assert.equal(intakePromptContext(defaultIntake(), defaultDecisionLedger()), "");
+});
+
+
+test("numeric assumptions support target-word provenance without string coercion", () => {
+  const inferred = inferAssumption(defaultDecisionLedger(), {
+    ...inferredInput,
+    subject: "target_words",
+    value: 110000,
+    affects: ["book-plan"],
+  });
+  assert.equal(inferred.assumptions[0]?.value, 110000);
+  const confirmed = decideAssumption(inferred, { assumptionId: "ASM-001", choice: "110000", decidedAt: "2026-07-16T12:00:00Z", evidenceRefs: ["author"] });
+  assert.equal(confirmed.assumptions[0]?.status, "confirmed");
 });

@@ -10,7 +10,7 @@ import { decisionLedgerFindings } from "../domain/v1-4-schemas.js";
 export interface InferAssumptionInput {
   scope: IntakeScope;
   subject: string;
-  value: string;
+  value: string | number;
   source: AssumptionRecord["source"];
   confidence: AssumptionRecord["confidence"];
   affects: string[];
@@ -27,6 +27,14 @@ function nonBlank(value: string, label: string): string {
   const normalized = value.trim();
   if (!normalized) throw new Error(`${label} must be nonblank.`);
   return normalized;
+}
+
+function assumptionValue(value: string | number, label: string): string | number {
+  if (typeof value === "number") {
+    if (!Number.isInteger(value)) throw new Error(`${label} must be an integer when numeric.`);
+    return value;
+  }
+  return nonBlank(value, label);
 }
 
 function uniqueStrings(values: string[], label: string, requireOne = false): string[] {
@@ -66,7 +74,7 @@ export function inferAssumption(ledger: DecisionLedger, input: InferAssumptionIn
     id: nextId(result.assumptions.map((item) => item.id), "ASM"),
     scope,
     subject,
-    value: nonBlank(input.value, "Assumption value"),
+    value: assumptionValue(input.value, "Assumption value"),
     status: "inferred",
     source: {
       type: input.source.type,
@@ -98,7 +106,7 @@ export function supersedeAssumption(
     id: nextId(result.assumptions.map((item) => item.id), "ASM"),
     scope,
     subject,
-    value: nonBlank(input.value, "Assumption value"),
+    value: assumptionValue(input.value, "Assumption value"),
     status: "inferred",
     source: { type: input.source.type, path: nonBlank(input.source.path, "Assumption source path") },
     confidence: input.confidence,
@@ -117,7 +125,7 @@ export function decideAssumption(ledger: DecisionLedger, input: DecideAssumption
   if (assumption.status !== "inferred") throw new Error(`Assumption ${input.assumptionId} is terminal and cannot be decided again.`);
   const choice = nonBlank(input.choice, "Writer decision choice");
   const evidenceRefs = uniqueStrings(input.evidenceRefs, "Writer decision", true);
-  assumption.status = choice === "rejected" ? "rejected" : choice === assumption.value ? "confirmed" : "corrected";
+  assumption.status = choice === "rejected" ? "rejected" : choice === String(assumption.value) ? "confirmed" : "corrected";
   result.decisions.push({
     id: nextId(result.decisions.map((item) => item.id), "DEC"),
     scope: assumption.scope,
@@ -159,7 +167,8 @@ export function replaceWriterDecision(
 export function resolvedDecision(ledger: DecisionLedger, scope: string, subject: string): WriterDecisionRecord | null {
   const replaced = new Set(ledger.decisions.map((item) => item.replaces).filter((item): item is string => Boolean(item)));
   const candidates = ledger.decisions.filter((item) => item.scope === scope && item.subject === subject && !replaced.has(item.id));
-  return candidates.at(-1) ?? null;
+  const resolved = candidates.at(-1) ?? null;
+  return resolved?.choice === "rejected" ? null : resolved;
 }
 
 export function intakePromptContext(intake: IntakeState | null, ledger: DecisionLedger | null): string {
