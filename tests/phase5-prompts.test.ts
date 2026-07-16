@@ -15,12 +15,12 @@ test("review prompt treats voice metrics as evidence and requires writer approva
     assert.match(prompt, /voice metrics are evidence/i);
     assert.match(prompt, /scene engine/i);
     assert.match(prompt, /three distinct chapters|two milestone reviews/i);
-    assert.match(prompt, /writer approval/i);
+    assert.match(prompt, /explicitly approve|writer approval/i);
     assert.match(prompt, /do not rewrite|no retroactive/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
-test("draft prompt does not turn audit metrics into prose quotas", () => {
+test("draft prompt does not turn audit metrics into prescriptive prose targets", () => {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-phase5-draft-prompt-"));
   try {
     const root = initializeProject(parent, { projectName: "Phase 5 Draft Prompt", projectType: "standalone", profile: "thriller" });
@@ -35,6 +35,8 @@ test("draft prompt does not turn audit metrics into prose quotas", () => {
       text: "# Drafting Context",
       report: { estimatedTokens: 10, included: [], excluded: [], graph: { maxDepth: 2, selections: [], blocked: [] } },
     };
-    assert.doesNotMatch(draftPrompt(context), /hit a dialogue ratio|target a sentence average|quota/i);
+    const prompt = draftPrompt(context);
+    assert.doesNotMatch(prompt, /hit (?:a )?dialogue ratio|target (?:a )?sentence average|must achieve (?:a )?dialogue ratio/i);
+    assert.match(prompt, /do not .*metrics.*quotas/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
