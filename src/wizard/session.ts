@@ -80,8 +80,8 @@ export async function startWizardSession(options: WizardSessionOptions): Promise
     try {
       const requestUrl = new URL(req.url ?? "/", origin || "http://127.0.0.1");
       const file = staticPath(requestUrl.pathname);
-      if (req.method === "GET" && file) { sendText(res, 200, readFileSync(file, "utf8"), contentType(file)); return; }
-      requireApiAuthorization(req, token, origin);
+      if (req.method === "GET" && file) { sendText(res, 200, contentType(file), readFileSync(file, "utf8")); return; }
+      if (!requireApiAuthorization(req, res, token, origin)) return;
       lastActivity = Date.now();
       if (req.method === "POST" && requestUrl.pathname === "/api/session") {
         sendJson(res, 200, { workflow: options.workflow ?? null, project: options.projectRoot, expires_at: new Date(lastActivity + idleTimeoutMs).toISOString() });
