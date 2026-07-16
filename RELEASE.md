@@ -13,6 +13,12 @@ The first 1.4 pull request changes evaluation only. It must not change productio
 - [ ] `contextCharacters` records the maximum observed size.
 - [ ] Architecture and Novel Forge 1.3 release fixtures remain unchanged and passing.
 - [ ] Package version and dependency metadata remain unchanged.
+- [ ] Invalid YAML returns `schema-validation`, the exact relative path, and one-retry eligibility.
+- [ ] Missing canon or research references return `reference-validation`.
+- [ ] Stale stage/hash rejections require reload and are not retryable.
+- [ ] Disallowed paths and human gates never permit automatic retry.
+- [ ] Wizard and Pi-tool failures expose the same structured detail.
+- [ ] Unknown failures contain no stack trace, absolute project path, or raw thrown object.
 
 
 ## Version 1.3.0

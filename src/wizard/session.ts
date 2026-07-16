@@ -6,6 +6,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { NovelEventRejection } from "../application/event-rejection.js";
 import { openWizardBrowser } from "./browser.js";
 import { readJson, requireApiAuthorization, sendJson, sendText } from "./server.js";
 import type { WizardProposalEnvelope, WizardSessionHandle, WizardSessionOptions, WizardSource, WizardWorkflow } from "./types.js";
@@ -113,6 +114,17 @@ export async function startWizardSession(options: WizardSessionOptions): Promise
       if (req.method === "POST" && requestUrl.pathname === "/api/close") { sendJson(res, 200, { closing: true }); setImmediate(() => void close()); return; }
       throw statusError(404, "Wizard endpoint not found.");
     } catch (error) {
+      if (error instanceof NovelEventRejection) {
+        const statusCode = error.detail.code === "schema-validation" || error.detail.code === "reference-validation"
+          ? 422
+          : error.detail.code === "allowlist-violation"
+            ? 403
+            : error.detail.requiresReload || error.detail.code === "wrong-stage" || error.detail.code === "human-gate-required"
+              ? 409
+              : 500;
+        sendJson(res, statusCode, { error: error.message, rejection: error.detail });
+        return;
+      }
       const statusCode = typeof error === "object" && error !== null && "statusCode" in error ? Number((error as { statusCode: number }).statusCode) : 500;
       sendJson(res, statusCode, { error: error instanceof Error ? error.message : String(error) });
     }

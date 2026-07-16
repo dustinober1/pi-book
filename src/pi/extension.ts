@@ -8,7 +8,7 @@ import { bookPlanPrompt, packagePrompt, readerTestPrompt, reviewPrompt, seriesPl
 import { approveProjectGate, decideNextRun, directDraftDecision, directRevisionDecision, rejectProjectGate, type RunDecision } from "../application/run.js";
 import { migrateGenesisProject } from "../migration/genesis-v0.4.js";
 import { assertOperationAllowed, assertReviewAllowed } from "../application/authorization.js";
-import { applyNovelEvent, type NovelEventType } from "../application/events.js";
+import { applyNovelEvent, projectStateHash, type NovelEventType } from "../application/events.js";
 import { flagValue, parseRunOptions, tokens } from "./arguments.js";
 import { buildGuideScreen, type GuideActionId } from "../application/guide.js";
 import { gateDetail } from "../application/gate-metadata.js";
@@ -18,6 +18,7 @@ import { explainFirstBlocker, inspectUndo, runIntegritySummary, undoLastNovelEve
 import { upgradeProjectVersion } from "../application/version.js";
 import { launchNovelWizard } from "../application/wizard-launch.js";
 import type { WizardWorkflow } from "../wizard/types.js";
+import { normalizeEventRejection, rejectionInstruction } from "../application/event-rejection.js";
 
 function errorText(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 
@@ -195,8 +196,9 @@ export function registerNovelForge(pi: ExtensionAPI): void {
       files: Type.Array(Type.Object({ path: Type.String(), content: Type.String() })),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      let root: string | undefined;
       try {
-        const root = requireProjectRoot(params.project_root || ctx.cwd);
+        root = requireProjectRoot(params.project_root || ctx.cwd);
         const files = params.files.map((file) => ({ path: file.path, content: file.content }));
         const result = applyNovelEvent(root, {
           eventType: params.event_type as NovelEventType,
@@ -209,8 +211,20 @@ export function registerNovelForge(pi: ExtensionAPI): void {
         const text = `Applied ${params.event_type}.\nStage: ${result.stage}\nChanged: ${result.changed.join(", ")}\nProject hash: ${result.projectHash}\nGit: ${result.gitMessage}`;
         return { content: [{ type: "text", text }], details: result };
       } catch (error) {
-        const text = errorText(error);
-        return { content: [{ type: "text", text: `Novel Forge event rejected: ${text}` }], details: { error: text } };
+        let currentStage = String(params.expected_stage || "unknown");
+        let currentProjectHash = String(params.expected_project_hash || "unknown");
+        if (root) {
+          try {
+            currentStage = readProject(root).current_stage;
+            currentProjectHash = projectStateHash(root);
+          } catch {
+            // The normalizer sanitizes project lookup failures.
+          }
+        }
+        const rejection = normalizeEventRejection(error, { currentStage, currentProjectHash, ...(root ? { root } : {}) });
+        const detail = rejection.detail;
+        const text = `Novel Forge event rejected: ${detail.message}\n${rejectionInstruction(detail)}`;
+        return { content: [{ type: "text", text }], details: { error: detail.message, rejection: detail } };
       }
     },
   });

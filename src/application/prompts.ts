@@ -8,7 +8,7 @@ import { regressionChecklist } from "../review/review.js";
 import { projectStateHash, type NovelEventType } from "./events.js";
 
 function eventRule(root: string, eventType: NovelEventType, stage: Stage, extra = ""): string {
-  return `Do not write project files directly. When the content is ready, call the \`novel_apply_event\` tool with event_type \`${eventType}\`, expected_stage \`${stage}\`, expected_project_hash \`${projectStateHash(root)}\`, and only the allowed changed files. ${extra} The tool validates schemas, references, state transitions, file allowlists, stale writes, and commits the complete workflow event.`;
+  return `Do not write project files directly. When the content is ready, call the \`novel_apply_event\` tool with event_type \`${eventType}\`, expected_stage \`${stage}\`, expected_project_hash \`${projectStateHash(root)}\`, and only the allowed changed files. ${extra} The tool validates schemas, references, state transitions, file allowlists, stale writes, and commits the complete workflow event. If the tool returns a structured rejection code, correct only \`schema-validation\` or \`reference-validation\` payloads and resubmit once. For \`stale-stage\` or \`stale-project-hash\`, reload canonical state and rebuild the proposal. For all other rejection codes, stop automatic work and surface the failure.`;
 }
 
 const interviewRule = `Inspect existing evidence first. Conduct a short author interview only for unresolved decisions: ask one question at a time and no more than four normal questions. Ask one additional question only when a genuine blocker prevents a complete required workflow artifact. Derive the detailed structure internally, then present the complete result for writer approval.`;

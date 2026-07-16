@@ -33,6 +33,14 @@ npm run eval:journeys
 
 `npm run eval` continues to run the architecture and Novel Forge 1.3 release evaluations, then prints the author-journey baseline as a separate section. Future Author Velocity changes must update these traces only when workflow behavior intentionally changes.
 
+### Structured rejection envelopes and bounded retry policy
+
+Guarded events, wizard applies, HTTP responses, and the public `novel_apply_event` tool now report the same structured rejection detail: a stable code, sanitized message, retry and reload policy, invalid relative paths, typed issues, and the current stage/project hash when safely readable. If canonical state cannot be read, the stage/hash fields use `unknown` rather than exposing filesystem details or throwing during normalization.
+
+Only `schema-validation` and `reference-validation` are eligible for one corrected resubmission. The retry must change only the rejected payload. `stale-stage` and `stale-project-hash` require a state reload and a rebuilt proposal. Wrong-stage, allowlist, human-gate, integrity, filesystem, and unknown failures stop automatic work. Eligibility is guidance, not automatic execution.
+
+Unknown errors are reduced to a safe message. Stack traces, absolute project paths, raw thrown objects, tokens, and filesystem internals are never returned in the rejection envelope. Existing human-readable validator text remains available as `message`.
+
 The primary author-facing files are:
 
 - `STATUS.md` — the current decision, reason, blockers, warnings, and progress.

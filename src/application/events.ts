@@ -40,6 +40,7 @@ import { bookPlanFindings } from "./book-strategy.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
 import { packetReferenceFindings } from "./integrity.js";
 import { projectStateHash } from "./project-hash.js";
+import { normalizeEventRejection } from "./event-rejection.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 import { readerFrictionFindings } from "./review-observations.js";
 import { researchEvidenceFindings } from "./research-evidence.js";
@@ -248,7 +249,7 @@ function validateArchitecture(root: string, files: FileChange[], book: BookState
   return { queue, plot };
 }
 
-export function applyNovelEvent(root: string, input: NovelEventInput): NovelEventResult {
+function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEventResult {
   const project = structuredClone(readProject(root));
   const book = structuredClone(readBook(root));
   validateFiles(root, input, project, book);
@@ -365,4 +366,22 @@ export function applyNovelEvent(root: string, input: NovelEventInput): NovelEven
   const message = `Novel Forge: ${input.eventType}${input.chapter ? ` chapter-${input.chapter}` : ""}`;
   const applied = applyGuidedProjectEvent(root, changes, message, { lastAction: `${input.eventType}${input.chapter ? ` chapter ${input.chapter}` : ""}` });
   return { changed: applied.changed, stage: project.current_stage, projectHash: projectStateHash(root), gitMessage: applied.git.message };
+}
+
+
+export function applyNovelEvent(root: string, input: NovelEventInput): NovelEventResult {
+  let currentStage = String(input.expectedStage || "unknown");
+  let currentProjectHash = String(input.expectedProjectHash || "unknown");
+  try {
+    const current = readProject(root);
+    currentStage = current.current_stage;
+    currentProjectHash = projectStateHash(root);
+  } catch {
+    // The normalizer will classify project-read failures without exposing paths.
+  }
+  try {
+    return applyNovelEventInternal(root, input);
+  } catch (error) {
+    throw normalizeEventRejection(error, { root, currentStage, currentProjectHash });
+  }
 }

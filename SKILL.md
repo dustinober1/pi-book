@@ -119,6 +119,12 @@ Use stable recurrence pattern IDs only for genuinely repeated problems. A patter
 
 The read-only `npm run audit:voice -- <project-root>` command may print diagnostics but must not mutate project state or replace guarded workflow events.
 
+## Structured event rejections
+
+Treat `EventRejectionDetail.code` as the controlling retry signal. Correct and resubmit only `schema-validation` or `reference-validation`, and do so at most once using the same accepted project state. For `stale-stage` or `stale-project-hash`, reload canonical state and rebuild the proposal with the returned current values. For `wrong-stage`, `allowlist-violation`, `human-gate-required`, `integrity-failure`, `filesystem-failure`, or `unknown`, stop automatic work and surface the rejection.
+
+Never infer retryability from message text. Never bypass the allowlist or a human gate. Structured eligibility does not authorize automatic retry execution. Preserve the concise validator message for the writer while using `issues`, `invalidPaths`, `requiresReload`, and `retryable` for deterministic handling. Unknown values must remain sanitized and must not expose stacks, absolute paths, raw objects, credentials, or filesystem internals.
+
 ## Guided research wizard
 
 `/novel-wizard research` is an optional loopback-only review surface. `/novel` remains the normal interface and may offer **Review voice and research evidence** as a non-primary action.
