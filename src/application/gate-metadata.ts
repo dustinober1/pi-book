@@ -38,8 +38,10 @@ export function gateEvidencePaths(project: ProjectState, gate: string): string[]
     `${book}/research-ledger.yaml`,
     `${book}/book-strategy.yaml`,
   ];
-  if (gate === "first-chapter-approval") return [`${book}/manuscript/chapters/01-opening.md`, `${book}/review-report.md`];
-  if (["act-1-review", "midpoint-review", "pre-final-act-review", "manuscript-approval"].includes(gate)) return [`${book}/review-report.md`, `${book}/revision-tickets.yaml`];
+  if (gate === "first-chapter-approval") return [`${book}/manuscript/chapters/01-opening.md`, `${book}/review-report.md`, `${book}/voice-audits.yaml`];
+  if (["act-1-review", "midpoint-review", "pre-final-act-review", "manuscript-approval"].includes(gate)) {
+    return [`${book}/review-report.md`, `${book}/revision-tickets.yaml`, `${book}/voice-audits.yaml`];
+  }
   if (gate === "package-approval") return [`${book}/package.md`];
   return ["PROJECT.yaml"];
 }
