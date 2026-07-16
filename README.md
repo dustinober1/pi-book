@@ -68,6 +68,25 @@ For each relevant cluster, the writer chooses **prevent**, **mitigate**, **accep
 
 New ready chapter packets reference `RES-NNN` research-ledger items. Existing `SRC-NNN` references remain readable as compatibility advisories until the next plan rebuild migrates them. Research-to-graph discovery, voice/scene audits, and the browser research wizard remain later 1.3 phases.
 
+## Voice, scene, and revision-learning audits
+
+Novel Forge treats audits as evidence rather than scoring machinery. When an accepted voice baseline contains both a content hash and baseline metrics, the guarded workflow records deterministic voice evidence after Chapter 1, Chapter 3, act reviews, manuscript review, and explicit recalibration. Missing baseline evidence simply skips the audit; it never blocks drafting.
+
+Voice evidence includes sentence and paragraph distributions, dialogue ratio, fragment and rhetorical-question frequency, filter-word rate, repeated body-language vocabulary, and interiority rate. The stored audit records current signals, baseline metrics, numeric deltas, POV and chapter scope when available, protected intentional exceptions, and an evidence-only assessment. These values are not prose quotas and do not create severity or revision tickets by themselves. A read-only diagnostic is also available:
+
+```bash
+npm run audit:voice -- /path/to/novel-project
+```
+
+The scene audit uses existing chapter packets and plot-grid state changes. It flags:
+
+- more than two consecutive chapters with the same scene engine;
+- one engine occupying more than half of a plan with at least six packets;
+- interview, conversation, dialogue, meeting, debrief, or questioning scenes that do not change case, relationship, power, or knowledge state;
+- adjacent chapters with indistinguishable normalized state changes.
+
+Deterministic scene findings become revision tickets; they never edit manuscript prose. Tickets may carry a stable recurrence pattern and milestone-review identifier. A pattern becomes eligible for a reusable learning rule only after **three distinct chapters** or **two distinct milestone reviews**. Eligibility is not approval. The writer must explicitly approve the rule in `book-strategy.yaml`, and only approved rules enter future chapter context. Promotion never launches a retroactive rewrite of earlier chapters.
+
 ## Graph-aware continuity context
 
 When Novel Forge prepares an approved chapter for drafting, it derives a local continuity graph from the validated project files already in use: canon facts, relationship state, story threads, chapter packets, plot setup/payoff IDs, and research sources.
