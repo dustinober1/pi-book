@@ -21,6 +21,7 @@ function guardedEvidencePaths(root: string, bookId: string): string[] {
     `books/${bookId}/research-ledger.yaml`,
     `books/${bookId}/book-strategy.yaml`,
     `books/${bookId}/voice-audits.yaml`,
+    `books/${bookId}/premise-lab.yaml`,
   ];
   const experimentRoot = join(root, "series", "voice-experiments");
   const experimentFiles = listFilesRecursive(experimentRoot, (path) => /\.(?:yaml|md)$/i.test(path))

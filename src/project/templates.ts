@@ -4,7 +4,7 @@ import { getProfile } from "../profiles/index.js";
 import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
 import { defaultMarketingMetadata, defaultPublishingMetadata } from "../domain/v1-2-schemas.js";
 import { defaultPhase4StressTest } from "../domain/v1-3-architecture-schemas.js";
-import { defaultDecisionLedger, defaultIntake } from "../domain/v1-4-schemas.js";
+import { defaultDecisionLedger, defaultIntake, defaultPremiseLab } from "../domain/v1-4-schemas.js";
 import {
   defaultBookStrategy,
   defaultResearchLedger,
@@ -87,6 +87,7 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
     [`${base}/research-ledger.yaml`]: stringifyYaml(defaultResearchLedger()),
     [`${base}/book-strategy.yaml`]: stringifyYaml(strategy),
     [`${base}/voice-audits.yaml`]: stringifyYaml(defaultVoiceAudits()),
+    [`${base}/premise-lab.yaml`]: stringifyYaml(defaultPremiseLab(bookId)),
   };
 }
 
