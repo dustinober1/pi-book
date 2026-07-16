@@ -48,8 +48,9 @@ test("projects created before runtime configuration remain readable and resolve 
     writeFileSync(path, stringifyYaml(project), "utf8");
 
     const legacy = readProject(root);
+    const resolved = resolveRuntimeProfile({ project: legacy.runtime?.profile });
     assert.equal(legacy.runtime, undefined);
-    assert.equal(resolveRuntimeProfile({ project: legacy.runtime?.profile }).id, "full");
+    assert.equal(resolved.id, "full");
   });
 });
 
