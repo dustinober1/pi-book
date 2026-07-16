@@ -1,0 +1,39 @@
+schema_version: 1.0.0
+id: brief-to-book-plan
+description: Current guided path from an initial brief to the book-plan approval gate.
+limitations:
+  - Current planning still asks four author questions before the book-plan decision.
+  - One rejected book-plan attempt requires a corrected guarded resubmission.
+trace:
+  events:
+    - { type: author-question, id: Q1 }
+    - { type: author-question, id: Q2 }
+    - { type: author-question, id: Q3 }
+    - { type: author-question, id: Q4 }
+    - { type: model-prompt, id: P1 }
+    - { type: model-prompt, id: P2 }
+    - { type: model-prompt, id: P3 }
+    - { type: model-prompt, id: P4 }
+    - { type: model-prompt, id: P5 }
+    - { type: context, characters: 6000 }
+    - { type: guarded-event, id: E1, action: series-plan, outcome: accepted }
+    - { type: context, characters: 9500 }
+    - { type: guarded-event, id: E2, action: book-plan, outcome: rejected }
+    - { type: guarded-event, id: E3, action: book-plan, outcome: accepted, retry_of: E2 }
+    - { type: writer-approval, gate: book-plan-approval }
+    - { type: stop, reason: human-gate }
+expected:
+  authorQuestions: 4
+  modelPrompts: 5
+  guardedEvents: 3
+  rejectedEvents: 1
+  retries: 1
+  writerApprovals: 1
+  chaptersCompleted: 0
+  contextCharacters: 9500
+  stopReason: human-gate
+limits:
+  max_author_questions: 4
+  max_model_prompts: 5
+  max_rejected_events: 1
+  max_retries: 1
