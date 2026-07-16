@@ -1,4 +1,4 @@
-import type { SourceRegisterState } from "../domain/schemas.js";
+import type { SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
 import type { ResearchLedger } from "../domain/v1-3-schemas.js";
 
 export interface ResearchEvidenceFinding {
@@ -32,7 +32,7 @@ function nonblank(value: string | null | undefined): boolean {
 
 export function researchEvidenceFindings(
   ledger: ResearchLedger,
-  sources: SourceRegisterState,
+  sources: SourceRegisterV13,
 ): ResearchEvidenceFinding[] {
   const findings: ResearchEvidenceFinding[] = [];
   for (const id of duplicates(ledger.items.map((item) => item.id))) {
@@ -57,18 +57,13 @@ export function researchEvidenceFindings(
         findings.push({ severity: "blocker", code: "missing-source", message: `${item.id} references missing source ${sourceId}.` });
         continue;
       }
-      const extended = source as typeof source & {
-        reliability?: "unknown" | "low" | "medium" | "high" | "primary";
-        observed_on?: string | null;
-        supports_research_ids?: string[];
-      };
-      if (!extended.reliability || extended.reliability === "unknown") {
+      if (!source.reliability || source.reliability === "unknown") {
         findings.push({ severity: "blocker", code: "missing-source-reliability", message: `${sourceId} must record reliability before supporting ready research ${item.id}.` });
       }
-      if (!nonblank(extended.observed_on) && !nonblank(source.verified_on)) {
+      if (!nonblank(source.observed_on) && !nonblank(source.verified_on)) {
         findings.push({ severity: "blocker", code: "missing-source-observation-date", message: `${sourceId} must record an observation or verification date before supporting ready research ${item.id}.` });
       }
-      if (!extended.supports_research_ids?.includes(item.id)) {
+      if (!source.supports_research_ids?.includes(item.id)) {
         findings.push({ severity: "blocker", code: "source-support-mismatch", message: `${sourceId} does not declare support for ${item.id}.` });
       }
     }
