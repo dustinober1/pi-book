@@ -56,7 +56,7 @@ test("CSV intake parses quoted commas while discarding identity columns", () => 
   assert.equal(result.discardedIdentityFields, 3);
 });
 
-test("CSV intake rejects duplicate IDs and malformed ratings", () => {
+test("CSV intake rejects malformed ratings", () => {
   const header = "title,source_location,observed_on,rating,paraphrase,short_excerpt,category,genre_relevance,execution_relevance,sentiment,reviewer_name,reviewer_handle,reviewer_profile_url";
   const row = "Book,source,2026-07-15,8,Note,,execution-problem,high,high,,,,";
   assert.throws(() => importReviewObservationCsv(`${header}\n${row}`), /rating/i);
