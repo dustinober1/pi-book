@@ -114,11 +114,27 @@ export function revisionLearningFindings(tickets: RevisionTicketsPhase5, strateg
     }
   }
   if (strategy) {
+    const ticketById = new Map(tickets.tickets.map((ticket) => [ticket.id, ticket]));
     for (const guardrail of strategy.review_derived_guardrails) {
-      if (guardrail.status !== "approved" || !(guardrail.source_ticket_ids?.length)) continue;
-      const sourceTickets = tickets.tickets.filter((ticket) => guardrail.source_ticket_ids?.includes(ticket.id));
-      if (!sourceTickets.length) {
-        findings.push({ severity: "blocker", code: "missing-guardrail-ticket-source", message: `${guardrail.id} approves a learned guardrail without an existing source ticket.` });
+      const sourceIds = distinctSorted(guardrail.source_ticket_ids ?? []);
+      if (!sourceIds.length) continue;
+      const missingIds = sourceIds.filter((id) => !ticketById.has(id));
+      if (missingIds.length) {
+        findings.push({ severity: "blocker", code: "missing-guardrail-ticket-source", message: `${guardrail.id} references missing learned-guardrail source ticket(s): ${missingIds.join(", ")}.` });
+      }
+      const sourceTickets = sourceIds.map((id) => ticketById.get(id)).filter((ticket): ticket is RevisionTicketPhase5 => Boolean(ticket));
+      const occurrenceChapters = distinctSorted(sourceTickets.flatMap((ticket) => ticket.recurrence?.occurrence_chapters ?? []));
+      const milestoneIds = distinctSorted(sourceTickets.flatMap((ticket) => ticket.recurrence?.milestone_review_ids ?? []));
+      if ((guardrail.status === "approved" || guardrail.status === "rejected") && !eligible(occurrenceChapters, milestoneIds)) {
+        findings.push({ severity: "blocker", code: "unsupported-learned-guardrail", message: `${guardrail.id} resolves a learned guardrail before three distinct chapters or two distinct milestone reviews.` });
+      }
+      const unsupportedMilestones = (guardrail.source_milestone_ids ?? []).filter((id) => !milestoneIds.includes(id));
+      if (unsupportedMilestones.length) {
+        findings.push({ severity: "blocker", code: "invalid-guardrail-milestone-source", message: `${guardrail.id} references milestone review(s) absent from its source tickets: ${unsupportedMilestones.join(", ")}.` });
+      }
+      if (guardrail.status === "approved") {
+        if (!guardrail.rule.trim()) findings.push({ severity: "blocker", code: "blank-approved-learned-guardrail", message: `${guardrail.id} is approved but has no rule.` });
+        if (!guardrail.approved_at?.trim()) findings.push({ severity: "blocker", code: "missing-guardrail-approval-time", message: `${guardrail.id} is approved but has no approval timestamp.` });
       }
     }
   }
