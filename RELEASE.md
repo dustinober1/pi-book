@@ -2,7 +2,7 @@
 
 ## Version 1.3.0
 
-Do not create the `v1.3.0` tag after the foundation PR alone. Create it only after all planned 1.3 phases are merged and the final `main` commit passes the complete Node 22.19.0 and Node 24 verification matrix **manually on the development computer**. Do not use GitHub Actions for development or release verification.
+Do not create the `v1.3.0` tag after the foundation PR alone. Create it only after all planned 1.3 phases are merged and the final `main` commit passes the complete Node 22.19.0 and Node 24 verification matrix through the repository's `Novel Forge tests` GitHub Actions workflow.
 
 ### Version and compatibility
 
@@ -86,9 +86,9 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 - [ ] The continuity graph preserves bounded depth, explicit-before-discovered ordering, provisional restrictions, inactive-thread restrictions, later-book exclusions, and provenance reporting.
 - [ ] Undo continues to create revert commits and never rewrites history.
 
-### Manual verification
+### GitHub Actions verification
 
-Do not trigger, inspect, rerun, or rely on GitHub Actions. Run all verification locally on the development computer and record the command output in the relevant pull request before merge.
+Use the repository's `Novel Forge tests` workflow as the authoritative verification record. Every phase PR and the final merged `main` commit must pass both Node jobs before merge or release.
 
 - [ ] `npm ci` passes strictly from the committed lockfile.
 - [ ] `npm run typecheck` passes on Node 22.19.0 and Node 24.
@@ -97,13 +97,13 @@ Do not trigger, inspect, rerun, or rely on GitHub Actions. Run all verification 
 - [ ] Real Pi command/tool lifecycle tests pass.
 - [ ] Packed-extension install/import/registration smoke tests pass.
 - [ ] `npm pack --dry-run` contains the new source contracts and bundled wizard assets.
-- [ ] The final diff contains no temporary lockfile workflow, generated diagnostics, local artifacts, imported review corpora, or generated book outputs.
+- [ ] The final diff contains no temporary workflow files, generated diagnostics, local artifacts, imported review corpora, or generated book outputs.
 
 ### Publish
 
-1. Merge every manually verified 1.3 phase pull request to `main`.
-2. On the development computer, check out the final `main` commit and run the full Node 22.19.0 and Node 24 verification matrix locally.
-3. Create annotated tag `v1.3.0` only after the local verification record has zero failures.
+1. Merge every GitHub-Actions-verified 1.3 phase pull request to `main`.
+2. Confirm the final merged `main` commit's `Novel Forge tests` workflow is green under Node 22.19.0 and Node 24.
+3. Create annotated tag `v1.3.0` only on that verified `main` commit.
 4. Confirm installation with:
 
    ```bash
