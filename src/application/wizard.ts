@@ -51,7 +51,7 @@ function projectSnapshot(root: string) {
   };
 }
 
-function workflowSnapshot(root: string, workflow: Exclude<WizardWorkflow, "research">): unknown {
+function workflowSnapshot(root: string, workflow: Exclude<WizardWorkflow, "research" | "premise">): unknown {
   const base = projectSnapshot(root);
   const bookId = base.book.id;
   if (workflow === "adoption") {
@@ -75,7 +75,7 @@ export function createWizardRegistry(root: string, handlers: WizardWorkflowHandl
     snapshot(workflow) {
       const handler = handlers[workflow];
       if (handler?.snapshot) return { ...projectSnapshot(root), workflow: handler.snapshot() };
-      if (workflow === "research") throw new Error("research snapshot is not available yet.");
+      if (workflow === "research" || workflow === "premise") throw new Error(`${workflow} snapshot is not available yet.`);
       return workflowSnapshot(root, workflow);
     },
     preview(workflow, action, payload) {

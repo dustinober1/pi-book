@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { registerNovelForge } from "../src/pi/extension.js";
 
-test("novel-wizard command offers research as a workflow completion", () => {
+test("novel-wizard command offers research and premise as workflow completions", () => {
   const commands = new Map<string, any>();
   const pi = {
     registerCommand(name: string, definition: unknown) { commands.set(name, definition); },
@@ -13,6 +13,7 @@ test("novel-wizard command offers research as a workflow completion", () => {
   const wizard = commands.get("novel-wizard");
   assert.ok(wizard);
   const values = wizard.getArgumentCompletions("").map((item: { value: string }) => item.value);
-  assert.deepEqual(values, ["adoption", "readers", "packaging", "next-book", "research"]);
+  assert.deepEqual(values, ["adoption", "readers", "packaging", "next-book", "research", "premise"]);
   assert.match(wizard.description, /research/i);
+  assert.match(wizard.description, /premise/i);
 });

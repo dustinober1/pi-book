@@ -25,7 +25,7 @@ import {
 } from "../domain/v1-3-audit-schemas.js";
 import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
 import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
-import { DecisionLedgerSchema, IntakeSchema, intakeDecisionFindings, type DecisionLedger, type IntakeState } from "../domain/v1-4-schemas.js";
+import { DecisionLedgerSchema, IntakeSchema, PremiseLabSchema, intakeDecisionFindings, type DecisionLedger, type IntakeState, type PremiseLab } from "../domain/v1-4-schemas.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import type { FileChange } from "../infrastructure/transaction.js";
 import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
@@ -41,6 +41,7 @@ import { bookPlanFindings } from "./book-strategy.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
 import { packetReferenceFindings } from "./integrity.js";
 import { projectStateHash } from "./project-hash.js";
+import { premiseLabFindings } from "./premise-lab.js";
 import { normalizeEventRejection } from "./event-rejection.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 import { readerFrictionFindings } from "./review-observations.js";
@@ -48,7 +49,7 @@ import { researchEvidenceFindings } from "./research-evidence.js";
 
 export { projectStateHash } from "./project-hash.js";
 
-export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "research-update" | "intake-update" | "revise" | "canon-lock" | "package";
+export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "research-update" | "intake-update" | "premise-update" | "revise" | "canon-lock" | "package";
 export interface NovelEventInput { eventType: NovelEventType; expectedStage: Stage; expectedProjectHash: string; files: FileChange[]; chapter?: number; scope?: string }
 export interface NovelEventResult { changed: string[]; stage: Stage; projectHash: string; gitMessage: string }
 
@@ -62,6 +63,7 @@ const eventStages: Record<NovelEventType, Stage[]> = {
   "reader-test": ["drafting", "act-review", "revision", "manuscript-review", "packaging"],
   "research-update": ["voice-intake", "series-planning", "book-planning", "drafting", "act-review", "revision", "manuscript-review", "packaging"],
   "intake-update": ["voice-intake", "series-planning", "book-planning"],
+  "premise-update": ["book-planning"],
   revise: ["revision"],
   "canon-lock": ["canon-lock"],
   package: ["packaging"],
@@ -80,6 +82,7 @@ function allowedPath(event: NovelEventType, path: string, bookId: string, chapte
     review: [`${book}/review-report.md`, `${book}/revision-tickets.yaml`, `${book}/voice-audits.yaml`],
     "reader-test": [`${book}/reader-experiments.yaml`, `${book}/revision-tickets.yaml`],
     "intake-update": ["series/intake.yaml", "series/decision-ledger.yaml"],
+    "premise-update": [`${book}/premise-lab.yaml`, "series/decision-ledger.yaml"],
     "research-update": [
       "series/taste-profile.yaml",
       "series/voice-guardrails.yaml",
@@ -151,6 +154,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
   if (input.expectedProjectHash !== projectStateHash(root)) throw new Error("Stale project hash; reload state before applying this event.");
   if (input.eventType === "research-update" && input.files.length === 0) throw new Error("research-update requires at least one evidence file.");
   if (input.eventType === "intake-update" && input.files.length === 0) throw new Error("intake-update requires at least one intake evidence file.");
+  if (input.eventType === "premise-update" && input.files.length === 0) throw new Error("premise-update requires at least one premise evidence file.");
   const seen = new Set<string>();
   for (const file of input.files) {
     file.path = normalized(file.path);
@@ -202,6 +206,15 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
   if (input.eventType === "book-plan" || input.eventType === "research-update") {
     validateResearchAndFriction(root, input.files, book, input.eventType);
     validateRevisionLearning(root, input.files, book);
+  }
+  if (input.eventType === "premise-update" || (input.eventType === "book-plan" && overlay(root, input.files, `books/${book.book_id}/premise-lab.yaml`))) {
+    const lab = parseOverlay<PremiseLab>(root, input.files, `books/${book.book_id}/premise-lab.yaml`, PremiseLabSchema);
+    const ledger = parseOverlay<DecisionLedger>(root, input.files, "series/decision-ledger.yaml", DecisionLedgerSchema);
+    const blockers = premiseLabFindings(lab, ledger).filter((finding) => finding.severity === "blocker");
+    if (input.eventType === "book-plan" && lab.variants.length > 0 && (!lab.selected_variant_id || !lab.selection_decision_id)) {
+      blockers.push({ severity: "blocker", code: "unselected-premise", message: "A rebuilt book plan requires an explicitly selected premise variant." });
+    }
+    if (blockers.length) throw new Error(`Premise validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
   if (input.eventType === "intake-update") {
     const intake = parseOverlay<IntakeState>(root, input.files, "series/intake.yaml", IntakeSchema);
@@ -348,6 +361,8 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
       break;
     case "intake-update":
       break;
+    case "premise-update":
+      break;
     case "revise": {
       const tickets = parseOverlay<RevisionTicketsPhase5>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsPhase5Schema);
       book.status = "revision";
@@ -371,7 +386,7 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
       break;
   }
 
-  if (input.eventType !== "research-update" && input.eventType !== "intake-update") {
+  if (input.eventType !== "research-update" && input.eventType !== "intake-update" && input.eventType !== "premise-update") {
     setChange(changes, "PROJECT.yaml", stringifyYaml(project));
     setChange(changes, `books/${book.book_id}/BOOK.yaml`, stringifyYaml(book));
   }

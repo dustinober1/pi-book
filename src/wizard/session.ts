@@ -11,7 +11,7 @@ import { openWizardBrowser } from "./browser.js";
 import { readJson, requireApiAuthorization, sendJson, sendText } from "./server.js";
 import type { WizardProposalEnvelope, WizardSessionHandle, WizardSessionOptions, WizardSource, WizardWorkflow } from "./types.js";
 
-const workflows = new Set<WizardWorkflow>(["adoption", "readers", "packaging", "next-book", "research"]);
+const workflows = new Set<WizardWorkflow>(["adoption", "readers", "packaging", "next-book", "research", "premise"]);
 const allowedExtensions = new Set([".docx", ".epub", ".md", ".txt", ".csv", ".xlsx"]);
 const staticRoot = fileURLToPath(new URL("../../wizard/", import.meta.url));
 
