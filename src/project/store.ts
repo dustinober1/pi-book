@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { BookSchema, ProjectSchema, RevisionTicketsSchema, type BookState, type ProjectState, type RevisionTicketsState } from "../domain/schemas.js";
+import { BookSchema, RevisionTicketsSchema, type BookState, type RevisionTicketsState } from "../domain/schemas.js";
+import { ProjectV14Schema, type ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import { findProjectRoot, readText, safeSlug } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { applyTransaction, type FileChange } from "../infrastructure/transaction.js";
@@ -25,11 +26,11 @@ export function requireProjectRoot(cwd: string): string {
   return root;
 }
 
-export function readProject(root: string): ProjectState {
+export function readProject(root: string): ProjectStateV14 {
   const path = join(root, "PROJECT.yaml");
   const text = readText(path);
   if (!text) throw new Error(`Missing ${path}`);
-  return parseYaml<ProjectState>(text, ProjectSchema, "PROJECT.yaml");
+  return parseYaml<ProjectStateV14>(text, ProjectV14Schema, "PROJECT.yaml");
 }
 
 export function readBook(root: string, bookId?: string): BookState {
