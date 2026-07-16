@@ -29,9 +29,10 @@ function guardedEvidencePaths(root: string, bookId: string): string[] {
   return [...new Set([...fixed, ...experimentFiles])].sort();
 }
 
-export function projectStateHash(root: string): string {
-  const project = readProject(root);
+function calculateProjectHash(root: string, includeRunBookkeeping: boolean): string {
+  const project = structuredClone(readProject(root));
   const book = readBook(root);
+  if (!includeRunBookkeeping) project.automation.active_run = null;
   const hash = createHash("sha256")
     .update("PROJECT.yaml\0")
     .update(stringifyYaml(project))
@@ -42,4 +43,12 @@ export function projectStateHash(root: string): string {
     hash.update("\0").update(path).update("\0").update(readText(join(root, path)) ?? "<missing>");
   }
   return hash.digest("hex");
+}
+
+export function projectStateHash(root: string): string {
+  return calculateProjectHash(root, true);
+}
+
+export function creativeProjectStateHash(root: string): string {
+  return calculateProjectHash(root, false);
 }
