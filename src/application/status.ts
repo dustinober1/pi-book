@@ -12,6 +12,7 @@ import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact
 import { getProfile } from "../profiles/index.js";
 import { gateDetail } from "./gate-metadata.js";
 import { versionFindings } from "./version-core.js";
+import { nextVoiceAuditRequirement, type VoiceAuditRequirement } from "./voice-drift.js";
 
 export interface ProjectStatus {
   blockers: string[];
@@ -45,7 +46,19 @@ function nextActionForStage(stage: string): string {
   return actions[stage] ?? "Inspect PROJECT.yaml for an unsupported stage.";
 }
 
-function decisionText(project: ReturnType<typeof readProject>, blockers: string[]): { headline: string; reason: string; nextAction: string; command: string } {
+function decisionText(
+  project: ReturnType<typeof readProject>,
+  blockers: string[],
+  dueAudit: VoiceAuditRequirement | null,
+): { headline: string; reason: string; nextAction: string; command: string } {
+  if (dueAudit) {
+    return {
+      headline: `Voice audit ${dueAudit.milestone_ref} is required.`,
+      reason: `Novel Forge paused before the next creative or approval step so the ${dueAudit.milestone.replace(/-/g, " ")} evidence can be recorded without rewriting prose automatically.`,
+      nextAction: `Run the guided ${dueAudit.milestone_ref} voice audit and review its evidence-only metrics.`,
+      command: "/novel",
+    };
+  }
   const activeGate = project.next_gate;
   const gateState = activeGate ? project.gates[activeGate] : undefined;
   if (activeGate && gateState === "pending") {
@@ -166,7 +179,8 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
   else if (dirty) warnings.push(`${dirty} uncommitted file(s) exist.`);
 
   const words = manuscriptWordCount(root, book.book_id);
-  const decision = decisionText(project, blockers);
+  const dueAudit = nextVoiceAuditRequirement(root);
+  const decision = decisionText(project, blockers, dueAudit);
   const recent = newestFiles(root, 6);
   const markdown = [
     "# Novel Forge",
@@ -193,6 +207,7 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     `- Active book: ${book.book_id}`,
     `- Stage: ${project.current_stage}`,
     `- Next gate: ${project.next_gate ?? "none"}${project.next_gate ? ` (${project.gates[project.next_gate] ?? "unknown"})` : ""}`,
+    `- Required voice audit: ${dueAudit?.milestone_ref ?? "none"}`,
     `- Manuscript words: ${words}`,
     `- Blocking tickets/conflicts: ${blockers.length}`,
     `- Warnings: ${warnings.length}`,
