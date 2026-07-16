@@ -10,11 +10,12 @@ Persist bounded-run intent across pauses, restarts, and safe failures without by
 - Existing projects without it remain valid; new projects initialize it to null.
 - Store run ID, status, target, starting stage, current action, chapter budget, completed event keys, creative-state hash, refill count, retry counts, stop reason, and timestamps.
 - Use a creative-state hash that excludes active-run bookkeeping, avoiding a self-referential hash while still detecting outside creative changes.
-- Run-state changes are internal guided transactions that write only `PROJECT.yaml` and refresh status/handoff.
+- Run-state changes are internal guided transactions that update `PROJECT.yaml` and regenerate the derived `STATUS.md` and `HANDOFF.md` files.
 - Completed deterministic event keys are never replayed.
 - One retryable schema/reference rejection is allowed per event key; a second stops the run.
 - Human gates and nonretryable failures stop immediately.
 - Pause and cancel are idempotent. Cancelled or completed runs cannot resume.
+- Guarded undo means the existing Novel Forge undo command creates a new Git revert commit for one run-state checkpoint; it never rewrites history or silently reverses writer approvals.
 
 ## Implementation units
 
