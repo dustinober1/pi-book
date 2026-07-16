@@ -8,7 +8,7 @@ import { gateEvidenceHash } from "../src/application/gates.js";
 import { gateEvidencePaths } from "../src/application/gate-metadata.js";
 import { approveProjectGate, rejectProjectGate } from "../src/application/run.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
-import { initializeProject, readProject } from "../src/project/store.js";
+import { initializeProject, readBook, readProject } from "../src/project/store.js";
 
 function temp(): string { return mkdtempSync(join(tmpdir(), "novel-forge-gate-guidance-")); }
 
@@ -94,5 +94,28 @@ test("book-plan approval evidence covers research and reader strategy", () => {
       assert.notEqual(after, before, relativePath);
       before = after;
     }
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("milestone approval requires its approved voice audit", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Milestone Audit", projectType: "standalone", profile: "thriller" });
+    const project = readProject(root);
+    project.current_stage = "drafting";
+    project.next_gate = "first-chapter-approval";
+    project.gates["first-chapter-approval"] = "pending";
+    writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
+    const book = readBook(root);
+    book.current_chapter = 1;
+    writeFileSync(join(root, "books", "book-01", "BOOK.yaml"), stringifyYaml(book), "utf8");
+
+    assert.throws(() => approveProjectGate(root, "first-chapter-approval"), /voice audit/i);
+    writeFileSync(join(root, "books", "book-01", "voice-audits.yaml"), stringifyYaml({
+      schema_version: "1.0.0",
+      audits: [{ id: "VA-001", scope: "chapter", baseline_hash: "a".repeat(64), run_at: "2026-07-15T12:00:00Z", signals: {}, findings: [], verdict: "stable", status: "approved", milestone: "chapter-1", milestone_ref: "chapter-1", chapter_refs: [1], pov: null, baseline_scope: "project", interpretation: "evidence-only" }],
+    }), "utf8");
+    assert.equal(approveProjectGate(root, "first-chapter-approval").action, "approved");
+    assert.ok(gateEvidencePaths(readProject(root), "first-chapter-approval").includes("books/book-01/voice-audits.yaml"));
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
