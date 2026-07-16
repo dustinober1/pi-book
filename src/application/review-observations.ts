@@ -12,14 +12,14 @@ export interface RawReviewObservation {
   observedOn: string;
   rating: number | null;
   paraphrase: string;
-  shortExcerpt?: string;
+  shortExcerpt?: string | undefined;
   category: FrictionCategory;
   genreRelevance: Relevance;
   executionRelevance: Relevance;
-  sentiment?: ReviewSentiment;
-  reviewerName?: string;
-  reviewerHandle?: string;
-  reviewerProfileUrl?: string;
+  sentiment?: ReviewSentiment | undefined;
+  reviewerName?: string | undefined;
+  reviewerHandle?: string | undefined;
+  reviewerProfileUrl?: string | undefined;
 }
 
 export interface ReviewImportResult {
@@ -163,7 +163,7 @@ function relevance(value: string, label: string): Relevance {
 function explicitSentiment(value: string): ReviewSentiment | undefined {
   const normalized = value.trim().toLowerCase();
   if (!normalized) return undefined;
-  if (!SENTIMENTS.has(normalized as ReviewSentiment)) throw new Error(`Sentiment must be negative, mixed, positive, or blank.`);
+  if (!SENTIMENTS.has(normalized as ReviewSentiment)) throw new Error("Sentiment must be negative, mixed, positive, or blank.");
   return normalized as ReviewSentiment;
 }
 
@@ -216,11 +216,10 @@ export function maximumClusterConfidence(
 ): "weak" | "moderate" | "strong" {
   const titles = distinct(observations.map((item) => item.title));
   if (observations.length < 3 || titles.length < 2) return "weak";
-  const moderate = "moderate" as const;
   const oneStarOnly = observations.length > 0 && observations.every((item) => item.rating === 1);
   const executionSpecific = observations.some((item) => item.execution_relevance === "high");
   if (!oneStarOnly && observations.length >= 6 && titles.length >= 3 && executionSpecific && positiveCounterweightIds.length > 0) return "strong";
-  return moderate;
+  return "moderate";
 }
 
 export function buildReviewCluster(
@@ -291,7 +290,7 @@ export function readerFrictionFindings(strategy: BookStrategy): ReaderFrictionFi
     if (cluster.decision === "accept-as-tradeoff") {
       const linked = strategy.reader_friction.accepted_tradeoffs.some((tradeoff) => {
         const extended = tradeoff as typeof tradeoff & { source_cluster_ids?: string[] };
-        return extended.source_cluster_ids?.includes(cluster.id);
+        return tradeoff.id === cluster.id || extended.source_cluster_ids?.includes(cluster.id);
       });
       if (!linked) findings.push({ severity: "blocker", code: "missing-tradeoff-link", message: `${cluster.id} is accepted as a tradeoff but has no linked accepted-tradeoff record.` });
     }
