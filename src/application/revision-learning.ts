@@ -83,29 +83,35 @@ export function revisionLearningFindings(
     if (guardrail.status !== "approved") continue;
 
     const candidate = candidates.get(guardrail.pattern_id);
-    if (!candidate?.eligible) {
+    const evidence = candidate ?? {
+      patternId: guardrail.pattern_id,
+      ticketIds: [],
+      distinctChapters: [],
+      milestoneReviews: [],
+      eligible: false,
+    };
+    if (!evidence.eligible) {
       findings.push({
         severity: "blocker",
         code: "ineligible-learning-guardrail",
         message: `Approved learning guardrail ${guardrail.id} does not meet the threshold of three distinct chapters or two milestone reviews.`,
       });
-      continue;
     }
-    if (!sameStrings(guardrail.source_ticket_ids, candidate.ticketIds)) {
+    if (!sameStrings(guardrail.source_ticket_ids, evidence.ticketIds)) {
       findings.push({
         severity: "blocker",
         code: "learning-ticket-mismatch",
         message: `Approved learning guardrail ${guardrail.id} must reference exactly the supporting tickets for ${guardrail.pattern_id}.`,
       });
     }
-    if (!sameNumbers(guardrail.distinct_chapters, candidate.distinctChapters)) {
+    if (!sameNumbers(guardrail.distinct_chapters, evidence.distinctChapters)) {
       findings.push({
         severity: "blocker",
         code: "learning-chapter-mismatch",
         message: `Approved learning guardrail ${guardrail.id} has incorrect distinct-chapter evidence.`,
       });
     }
-    if (!sameStrings(guardrail.milestone_reviews, candidate.milestoneReviews)) {
+    if (!sameStrings(guardrail.milestone_reviews, evidence.milestoneReviews)) {
       findings.push({
         severity: "blocker",
         code: "learning-review-mismatch",
