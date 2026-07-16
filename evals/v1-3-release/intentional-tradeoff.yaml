@@ -1,0 +1,10 @@
+schema_version: 1.0.0
+id: intentional-tradeoff
+kind: intentional-tradeoff
+input:
+  cluster_id: CLU-001
+  tradeoff_id: TRD-001
+  decision: accept-as-tradeoff
+expected:
+  visible_tradeoff: true
+  approved_guardrail: false

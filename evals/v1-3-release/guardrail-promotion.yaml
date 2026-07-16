@@ -1,0 +1,25 @@
+schema_version: 1.0.0
+id: guardrail-promotion
+kind: guardrail-promotion
+input:
+  below_threshold:
+    chapters:
+      - 4
+      - 4
+    milestone_reviews:
+      - act-1
+  chapter_threshold:
+    chapters:
+      - 4
+      - 9
+      - 14
+    milestone_reviews: []
+  review_threshold:
+    chapters: []
+    milestone_reviews:
+      - act-1
+      - midpoint
+expected:
+  below_eligible: false
+  chapter_eligible: true
+  review_eligible: true

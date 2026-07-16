@@ -1,0 +1,11 @@
+schema_version: 1.0.0
+id: voice-drift
+kind: voice-drift
+input:
+  baseline_text: Mara moved. She listened. "Go now," Jonah said.
+  current_text: Mara moved through the corridor and listened for the elevator before Jonah said, "Go now, before they see us."
+expected:
+  changed_metrics:
+    - sentence_mean
+    - dialogue_ratio
+  interpretation: evidence-only
