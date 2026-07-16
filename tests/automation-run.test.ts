@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ProjectSchema, type ProjectState } from "../src/domain/schemas.js";
+import { ProjectV14Schema, type ProjectStateV14 } from "../src/domain/v1-4-project-schema.js";
 import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readProject } from "../src/project/store.js";
 import {
@@ -16,11 +16,11 @@ import {
   startAutomationRun,
 } from "../src/application/automation-run.js";
 
-function project(): ProjectState {
+function project(): ProjectStateV14 {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-run-schema-"));
   try {
     const root = initializeProject(parent, { projectName: "Run Schema", projectType: "standalone", profile: "thriller" });
-    return readProject(root);
+    return readProject(root) as ProjectStateV14;
   } finally { rmSync(parent, { recursive: true, force: true }); }
 }
 
@@ -38,9 +38,9 @@ function started(): ProjectState {
 test("existing project YAML without active_run remains readable and new projects initialize null", () => {
   const value = project();
   assert.equal(value.automation.active_run, null);
-  const legacy = structuredClone(value) as ProjectState & { automation: Record<string, unknown> };
+  const legacy = structuredClone(value) as ProjectStateV14 & { automation: Record<string, unknown> };
   delete legacy.automation.active_run;
-  assert.doesNotThrow(() => parseYaml(stringifyYaml(legacy), ProjectSchema, "PROJECT.yaml"));
+  assert.doesNotThrow(() => parseYaml(stringifyYaml(legacy), ProjectV14Schema, "PROJECT.yaml"));
 });
 
 test("starting a run records durable intent and rejects a second live run", () => {
