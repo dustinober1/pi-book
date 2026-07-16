@@ -1,4 +1,5 @@
 import type { TSchema } from "@sinclair/typebox";
+import { SourceRegisterV13Schema } from "./v1-3-research-schemas.js";
 import {
   BookStrategySchema,
   ResearchLedgerSchema,
@@ -17,6 +18,7 @@ const registry: Array<[RegExp, TSchema]> = [
   [/(^|\/)research-ledger\.yaml$/, ResearchLedgerSchema],
   [/(^|\/)book-strategy\.yaml$/, BookStrategySchema],
   [/(^|\/)voice-audits\.yaml$/, VoiceAuditsSchema],
+  [/(^|\/)source-register\.yaml$/, SourceRegisterV13Schema],
 ];
 
 export function v13SchemaForPath(path: string): TSchema | null {
