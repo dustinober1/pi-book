@@ -1,5 +1,20 @@
 # Novel Forge Release Checklist
 
+## Version 1.4.0 — Author Velocity baseline entry gate
+
+The first 1.4 pull request changes evaluation only. It must not change production workflow behavior or package version.
+
+- [ ] Four journey fixtures load and pass with at least one explicit current limitation each.
+- [ ] Four author questions report exactly four.
+- [ ] Duplicate accepted `draft-chapter` events do not inflate completed chapters.
+- [ ] Pause and resume under one run ID preserve all counters.
+- [ ] Rejected attempts and permitted retries are counted independently.
+- [ ] Human gates and requested targets remain explicit stop reasons.
+- [ ] `contextCharacters` records the maximum observed size.
+- [ ] Architecture and Novel Forge 1.3 release fixtures remain unchanged and passing.
+- [ ] Package version and dependency metadata remain unchanged.
+
+
 ## Version 1.3.0
 
 Do not create the `v1.3.0` tag after the foundation PR alone. Create it only after all planned 1.3 phases are merged and the final `main` commit passes the complete Node 22.19.0 and Node 24 verification matrix through the repository's `Novel Forge tests` GitHub Actions workflow.

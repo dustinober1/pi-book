@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — Author Velocity baselines
+
+### Added
+
+- Deterministic author-journey traces for brief-to-book-plan, packet-window drafting, pause/resume drafting, and twelve-ticket revision work.
+- Exact counts for questions, prompts, guarded attempts, rejections, retries, approvals, unique completed chapters, peak context characters, and stop reasons.
+- An `eval:journeys` command and an author-journey section in `npm run eval`.
+
+### Boundaries
+
+- Baselines use no wall-clock timing, telemetry, remote service, workflow mutation, or claim that future Author Velocity targets already pass.
+
+
 ## 1.3.0 — Author-taste and research foundation
 
 ### Added

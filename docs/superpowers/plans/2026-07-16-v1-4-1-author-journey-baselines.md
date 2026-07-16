@@ -131,7 +131,8 @@ Implementation rules:
 - count every guarded attempt once, regardless of outcome;
 - count rejected outcomes separately;
 - count retries only when `retry_of` is present;
-- maintain a set of accepted draft chapter numbers;
+- maintain a set of accepted draft chapter numbers specifically where `action === "draft-chapter"` and `outcome === "accepted"`;
+- count every `writer-approval` event to populate `writerApprovals`;
 - track maximum context characters;
 - overwrite `stopReason` for each explicit stop so the last stop wins;
 - ignore run-state events for counts while validating each run ID and state transition is nonblank;
