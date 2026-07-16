@@ -1,0 +1,49 @@
+schema_version: 1.0.0
+id: resume-after-four-chapters
+description: Current drafting trace paused after four chapters and resumed under one logical run ID.
+limitations:
+  - Resume preserves counters but still requires an explicit author-requested target.
+trace:
+  events:
+    - { type: run-state, run_id: RUN-RESUME, state: started }
+    - { type: model-prompt, id: P1 }
+    - { type: guarded-event, id: E1, action: draft-chapter, outcome: accepted, chapter: 1 }
+    - { type: model-prompt, id: P2 }
+    - { type: guarded-event, id: E2, action: draft-chapter, outcome: accepted, chapter: 2 }
+    - { type: model-prompt, id: P3 }
+    - { type: guarded-event, id: E3, action: draft-chapter, outcome: accepted, chapter: 3 }
+    - { type: model-prompt, id: P4 }
+    - { type: guarded-event, id: E4, action: draft-chapter, outcome: accepted, chapter: 4 }
+    - { type: context, characters: 10000 }
+    - { type: run-state, run_id: RUN-RESUME, state: paused }
+    - { type: run-state, run_id: RUN-RESUME, state: resumed }
+    - { type: model-prompt, id: P5 }
+    - { type: guarded-event, id: E5, action: draft-chapter, outcome: accepted, chapter: 5 }
+    - { type: model-prompt, id: P6 }
+    - { type: guarded-event, id: E6, action: draft-chapter, outcome: accepted, chapter: 6 }
+    - { type: model-prompt, id: P7 }
+    - { type: guarded-event, id: E7, action: draft-chapter, outcome: accepted, chapter: 7 }
+    - { type: model-prompt, id: P8 }
+    - { type: guarded-event, id: E8, action: draft-chapter, outcome: accepted, chapter: 8 }
+    - { type: model-prompt, id: P9 }
+    - { type: guarded-event, id: E9, action: draft-chapter, outcome: accepted, chapter: 9 }
+    - { type: model-prompt, id: P10 }
+    - { type: guarded-event, id: E10, action: draft-chapter, outcome: accepted, chapter: 10 }
+    - { type: context, characters: 14000 }
+    - { type: run-state, run_id: RUN-RESUME, state: completed }
+    - { type: stop, reason: requested-target }
+expected:
+  authorQuestions: 0
+  modelPrompts: 10
+  guardedEvents: 10
+  rejectedEvents: 0
+  retries: 0
+  writerApprovals: 0
+  chaptersCompleted: 10
+  contextCharacters: 14000
+  stopReason: requested-target
+limits:
+  max_author_questions: 0
+  max_model_prompts: 10
+  max_rejected_events: 0
+  max_retries: 0
