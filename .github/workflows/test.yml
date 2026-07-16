@@ -58,4 +58,5 @@ jobs:
         if: steps.typecheck.outputs.code == '0' && steps.tests.outputs.code != '0'
         run: exit 1
       - run: npm run eval
+      - run: npm run verify:release
       - run: npm pack --dry-run
