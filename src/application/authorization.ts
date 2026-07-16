@@ -1,11 +1,12 @@
 import type { ProjectState, Stage } from "../domain/schemas.js";
 import { gateOwnerStage } from "../domain/workflow.js";
 
-export type NovelOperation = "plan-voice" | "plan-series" | "plan-book" | "build-queue" | "draft" | "review-act" | "review-manuscript" | "review-series" | "reader-test" | "revise" | "canon-lock" | "package";
+export type NovelOperation = "plan-voice" | "plan-series" | "plan-book" | "build-queue" | "draft" | "review-act" | "review-manuscript" | "review-series" | "review-recalibration" | "reader-test" | "revise" | "canon-lock" | "package";
 const allowedStages: Record<NovelOperation, Stage[]> = {
   "plan-voice": ["voice-intake"], "plan-series": ["series-planning"], "plan-book": ["book-planning"],
   "build-queue": ["chapter-queue"], draft: ["drafting"], "review-act": ["act-review"],
   "review-manuscript": ["manuscript-review"], "review-series": ["manuscript-review", "canon-lock", "packaging", "complete"],
+  "review-recalibration": ["drafting", "act-review", "revision", "manuscript-review", "packaging"],
   "reader-test": ["drafting", "act-review", "revision", "manuscript-review", "packaging"],
   revise: ["revision"], "canon-lock": ["canon-lock"], package: ["packaging"],
 };
@@ -16,7 +17,7 @@ export function assertOperationAllowed(project: ProjectState, operation: NovelOp
     const requirement = required.length === 1 ? `the ${required[0]} stage` : `one of these stages: ${required.join(", ")}`;
     throw new Error(`${operation} requires ${requirement}; current stage is ${project.current_stage}.`);
   }
-  if (project.next_gate && project.gates[project.next_gate] === "pending" && !["review-act", "review-manuscript", "reader-test", "revise"].includes(operation)) {
+  if (project.next_gate && project.gates[project.next_gate] === "pending" && !["review-act", "review-manuscript", "review-recalibration", "reader-test", "revise"].includes(operation)) {
     throw new Error(`Human approval required before ${operation}: ${project.next_gate}.`);
   }
 }
@@ -33,6 +34,7 @@ export function assertReviewAllowed(project: ProjectState, scope: string): void 
   if (scope === "act") return assertOperationAllowed(project, "review-act");
   if (scope === "manuscript") return assertOperationAllowed(project, "review-manuscript");
   if (scope === "series") return assertOperationAllowed(project, "review-series");
+  if (scope === "recalibration") return assertOperationAllowed(project, "review-recalibration");
   if (scope === "chapter") {
     if (!["drafting", "act-review", "revision"].includes(project.current_stage)) throw new Error(`chapter review is not allowed during ${project.current_stage}.`);
     return;

@@ -4,15 +4,27 @@ import { sceneAuditFindings } from "../src/application/scene-audit.js";
 import type { ChapterQueueState } from "../src/domain/schemas.js";
 import type { PlotGridPhase4 } from "../src/domain/v1-3-architecture-schemas.js";
 
-function queue(engines: string[]): ChapterQueueState {
+interface MovementOverrides {
+  pressure?: string;
+  character?: string;
+  relationship?: string;
+}
+
+function queue(engines: string[], overrides: Record<number, MovementOverrides> = {}): ChapterQueueState {
   return {
     schema_version: "1.0.0", active_window: "Act I",
-    packets: engines.map((scene_engine, index) => ({
-      chapter: index + 1, title: `Chapter ${index + 1}`, status: "ready", pov: "Mara", purpose: "advance",
-      scene_engine, pressure_movement: "pressure rises", character_movement: "Mara commits",
-      relationship_movement: "trust shifts", story_thread_refs: [], continuity_refs: [], character_refs: ["Mara"],
-      required_research: [], profile_fields: {}, ending_hook: "new pressure", milestone_gate: null, target_words: 1500,
-    })),
+    packets: engines.map((scene_engine, index) => {
+      const movement = overrides[index + 1] ?? {};
+      return {
+        chapter: index + 1, title: `Chapter ${index + 1}`, status: "ready", pov: "Mara", purpose: "advance",
+        scene_engine,
+        pressure_movement: movement.pressure ?? "pressure rises",
+        character_movement: movement.character ?? "Mara commits",
+        relationship_movement: movement.relationship ?? "trust shifts",
+        story_thread_refs: [], continuity_refs: [], character_refs: ["Mara"], required_research: [],
+        profile_fields: {}, ending_hook: "new pressure", milestone_gate: null, target_words: 1500,
+      };
+    }),
   };
 }
 
@@ -37,11 +49,30 @@ test("whole-book dominance requires six chapters and more than half usage", () =
   assert.ok(findings.some((item) => item.code === "scene-engine-dominance"));
 });
 
-test("state-neutral conversations are flagged but meaningful changes suppress the finding", () => {
-  const neutral = sceneAuditFindings(queue(["interview"]), plot(["unchanged"]));
+test("state-neutral conversations require every state channel to remain neutral", () => {
+  const allNeutral = queue(["interview"], { 1: { pressure: "unchanged", character: "unchanged", relationship: "unchanged" } });
+  const neutral = sceneAuditFindings(allNeutral, plot(["unchanged"]));
   assert.ok(neutral.some((item) => item.code === "state-neutral-conversation"));
-  const changed = sceneAuditFindings(queue(["interview"]), plot(["Mara learns the lock code and loses Jonah's trust"]));
-  assert.equal(changed.some((item) => item.code === "state-neutral-conversation"), false);
+
+  for (const [label, movement] of [
+    ["pressure", { pressure: "deadline advances", character: "unchanged", relationship: "unchanged" }],
+    ["character", { pressure: "unchanged", character: "Mara accepts responsibility", relationship: "unchanged" }],
+    ["relationship", { pressure: "unchanged", character: "unchanged", relationship: "Jonah withdraws trust" }],
+  ] as const) {
+    const changed = sceneAuditFindings(queue(["interview"], { 1: movement }), plot(["unchanged"]));
+    assert.equal(changed.some((item) => item.code === "state-neutral-conversation"), false, `${label} movement should suppress the finding`);
+  }
+
+  const plotChanged = sceneAuditFindings(allNeutral, plot(["Mara learns the lock code"]));
+  assert.equal(plotChanged.some((item) => item.code === "state-neutral-conversation"), false);
+});
+
+test("briefings and interrogations use the same full state-vector rule", () => {
+  const neutralMovements = { 1: { pressure: "none", character: "none", relationship: "none" } };
+  for (const engine of ["briefing", "interrogation"]) {
+    const findings = sceneAuditFindings(queue([engine], neutralMovements), plot(["none"]));
+    assert.ok(findings.some((item) => item.code === "state-neutral-conversation"), engine);
+  }
 });
 
 test("adjacent indistinguishable state changes are flagged", () => {

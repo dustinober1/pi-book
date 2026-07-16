@@ -9,8 +9,8 @@ export interface SceneAuditFinding {
   recurrenceKey: string;
 }
 
-const CONVERSATIONAL_ENGINES = ["interview", "conversation", "dialogue", "meeting", "debrief", "questioning"];
-const NEUTRAL_STATES = new Set(["", "none", "no change", "unchanged", "same", "status quo", "n/a"]);
+const CONVERSATIONAL_ENGINES = ["interview", "conversation", "dialogue", "meeting", "briefing", "debrief", "interrogation", "questioning"];
+const NEUTRAL_STATES = new Set(["", "none", "no change", "unchanged", "same", "status quo", "n/a", "neutral", "static", "holds"]);
 
 function normalize(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase("en-US").replace(/[^\p{L}\p{N}]+/gu, " ").trim().replace(/\s+/g, " ");
@@ -19,6 +19,10 @@ function normalize(value: string): string {
 function isConversation(engine: string): boolean {
   const normalized = normalize(engine);
   return CONVERSATIONAL_ENGINES.some((value) => normalized.includes(value));
+}
+
+function isNeutral(value: string): boolean {
+  return NEUTRAL_STATES.has(normalize(value));
 }
 
 export function sceneAuditFindings(queue: ChapterQueueState, plot: PlotGridPhase4): SceneAuditFinding[] {
@@ -50,8 +54,9 @@ export function sceneAuditFindings(queue: ChapterQueueState, plot: PlotGridPhase
       current.chapters.push(packet.chapter);
       counts.set(key, current);
     }
+    const majorityThreshold = Math.floor(packets.length / 2);
     for (const [key, value] of counts) {
-      if (value.chapters.length / packets.length > 0.5) {
+      if (value.chapters.length > majorityThreshold) {
         findings.push({
           code: "scene-engine-dominance",
           chapters: value.chapters,
@@ -64,13 +69,18 @@ export function sceneAuditFindings(queue: ChapterQueueState, plot: PlotGridPhase
   }
 
   for (const packet of packets) {
-    const state = normalize(stateByChapter.get(packet.chapter) ?? "");
-    if (isConversation(packet.scene_engine) && NEUTRAL_STATES.has(state)) {
+    const stateChannels = [
+      stateByChapter.get(packet.chapter) ?? "",
+      packet.pressure_movement,
+      packet.character_movement,
+      packet.relationship_movement,
+    ];
+    if (isConversation(packet.scene_engine) && stateChannels.every(isNeutral)) {
       findings.push({
         code: "state-neutral-conversation",
         chapters: [packet.chapter],
-        evidence: `Chapter ${packet.chapter} uses ${packet.scene_engine} with state change "${stateByChapter.get(packet.chapter) ?? ""}".`,
-        problem: "A conversation-driven scene does not change case, relationship, power, or knowledge state.",
+        evidence: `Chapter ${packet.chapter} uses ${packet.scene_engine} while plot, pressure, character, and relationship movement remain neutral.`,
+        problem: "A conversation-driven scene does not change case, relationship, power, character, pressure, or knowledge state.",
         recurrenceKey: "state-neutral-conversation",
       });
     }
