@@ -1,0 +1,50 @@
+schema_version: 1.0.0
+id: twelve-revision-tickets
+description: Current guarded path for applying twelve accepted revision tickets after writer approval.
+limitations:
+  - Current revision execution records one guarded transaction per ticket.
+  - Revision begins only after an explicit writer approval and returns to a human gate.
+trace:
+  events:
+    - { type: writer-approval, gate: revision-approval }
+    - { type: context, characters: 16000 }
+    - { type: model-prompt, id: P-REV-01 }
+    - { type: guarded-event, id: E-REV-01, action: apply-revision, outcome: accepted }
+    - { type: model-prompt, id: P-REV-02 }
+    - { type: guarded-event, id: E-REV-02, action: apply-revision, outcome: accepted }
+    - { type: model-prompt, id: P-REV-03 }
+    - { type: guarded-event, id: E-REV-03, action: apply-revision, outcome: accepted }
+    - { type: model-prompt, id: P-REV-04 }
+    - { type: guarded-event, id: E-REV-04, action: apply-revision, outcome: accepted }
+    - { type: model-prompt, id: P-REV-05 }
+    - { type: guarded-event, id: E-REV-05, action: apply-revision, outcome: accepted }
+    - { type: model-prompt, id: P-REV-06 }
+    - { type: guarded-event, id: E-REV-06, action: apply-revision, outcome: accepted }
+    - { type: model-prompt, id: P-REV-07 }
+    - { type: guarded-event, id: E-REV-07, action: apply-revision, outcome: accepted }
+    - { type: model-prompt, id: P-REV-08 }
+    - { type: guarded-event, id: E-REV-08, action: apply-revision, outcome: accepted }
+    - { type: model-prompt, id: P-REV-09 }
+    - { type: guarded-event, id: E-REV-09, action: apply-revision, outcome: accepted }
+    - { type: model-prompt, id: P-REV-10 }
+    - { type: guarded-event, id: E-REV-10, action: apply-revision, outcome: accepted }
+    - { type: model-prompt, id: P-REV-11 }
+    - { type: guarded-event, id: E-REV-11, action: apply-revision, outcome: accepted }
+    - { type: model-prompt, id: P-REV-12 }
+    - { type: guarded-event, id: E-REV-12, action: apply-revision, outcome: accepted }
+    - { type: stop, reason: human-gate }
+expected:
+  authorQuestions: 0
+  modelPrompts: 12
+  guardedEvents: 12
+  rejectedEvents: 0
+  retries: 0
+  writerApprovals: 1
+  chaptersCompleted: 0
+  contextCharacters: 16000
+  stopReason: human-gate
+limits:
+  max_author_questions: 0
+  max_model_prompts: 12
+  max_rejected_events: 0
+  max_retries: 0

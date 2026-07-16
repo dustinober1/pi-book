@@ -19,6 +19,20 @@ pi install git:github.com/dustinober1/pi-book@v1.3.0
 
 Run `/novel` whenever the current action finishes. It reads project state and shows only the choices that matter now: continue, review a gate, request changes, inspect evidence, adopt an existing manuscript, use real-reader evidence, package the book, recover safely, or create the next installment.
 
+## 1.4 author-journey throughput baseline
+
+Before changing intake or automation behavior, Novel Forge records deterministic workflow baselines under `evals/journeys/`. These fixtures count author questions, model prompts, guarded attempts, rejections, permitted retries, writer approvals, unique completed chapters, peak bounded-context characters, and the final explicit stop reason.
+
+The baseline is intentionally not a performance score and does not use wall-clock timings or telemetry. `contextCharacters` is the maximum observed bounded-context size, duplicate accepted draft events for one chapter count once, and pause/resume events with the same run ID remain one logical journey. Each fixture lists current limitations rather than pretending later Author Velocity targets already pass.
+
+Run the focused baseline tests with:
+
+```bash
+npm run eval:journeys
+```
+
+`npm run eval` continues to run the architecture and Novel Forge 1.3 release evaluations, then prints the author-journey baseline as a separate section. Future Author Velocity changes must update these traces only when workflow behavior intentionally changes.
+
 The primary author-facing files are:
 
 - `STATUS.md` — the current decision, reason, blockers, warnings, and progress.
