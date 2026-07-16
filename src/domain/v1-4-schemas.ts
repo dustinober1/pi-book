@@ -198,3 +198,4 @@ export function defaultIntake(): IntakeState {
 export function defaultDecisionLedger(): DecisionLedger {
   return { schema_version: "1.0.0", assumptions: [], decisions: [] };
 }
+export { PremiseLabSchema, PremiseVariantSchema, defaultPremiseLab, type PremiseLab, type PremiseVariant } from "./v1-4-premise-schemas.js";
