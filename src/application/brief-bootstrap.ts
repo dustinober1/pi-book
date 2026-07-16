@@ -30,8 +30,19 @@ function field(text: string, label: string): string | null {
 }
 
 function section(text: string, label: string): string {
-  const match = text.match(new RegExp(`^#{1,6}\\s+${label}\\s*$([\\s\\S]*?)(?=^#{1,6}\\s+|\\Z)`, "im"));
-  return (match?.[1] ?? "").trim();
+  const lines = text.split("\n");
+  let collecting = false;
+  const collected: string[] = [];
+  for (const line of lines) {
+    const heading = line.match(/^#{1,6}\s+(.+?)\s*$/);
+    if (heading) {
+      if (collecting) break;
+      collecting = heading[1]?.trim().toLocaleLowerCase() === label.trim().toLocaleLowerCase();
+      continue;
+    }
+    if (collecting) collected.push(line);
+  }
+  return collected.join("\n").trim();
 }
 
 function firstParagraph(text: string): string {
