@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { BookStrategySchema } from "./v1-3-schemas.js";
 
 export const SourceReliabilitySchema = Type.Union([
   Type.Literal("unknown"),
@@ -24,5 +25,20 @@ export const SourceRegisterV13Schema = Type.Object({
     supports_research_ids: Type.Optional(Type.Array(Type.String({ pattern: "^RES-[0-9]{3}$" }))),
   }, { additionalProperties: false })),
 }, { additionalProperties: false });
-
 export type SourceRegisterV13 = Static<typeof SourceRegisterV13Schema>;
+
+const ReaderFrictionPhase3Schema = Type.Object({
+  ...BookStrategySchema.properties.reader_friction.properties,
+  accepted_tradeoffs: Type.Array(Type.Object({
+    id: Type.String(),
+    statement: Type.String(),
+    mitigation: Type.String(),
+    source_cluster_ids: Type.Optional(Type.Array(Type.String())),
+  }, { additionalProperties: false })),
+}, { additionalProperties: false });
+
+export const BookStrategyPhase3Schema = Type.Object({
+  ...BookStrategySchema.properties,
+  reader_friction: ReaderFrictionPhase3Schema,
+}, { additionalProperties: false });
+export type BookStrategyPhase3 = Static<typeof BookStrategyPhase3Schema>;
