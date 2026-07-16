@@ -12,7 +12,7 @@ import { automationDraftPrompt, bookPlanPrompt, canonLockPrompt, draftPrompt, gu
 import { compileActiveBook } from "./package.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
 import { promotionCandidates } from "./revision-learning.js";
-import { assertVoiceAuditCompleteForGate, nextVoiceAuditRequirement } from "./voice-drift.js";
+import { nextVoiceAuditRequirement } from "./voice-drift.js";
 
 export interface RunOptions { approve?: string; until?: string; maxChapters?: number; noProse?: boolean; reviewOnly?: boolean; stopOnWarning?: boolean }
 export interface RunDecision { action: string; prompt: string | null; message: string }
@@ -24,8 +24,11 @@ function readStrategy(root: string): BookStrategyPhase5 | null {
   return text ? parseYaml<BookStrategyPhase5>(text, BookStrategyPhase5Schema, "book-strategy.yaml") : null;
 }
 
+function nonPendingGateBlockers(blockers: readonly string[]): string[] {
+  return blockers.filter((blocker) => !blocker.startsWith("Human approval required:"));
+}
+
 export function approveProjectGate(root: string, gate: string, note = ""): RunDecision {
-  assertVoiceAuditCompleteForGate(root, gate);
   const project = approveGate(root, structuredClone(readProject(root)), gate, note);
   applyGuidedProjectEvent(root, [{ path: "PROJECT.yaml", content: stringifyYaml(project) }], `Novel Forge: approve ${gate}`, { lastAction: `Approved ${gate}` });
   return { action: "approved", prompt: null, message: `Approved ${gate}. Current stage: ${project.current_stage}.` };
@@ -52,14 +55,17 @@ export function rejectProjectGate(root: string, gate: string, note: string): Run
 export function decideNextRun(root: string, options: RunOptions = {}): RunDecision {
   if (options.approve) return approveProjectGate(root, options.approve);
 
+  const status = getProjectStatus(root);
+  const hardBlockers = nonPendingGateBlockers(status.blockers);
+  if (hardBlockers.length) return { action: "blocked", prompt: null, message: hardBlockers[0] ?? "Project is blocked." };
+  if (options.stopOnWarning && status.warnings.length) return { action: "warning-stop", prompt: null, message: status.warnings[0] ?? "Project warning." };
+
   const dueAudit = nextVoiceAuditRequirement(root);
   if (dueAudit) {
     return { action: "voice-audit", prompt: voiceAuditPrompt(root, dueAudit), message: `Queued required voice audit ${dueAudit.milestone_ref}.` };
   }
 
-  const status = getProjectStatus(root);
   if (status.blockers.length) return { action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." };
-  if (options.stopOnWarning && status.warnings.length) return { action: "warning-stop", prompt: null, message: status.warnings[0] ?? "Project warning." };
   const project = readProject(root);
   if (options.reviewOnly) {
     if (project.current_stage === "act-review") return { action: "review", prompt: reviewPrompt(root, "act"), message: "Queued act review." };
@@ -102,6 +108,10 @@ export function directDraftDecision(root: string, chapter?: number): RunDecision
   const project = readProject(root);
   try { assertOperationAllowed(project, "draft"); } catch (error) { return { action: "blocked", prompt: null, message: error instanceof Error ? error.message : String(error) }; }
   const status = getProjectStatus(root);
+  const hardBlockers = nonPendingGateBlockers(status.blockers);
+  if (hardBlockers.length) return { action: "blocked", prompt: null, message: hardBlockers[0] ?? "Project is blocked." };
+  const dueAudit = nextVoiceAuditRequirement(root);
+  if (dueAudit) return { action: "blocked", prompt: null, message: `Required voice audit ${dueAudit.milestone_ref} must be completed through /novel before drafting.` };
   if (status.blockers.length) return { action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." };
   const context = buildChapterContext(root, chapter);
   return { action: "draft", prompt: draftPrompt(context), message: `Queued Chapter ${context.packet.chapter}.` };
