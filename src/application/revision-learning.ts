@@ -20,7 +20,16 @@ function eligible(chapters: readonly number[], milestoneIds: readonly string[]):
   return new Set(chapters).size >= 3 || new Set(milestoneIds).size >= 2;
 }
 
-export function promotionCandidates(tickets: RevisionTicketsPhase5): GuardrailPromotionCandidate[] {
+function resolvedByStrategy(candidate: GuardrailPromotionCandidate, strategy?: BookStrategyPhase5): boolean {
+  if (!strategy) return false;
+  return strategy.review_derived_guardrails.some((guardrail) => {
+    if (guardrail.status !== "approved" && guardrail.status !== "rejected") return false;
+    const ticketIds = guardrail.source_ticket_ids ?? [];
+    return candidate.source_ticket_ids.some((id) => ticketIds.includes(id));
+  });
+}
+
+export function promotionCandidates(tickets: RevisionTicketsPhase5, strategy?: BookStrategyPhase5): GuardrailPromotionCandidate[] {
   const groups = new Map<string, RevisionTicketPhase5[]>();
   for (const ticket of tickets.tickets) {
     const key = ticket.recurrence?.pattern_key;
@@ -40,13 +49,14 @@ export function promotionCandidates(tickets: RevisionTicketsPhase5): GuardrailPr
     const rule = group.map((ticket) => ticket.recurrence?.candidate_guardrail?.trim() ?? "").find(Boolean)
       ?? group.map((ticket) => ticket.required_change.trim()).find(Boolean)
       ?? "Prevent the recurring revision pattern.";
-    candidates.push({
+    const candidate = {
       pattern_key: patternKey,
       rule,
       source_ticket_ids: distinctSorted(group.map((ticket) => ticket.id)),
       occurrence_chapters: occurrenceChapters,
       milestone_review_ids: milestoneIds,
-    });
+    };
+    if (!resolvedByStrategy(candidate, strategy)) candidates.push(candidate);
   }
   return candidates.sort((a, b) => a.pattern_key.localeCompare(b.pattern_key));
 }
