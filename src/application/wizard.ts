@@ -6,6 +6,7 @@ import { buildNextBookInheritanceProposal } from "./next-book.js";
 import { buildPackagingChecklist } from "./package-checklist.js";
 import { projectStateHash } from "./project-hash.js";
 import { getProjectStatus } from "./status.js";
+import { normalizeEventRejection } from "./event-rejection.js";
 import type { WizardActionRegistry, WizardProposalEnvelope, WizardWorkflow } from "../wizard/types.js";
 
 export interface WizardWorkflowHandler {
@@ -84,11 +85,16 @@ export function createWizardRegistry(root: string, handlers: WizardWorkflowHandl
     },
     apply(envelope) {
       const project = readProject(root);
-      if (envelope.expected_stage !== project.current_stage) throw new Error(`Stale wizard stage: expected ${envelope.expected_stage}, current ${project.current_stage}.`);
-      if (envelope.expected_project_hash !== projectStateHash(root)) throw new Error("Stale wizard project hash; reload the workflow before applying.");
-      const handler = handlers[envelope.workflow];
-      if (!handler?.apply) throw new Error(`${envelope.workflow} apply action ${envelope.action} is not available yet.`);
-      return handler.apply(envelope);
+      const currentProjectHash = projectStateHash(root);
+      try {
+        if (envelope.expected_stage !== project.current_stage) throw new Error(`Stale wizard stage: expected ${envelope.expected_stage}, current ${project.current_stage}.`);
+        if (envelope.expected_project_hash !== currentProjectHash) throw new Error("Stale wizard project hash; reload the workflow before applying.");
+        const handler = handlers[envelope.workflow];
+        if (!handler?.apply) throw new Error(`${envelope.workflow} apply action ${envelope.action} is not available yet.`);
+        return handler.apply(envelope);
+      } catch (error) {
+        throw normalizeEventRejection(error, { root, currentStage: project.current_stage, currentProjectHash });
+      }
     },
   };
 }

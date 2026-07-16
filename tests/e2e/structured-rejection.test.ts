@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { applyNovelEvent, projectStateHash } from "../../src/application/events.js";
@@ -68,6 +68,9 @@ test("guarded events expose schema stale allowlist and reference rejection detai
     assert.deepEqual(disallowed.detail.invalidPaths, ["books/book-01/manuscript/chapters/01-opening.md"]);
     assert.equal(disallowed.detail.retryable, false);
 
+    assert.equal(readFileSync(projectPath, "utf8"), projectBefore);
+    assert.equal(readFileSync(bookPath, "utf8"), bookBefore);
+
     const project = readProject(root);
     project.current_stage = "chapter-queue";
     project.next_gate = null;
@@ -88,13 +91,9 @@ test("guarded events expose schema stale allowlist and reference rejection detai
     assert.equal(reference.detail.retryable, true);
     assert.match(reference.message, /Reference validation blocked/i);
 
-    const restored = readProject(root);
-    restored.current_stage = "voice-intake";
-    writeFileSync(projectPath, stringifyYaml(restored), "utf8");
+    assert.equal(readProject(root).current_stage, "chapter-queue");
     assert.equal(readFileSync(bookPath, "utf8"), bookBefore);
-    assert.equal(readFileSync(join(root, "books", "book-01", "manuscript", "chapters", ".gitkeep"), "utf8"), "");
-    assert.equal(readFileSync(projectPath, "utf8"), stringifyYaml(restored));
-    assert.notEqual(readFileSync(projectPath, "utf8"), projectBefore, "only the test's explicit stage setup may differ");
+    assert.deepEqual(readdirSync(join(root, "books", "book-01", "manuscript", "chapters")), []);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 

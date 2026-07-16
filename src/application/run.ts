@@ -10,6 +10,7 @@ import { assertOperationAllowed } from "./authorization.js";
 import { automationDraftPrompt, bookPlanPrompt, canonLockPrompt, draftPrompt, packagePrompt, queuePrompt, reviewPrompt, revisionPrompt, seriesPlanPrompt, voicePlanPrompt } from "./prompts.js";
 import { compileActiveBook } from "./package.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
+import { canRetryEvent, rejectionInstruction, type EventRejectionDetail } from "./event-rejection.js";
 
 export interface RunOptions { approve?: string; until?: string; maxChapters?: number; noProse?: boolean; reviewOnly?: boolean; stopOnWarning?: boolean }
 export interface RunDecision { action: string; prompt: string | null; message: string }
@@ -93,3 +94,17 @@ export function directRevisionDecision(root: string, ticketIds: string[] = []): 
 }
 
 export function bookPath(root: string): string { return join(root, "books", readBook(root).book_id); }
+
+export function rejectionRunDecision(detail: EventRejectionDetail, previousRetries = 0): RunDecision {
+  const instruction = rejectionInstruction(detail, previousRetries);
+  if (canRetryEvent(detail, previousRetries)) {
+    return { action: "repair-rejection", prompt: null, message: `${detail.message} ${instruction}` };
+  }
+  if (detail.retryable) {
+    return { action: "blocked", prompt: null, message: `Retry limit reached. ${instruction}` };
+  }
+  if (detail.requiresReload) {
+    return { action: "reload-state", prompt: null, message: `${detail.message} ${instruction}` };
+  }
+  return { action: "blocked", prompt: null, message: `${detail.message} ${instruction}` };
+}
