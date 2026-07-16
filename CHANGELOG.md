@@ -24,6 +24,12 @@
 - Deterministic book-plan validation for reader promise, approved expectation decisions, stress-test evidence, setup-before-payoff order, decision consequences, and repeated scene engines.
 - Safe `research-item` graph records that connect explicitly required ready claims to mutually registered source provenance while keeping source nodes terminal.
 - Bounded `Required ready research claims` and `Approved book guardrails` drafting-context sections that exclude public-review bodies, unrequired claims, and unapproved rules.
+- Deterministic voice metric extraction covering sentence and paragraph distributions, dialogue ratio, short-fragment frequency, rhetorical questions, filter words, repeated body-language vocabulary, and interiority density.
+- Required voice-audit milestones after Chapter 1, Chapter 3, every act boundary, manuscript review, and explicit recalibration.
+- Scene and state-change diversity findings for repeated scene engines, dominant engines, state-neutral conversations, and indistinguishable adjacent chapter movement.
+- Revision-pattern recurrence tracking with exact eligibility at three distinct chapters or two distinct milestone reviews.
+- Writer-approved learned guardrails with ticket and milestone provenance, rejection memory, and future-drafting-only activation.
+- A read-only `npm run audit:voice -- <project-root> [milestone]` JSON evidence command.
 
 ### Changed
 
@@ -37,7 +43,11 @@
 - Queue planning uses ready research-ledger IDs for new packets while preserving legacy source IDs as migration advisories.
 - Chapter context reports selected research claims and their source provenance separately from canon, threads, and public market observations.
 - Review and reader-test prompts explicitly separate public market observations from accepted human responses to the current manuscript.
-- Review events may write typed `voice-audits.yaml` evidence without making it mandatory during this foundation phase.
+- Milestone reviews may write typed voice-audit and recurrence evidence; voice metrics remain evidence rather than mechanical prose targets.
+- `/novel` now surfaces a due voice audit before offering a milestone approval or continuing drafting.
+- `/novel-review recalibration` launches an explicit state-neutral voice recalibration audit.
+- Gate evidence hashes for first-chapter, act, and manuscript decisions include the corresponding approved voice-audit evidence.
+- Eligible recurring revision patterns become writer decisions instead of automatic drafting rules.
 
 ### Compatibility
 
@@ -48,6 +58,8 @@
 - Unrelated voice or audit evidence updates do not force a legacy research backfill.
 - Existing `SRC-NNN` packet references remain draftable with an advisory until a later plan rebuild migrates them to ready `RES-NNN` items.
 - Existing plot grids and book strategies without Phase 4 fields remain readable. New projects receive empty decision ledgers and pending stress-test templates; a deliberate book-plan rebuild must complete them before approval.
+- Existing voice audits, revision tickets, and book strategies without Phase 5 extension fields remain readable.
+- Older projects without `voice-audits.yaml` are not retroactively blocked by the new milestone gate rule.
 - Existing manuscript prose, reader experiments, publishing metadata, marketing metadata, and continuity-graph safety behavior remain unchanged.
 - No dependency or external service is added.
 
@@ -62,6 +74,10 @@
 - Research-source graph nodes remain terminal, so a shared source cannot pull unrelated claims into chapter context.
 - Unready research is blocked from ready packets and automatic graph discovery.
 - Raw review observations, raw influence references, unapproved guardrails, and unrelated research claims never enter drafting context.
+- Voice metrics cannot create an automatic blocker, severity, verdict, or prose rewrite.
+- Missed earlier audits cannot be bypassed by a later act or manuscript gate.
+- Repeated findings in one chapter count once toward learned-rule eligibility.
+- Proposed and rejected learned guardrails never enter drafting context; promotion changes strategy evidence only and never rewrites earlier chapters.
 - Experiment YAML cannot borrow arbitrary project files as source, variant, or baseline assets.
 - The final taste selection, experiment index, experiment record, guardrail baseline, and baseline bytes must agree before voice approval can proceed.
 
