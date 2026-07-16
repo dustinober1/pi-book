@@ -1,0 +1,32 @@
+name: Apply Phase 5 documentation
+
+on:
+  push:
+    branches:
+      - agent/v1.3-phase5-audits-learning
+    paths:
+      - scripts/apply-phase5-docs.py
+      - .github/workflows/phase5-docs-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1.3-phase5-audits-learning
+          fetch-depth: 0
+      - run: python scripts/apply-phase5-docs.py
+      - run: |
+          rm -f .github/workflows/phase5-docs-apply.yml
+          rm -f .github/workflows/phase5-source-export.yml
+          rm -f scripts/apply-phase5-docs.py
+          touch docs/.phase5-docs-ready
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs: document Phase 5 audits and learning [phase5-docs-applied]"
+          git push origin HEAD:agent/v1.3-phase5-audits-learning
