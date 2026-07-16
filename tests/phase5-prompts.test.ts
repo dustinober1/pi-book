@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { decideNextRun } from "../src/application/run.js";
+import { decideNextRun, directDraftDecision } from "../src/application/run.js";
 import { guardrailPromotionPrompt, reviewPrompt, voiceAuditPrompt } from "../src/application/prompts.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readBook, readProject } from "../src/project/store.js";
@@ -11,8 +11,27 @@ import type { GuardrailPromotionCandidate } from "../src/application/revision-le
 
 function setup(): { parent: string; root: string } {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-phase5-prompts-"));
-  const root = initializeProject(parent, { projectName: "Phase 5 Prompts", projectType: "standalone", profile: "thriller" });
-  return { parent, root };
+  try {
+    const root = initializeProject(parent, { projectName: "Phase 5 Prompts", projectType: "standalone", profile: "thriller" });
+    return { parent, root };
+  } catch (error) {
+    rmSync(parent, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+function makeChapter3AuditDue(root: string): void {
+  const project = readProject(root);
+  project.current_stage = "drafting";
+  project.next_gate = null;
+  writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
+  const book = readBook(root);
+  book.current_chapter = 3;
+  writeFileSync(join(root, "books", "book-01", "BOOK.yaml"), stringifyYaml(book), "utf8");
+  writeFileSync(join(root, "books", "book-01", "voice-audits.yaml"), stringifyYaml({
+    schema_version: "1.0.0",
+    audits: [{ id: "VA-001", scope: "chapter", baseline_hash: "a".repeat(64), run_at: "2026-07-15T12:00:00Z", signals: {}, findings: [], verdict: "stable", status: "approved", milestone: "chapter-1", milestone_ref: "chapter-1", chapter_refs: [1], pov: null, baseline_scope: "project", interpretation: "evidence-only" }],
+  }), "utf8");
 }
 
 test("voice audit prompt uses research-update and treats metrics as evidence", () => {
@@ -46,20 +65,31 @@ test("milestone review prompt includes voice, scene-state, and recurrence instru
 test("normal continuation queues a due Chapter 3 voice audit before more drafting", () => {
   const { parent, root } = setup();
   try {
-    const project = readProject(root);
-    project.current_stage = "drafting";
-    project.next_gate = null;
-    writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
-    const book = readBook(root);
-    book.current_chapter = 3;
-    writeFileSync(join(root, "books", "book-01", "BOOK.yaml"), stringifyYaml(book), "utf8");
-    writeFileSync(join(root, "books", "book-01", "voice-audits.yaml"), stringifyYaml({
-      schema_version: "1.0.0",
-      audits: [{ id: "VA-001", scope: "chapter", baseline_hash: "a".repeat(64), run_at: "2026-07-15T12:00:00Z", signals: {}, findings: [], verdict: "stable", status: "approved", milestone: "chapter-1", milestone_ref: "chapter-1", chapter_refs: [1], pov: null, baseline_scope: "project", interpretation: "evidence-only" }],
-    }), "utf8");
+    makeChapter3AuditDue(root);
     const decision = decideNextRun(root);
     assert.equal(decision.action, "voice-audit");
     assert.match(decision.prompt ?? "", /chapter-3/);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("an integrity blocker outranks a due voice audit", () => {
+  const { parent, root } = setup();
+  try {
+    makeChapter3AuditDue(root);
+    unlinkSync(join(root, "series", "canon.yaml"));
+    const decision = decideNextRun(root);
+    assert.equal(decision.action, "blocked");
+    assert.match(decision.message, /canon\.yaml|missing required control file/i);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("direct drafting cannot bypass a due voice audit", () => {
+  const { parent, root } = setup();
+  try {
+    makeChapter3AuditDue(root);
+    const decision = directDraftDecision(root);
+    assert.equal(decision.action, "blocked");
+    assert.match(decision.message, /chapter-3|voice audit/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
