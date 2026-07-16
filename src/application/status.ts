@@ -133,6 +133,11 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     warnings.push(`Optional Novel Forge 1.3 research setup is incomplete: ${missingOptionalV13.join(", ")}. Existing approvals and manuscript prose remain valid; backfill these files through the guided research workflow when available.`);
   }
 
+  const missingOptionalV14 = ["series/intake.yaml", "series/decision-ledger.yaml"].filter((path) => !existsSync(join(root, path)));
+  if (missingOptionalV14.length) {
+    warnings.push(`Optional Novel Forge 1.4 intake setup is incomplete: ${missingOptionalV14.join(", ")}. Existing approvals and manuscript prose remain valid; backfill these files only through the explicit intake workflow.`);
+  }
+
   const genrePath = join(bookRoot, "genre.yaml");
   if (existsSync(genrePath)) {
     const genre = parseYaml<GenreConfig>(readText(genrePath) ?? "", GenreConfigSchema, "genre.yaml");

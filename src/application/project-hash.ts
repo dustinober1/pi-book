@@ -10,6 +10,8 @@ function normalizedRelative(root: string, path: string): string {
 
 function guardedEvidencePaths(root: string, bookId: string): string[] {
   const fixed = [
+    "series/intake.yaml",
+    "series/decision-ledger.yaml",
     "series/taste-profile.yaml",
     "series/voice-guardrails.yaml",
     "series/voice-experiments/index.yaml",

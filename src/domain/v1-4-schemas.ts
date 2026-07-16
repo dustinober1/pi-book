@@ -55,15 +55,15 @@ export const AuthorizedIntakeReferenceSchema = Type.Object({
 }, { additionalProperties: false });
 export type AuthorizedIntakeReference = Static<typeof AuthorizedIntakeReferenceSchema>;
 
-const StringInferenceSchema = Type.Object({
-  value: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
-  assumption_id: Type.Union([Type.String({ pattern: "^ASM-[0-9]{3}$" }), Type.Null()]),
-}, { additionalProperties: false });
+const StringInferenceSchema = Type.Union([
+  Type.Object({ value: Type.Null(), assumption_id: Type.Null() }, { additionalProperties: false }),
+  Type.Object({ value: Type.String({ minLength: 1 }), assumption_id: Type.String({ pattern: "^ASM-[0-9]{3}$" }) }, { additionalProperties: false }),
+]);
 
-const TargetWordsInferenceSchema = Type.Object({
-  value: Type.Union([Type.Integer({ minimum: 1000 }), Type.Null()]),
-  assumption_id: Type.Union([Type.String({ pattern: "^ASM-[0-9]{3}$" }), Type.Null()]),
-}, { additionalProperties: false });
+const TargetWordsInferenceSchema = Type.Union([
+  Type.Object({ value: Type.Null(), assumption_id: Type.Null() }, { additionalProperties: false }),
+  Type.Object({ value: Type.Integer({ minimum: 1000 }), assumption_id: Type.String({ pattern: "^ASM-[0-9]{3}$" }) }, { additionalProperties: false }),
+]);
 
 export const IntakeSchema = Type.Object({
   schema_version: Type.Literal("1.0.0"),

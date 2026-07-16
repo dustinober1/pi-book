@@ -25,6 +25,7 @@ import {
 } from "../domain/v1-3-audit-schemas.js";
 import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
 import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
+import { DecisionLedgerSchema, IntakeSchema, intakeDecisionFindings, type DecisionLedger, type IntakeState } from "../domain/v1-4-schemas.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import type { FileChange } from "../infrastructure/transaction.js";
 import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
@@ -47,7 +48,7 @@ import { researchEvidenceFindings } from "./research-evidence.js";
 
 export { projectStateHash } from "./project-hash.js";
 
-export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "research-update" | "revise" | "canon-lock" | "package";
+export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "research-update" | "intake-update" | "revise" | "canon-lock" | "package";
 export interface NovelEventInput { eventType: NovelEventType; expectedStage: Stage; expectedProjectHash: string; files: FileChange[]; chapter?: number; scope?: string }
 export interface NovelEventResult { changed: string[]; stage: Stage; projectHash: string; gitMessage: string }
 
@@ -60,6 +61,7 @@ const eventStages: Record<NovelEventType, Stage[]> = {
   review: ["drafting", "act-review", "revision", "manuscript-review"],
   "reader-test": ["drafting", "act-review", "revision", "manuscript-review", "packaging"],
   "research-update": ["voice-intake", "series-planning", "book-planning", "drafting", "act-review", "revision", "manuscript-review", "packaging"],
+  "intake-update": ["voice-intake", "series-planning", "book-planning"],
   revise: ["revision"],
   "canon-lock": ["canon-lock"],
   package: ["packaging"],
@@ -77,6 +79,7 @@ function allowedPath(event: NovelEventType, path: string, bookId: string, chapte
     "draft-chapter": [`${book}/continuity-delta.yaml`, "series/story-threads.yaml", `${book}/revision-tickets.yaml`],
     review: [`${book}/review-report.md`, `${book}/revision-tickets.yaml`, `${book}/voice-audits.yaml`],
     "reader-test": [`${book}/reader-experiments.yaml`, `${book}/revision-tickets.yaml`],
+    "intake-update": ["series/intake.yaml", "series/decision-ledger.yaml"],
     "research-update": [
       "series/taste-profile.yaml",
       "series/voice-guardrails.yaml",
@@ -147,6 +150,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
   if (input.expectedStage !== project.current_stage) throw new Error(`Stale event stage: expected ${input.expectedStage}, current ${project.current_stage}.`);
   if (input.expectedProjectHash !== projectStateHash(root)) throw new Error("Stale project hash; reload state before applying this event.");
   if (input.eventType === "research-update" && input.files.length === 0) throw new Error("research-update requires at least one evidence file.");
+  if (input.eventType === "intake-update" && input.files.length === 0) throw new Error("intake-update requires at least one intake evidence file.");
   const seen = new Set<string>();
   for (const file of input.files) {
     file.path = normalized(file.path);
@@ -198,6 +202,14 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
   if (input.eventType === "book-plan" || input.eventType === "research-update") {
     validateResearchAndFriction(root, input.files, book, input.eventType);
     validateRevisionLearning(root, input.files, book);
+  }
+  if (input.eventType === "intake-update") {
+    const intake = parseOverlay<IntakeState>(root, input.files, "series/intake.yaml", IntakeSchema);
+    const ledger = parseOverlay<DecisionLedger>(root, input.files, "series/decision-ledger.yaml", DecisionLedgerSchema);
+    const blockers = intakeDecisionFindings(intake, ledger).filter((finding) => finding.severity === "blocker");
+    if (blockers.length) throw new Error(`Intake and decision ledger validation blocked the event:
+${blockers.map((item) => `- ${item.message}`).join("
+")}`);
   }
 }
 
@@ -336,6 +348,8 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
     case "research-update":
       appendMilestoneVoiceAudit(root, changes, book, { eventType: "research-update", scope: input.scope });
       break;
+    case "intake-update":
+      break;
     case "revise": {
       const tickets = parseOverlay<RevisionTicketsPhase5>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsPhase5Schema);
       book.status = "revision";
@@ -359,7 +373,7 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
       break;
   }
 
-  if (input.eventType !== "research-update") {
+  if (input.eventType !== "research-update" && input.eventType !== "intake-update") {
     setChange(changes, "PROJECT.yaml", stringifyYaml(project));
     setChange(changes, `books/${book.book_id}/BOOK.yaml`, stringifyYaml(book));
   }
