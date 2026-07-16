@@ -17,7 +17,7 @@ pi install git:github.com/dustinober1/pi-book@v1.3.0
 /novel
 ```
 
-Run `/novel` whenever the current action finishes. It reads project state and shows only the choices that matter now: continue, review a gate, request changes, inspect evidence, adopt an existing manuscript, use real-reader evidence, package the book, recover safely, or create the next installment.
+Run `/novel` whenever the current action finishes. It reads project state and shows only the choices that matter now: continue, complete a required audit, review a gate, request changes, inspect evidence, adopt an existing manuscript, use real-reader evidence, package the book, recover safely, or create the next installment.
 
 The primary author-facing files are:
 
@@ -38,11 +38,11 @@ books/book-01/book-strategy.yaml
 books/book-01/voice-audits.yaml
 ```
 
-These files keep raw author preferences, neutral voice rules, research claims, reader-facing strategy, and later voice-audit evidence separate from manuscript prose and real-reader experiments.
+These files keep raw author preferences, neutral voice rules, research claims, reader-facing strategy, and voice-audit evidence separate from manuscript prose and real-reader experiments.
 
 A guarded `research-update` event may save only allowlisted evidence files during active creative stages. It does not advance the project, change gates or approvals, alter book status, or write manuscript prose. Every accepted update still requires the current stage and project hash, strict schema validation, rollback, one Git checkpoint, and regenerated `STATUS.md` and `HANDOFF.md`.
 
-Rebuilding a voice profile now submits the readable voice profile, taste profile, voice guardrails, and voice-experiment index together. Rebuilding a book plan submits its research ledger and book strategy with the existing architecture files. Planning prompts must translate named influences into neutral craft traits and must not invent public-review evidence.
+Rebuilding a voice profile submits the readable voice profile, taste profile, voice guardrails, and voice-experiment index together. Rebuilding a book plan submits its research ledger and book strategy with the existing architecture files. Planning prompts must translate named influences into neutral craft traits and must not invent public-review evidence.
 
 Existing 1.2 projects remain readable when these files are absent. Novel Forge reports one optional-backfill warning; it does not invalidate existing approvals or manuscript prose. A metadata-only upgrade records the installed version but does not manufacture evidence or hide the warning.
 
@@ -66,15 +66,43 @@ Complaint and mixed observations may be clustered only with their supporting IDs
 
 For each relevant cluster, the writer chooses **prevent**, **mitigate**, **accept as tradeoff**, or **irrelevant to project**. Only prevent and mitigate decisions may become approved review-derived guardrails. Accepted tradeoffs keep their source-cluster provenance. Public observations never update `reader-experiments.yaml`, reader metrics, verdicts, or claims that the manuscript was tested.
 
-New ready chapter packets reference `RES-NNN` research-ledger items. Existing `SRC-NNN` references remain readable as compatibility advisories until the next plan rebuild migrates them. Research-to-graph discovery, voice/scene audits, and the browser research wizard remain later 1.3 phases.
+New ready chapter packets reference `RES-NNN` research-ledger items. Existing `SRC-NNN` references remain readable as compatibility advisories until the next plan rebuild migrates them. The local browser research workflow remains a later 1.3 phase.
+
+### Book strategy and decision consequences
+
+A rebuilt book plan includes a decision ledger in `plot-grid.yaml`. Every consequential choice records its chapter, immediate gain, deferred cost, irreversible effect, and forward payoff window.
+
+Before book-plan approval, Novel Forge requires a ten-part stress test covering the early genre promise, middle repetition, motivated risk, fair information, uneven alternatives, avoidable silence, redundant characters, external and emotional ending contracts, and reference similarity with intentional tradeoffs. A check must pass or link to an explicit accepted tradeoff; pending and blocked checks cannot proceed to approval.
+
+Only approved book guardrails enter drafting context. Raw public-review observations and unapproved rules remain excluded.
+
+### Voice, scene, and revision-learning audits
+
+Novel Forge schedules deterministic voice evidence after Chapter 1, Chapter 3, every act boundary, manuscript review, and an explicit `/novel-review recalibration`. A missed earlier audit remains due and cannot be bypassed by a later gate.
+
+Voice evidence includes sentence and paragraph distributions, dialogue ratio, short-fragment frequency, rhetorical-question rate, filter-word rate, repeated body-language vocabulary, and interiority density. A matching approved POV baseline is preferred when one exists.
+
+Metrics are evidence, not prose quotas. Novel Forge does not turn a numeric delta into an automatic severity, blocker, verdict, or rewrite. Approved intentional exceptions remain visible.
+
+Milestone review also checks scene and state-change diversity. It flags more than two consecutive identical scene engines, whole-book dominance by one engine, dialogue-led scenes without a meaningful state change, and adjacent chapters whose state-change vectors are indistinguishable.
+
+Revision findings receive stable pattern keys. Repeated findings in one chapter count once. A pattern becomes eligible for a learned guardrail only after three distinct chapters or two distinct milestone reviews. The writer must explicitly approve or reject the proposal. Only approved, nonblank rules enter future drafting context; promotion never rewrites earlier chapters or changes stage or gates.
+
+For a read-only JSON voice report:
+
+```bash
+npm run audit:voice -- /path/to/project chapter-3
+```
+
+See `docs/novel-forge-phase5-audits-and-learning.md` for the detailed workflow and safety boundaries.
 
 ## Graph-aware continuity context
 
-When Novel Forge prepares an approved chapter for drafting, it derives a local continuity graph from the validated project files already in use: canon facts, relationship state, story threads, chapter packets, plot setup/payoff IDs, and research sources.
+When Novel Forge prepares an approved chapter for drafting, it derives a local continuity graph from the validated project files already in use: canon facts, relationship state, story threads, chapter packets, plot setup/payoff IDs, ready research claims, and registered research sources.
 
-The resolver starts with the chapter packet's explicit canon, thread, character, and research references, then follows at most two safe links. It may add locked facts and relationships, open or advancing threads, and supporting source provenance that the packet did not list directly. Chapter and source nodes are terminal, so a shared chapter or research document cannot pull unrelated records into the prompt.
+The resolver starts with the chapter packet's explicit canon, thread, character, and research references, then follows at most two safe links. It may add locked facts and relationships, open or advancing threads, ready research items, and supporting source provenance that the packet did not list directly. Chapter and source nodes are terminal, so a shared chapter or research document cannot pull unrelated records into the prompt.
 
-Automatic discovery blocks provisional relationships and facts, inactive threads, and canon introduced in a later `book-NN`. An explicitly referenced provisional record retains the existing packet behavior but cannot act as a bridge to additional context. Every selected or blocked graph record carries its depth, source path, and traversal path in the context report.
+Automatic discovery blocks provisional relationships and facts, inactive threads, unready research, and canon introduced in a later `book-NN`. An explicitly referenced provisional record retains the existing packet behavior but cannot act as a bridge to additional context. Every selected or blocked graph record carries its depth, source path, and traversal path in the context report.
 
 The graph is deterministic, rebuilt in memory, and disposable. Canonical YAML remains the only source of truth. No graph database, hosted service, embeddings, Python runtime, schema migration, or additional dependency is required.
 
@@ -245,7 +273,7 @@ Selected IDs are validated against locked sources. Novel Forge records provenanc
 
 ## Human gates, status, and recovery
 
-Pending gates show friendly approve, request-changes, and evidence actions. Approval records writer identity, time, evidence hash, and note. Rejection records a specific repair note and keeps the correct gate active.
+Pending gates show friendly approve, request-changes, and evidence actions. A required voice audit appears as the primary action before approval. Approval records writer identity, time, evidence hash, and note. Rejection records a specific repair note and keeps the correct gate active.
 
 Every guarded planning, drafting, review, reader, research, revision, canon-lock, package, adoption, migration, metadata, and next-book event refreshes `STATUS.md` and `HANDOFF.md` inside the same rollback-capable transaction and Git checkpoint.
 
@@ -277,9 +305,9 @@ Binary files are accepted only by trusted internal application services for adop
 | `/novel-start` | Create a standalone or series-capable project |
 | `/novel-status` | Rebuild and show status and handoff |
 | `/novel-plan` | Build or repair voice, series, or active-book plans |
-| `/novel-run` | Advance safe work until a gate, blocker, or limit |
+| `/novel-run` | Advance safe work until a gate, audit, blocker, or limit |
 | `/novel-draft` | Draft the next approved chapter packet |
-| `/novel-review` | Review a chapter, act, manuscript, or series |
+| `/novel-review` | Review a chapter, act, manuscript, series, or explicit recalibration |
 | `/novel-readers` | Open reader-kit and CSV evidence workflows |
 | `/novel-revise` | Apply open revision tickets |
 | `/novel-package` | Open packaging readiness and export workflows |
@@ -294,6 +322,7 @@ New projects record both the stable project schema and the installed Novel Forge
 - Malformed version: warning and repair path.
 - Project written by a newer package: blocker until Novel Forge is upgraded.
 - Missing 1.3 taste, strategy, research, or audit files: optional-backfill warning, not a blocker for an existing project.
+- Existing audit, ticket, and strategy files without Phase 5 extension fields remain readable.
 
 A metadata upgrade does not change creative stage, gates, approvals, manuscript prose, canon, reader evidence, or research evidence. It does not create missing evidence files.
 
