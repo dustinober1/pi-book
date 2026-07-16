@@ -1,0 +1,19 @@
+schema_version: 1.0.0
+id: one-star-noise
+kind: one-star-noise
+input:
+  observations:
+    - title: Comparable One
+      rating: 1
+    - title: Comparable Two
+      rating: 1
+    - title: Comparable Three
+      rating: 1
+    - title: Comparable Four
+      rating: 1
+    - title: Comparable Five
+      rating: 1
+    - title: Comparable Six
+      rating: 1
+expected:
+  maximum_confidence: moderate

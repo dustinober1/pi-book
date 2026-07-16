@@ -20,7 +20,9 @@
     "audit:spelling": "node scripts/spelling-consistency-audit.mjs",
     "audit:temporal": "node scripts/temporal-reference-audit.mjs",
     "audit:mechanics": "node scripts/copy-mechanics-audit.mjs",
-    "eval": "node --import tsx scripts/evaluate-fixtures.ts"
+    "eval": "node --import tsx scripts/evaluate-fixtures.ts",
+    "verify:release": "node --import tsx scripts/verify-v1-3-release.ts",
+    "test:release": "node --import tsx --test tests/v1-3-release-evaluation.test.ts tests/e2e/v1-3-release-journey.test.ts tests/package-smoke.test.ts tests/e2e/packed-clean-start.test.ts tests/v1-3-release-checklist.test.ts"
   },
   "pi": { "skills": ["."], "extensions": ["extensions/novel-forge.ts"] },
   "files": ["SKILL.md", "README.md", "CHANGELOG.md", "RELEASE.md", "agents/", "extensions/", "src/", "profiles/", "references/", "scripts/", "wizard/"],

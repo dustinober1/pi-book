@@ -209,3 +209,7 @@ Undo requires initialized Git, a clean worktree, and a `Novel Forge:` commit at 
 ```
 
 Specialist commands are compatibility and precision tools. They do not replace `/novel` as the normal author workflow.
+
+## Release qualification
+
+Before publishing Novel Forge 1.3, run the complete Node 22.19.0 and Node 24 matrix, all nine deterministic release fixtures, the honest clean-project journey, packed-extension clean start, and `npm run verify:release`. Release checks verify contracts, compatibility, and package boundaries only. Never describe them as proof of literary excellence or substitute them for human editorial and reader judgment.

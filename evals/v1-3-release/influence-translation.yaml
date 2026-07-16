@@ -1,0 +1,15 @@
+schema_version: 1.0.0
+id: influence-translation
+kind: influence-translation
+input:
+  reference: Private Reference Author — Private Reference Book
+  derived_traits:
+    - compressed causal transitions
+    - controlled interiority
+  safe_profile: Use compressed causal transitions and controlled interiority.
+  unsafe_profile: Write like Private Reference Author.
+expected:
+  safe_codes: []
+  unsafe_codes:
+    - direct-imitation
+    - raw-reference

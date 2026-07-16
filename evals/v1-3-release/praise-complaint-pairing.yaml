@@ -1,0 +1,11 @@
+schema_version: 1.0.0
+id: praise-complaint-pairing
+kind: praise-complaint-pairing
+input:
+  title: Comparable One
+  category: pacing-problem
+expected:
+  negative_ids:
+    - OBS-001
+  positive_counterweights:
+    - OBS-002

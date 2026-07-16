@@ -1,0 +1,12 @@
+schema_version: 1.0.0
+id: writer-sample-precedence
+kind: writer-sample-precedence
+input:
+  shared_rule: Preserve clipped transitions.
+  influence_only: Use atmospheric compression.
+expected:
+  winning_layer: writer-samples
+  must_include:
+    - Preserve clipped transitions.
+  prefer_include:
+    - Use atmospheric compression.

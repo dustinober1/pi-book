@@ -1,0 +1,18 @@
+schema_version: 1.0.0
+id: agency-tracking
+kind: agency-tracking
+input:
+  decision:
+    chapter: 2
+    choice: Mara enters the restricted archive.
+    immediate_gain: She obtains the missing log.
+    deferred_cost: Security now tracks her.
+    irreversible_effect: Her official access is revoked.
+    payoff_window:
+      start_chapter: 3
+      end_chapter: 4
+expected:
+  valid_codes: []
+  invalid_codes:
+    - incomplete-decision-consequence
+    - invalid-payoff-window
