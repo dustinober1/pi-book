@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts tests/e2e/*.test.ts",
     "test:e2e": "node --import tsx --test tests/e2e/*.test.ts",
+    "audit:voice": "node --import tsx scripts/voice-audit.ts",
     "audit:ngrams": "node scripts/ngram-audit.mjs",
     "audit:rhetoric": "node scripts/rhetorical-pattern-audit.mjs",
     "audit:continuity": "node scripts/continuity-scan.mjs",
@@ -42,7 +43,7 @@
     "@earendil-works/pi-coding-agent": "0.80.3",
     "@types/busboy": "^1.5.4",
     "@types/node": "^24.0.0",
-    "@types/turndown": "^5.0.6",
+    "@types/turndown": "^7.1.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   },
