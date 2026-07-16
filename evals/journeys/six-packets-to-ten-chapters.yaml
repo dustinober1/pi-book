@@ -1,0 +1,52 @@
+schema_version: 1.0.0
+id: six-packets-to-ten-chapters
+description: Current bounded packet-window path from six ready packets to ten completed chapters.
+limitations:
+  - Current drafting requires a second packet-preparation prompt after chapter six.
+  - Duplicate accepted chapter events are tolerated by the trace but must not inflate completion counts.
+trace:
+  events:
+    - { type: run-state, run_id: RUN-001, state: started }
+    - { type: model-prompt, id: P-PACKETS-1 }
+    - { type: guarded-event, id: E-PACKETS-1, action: chapter-queue, outcome: accepted }
+    - { type: context, characters: 9000 }
+    - { type: model-prompt, id: P-DRAFT-1 }
+    - { type: guarded-event, id: E-DRAFT-1, action: draft-chapter, outcome: accepted, chapter: 1 }
+    - { type: model-prompt, id: P-DRAFT-2 }
+    - { type: guarded-event, id: E-DRAFT-2, action: draft-chapter, outcome: accepted, chapter: 2 }
+    - { type: model-prompt, id: P-DRAFT-3 }
+    - { type: guarded-event, id: E-DRAFT-3, action: draft-chapter, outcome: accepted, chapter: 3 }
+    - { type: model-prompt, id: P-DRAFT-4 }
+    - { type: guarded-event, id: E-DRAFT-4, action: draft-chapter, outcome: accepted, chapter: 4 }
+    - { type: model-prompt, id: P-DRAFT-5 }
+    - { type: guarded-event, id: E-DRAFT-5, action: draft-chapter, outcome: accepted, chapter: 5 }
+    - { type: model-prompt, id: P-DRAFT-6 }
+    - { type: guarded-event, id: E-DRAFT-6, action: draft-chapter, outcome: accepted, chapter: 6 }
+    - { type: guarded-event, id: E-DRAFT-6-DUP, action: draft-chapter, outcome: accepted, chapter: 6 }
+    - { type: model-prompt, id: P-PACKETS-2 }
+    - { type: guarded-event, id: E-PACKETS-2, action: chapter-queue, outcome: accepted }
+    - { type: context, characters: 13000 }
+    - { type: model-prompt, id: P-DRAFT-7 }
+    - { type: guarded-event, id: E-DRAFT-7, action: draft-chapter, outcome: accepted, chapter: 7 }
+    - { type: model-prompt, id: P-DRAFT-8 }
+    - { type: guarded-event, id: E-DRAFT-8, action: draft-chapter, outcome: accepted, chapter: 8 }
+    - { type: model-prompt, id: P-DRAFT-9 }
+    - { type: guarded-event, id: E-DRAFT-9, action: draft-chapter, outcome: accepted, chapter: 9 }
+    - { type: model-prompt, id: P-DRAFT-10 }
+    - { type: guarded-event, id: E-DRAFT-10, action: draft-chapter, outcome: accepted, chapter: 10 }
+    - { type: stop, reason: milestone }
+expected:
+  authorQuestions: 0
+  modelPrompts: 12
+  guardedEvents: 13
+  rejectedEvents: 0
+  retries: 0
+  writerApprovals: 0
+  chaptersCompleted: 10
+  contextCharacters: 13000
+  stopReason: milestone
+limits:
+  max_author_questions: 0
+  max_model_prompts: 12
+  max_rejected_events: 0
+  max_retries: 0
