@@ -9,6 +9,7 @@ import { getProjectStatus } from "./status.js";
 import type { WizardActionRegistry, WizardProposalEnvelope, WizardWorkflow } from "../wizard/types.js";
 
 export interface WizardWorkflowHandler {
+  snapshot?(): Promise<unknown> | unknown;
   preview?(action: string, payload: unknown): Promise<unknown> | unknown;
   apply?(envelope: WizardProposalEnvelope): Promise<unknown> | unknown;
 }
@@ -49,7 +50,7 @@ function projectSnapshot(root: string) {
   };
 }
 
-function workflowSnapshot(root: string, workflow: WizardWorkflow): unknown {
+function workflowSnapshot(root: string, workflow: Exclude<WizardWorkflow, "research">): unknown {
   const base = projectSnapshot(root);
   const bookId = base.book.id;
   if (workflow === "adoption") {
@@ -71,6 +72,9 @@ function workflowSnapshot(root: string, workflow: WizardWorkflow): unknown {
 export function createWizardRegistry(root: string, handlers: WizardWorkflowHandlers = {}): WizardActionRegistry {
   return {
     snapshot(workflow) {
+      const handler = handlers[workflow];
+      if (handler?.snapshot) return { ...projectSnapshot(root), workflow: handler.snapshot() };
+      if (workflow === "research") throw new Error("research snapshot is not available yet.");
       return workflowSnapshot(root, workflow);
     },
     preview(workflow, action, payload) {
