@@ -83,6 +83,15 @@ Do not create the `v1.3.0` tag after the foundation PR alone. Create it only aft
 - [ ] Confirmed actions enforce expected stage and project hash.
 - [ ] Binary files preserve exact bytes and participate in transaction rollback.
 - [ ] The research wizard exposes sanitized snapshots, previews, and typed proposals only.
+- [ ] `/novel-wizard research` opens Influence Palette, Anonymous Voice Comparison, Reader Friction, Research Ledger, and Revision Learning surfaces.
+- [ ] Initial research snapshots exclude manuscript prose, reader-response bodies, reviewer identity, source-scene prose, and variant prose.
+- [ ] Every research mutation requires a stored preview ID plus current stage and project hash.
+- [ ] Confirmed research actions return through `research-update` and leave stage, gates, approvals, and manuscript prose unchanged.
+- [ ] Public-review imports remain identity-stripped market evidence and never update manuscript reader metrics.
+- [ ] Voice variants are shown only as A/B/C; scores do not choose the baseline automatically.
+- [ ] Ready research claims require valid registered source support.
+- [ ] Learning eligibility never activates a rule without explicit writer approval.
+- [ ] Existing adoption, readers, packaging, and next-book wizard workflows remain passing.
 - [ ] Existing adoption, readers, packaging, and next-book wizard workflows remain passing.
 
 ### Existing 1.2 capability regression

@@ -87,6 +87,26 @@ The scene audit uses existing chapter packets and plot-grid state changes. It fl
 
 Deterministic scene findings become revision tickets; they never edit manuscript prose. Tickets may carry a stable recurrence pattern and milestone-review identifier. A pattern becomes eligible for a reusable learning rule only after **three distinct chapters** or **two distinct milestone reviews**. Eligibility is not approval. The writer must explicitly approve the rule in `book-strategy.yaml`, and only approved rules enter future chapter context. Promotion never launches a retroactive rewrite of earlier chapters.
 
+## Guided voice and research wizard
+
+Use the normal `/novel` workflow and choose **Review voice and research evidence**, or open the optional surface directly:
+
+```text
+/novel-wizard research
+```
+
+The local wizard provides five evidence workspaces:
+
+- **Influence Palette** — capture private references, admired qualities, explicit exclusions, and neutral derived craft traits;
+- **Anonymous Voice Comparison** — review only variants A, B, and C, record writer scores, and explicitly accept one or a custom combined baseline;
+- **Reader Friction** — preview identity-stripped public-review CSV evidence, build evidence-backed clusters, and record prevent, mitigate, accepted-tradeoff, or irrelevant decisions;
+- **Research Ledger** — inspect and validate planned, researching, or ready claims against registered source provenance;
+- **Revision Learning** — inspect eligible recurrence patterns and explicitly propose, approve, or reject future drafting rules.
+
+The browser receives a sanitized project snapshot. It does not receive manuscript prose, reader-response bodies, source-scene prose, anonymous variant prose until the writer explicitly opens a comparison, reviewer identity, or arbitrary filesystem access. Every mutation requires a successful preview and returns through the existing `research-update` event with stage/hash checks, typed validation, rollback, one Git checkpoint, `STATUS.md`, and `HANDOFF.md`.
+
+Public market observations remain separate from real manuscript reader evidence. Scores never choose a voice baseline automatically, readiness findings never invent source support, and learning eligibility never approves a rule on the writer's behalf.
+
 ## Graph-aware continuity context
 
 When Novel Forge prepares an approved chapter for drafting, it derives a local continuity graph from the validated project files already in use: canon facts, relationship state, story threads, chapter packets, plot setup/payoff IDs, and research sources.
