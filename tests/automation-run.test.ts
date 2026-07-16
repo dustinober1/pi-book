@@ -24,7 +24,7 @@ function project(): ProjectStateV14 {
   } finally { rmSync(parent, { recursive: true, force: true }); }
 }
 
-function started(): ProjectState {
+function started(): ProjectStateV14 {
   return startAutomationRun(project(), {
     id: "RUN-001",
     target: "midpoint-review",
@@ -71,7 +71,7 @@ test("completed event keys persist across YAML reload and duplicates do not repl
   for (let chapter = 1; chapter <= 4; chapter += 1) {
     value = completeAutomationEvent(value, automationEventKey("draft-chapter", chapter), `draft-chapter:${chapter + 1}`, `hash-${chapter + 1}`, `2026-07-16T12:0${chapter}:00Z`);
   }
-  const reloaded = parseYaml<ProjectState>(stringifyYaml(value), ProjectSchema, "PROJECT.yaml");
+  const reloaded = parseYaml<ProjectStateV14>(stringifyYaml(value), ProjectV14Schema, "PROJECT.yaml");
   assert.deepEqual(reloaded.automation.active_run?.completedEventKeys, [
     "draft-chapter:1", "draft-chapter:2", "draft-chapter:3", "draft-chapter:4",
   ]);
