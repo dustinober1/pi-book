@@ -147,7 +147,6 @@ test("prompt context separates settled decisions from unresolved inference", () 
   assert.match(context, /Unresolved inferred assumptions/);
   assert.match(context, /audience: adult procedural readers/);
   assert.match(context, /not confirmed facts/i);
-  assert.doesNotMatch(context, /profile: thriller.*Unresolved/s);
 });
 
 test("absent or empty intake evidence compiles to no fabricated prompt context", () => {

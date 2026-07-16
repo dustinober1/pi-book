@@ -101,7 +101,7 @@ function classify(error: unknown, message: string): EventRejectionCode {
   if (lower.includes("stale event stage") || lower.includes("stale wizard stage")) return "stale-stage";
   if (lower.includes(" is not allowed during ") || lower.includes("wrong stage")) return "wrong-stage";
   if (lower.includes(" is not allowed for ") || lower.includes("duplicate event path")) return "allowlist-violation";
-  if (lower.includes("not valid yaml") || lower.includes("schema validation") || lower.includes("schema-validation") || lower.includes("does not match schema")) return "schema-validation";
+  if (lower.includes("not valid yaml") || lower.includes("schema validation") || lower.includes("schema-validation") || lower.includes("does not match schema") || lower.includes("decision ledger validation")) return "schema-validation";
   if (lower.includes("reference validation") || lower.includes("missing canon reference") || lower.includes("missing research reference") || lower.includes("reference is missing")) return "reference-validation";
   if ((lower.includes("gate") || lower.includes("approval")) && (lower.includes("must be") || lower.includes("requires") || lower.includes("human"))) return "human-gate-required";
   if (lower.includes("integrity")) return "integrity-failure";

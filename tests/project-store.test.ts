@@ -18,7 +18,7 @@ test("initialization creates a compact series-capable thriller project", () => {
     assert.equal(book.target_words, 95000);
     assert.equal(book.profile, "thriller");
     const controls = listFilesRecursive(root, (path) => !path.includes("/.git/") && !path.includes("manuscript/chapters"));
-    assert.ok(controls.length <= 29, `expected compact v1.3 controls, found ${controls.length}`);
+    assert.ok(controls.length <= 31, `expected compact controls including 1.4 intake provenance, found ${controls.length}`);
     for (const path of [
       "remarkability.yaml", "reader-experiments.yaml", "publishing.yaml", "marketing.yaml", "reader-kits/index.yaml",
       "research-ledger.yaml", "book-strategy.yaml", "voice-audits.yaml",
