@@ -6,7 +6,7 @@ function normalize(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim().replace(/\s+/g, " ");
 }
 
-function duplicate(values: string[]): boolean {
+function duplicate<T>(values: T[]): boolean {
   return new Set(values).size !== values.length;
 }
 
