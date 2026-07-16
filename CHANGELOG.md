@@ -19,6 +19,11 @@
 - Deterministic reader-friction clustering with title coverage, positive counterweights, weak/moderate/strong confidence ceilings, and a one-star-only cap at moderate.
 - Explicit writer decisions for review clusters and typed source-cluster provenance for accepted tradeoffs.
 - Ready chapter-packet validation against `RES-NNN` research-ledger state, with advisory compatibility for legacy `SRC-NNN` packet references.
+- A decision-and-consequence ledger in `plot-grid.yaml` recording each major choice, immediate gain, deferred cost, irreversible effect, payoff window, and lifecycle status.
+- A ten-part pre-approval stress test covering early genre promise, middle repetition, motivated risk, fair information, uneven alternatives, avoidable silence, redundant characters, external and emotional ending contracts, and reference similarity with intentional tradeoffs.
+- Deterministic book-plan validation for reader promise, approved expectation decisions, stress-test evidence, setup-before-payoff order, decision consequences, and repeated scene engines.
+- Safe `research-item` graph records that connect explicitly required ready claims to mutually registered source provenance while keeping source nodes terminal.
+- Bounded `Required ready research claims` and `Approved book guardrails` drafting-context sections that exclude public-review bodies, unrequired claims, and unapproved rules.
 
 ### Changed
 
@@ -28,7 +33,9 @@
 - Voice planning now supports an optional anonymous calibration loop through `research-update`, followed by the final atomic `voice-profile` bundle.
 - Voice and book planning prompts request the complete evidence bundle and explicitly prohibit invented public-review evidence or named-author imitation instructions.
 - Book planning may submit source-register provenance atomically with research, strategy, and architecture.
+- Book-plan approval now requires the complete Phase 4 stress-test and decision-ledger contract; the validator never approves a plan on the writer's behalf.
 - Queue planning uses ready research-ledger IDs for new packets while preserving legacy source IDs as migration advisories.
+- Chapter context reports selected research claims and their source provenance separately from canon, threads, and public market observations.
 - Review and reader-test prompts explicitly separate public market observations from accepted human responses to the current manuscript.
 - Review events may write typed `voice-audits.yaml` evidence without making it mandatory during this foundation phase.
 
@@ -40,7 +47,8 @@
 - Legacy source-register records remain schema-readable; extended provenance is enforced only when a ready claim or changed source uses that evidence.
 - Unrelated voice or audit evidence updates do not force a legacy research backfill.
 - Existing `SRC-NNN` packet references remain draftable with an advisory until a later plan rebuild migrates them to ready `RES-NNN` items.
-- Existing manuscript prose, reader experiments, publishing metadata, marketing metadata, and continuity-graph behavior remain unchanged.
+- Existing plot grids and book strategies without Phase 4 fields remain readable. New projects receive empty decision ledgers and pending stress-test templates; a deliberate book-plan rebuild must complete them before approval.
+- Existing manuscript prose, reader experiments, publishing metadata, marketing metadata, and continuity-graph safety behavior remain unchanged.
 - No dependency or external service is added.
 
 ### Safety retained
@@ -51,6 +59,9 @@
 - Reviewer names, handles, and profile URLs are removed before public observations enter canonical project files.
 - Strong friction confidence requires evidence across at least three titles plus a positive counterweight; one-star-only evidence never reaches strong.
 - Only prevent or mitigate decisions may produce approved review-derived guardrails.
+- Research-source graph nodes remain terminal, so a shared source cannot pull unrelated claims into chapter context.
+- Unready research is blocked from ready packets and automatic graph discovery.
+- Raw review observations, raw influence references, unapproved guardrails, and unrelated research claims never enter drafting context.
 - Experiment YAML cannot borrow arbitrary project files as source, variant, or baseline assets.
 - The final taste selection, experiment index, experiment record, guardrail baseline, and baseline bytes must agree before voice approval can proceed.
 
@@ -85,7 +96,7 @@
 ### Compatibility
 
 - Version 1.1 projects remain readable before migration.
-- Legacy reader evidence can be copied into isolated v1.2 experiment directories without changing accepted response fields, metrics, verdicts, timestamps, or source claims.
+- Legacy reader evidence can be copied into isolated v1.2 experiment directories without changing response fields, metrics, verdicts, timestamps, or source claims.
 - Legacy `reader-experiments.yaml`, `reader-kit/`, Markdown/text adoption, and all specialist planning/drafting/review commands remain supported.
 - The continuity graph requires no new project files, schema migration, external service, or runtime dependency.
 
