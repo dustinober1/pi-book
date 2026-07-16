@@ -6,6 +6,7 @@ import { countWords } from "../src/infrastructure/files.js";
 import { getProfile } from "../src/profiles/index.js";
 import { regressionChecklist, synthesizeTickets, type ReviewFinding } from "../src/review/review.js";
 import { evaluateV13ReleaseFixture, loadV13ReleaseFixtures } from "../src/evaluation/v1-3-release.js";
+import { evaluateAuthorJourneyFixture, loadAuthorJourneyFixtures } from "../src/evaluation/author-journey.js";
 
 interface Fixture {
   schema_version: "1.0.0";
@@ -20,7 +21,7 @@ interface Fixture {
 
 const root = resolve(process.cwd(), "evals");
 const names = readdirSync(root, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory() && entry.name !== "rubrics" && entry.name !== "v1-3-release")
+  .filter((entry) => entry.isDirectory() && entry.name !== "rubrics" && entry.name !== "v1-3-release" && entry.name !== "journeys")
   .map((entry) => entry.name)
   .sort();
 let failures = 0;
@@ -59,4 +60,15 @@ for (const fixture of releaseFixtures) {
   if (!result.passed) releaseFailures += 1;
 }
 console.log(`\n${releaseFixtures.length - releaseFailures}/${releaseFixtures.length} release fixtures passed.`);
-if (failures || releaseFailures) process.exitCode = 1;
+
+const journeyFixtures = loadAuthorJourneyFixtures(join(root, "journeys"));
+let journeyFailures = 0;
+console.log("\n# Novel Forge author-journey baseline\n");
+for (const fixture of journeyFixtures) {
+  const result = evaluateAuthorJourneyFixture(fixture);
+  console.log(`- ${result.id}: ${result.passed ? "PASS" : `FAIL (${result.failures.join("; ")})`}`);
+  for (const limitation of result.limitations) console.log(`  limitation: ${limitation}`);
+  if (!result.passed) journeyFailures += 1;
+}
+console.log(`\n${journeyFixtures.length - journeyFailures}/${journeyFixtures.length} author journeys passed.`);
+if (failures || releaseFailures || journeyFailures) process.exitCode = 1;
