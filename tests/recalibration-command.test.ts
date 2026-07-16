@@ -9,7 +9,7 @@ import { VoiceAuditsPhase5Schema, type VoiceAuditsPhase5 } from "../src/domain/v
 import { VoiceGuardrailsSchema, type VoiceGuardrails } from "../src/domain/v1-3-schemas.js";
 import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readProject } from "../src/project/store.js";
-import { registerNovelForge } from "../src/pi/extension.js";
+import novelForgeExtension from "../extensions/novel-forge.js";
 
 function setup(stage: "drafting" | "act-review" | "revision" | "manuscript-review" | "packaging" = "drafting") {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-recalibration-"));
@@ -108,7 +108,7 @@ test("explicit recalibration refuses an empty manuscript without mutation", () =
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
-test("the Pi review command exposes and executes recalibration", async () => {
+test("the installed Pi review command exposes and executes recalibration", async () => {
   const { parent, root } = setup();
   try {
     approveBaseline(root);
@@ -120,7 +120,7 @@ test("the Pi review command exposes and executes recalibration", async () => {
       registerTool() {},
       sendUserMessage() {},
     };
-    registerNovelForge(pi as never);
+    novelForgeExtension(pi as never);
     const review = commands.get("novel-review");
     assert.ok(review);
     const values = review.getArgumentCompletions?.("")?.map((item) => item.value) ?? [];
