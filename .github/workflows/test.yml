@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
@@ -17,20 +17,6 @@ jobs:
         node: ['22.19.0', '24']
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          fetch-depth: 0
-      - name: Apply rolling-window source patch
-        if: github.head_ref == 'agent/v1.4-6-rolling-packet-windows' || github.ref_name == 'agent/v1.4-6-rolling-packet-windows'
-        run: python scripts/apply-v1-4-6-window-integration.py
-      - name: Persist rolling-window source patch
-        if: matrix.node == '22.19.0' && (github.head_ref == 'agent/v1.4-6-rolling-packet-windows' || github.ref_name == 'agent/v1.4-6-rolling-packet-windows')
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src
-          git commit -m "feat: integrate rolling packet windows" || exit 0
-          git push origin HEAD:agent/v1.4-6-rolling-packet-windows
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
