@@ -39,8 +39,13 @@ export interface VoiceSafetyFinding {
 
 export interface VoiceSafetyInput {
   taste: TasteProfile;
-  voiceProfile: string;
+  voiceProfile?: string | null;
   guardrails: VoiceGuardrails;
+}
+
+interface ReferenceMatcher {
+  reference: string;
+  pattern: RegExp;
 }
 
 const IMITATION_PATTERNS = [
@@ -65,10 +70,48 @@ function guardrailStrings(value: VoiceGuardrails): string[] {
   ];
 }
 
-function referenceTokens(taste: TasteProfile): string[] {
-  return [...taste.influences.map((item) => item.reference), ...taste.negative_references.map((item) => item.reference)]
-    .flatMap((reference) => [reference, ...reference.split(/[—–:\-]/).map((item) => item.trim())])
-    .filter((item, index, values) => item.length >= 4 && values.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function phrasePattern(value: string, caseInsensitive: boolean): RegExp {
+  const phrase = value.trim().split(/\s+/).map(escapeRegex).join("\\s+");
+  return new RegExp(`(^|[^\\p{L}\\p{N}])${phrase}(?=$|[^\\p{L}\\p{N}])`, caseInsensitive ? "iu" : "u");
+}
+
+function referenceMatchers(taste: TasteProfile): ReferenceMatcher[] {
+  const references = [...taste.influences.map((item) => item.reference), ...taste.negative_references.map((item) => item.reference)];
+  const matchers: ReferenceMatcher[] = [];
+  const seen = new Set<string>();
+
+  function add(reference: string, caseInsensitive: boolean): void {
+    const value = reference.trim();
+    if (value.length < 4) return;
+    const key = `${caseInsensitive ? "i" : "s"}:${value.toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    matchers.push({ reference: value, pattern: phrasePattern(value, caseInsensitive) });
+  }
+
+  for (const rawReference of references) {
+    const reference = rawReference.trim();
+    if (!reference) continue;
+    add(reference, true);
+
+    const parts = reference.split(/\s*(?:—|–|:)\s*|\s+-\s+/).map((item) => item.trim()).filter(Boolean);
+    parts.forEach((part, index) => {
+      const wordCount = part.split(/\s+/).length;
+      if (index === 0) {
+        add(part, wordCount > 1);
+        return;
+      }
+      // Short work titles are matched case-sensitively so ordinary prose such as
+      // "walked down the road" does not collide with a reference to "The Road".
+      add(part, wordCount > 3);
+    });
+  }
+
+  return matchers;
 }
 
 export function compileVoiceGuardrails(input: VoiceCompilationInput): VoiceCompilationResult {
@@ -106,27 +149,28 @@ export function compileVoiceGuardrails(input: VoiceCompilationInput): VoiceCompi
 
 export function voiceSafetyFindings(input: VoiceSafetyInput): VoiceSafetyFinding[] {
   const targets = [
-    { path: "series/voice-profile.md", text: input.voiceProfile },
+    { path: "series/voice-profile.md", text: input.voiceProfile ?? "" },
     ...guardrailStrings(input.guardrails).map((text) => ({ path: "series/voice-guardrails.yaml", text })),
   ];
-  const references = referenceTokens(input.taste);
+  const references = referenceMatchers(input.taste);
   const findings: VoiceSafetyFinding[] = [];
   const seen = new Set<string>();
 
   for (const target of targets) {
-    if (IMITATION_PATTERNS.some((pattern) => pattern.test(target.text))) {
+    const text = typeof target.text === "string" ? target.text : "";
+    if (IMITATION_PATTERNS.some((pattern) => pattern.test(text))) {
       const key = `direct-imitation:${target.path}`;
       if (!seen.has(key)) {
         seen.add(key);
         findings.push({ code: "direct-imitation", path: target.path, message: `${target.path} contains direct imitation language.` });
       }
     }
-    for (const reference of references) {
-      if (!target.text.toLowerCase().includes(reference.toLowerCase())) continue;
-      const key = `raw-reference:${target.path}:${reference.toLowerCase()}`;
+    for (const matcher of references) {
+      if (!matcher.pattern.test(text)) continue;
+      const key = `raw-reference:${target.path}:${matcher.reference.toLowerCase()}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      findings.push({ code: "raw-reference", path: target.path, message: `${target.path} exposes raw influence reference ${reference}.` });
+      findings.push({ code: "raw-reference", path: target.path, message: `${target.path} exposes raw influence reference ${matcher.reference}.` });
     }
   }
 
