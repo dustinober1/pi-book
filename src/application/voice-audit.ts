@@ -1,6 +1,7 @@
 import type { VoiceAuditRecordPhase5 } from "../domain/v1-3-audit-schemas.js";
 
 export interface VoiceMetrics {
+  [key: string]: number;
   word_count: number;
   sentence_count: number;
   average_sentence_words: number;
@@ -25,6 +26,14 @@ export interface VoiceAuditInput {
   protectedExceptions: string[];
   runAt?: string;
 }
+
+export type BuiltVoiceAuditRecord = VoiceAuditRecordPhase5 & {
+  signals: VoiceMetrics;
+  baseline_metrics: Record<string, number>;
+  deltas: Record<string, number>;
+  protected_exceptions: string[];
+  assessment: "evidence-only";
+};
 
 const FILTER_WORDS = new Set(["saw", "felt", "heard", "noticed", "realized", "seemed", "thought", "knew", "wondered"]);
 const BODY_LANGUAGE = new Set(["hand", "hands", "eye", "eyes", "gaze", "breath", "shoulder", "shoulders", "jaw", "heart", "stomach", "throat"]);
@@ -100,7 +109,7 @@ function materialDelta(key: string, value: number): boolean {
   return Math.abs(value) >= 2;
 }
 
-export function buildVoiceAuditRecord(input: VoiceAuditInput): VoiceAuditRecordPhase5 {
+export function buildVoiceAuditRecord(input: VoiceAuditInput): BuiltVoiceAuditRecord {
   const signals = extractVoiceMetrics(input.currentText);
   const deltas = compareVoiceMetrics(signals, input.baselineMetrics);
   const findings = Object.entries(deltas)
@@ -126,7 +135,7 @@ export function buildVoiceAuditRecord(input: VoiceAuditInput): VoiceAuditRecordP
   };
 }
 
-export function isVoiceAuditMilestone(input: { chapter?: number; scope?: string; explicit?: boolean }): boolean {
+export function isVoiceAuditMilestone(input: { chapter?: number | undefined; scope?: string | undefined; explicit?: boolean | undefined }): boolean {
   if (input.explicit) return true;
   if (input.chapter === 1 || input.chapter === 3) return true;
   const scope = input.scope?.trim().toLocaleLowerCase("en-US") ?? "";
