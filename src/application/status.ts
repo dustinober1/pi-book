@@ -46,11 +46,24 @@ function nextActionForStage(stage: string): string {
   return actions[stage] ?? "Inspect PROJECT.yaml for an unsupported stage.";
 }
 
+function firstHardBlocker(blockers: readonly string[]): string | null {
+  return blockers.find((blocker) => !blocker.startsWith("Human approval required:")) ?? null;
+}
+
 function decisionText(
   project: ReturnType<typeof readProject>,
   blockers: string[],
   dueAudit: VoiceAuditRequirement | null,
 ): { headline: string; reason: string; nextAction: string; command: string } {
+  const hardBlocker = firstHardBlocker(blockers);
+  if (hardBlocker) {
+    return {
+      headline: "Novel Forge needs one issue resolved before it can continue.",
+      reason: hardBlocker,
+      nextAction: "Open the guided workflow for an explanation and exact recovery action.",
+      command: "/novel",
+    };
+  }
   if (dueAudit) {
     return {
       headline: `Voice audit ${dueAudit.milestone_ref} is required.`,
@@ -76,14 +89,6 @@ function decisionText(
       headline: `${detail.title} needs repair.`,
       reason: `The active writer decision rejected the current ${detail.title.toLowerCase()} evidence.`,
       nextAction: detail.repairLabel,
-      command: "/novel",
-    };
-  }
-  if (blockers.length) {
-    return {
-      headline: "Novel Forge needs one issue resolved before it can continue.",
-      reason: blockers[0] ?? "A blocking integrity issue exists.",
-      nextAction: "Open the guided workflow for an explanation and exact recovery action.",
       command: "/novel",
     };
   }
@@ -232,7 +237,7 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     headline: decision.headline,
     reason: decision.reason,
     recommendedCommand: decision.command,
-    primaryBlocker: blockers[0] ?? null,
+    primaryBlocker: firstHardBlocker(blockers) ?? blockers[0] ?? null,
     markdown,
   };
 }
