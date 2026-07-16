@@ -9,6 +9,8 @@
 - An `eval:journeys` command and an author-journey section in `npm run eval`.
 - Machine-readable rejection codes and sanitized details across guarded events, wizard applies, HTTP responses, and the Pi tool.
 - A bounded one-retry policy for schema/reference payload repairs, with mandatory reload for stale state and no automatic retry for unsafe failures.
+- Typed intake and append-only assumption/decision provenance, including numeric setup assumptions, explicit rejection, supersession, and decision replacement.
+- A state-neutral `intake-update` event and prompt compilation that uses writer decisions while keeping inference visibly unresolved.
 
 ### Boundaries
 

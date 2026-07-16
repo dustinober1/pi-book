@@ -41,6 +41,14 @@ Only `schema-validation` and `reference-validation` are eligible for one correct
 
 Unknown errors are reduced to a safe message. Stack traces, absolute project paths, raw thrown objects, tokens, and filesystem internals are never returned in the rejection envelope. Existing human-readable validator text remains available as `message`.
 
+### Typed intake, assumptions, and writer decisions
+
+Novel Forge stores optional setup evidence in `series/intake.yaml` and immutable provenance in `series/decision-ledger.yaml`. Intake may preserve the original idea, authorized brief/sample references, unresolved blockers, and inferred language, profile, audience, or target length. Assumption values may be text or integers, so target-word evidence remains numeric.
+
+An inferred assumption is never a fact. Confirmation, correction, or rejection appends a writer-decision record and preserves the original assumption value. A later writer correction appends a replacement linked with `replaces`; earlier records remain unchanged. Rejected assumptions do not resolve to usable decisions. Superseding an inference preserves the old record with status `superseded` and appends a new linked assumption.
+
+Use `intake-update` only during voice intake, series planning, or book planning. It may write only the two intake artifacts, does not advance stage or change gates, and still uses typed validation, stale-stage/hash protection, rollback, one Git checkpoint, `STATUS.md`, and `HANDOFF.md`. Existing 1.3 projects without these files remain valid and receive one optional-backfill advisory.
+
 The primary author-facing files are:
 
 - `STATUS.md` — the current decision, reason, blockers, warnings, and progress.

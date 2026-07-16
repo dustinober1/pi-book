@@ -4,6 +4,7 @@ import { getProfile } from "../profiles/index.js";
 import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
 import { defaultMarketingMetadata, defaultPublishingMetadata } from "../domain/v1-2-schemas.js";
 import { defaultPhase4StressTest } from "../domain/v1-3-architecture-schemas.js";
+import { defaultDecisionLedger, defaultIntake } from "../domain/v1-4-schemas.js";
 import {
   defaultBookStrategy,
   defaultResearchLedger,
@@ -164,6 +165,8 @@ Each installment closes its immediate conflict while preserving only earned long
 
 status: pending
 `,
+    "series/intake.yaml": stringifyYaml(defaultIntake()),
+    "series/decision-ledger.yaml": stringifyYaml(defaultDecisionLedger()),
     "series/taste-profile.yaml": stringifyYaml(defaultTasteProfile()),
     "series/voice-guardrails.yaml": stringifyYaml(defaultVoiceGuardrails()),
     "series/voice-experiments/index.yaml": stringifyYaml(defaultVoiceExperimentIndex()),

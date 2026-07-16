@@ -19,6 +19,12 @@ The first 1.4 pull request changes evaluation only. It must not change productio
 - [ ] Disallowed paths and human gates never permit automatic retry.
 - [ ] Wizard and Pi-tool failures expose the same structured detail.
 - [ ] Unknown failures contain no stack trace, absolute project path, or raw thrown object.
+- [ ] New projects seed empty intake and decision-ledger files without invented evidence.
+- [ ] Existing 1.3 projects without intake files remain unblocked with one advisory.
+- [ ] Inferred assumptions never enter settled prompt decisions.
+- [ ] Confirm, correct, reject, supersede, and replace operations preserve immutable history.
+- [ ] Rejected decisions resolve to no usable choice.
+- [ ] `intake-update` is limited to the two canonical files and remains state-neutral.
 
 
 ## Version 1.3.0

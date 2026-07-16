@@ -125,6 +125,12 @@ Treat `EventRejectionDetail.code` as the controlling retry signal. Correct and r
 
 Never infer retryability from message text. Never bypass the allowlist or a human gate. Structured eligibility does not authorize automatic retry execution. Preserve the concise validator message for the writer while using `issues`, `invalidPaths`, `requiresReload`, and `retryable` for deterministic handling. Unknown values must remain sanitized and must not expose stacks, absolute paths, raw objects, credentials, or filesystem internals.
 
+## Intake and decision provenance
+
+Never promote an inferred intake value to confirmed project truth. Store inference in `series/intake.yaml` and an `inferred` assumption in `series/decision-ledger.yaml`. Confirmation, correction, rejection, supersession, or decision replacement must preserve history and append the appropriate linked record. Numeric assumptions such as target words remain integers. A rejected decision is not a resolved usable choice.
+
+Voice and book planning may use only unreplaced writer decisions as settled input. Inferred assumptions may appear only under an unresolved heading with explicit not-confirmed language. Write intake evidence through `intake-update`; never write manuscript, project/book state, gates, reader evidence, publishing, marketing, package output, `STATUS.md`, or `HANDOFF.md` through that event.
+
 ## Guided research wizard
 
 `/novel-wizard research` is an optional loopback-only review surface. `/novel` remains the normal interface and may offer **Review voice and research evidence** as a non-primary action.
