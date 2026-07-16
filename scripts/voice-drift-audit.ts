@@ -1,0 +1,24 @@
+import { resolve, join } from "node:path";
+import { buildVoiceDriftEvidence } from "../src/application/voice-drift.js";
+import { VoiceGuardrailsSchema, type VoiceGuardrails } from "../src/domain/v1-3-schemas.js";
+import { listChapterFiles, readText } from "../src/infrastructure/files.js";
+import { parseYaml } from "../src/infrastructure/yaml.js";
+import { readBook } from "../src/project/store.js";
+
+const root = resolve(process.argv[2] ?? process.cwd());
+const milestone = process.argv[3] ?? "manual";
+const book = readBook(root);
+const guardrailPath = join(root, "series", "voice-guardrails.yaml");
+const guardrailText = readText(guardrailPath);
+if (!guardrailText) throw new Error(`Missing ${guardrailPath}`);
+const guardrails = parseYaml<VoiceGuardrails>(guardrailText, VoiceGuardrailsSchema, "voice-guardrails.yaml");
+if (!guardrails.baseline.path) throw new Error("Voice audit requires an approved baseline path in series/voice-guardrails.yaml.");
+const baselinePath = join(root, guardrails.baseline.path);
+const baselineText = readText(baselinePath);
+if (!baselineText) throw new Error(`Missing voice baseline: ${baselinePath}`);
+const chapters = listChapterFiles(join(root, "books", book.book_id));
+const observedText = chapters.map((path) => readText(path) ?? "").filter(Boolean).join("\n\n");
+if (!observedText.trim()) throw new Error("Voice audit requires at least one manuscript chapter.");
+const protectedSignals = guardrails.monitor.filter((item) => /^metric:/i.test(item)).map((item) => item.replace(/^metric:\s*/i, "").trim()).filter(Boolean);
+const evidence = buildVoiceDriftEvidence({ baselineText, observedText, protectedSignals });
+process.stdout.write(`${JSON.stringify({ milestone, book_id: book.book_id, chapter_count: chapters.length, ...evidence }, null, 2)}\n`);
