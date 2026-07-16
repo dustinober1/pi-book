@@ -151,12 +151,15 @@ export function buildVoiceDriftEvidence(input: {
   const usePov = Boolean(input.pov && input.povBaselineText?.trim());
   const baseline = extractVoiceMetrics(usePov ? input.povBaselineText ?? "" : input.baselineText);
   const observed = extractVoiceMetrics(input.observedText);
+  const comparison = input.protectedSignals
+    ? compareVoiceMetrics({ baseline, observed, protectedSignals: input.protectedSignals })
+    : compareVoiceMetrics({ baseline, observed });
   return {
     baseline_scope: usePov ? "pov" : "project",
     pov: input.pov ?? null,
     baseline,
     observed,
-    ...compareVoiceMetrics({ baseline, observed, protectedSignals: input.protectedSignals }),
+    ...comparison,
   };
 }
 
@@ -182,7 +185,7 @@ function approvedMilestoneRefs(audits: VoiceAuditsPhase5): Set<string> {
   return new Set(audits.audits.filter((audit) => audit.status === "approved" && audit.milestone_ref).map((audit) => audit.milestone_ref as string));
 }
 
-function requirement(milestone: VoiceAuditMilestone, milestoneRef: string, chapters: number[], scope = milestone): VoiceAuditRequirement {
+function requirement(milestone: VoiceAuditMilestone, milestoneRef: string, chapters: number[], scope: string = milestone): VoiceAuditRequirement {
   return { milestone, milestone_ref: milestoneRef, chapter_refs: [...new Set(chapters)].sort((a, b) => a - b), scope };
 }
 
