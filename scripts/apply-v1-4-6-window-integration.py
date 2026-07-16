@@ -1,12 +1,38 @@
 from pathlib import Path
 
 root = Path('.')
-
 events_path = root / 'src/application/events.ts'
 prompts_path = root / 'src/application/prompts.ts'
 events = events_path.read_text(encoding='utf-8')
 prompts = prompts_path.read_text(encoding='utf-8')
 
+# Repair any earlier transport that converted escaped newlines into literal quoted line breaks.
+if 'if (windowBlockers.length) throw new Error(`Packet-window validation blocked ${event}:' in events:
+    start = events.index('    if (windowBlockers.length) throw new Error(`Packet-window validation blocked ${event}:')
+    end = events.index('  }\n  if (event === "book-plan")', start)
+    replacement = r'''    if (windowBlockers.length) throw new Error(`Packet-window validation blocked ${event}:\n${windowBlockers.map((item) => `- ${item.message}`).join("\n")}`);
+'''
+    events = events[:start] + replacement + events[end:]
+
+queue_start = prompts.find('export function queuePrompt(root: string): string {')
+queue_end = prompts.find('export function draftPrompt', queue_start)
+if queue_start >= 0 and queue_end > queue_start:
+    queue_text = prompts[queue_start:queue_end]
+    profile_start = queue_text.find('${profile.chapterPacketRequirements.map((item) => `- ${item}`).join("')
+    if profile_start >= 0:
+        profile_end = queue_text.find('")}', profile_start)
+        if profile_end >= 0:
+            fixed = r'''${profile.chapterPacketRequirements.map((item) => `- ${item}`).join("\n")}'''
+            queue_text = queue_text[:profile_start] + fixed + queue_text[profile_end + 3:]
+            prompts = prompts[:queue_start] + queue_text + prompts[queue_end:]
+
+# Exit only after the integrated source is present and no broken quoted newline remains.
+if 'import { compactPacketWindow, packetWindowDecision, packetWindowFindings } from "./packet-window.js";' in events and 'Maintain a rolling active window of at most six ready chapter packets.' in prompts:
+    events_path.write_text(events, encoding='utf-8')
+    prompts_path.write_text(prompts, encoding='utf-8')
+    raise SystemExit(0)
+
+# Event integration.
 if 'import { compactPacketWindow, packetWindowDecision, packetWindowFindings } from "./packet-window.js";' not in events:
     events = events.replace(
         'import { researchEvidenceFindings } from "./research-evidence.js";\n',
@@ -17,7 +43,7 @@ if 'import { compactPacketWindow, packetWindowDecision, packetWindowFindings } f
 if 'Packet-window validation blocked' not in events:
     marker = '  if (event === "book-plan") {\n    const strategy = parseOverlay<BookStrategyPhase5>'
     index = events.index(marker)
-    block = '''  if (event === "book-plan" || event === "chapter-queue") {
+    block = r'''  if (event === "book-plan" || event === "chapter-queue") {
     const drafted = new Set(listChapterFiles(join(root, "books", book.book_id)).map(chapterNumber).filter((item): item is number => item !== null));
     const windowBlockers = packetWindowFindings(queue, plot, drafted).filter((finding) => finding.severity === "blocker");
     if (windowBlockers.length) throw new Error(`Packet-window validation blocked ${event}:\n${windowBlockers.map((item) => `- ${item.message}`).join("\n")}`);
@@ -46,6 +72,7 @@ if 'const window = packetWindowDecision(queue, plot, manuscriptNumbers);' not in
 
 events_path.write_text(events, encoding='utf-8')
 
+# Prompt integration.
 prompts = prompts.replace('import { join } from "node:path";', 'import { basename, join } from "node:path";', 1)
 prompts = prompts.replace(
     'import type { RevisionTicket, Stage } from "../domain/schemas.js";',
@@ -63,13 +90,13 @@ if 'import { PlotGridPhase4Schema, type PlotGridPhase4 }' not in prompts:
 if 'Maintain a rolling active window of at most six ready chapter packets.' not in prompts:
     start = prompts.index('export function queuePrompt(root: string): string {')
     end = prompts.index('export function draftPrompt', start)
-    replacement = '''export function queuePrompt(root: string): string {
+    replacement = r'''export function queuePrompt(root: string): string {
   const book = readBook(root);
   const profile = getProfile(book.profile);
   const bookRoot = join(root, "books", book.book_id);
   const queue = parseYaml<ChapterQueueState>(readText(join(bookRoot, "chapter-queue.yaml")) ?? "", ChapterQueueSchema, "chapter-queue.yaml");
   const plot = parseYaml<PlotGridPhase4>(readText(join(bookRoot, "plot-grid.yaml")) ?? "", PlotGridPhase4Schema, "plot-grid.yaml");
-  const drafted = new Set(listChapterFiles(bookRoot).map((path) => Number.parseInt(basename(path).match(/^0*(\\d+)/)?.[1] ?? "", 10)).filter(Number.isInteger));
+  const drafted = new Set(listChapterFiles(bookRoot).map((path) => Number.parseInt(basename(path).match(/^0*(\d+)/)?.[1] ?? "", 10)).filter(Number.isInteger));
   const window = packetWindowDecision(queue, plot, drafted);
   const preserve = window.queue.packets.map((packet) => packet.chapter).sort((left, right) => left - right);
   const refillInstruction = window.needsRefill
