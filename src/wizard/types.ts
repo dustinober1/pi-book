@@ -1,4 +1,4 @@
-export type WizardWorkflow = "adoption" | "readers" | "packaging" | "next-book";
+export type WizardWorkflow = "adoption" | "readers" | "packaging" | "next-book" | "research";
 
 export interface WizardProposalEnvelope<T = unknown> {
   proposal_id: string;
