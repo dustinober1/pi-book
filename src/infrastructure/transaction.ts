@@ -5,6 +5,7 @@ import { parseYaml } from "./yaml.js";
 import { schemaForPath } from "../domain/schemas.js";
 import { v12SchemaForPath } from "../domain/v1-2-schema-registry.js";
 import { v13SchemaForPath } from "../domain/v1-3-schema-registry.js";
+import { v14SchemaForPath } from "../domain/v1-4-schema-registry.js";
 import { commitWorkflowEvent, type GitCheckpointResult } from "./git.js";
 
 export interface FileChange { path: string; content: string; encoding?: "utf8" }
@@ -27,7 +28,7 @@ function validateChange(change: TransactionFileChange): void {
   if (change.path.startsWith("/") || change.path.includes("..")) throw new Error(`Unsafe transaction path: ${change.path}`);
   if (/\.(yaml|yml)$/i.test(change.path)) {
     if (typeof change.content !== "string") throw new Error(`YAML changes must be UTF-8 text: ${change.path}`);
-    const schema = v13SchemaForPath(change.path) ?? v12SchemaForPath(change.path) ?? schemaForPath(change.path);
+    const schema = v14SchemaForPath(change.path) ?? v13SchemaForPath(change.path) ?? v12SchemaForPath(change.path) ?? schemaForPath(change.path);
     parseYaml(change.content, schema ?? undefined, change.path);
   }
 }
