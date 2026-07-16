@@ -21,8 +21,8 @@ import { buildVoiceAuditRecord, isVoiceAuditMilestone } from "./voice-audit.js";
 
 export interface AuditEventInput {
   eventType: "draft-chapter" | "review" | "research-update";
-  chapter?: number;
-  scope?: string;
+  chapter?: number | undefined;
+  scope?: string | undefined;
 }
 
 function normalized(path: string): string {
