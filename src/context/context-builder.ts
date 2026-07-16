@@ -1,6 +1,7 @@
 import { basename, join } from "node:path";
 import { CanonSchema, ChapterQueueSchema, RemarkabilitySchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type RemarkabilityState, type StoryThreadsState } from "../domain/schemas.js";
-import { BookStrategyPhase4Schema, PlotGridPhase4Schema, type BookStrategyPhase4, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
+import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
+import { BookStrategyPhase5Schema, type BookStrategyPhase5 } from "../domain/v1-3-audit-schemas.js";
 import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
 import { ResearchLedgerSchema, TasteProfileSchema, VoiceGuardrailsSchema, defaultTasteProfile, defaultVoiceGuardrails, type ResearchLedger, type TasteProfile, type VoiceGuardrails } from "../domain/v1-3-schemas.js";
 import { renderApprovedBookGuardrails } from "../application/book-strategy.js";
@@ -16,11 +17,7 @@ export interface ChapterContextReport {
   estimatedTokens: number;
   included: string[];
   excluded: string[];
-  graph: {
-    maxDepth: 1 | 2;
-    selections: StoryGraphSelection[];
-    blocked: StoryGraphBlockedSelection[];
-  };
+  graph: { maxDepth: 1 | 2; selections: StoryGraphSelection[]; blocked: StoryGraphBlockedSelection[] };
 }
 
 export interface ChapterContext { root: string; bookId: string; packet: ChapterPacket; text: string; report: ChapterContextReport }
@@ -58,7 +55,7 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
   const plot = parseYaml<PlotGridPhase4>(plotText, PlotGridPhase4Schema, "plot-grid.yaml");
   const sources = parseYaml<SourceRegisterV13>(sourcesText, SourceRegisterV13Schema, "source-register.yaml");
   const research = parseYaml<ResearchLedger>(researchText, ResearchLedgerSchema, "research-ledger.yaml");
-  const strategy = parseYaml<BookStrategyPhase4>(strategyText, BookStrategyPhase4Schema, "book-strategy.yaml");
+  const strategy = parseYaml<BookStrategyPhase5>(strategyText, BookStrategyPhase5Schema, "book-strategy.yaml");
   const remarkability = parseYaml<RemarkabilityState>(remarkabilityText, RemarkabilitySchema, "remarkability.yaml");
   const packet = selectPacket(queue, requestedChapter); const profile = getProfile(book.profile);
   const profileBlockers = profile.validatePacket(packet).filter((finding) => finding.severity === "blocker");
