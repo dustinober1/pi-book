@@ -14,6 +14,11 @@
 - Direct-imitation and raw-reference validation for readable voice profiles, compiled guardrails, anonymous variants, and accepted baselines.
 - Anonymous A/B/C voice-experiment verification with 600–900-word bounds, normalized SHA-256 hashes, deterministic score summaries, canonical asset paths, and internally consistent baseline selection.
 - A bounded `Approved voice guardrails` drafting-context section that includes neutral project rules and the matching POV signature while excluding private influence evidence and experiment prose.
+- Four research lanes—taste-and-voice, story-world, human-authenticity, and reader-and-market—with ready-claim provenance, reliability, observation-date, fictionalization, knowledge-scope, risk, dramatic-use, and story-decision validation.
+- Privacy-safe manual and CSV public-review observation intake that strips reviewer identity, preserves three-star mixed evidence, and keeps only paraphrases plus optional short excerpts.
+- Deterministic reader-friction clustering with title coverage, positive counterweights, weak/moderate/strong confidence ceilings, and a one-star-only cap at moderate.
+- Explicit writer decisions for review clusters and typed source-cluster provenance for accepted tradeoffs.
+- Ready chapter-packet validation against `RES-NNN` research-ledger state, with advisory compatibility for legacy `SRC-NNN` packet references.
 
 ### Changed
 
@@ -22,6 +27,9 @@
 - Rebuilding a book plan requires its research ledger and book strategy in the same guarded event as the existing architecture files.
 - Voice planning now supports an optional anonymous calibration loop through `research-update`, followed by the final atomic `voice-profile` bundle.
 - Voice and book planning prompts request the complete evidence bundle and explicitly prohibit invented public-review evidence or named-author imitation instructions.
+- Book planning may submit source-register provenance atomically with research, strategy, and architecture.
+- Queue planning uses ready research-ledger IDs for new packets while preserving legacy source IDs as migration advisories.
+- Review and reader-test prompts explicitly separate public market observations from accepted human responses to the current manuscript.
 - Review events may write typed `voice-audits.yaml` evidence without making it mandatory during this foundation phase.
 
 ### Compatibility
@@ -29,6 +37,9 @@
 - Existing 1.2 projects remain readable and unblocked when the new evidence files are absent.
 - Metadata-only upgrades do not create evidence, change approvals, or hide the optional-backfill warning.
 - Planned voice experiments remain valid before variants or a baseline exist; any assets already present must use canonical, unique A/B/C order and paths.
+- Legacy source-register records remain schema-readable; extended provenance is enforced only when a ready claim or changed source uses that evidence.
+- Unrelated voice or audit evidence updates do not force a legacy research backfill.
+- Existing `SRC-NNN` packet references remain draftable with an advisory until a later plan rebuild migrates them to ready `RES-NNN` items.
 - Existing manuscript prose, reader experiments, publishing metadata, marketing metadata, and continuity-graph behavior remain unchanged.
 - No dependency or external service is added.
 
@@ -36,7 +47,10 @@
 
 - `research-update` rejects manuscript, project-state, book-state, guidance, reader-evidence, publishing, marketing, and package-output paths.
 - Every accepted evidence update still requires the current stage and project hash, schema validation, rollback, one Git checkpoint, and refreshed status and handoff files.
-- Public market evidence remains separate from real human responses to the current manuscript.
+- Public market evidence remains separate from real human responses to the current manuscript and cannot change reader metrics or validation claims.
+- Reviewer names, handles, and profile URLs are removed before public observations enter canonical project files.
+- Strong friction confidence requires evidence across at least three titles plus a positive counterweight; one-star-only evidence never reaches strong.
+- Only prevent or mitigate decisions may produce approved review-derived guardrails.
 - Experiment YAML cannot borrow arbitrary project files as source, variant, or baseline assets.
 - The final taste selection, experiment index, experiment record, guardrail baseline, and baseline bytes must agree before voice approval can proceed.
 
