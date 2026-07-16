@@ -46,6 +46,7 @@ import { normalizeEventRejection } from "./event-rejection.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 import { readerFrictionFindings } from "./review-observations.js";
 import { researchEvidenceFindings } from "./research-evidence.js";
+import { compactPacketWindow, packetWindowDecision, packetWindowFindings } from "./packet-window.js";
 
 export { projectStateHash } from "./project-hash.js";
 
@@ -264,6 +265,13 @@ function validateArchitecture(root: string, files: FileChange[], book: BookState
     if (referenceBlockers.length) throw new Error(`Reference validation blocked ${event}:\n${referenceBlockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
 
+  if (event === "book-plan" || event === "chapter-queue") {
+    const drafted = new Set(listChapterFiles(join(root, "books", book.book_id)).map(chapterNumber).filter((item): item is number => item !== null));
+    const windowBlockers = packetWindowFindings(queue, plot, drafted).filter((finding) => finding.severity === "blocker");
+    if (windowBlockers.length) throw new Error(`Packet-window validation blocked ${event}:
+${windowBlockers.map((item) => `- ${item.message}`).join("
+")}`);
+  }
   if (event === "book-plan") {
     const strategy = parseOverlay<BookStrategyPhase5>(root, files, `${bookRoot}/book-strategy.yaml`, BookStrategyPhase5Schema);
     const planBlockers = bookPlanFindings({ strategy, plot, queue }).filter((finding) => finding.severity === "blocker");
@@ -304,6 +312,7 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
       const packet = queue.packets.find((item) => item.chapter === input.chapter);
       if (!packet) throw new Error(`Chapter ${input.chapter} packet not found.`);
       packet.status = "drafted";
+      queue = compactPacketWindow(queue);
       setChange(changes, `books/${book.book_id}/chapter-queue.yaml`, stringifyYaml(queue));
       appendMilestoneVoiceAudit(root, changes, book, { eventType: "draft-chapter", chapter: input.chapter, scope: input.scope });
       book.current_chapter = Math.max(book.current_chapter, input.chapter);
@@ -320,11 +329,10 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
         project.current_stage = "act-review";
         book.act_checkpoint = packet.milestone_gate;
       } else {
-        const remaining = queue.packets.some((item) => item.status === "ready");
         const manuscriptNumbers = new Set(listChapterFiles(join(root, "books", book.book_id)).map(chapterNumber).filter((item): item is number => item !== null));
         manuscriptNumbers.add(input.chapter);
-        const allPlanned = plot.chapters.length > 0 && plot.chapters.every((item) => manuscriptNumbers.has(item.chapter));
-        project.current_stage = remaining ? "drafting" : allPlanned ? "manuscript-review" : "chapter-queue";
+        const window = packetWindowDecision(queue, plot, manuscriptNumbers);
+        project.current_stage = window.allPlannedComplete ? "manuscript-review" : window.needsRefill ? "chapter-queue" : "drafting";
         project.next_gate = null;
       }
       break;

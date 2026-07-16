@@ -1,9 +1,11 @@
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { ChapterContext } from "../context/context-builder.js";
-import type { RevisionTicket, Stage } from "../domain/schemas.js";
-import { readText } from "../infrastructure/files.js";
+import { ChapterQueueSchema, type ChapterQueueState, type RevisionTicket, type Stage } from "../domain/schemas.js";
+import { listChapterFiles, readText } from "../infrastructure/files.js";
 import { DecisionLedgerSchema, IntakeSchema, type DecisionLedger, type IntakeState } from "../domain/v1-4-schemas.js";
 import { PremiseLabSchema, type PremiseLab } from "../domain/v1-4-schemas.js";
+import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
+import { packetWindowDecision } from "./packet-window.js";
 import { premiseLabFindings, selectedPremiseContext } from "./premise-lab.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { intakePromptContext } from "./intake.js";
@@ -66,7 +68,29 @@ Prepare only books/${book.book_id}/book-bible.md, books/${book.book_id}/genre.ya
 export function queuePrompt(root: string): string {
   const book = readBook(root);
   const profile = getProfile(book.profile);
-  return `Use the novel-forge-for-pi skill.\n\nProject root: ${root}\nActive book: ${book.book_id}\n\nCreate a bounded draft window of no more than six ready chapter packets from the approved plot grid. Every packet must define purpose, causality, state change, scene engine, relevant IDs, research needs, target words, and an honest ending hook. Use remarkability.yaml to protect the retellable hook and planned signature moments without forcing every chapter to perform them. New required_research entries use only ready RES-NNN research-ledger IDs. Existing SRC-NNN references remain readable but are legacy advisories and should be migrated during the next plan rebuild. Carry approved book guardrails into drafting context through book-strategy.yaml; never copy raw public-review observations or excerpts into a chapter packet.\n\nRequired ${profile.label} profile fields:\n${profile.chapterPacketRequirements.map((item) => `- ${item}`).join("\n")}\n\n${eventRule(root, "chapter-queue", "chapter-queue")}`;
+  const bookRoot = join(root, "books", book.book_id);
+  const queue = parseYaml<ChapterQueueState>(readText(join(bookRoot, "chapter-queue.yaml")) ?? "", ChapterQueueSchema, "chapter-queue.yaml");
+  const plot = parseYaml<PlotGridPhase4>(readText(join(bookRoot, "plot-grid.yaml")) ?? "", PlotGridPhase4Schema, "plot-grid.yaml");
+  const drafted = new Set(listChapterFiles(bookRoot).map((path) => Number.parseInt(basename(path).match(/^0*(\d+)/)?.[1] ?? "", 10)).filter(Number.isInteger));
+  const window = packetWindowDecision(queue, plot, drafted);
+  const preserve = window.queue.packets.map((packet) => packet.chapter).sort((left, right) => left - right);
+  const refillInstruction = window.needsRefill
+    ? `Create packets only for chapters ${window.candidateChapters.join(", ")}. Preserve the existing active packet${preserve.length === 1 ? "" : "s"} for chapter${preserve.length === 1 ? "" : "s"} ${preserve.join(", ")}. Return one complete replacement chapter-queue.yaml containing the preserved active packets plus the new packets.`
+    : `No refill is required because ${window.readyCount} ready packets remain. Preserve the active window and do not regenerate packets.`;
+  return `Use the novel-forge-for-pi skill.
+
+Project root: ${root}
+Active book: ${book.book_id}
+
+Maintain a rolling active window of at most six ready chapter packets. Refill only when fewer than two ready packets remain. Drafted, reviewed, and revised packets must not remain in the active window. ${refillInstruction}
+
+Every new packet must define purpose, causality, state change, scene engine, relevant IDs, research needs, target words, and an honest ending hook. Use remarkability.yaml to protect the retellable hook and planned signature moments without forcing every chapter to perform them. New required_research entries use only ready RES-NNN research-ledger IDs. Carry approved book guardrails into drafting context; never copy raw public-review observations into a packet. Do not rebuild the entire book queue.
+
+Required ${profile.label} profile fields:
+${profile.chapterPacketRequirements.map((item) => `- ${item}`).join("
+")}
+
+${eventRule(root, "chapter-queue", "chapter-queue")}`;
 }
 
 export function draftPrompt(context: ChapterContext): string {
