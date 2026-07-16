@@ -1,6 +1,7 @@
 import { basename, join } from "node:path";
-import { CanonSchema, ChapterQueueSchema, GenreConfigSchema, ReaderExperimentsSchema, RemarkabilitySchema, RevisionTicketsSchema, StoryThreadsSchema, type BookState, type CanonState, type ChapterQueueState, type GenreConfig, type ProjectState, type ReaderExperimentsState, type RemarkabilityState, type RevisionTicketsState, type Stage, type StoryThreadsState } from "../domain/schemas.js";
-import { BookStrategyPhase4Schema, PlotGridPhase4Schema, type BookStrategyPhase4, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
+import { CanonSchema, ChapterQueueSchema, GenreConfigSchema, ReaderExperimentsSchema, RemarkabilitySchema, StoryThreadsSchema, type BookState, type CanonState, type ChapterQueueState, type GenreConfig, type ProjectState, type ReaderExperimentsState, type RemarkabilityState, type Stage, type StoryThreadsState } from "../domain/schemas.js";
+import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
+import { BookStrategyPhase5Schema, RevisionTicketsPhase5Schema, VoiceAuditsPhase5Schema, type BookStrategyPhase5, type RevisionTicketsPhase5, type VoiceAuditsPhase5 } from "../domain/v1-3-audit-schemas.js";
 import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
 import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
@@ -16,6 +17,7 @@ import { projectStateHash } from "./project-hash.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 import { readerFrictionFindings } from "./review-observations.js";
 import { researchEvidenceFindings } from "./research-evidence.js";
+import { revisionLearningFindings } from "./revision-learning.js";
 
 export { projectStateHash } from "./project-hash.js";
 
@@ -95,6 +97,13 @@ function missingRequiredPaths(files: FileChange[], requiredPaths: string[]): str
   return requiredPaths.filter((path) => !submitted.has(path));
 }
 
+function duplicateIds(values: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const value of values) { if (seen.has(value)) duplicates.add(value); else seen.add(value); }
+  return [...duplicates].sort();
+}
+
 function validateResearchAndFriction(root: string, files: FileChange[], book: BookState, eventType: NovelEventType): void {
   const base = `books/${book.book_id}`;
   const paths = new Set(files.map((file) => normalized(file.path)));
@@ -107,11 +116,40 @@ function validateResearchAndFriction(root: string, files: FileChange[], book: Bo
     findings.push(...researchEvidenceFindings(ledger, sources));
   }
   if (validateFriction) {
-    const strategy = parseOverlay<BookStrategyPhase4>(root, files, `${base}/book-strategy.yaml`, BookStrategyPhase4Schema);
+    const strategy = parseOverlay<BookStrategyPhase5>(root, files, `${base}/book-strategy.yaml`, BookStrategyPhase5Schema);
     findings.push(...readerFrictionFindings(strategy));
   }
   const blockers = findings.filter((finding) => finding.severity === "blocker");
   if (blockers.length) throw new Error(`Research and reader-friction validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+}
+
+function validateAuditAndLearning(root: string, files: FileChange[], book: BookState, eventType: NovelEventType): void {
+  const base = `books/${book.book_id}`;
+  const paths = new Set(files.map((file) => normalized(file.path)));
+  const auditChanged = paths.has(`${base}/voice-audits.yaml`);
+  const ticketsChanged = paths.has(`${base}/revision-tickets.yaml`);
+  const strategyChanged = paths.has(`${base}/book-strategy.yaml`);
+  if (!auditChanged && !ticketsChanged && !strategyChanged) return;
+
+  const messages: string[] = [];
+  if (auditChanged) {
+    const audits = parseOverlay<VoiceAuditsPhase5>(root, files, `${base}/voice-audits.yaml`, VoiceAuditsPhase5Schema);
+    for (const id of duplicateIds(audits.audits.map((audit) => audit.id))) messages.push(`Duplicate voice audit id: ${id}.`);
+    for (const audit of audits.audits) {
+      const extended = audit.milestone !== undefined || audit.milestone_ref !== undefined || audit.baseline_metrics !== undefined || audit.observed_metrics !== undefined || audit.deltas !== undefined;
+      if (!extended) continue;
+      if (!audit.milestone || !audit.milestone_ref) messages.push(`${audit.id} requires milestone and milestone_ref.`);
+      if (audit.interpretation !== "evidence-only") messages.push(`${audit.id} must record interpretation: evidence-only.`);
+      if ((audit.baseline_metrics && !audit.observed_metrics) || (!audit.baseline_metrics && audit.observed_metrics)) messages.push(`${audit.id} must store baseline and observed metrics together.`);
+    }
+  }
+
+  if (ticketsChanged || strategyChanged) {
+    const tickets = parseOverlay<RevisionTicketsPhase5>(root, files, `${base}/revision-tickets.yaml`, RevisionTicketsPhase5Schema);
+    const strategy = parseOverlay<BookStrategyPhase5>(root, files, `${base}/book-strategy.yaml`, BookStrategyPhase5Schema);
+    messages.push(...revisionLearningFindings(tickets, strategy).filter((finding) => finding.severity === "blocker").map((finding) => finding.message));
+  }
+  if (messages.length) throw new Error(`Voice-audit and revision-learning validation blocked ${eventType}:\n${messages.map((message) => `- ${message}`).join("\n")}`);
 }
 
 function validateFiles(root: string, input: NovelEventInput, project: ProjectState, book: BookState): void {
@@ -168,6 +206,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     if (blockers.length) throw new Error(`Reader-evidence validation blocked reader-test:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
   if (input.eventType === "book-plan" || input.eventType === "research-update") validateResearchAndFriction(root, input.files, book, input.eventType);
+  if (["review", "research-update", "revise", "reader-test"].includes(input.eventType)) validateAuditAndLearning(root, input.files, book, input.eventType);
 }
 
 function chapterNumber(path: string): number | null {
@@ -213,7 +252,7 @@ function validateArchitecture(root: string, files: FileChange[], book: BookState
   }
 
   if (event === "book-plan") {
-    const strategy = parseOverlay<BookStrategyPhase4>(root, files, `${bookRoot}/book-strategy.yaml`, BookStrategyPhase4Schema);
+    const strategy = parseOverlay<BookStrategyPhase5>(root, files, `${bookRoot}/book-strategy.yaml`, BookStrategyPhase5Schema);
     const planBlockers = bookPlanFindings({ strategy, plot, queue }).filter((finding) => finding.severity === "blocker");
     if (planBlockers.length) throw new Error(`Book strategy validation blocked book-plan:\n${planBlockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
@@ -277,7 +316,7 @@ export function applyNovelEvent(root: string, input: NovelEventInput): NovelEven
       break;
     }
     case "review": {
-      const tickets = parseOverlay<RevisionTicketsState>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsSchema);
+      const tickets = parseOverlay<RevisionTicketsPhase5>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsPhase5Schema);
       book.status = "review";
       if (openBlockingTickets(tickets).length) project.current_stage = "revision";
       else if (input.scope === "manuscript" || project.current_stage === "manuscript-review") {
@@ -303,7 +342,7 @@ export function applyNovelEvent(root: string, input: NovelEventInput): NovelEven
     case "research-update":
       break;
     case "revise": {
-      const tickets = parseOverlay<RevisionTicketsState>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsSchema);
+      const tickets = parseOverlay<RevisionTicketsPhase5>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsPhase5Schema);
       book.status = "revision";
       if (openBlockingTickets(tickets).length) project.current_stage = "revision";
       else if (project.next_gate === "manuscript-approval") project.current_stage = "manuscript-review";
