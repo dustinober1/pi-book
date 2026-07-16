@@ -23,6 +23,15 @@ export interface DecideAssumptionInput {
   evidenceRefs: string[];
 }
 
+export interface RecordWriterDecisionInput {
+  scope: IntakeScope;
+  subject: string;
+  choice: string;
+  decidedAt: string;
+  evidenceRefs: string[];
+  replaces?: string | null;
+}
+
 function nonBlank(value: string, label: string): string {
   const normalized = value.trim();
   if (!normalized) throw new Error(`${label} must be nonblank.`);
@@ -134,6 +143,29 @@ export function decideAssumption(ledger: DecisionLedger, input: DecideAssumption
     decidedAt: nonBlank(input.decidedAt, "Writer decision time"),
     evidenceRefs,
     replaces: null,
+  });
+  assertValidLedger(result);
+  return result;
+}
+
+export function recordWriterDecision(ledger: DecisionLedger, input: RecordWriterDecisionInput): DecisionLedger {
+  assertValidLedger(ledger);
+  const result = cloneLedger(ledger);
+  const scope = nonBlank(input.scope, "Writer decision scope") as IntakeScope;
+  const subject = nonBlank(input.subject, "Writer decision subject");
+  const replaced = new Set(result.decisions.map((item) => item.replaces).filter((item): item is string => Boolean(item)));
+  const active = result.decisions.find((item) => item.scope === scope && item.subject === subject && !replaced.has(item.id));
+  const replacement = input.replaces ?? null;
+  if (active && replacement !== active.id) throw new Error(`An active writer decision already exists for ${scope}/${subject}; replace ${active.id} explicitly.`);
+  if (!active && replacement) throw new Error(`Cannot replace inactive or unknown writer decision ${replacement}.`);
+  result.decisions.push({
+    id: nextId(result.decisions.map((item) => item.id), "DEC"),
+    scope,
+    subject,
+    choice: nonBlank(input.choice, "Writer decision choice"),
+    decidedAt: nonBlank(input.decidedAt, "Writer decision time"),
+    evidenceRefs: uniqueStrings(input.evidenceRefs, "Writer decision", true),
+    replaces: replacement,
   });
   assertValidLedger(result);
   return result;

@@ -17,7 +17,7 @@ button.danger { background: #8f2d2d; }
 .masthead h1 { margin: 2px 0 8px; font-size: clamp(1.8rem, 4vw, 3.1rem); letter-spacing: -.045em; }
 .masthead p { margin: 0; color: #c8d0d8; }
 .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-weight: 700; font-size: .75rem; color: #63717d; margin: 0 0 8px; }
-.workflow-tabs { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 10px; margin: 18px 0; }
+.workflow-tabs { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 10px; margin: 18px 0; }
 .workflow-tabs button { background: white; color: #25313a; border: 1px solid #d5dbe0; }
 .workflow-tabs button.active { background: #315c67; color: white; border-color: #315c67; }
 .workspace { display: grid; grid-template-columns: minmax(280px,.75fr) minmax(0,2.25fr); gap: 18px; align-items: start; }

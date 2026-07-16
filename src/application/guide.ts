@@ -7,7 +7,7 @@ import { getProjectStatus } from "./status.js";
 
 export type GuideActionId =
   | "continue" | "approve" | "request-changes" | "view-evidence" | "repair"
-  | "status" | "readers" | "research" | "adopt" | "add-book" | "advanced";
+  | "status" | "readers" | "research" | "premise" | "adopt" | "add-book" | "advanced";
 
 export interface GuideAction {
   id: GuideActionId;
@@ -98,6 +98,10 @@ export function buildGuideScreen(root: string): GuideScreen {
   }
   if (readerStage(project.current_stage)) actions.push(action("readers", "Reader evidence", "Prepare isolated reader kits or preview and merge human-response CSVs."));
   if (project.current_stage !== "complete") actions.push(action("research", "Review voice and research evidence", "Open the local preview-and-apply workspace for influences, anonymous voice calibration, public-market friction, research readiness, and approved learning rules."));
+  if (project.current_stage === "book-planning") {
+    const premise = readText(join(root, "books", book.book_id, "premise-lab.yaml")) ?? "";
+    if (!/selected_variant_id:\s*PV-[0-9]{3}/.test(premise)) actions.push(action("premise", "Compare and select a premise", "Open the local structural premise laboratory and record the writer's explicit selection."));
+  }
   actions.push(action("status", "View full status", "Show blockers, warnings, and progress."));
   actions.push(action("advanced", "Advanced options", "Recovery, browser workflows, metadata, and integrity tools."));
 

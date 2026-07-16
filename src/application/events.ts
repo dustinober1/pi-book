@@ -214,9 +214,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     if (input.eventType === "book-plan" && lab.variants.length > 0 && (!lab.selected_variant_id || !lab.selection_decision_id)) {
       blockers.push({ severity: "blocker", code: "unselected-premise", message: "A rebuilt book plan requires an explicitly selected premise variant." });
     }
-    if (blockers.length) throw new Error(`Premise validation blocked the event:
-${blockers.map((item) => `- ${item.message}`).join("
-")}`);
+    if (blockers.length) throw new Error(`Premise validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
   if (input.eventType === "intake-update") {
     const intake = parseOverlay<IntakeState>(root, input.files, "series/intake.yaml", IntakeSchema);
@@ -363,6 +361,8 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
       break;
     case "intake-update":
       break;
+    case "premise-update":
+      break;
     case "revise": {
       const tickets = parseOverlay<RevisionTicketsPhase5>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsPhase5Schema);
       book.status = "revision";
@@ -386,7 +386,7 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
       break;
   }
 
-  if (input.eventType !== "research-update" && input.eventType !== "intake-update") {
+  if (input.eventType !== "research-update" && input.eventType !== "intake-update" && input.eventType !== "premise-update") {
     setChange(changes, "PROJECT.yaml", stringifyYaml(project));
     setChange(changes, `books/${book.book_id}/BOOK.yaml`, stringifyYaml(book));
   }

@@ -149,6 +149,7 @@ async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): 
   else if (id === "advanced") await guidedAdvanced(root, context);
   else if (id === "readers") await guidedReaders(root, context);
   else if (id === "research") await openWizard(root, context, "research");
+  else if (id === "premise") await openWizard(root, context, "premise");
   else if (id === "add-book") await guidedAddBook(root, context);
   else if (id === "adopt") await guidedAdoption(root, context);
   else if (id === "approve") {
@@ -230,7 +231,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("novel", { description: "Show the one recommended Novel Forge action and guided choices", handler: async (_args, context) => { try { await guidedNovel(pi, context); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
-  pi.registerCommand("novel-wizard", { description: "Open the temporary local browser wizard for adoption, readers, packaging, next-book, or research work", getArgumentCompletions: (prefix) => { const filtered = ["adoption", "readers", "packaging", "next-book", "research"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const requested = tokens(args)[0] as WizardWorkflow | undefined; if (requested && !["adoption", "readers", "packaging", "next-book", "research"].includes(requested)) throw new Error("Wizard workflow must be adoption, readers, packaging, next-book, or research."); await openWizard(root, context, requested); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-wizard", { description: "Open the temporary local browser wizard for adoption, readers, packaging, next-book, research, or premise work", getArgumentCompletions: (prefix) => { const filtered = ["adoption", "readers", "packaging", "next-book", "research", "premise"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const requested = tokens(args)[0] as WizardWorkflow | undefined; if (requested && !["adoption", "readers", "packaging", "next-book", "research", "premise"].includes(requested)) throw new Error("Wizard workflow must be adoption, readers, packaging, next-book, research, or premise."); await openWizard(root, context, requested); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-start", { description: "Create a compact standalone or series-capable thriller or romantasy project", handler: async (args, context) => {
     const supplied = tokens(args);
     const projectName = supplied.filter((item) => !item.startsWith("--") && !["thriller", "romantasy", "standalone", "planned-series", "open-ended-series"].includes(item)).join(" ") || await context.ui.input("Project name:", "my-novel");

@@ -101,12 +101,15 @@ export function createPremiseWizardHandler(root: string): PremiseWizardHandler {
       const variantId = string(input.variant_id, "variant_id");
       const decidedAt = string(input.decided_at, "decided_at");
       const evidenceRefs = strings(input.evidence_refs, "evidence_refs");
+      const replacedIds = new Set(state.ledger.decisions.map((item) => item.replaces).filter((item): item is string => Boolean(item)));
+      const active = state.ledger.decisions.find((item) => item.scope === state.bookId && item.subject === "premise-selection" && !replacedIds.has(item.id));
       const ledger = recordWriterDecision(state.ledger, {
         scope: state.bookId as `book-${string}`,
         subject: "premise-selection",
         choice: variantId,
         decidedAt,
         evidenceRefs,
+        ...(active ? { replaces: active.id } : {}),
       });
       const decision = ledger.decisions.at(-1)!;
       const lab = selectPremise(state.lab, ledger, variantId, decision.id);

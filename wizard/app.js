@@ -238,12 +238,25 @@ function researchForm() {
   document.querySelector("#apply-learning-decision").addEventListener("click", async () => { try { await applyAction("save-learning-decision", { preview_id: previews["apply-learning-decision"].preview_id }); } catch (error) { setResult(error.message, true); } });
 }
 
+function premiseForm() {
+  const data = currentSnapshot.workflow;
+  const draft = { schema_version: "1.0.0", book_id: data.book_id, raw_idea: data.raw_idea || "", seed_elements: data.seed_elements || [], variants: data.variants || [], selected_variant_id: data.selected_variant_id || null, selection_decision_id: data.selection_decision_id || null };
+  content.innerHTML = `<div class="wizard-stack"><section class="card"><h3>Premise Laboratory</h3><p>Compare structural engines without scores or an automatic winner. The writer makes the final decision.</p><label>Raw author idea<textarea id="premise-lab-json" rows="22">${escapeHtml(pretty(draft))}</textarea></label><label>Seed elements are stored inside the typed JSON above.</label><div class="button-row"><button id="preview-premise">Preview comparison</button><button id="save-premise" class="danger" disabled>Save comparison</button></div></section><section class="card"><h3>Explicit writer decision</h3><label>Variant <select id="premise-selection">${(data.variants || []).map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.id)} — ${escapeHtml(item.title)}</option>`).join("")}</select></label><label>Evidence note <input id="premise-evidence" value="writer selected after comparison"></label><div class="button-row"><button id="preview-premise-selection">Preview selection</button><button id="apply-premise-selection" class="danger" disabled>Select variant</button></div></section></div>`;
+  let comparison = null; let selection = null;
+  const preview = (action, payload) => api("/api/preview", { method: "POST", body: JSON.stringify({ workflow: "premise", action, payload }) });
+  document.querySelector("#preview-premise").addEventListener("click", async () => { try { comparison = await preview("comparison", { lab: JSON.parse(fieldValue("premise-lab-json")) }); document.querySelector("#save-premise").disabled = false; setResult(comparison); } catch (error) { setResult(error.message, true); } });
+  document.querySelector("#save-premise").addEventListener("click", async () => { try { await applyAction("save-comparison", { preview_id: comparison.preview_id }); } catch (error) { setResult(error.message, true); } });
+  document.querySelector("#preview-premise-selection").addEventListener("click", async () => { try { selection = await preview("selection", { variant_id: fieldValue("premise-selection"), decided_at: new Date().toISOString(), evidence_refs: [fieldValue("premise-evidence")] }); document.querySelector("#apply-premise-selection").disabled = false; setResult(selection); } catch (error) { setResult(error.message, true); } });
+  document.querySelector("#apply-premise-selection").addEventListener("click", async () => { try { await applyAction("select-variant", { preview_id: selection.preview_id }); } catch (error) { setResult(error.message, true); } });
+}
+
 function renderWorkflow() {
   if (activeWorkflow === "adoption") adoptionForm();
   else if (activeWorkflow === "readers") readersForm();
   else if (activeWorkflow === "packaging") packagingForm();
   else if (activeWorkflow === "next-book") nextBookForm();
   else if (activeWorkflow === "research") researchForm();
+  else if (activeWorkflow === "premise") premiseForm();
   else content.innerHTML = `<p>Select a workflow.</p>`;
 }
 
@@ -257,7 +270,7 @@ async function selectWorkflow(workflow) {
   activeWorkflow = workflow;
   currentPreview = null;
   document.querySelectorAll("[data-workflow]").forEach((button) => button.classList.toggle("active", button.dataset.workflow === workflow));
-  const names = { adoption: "Existing-project adoption", readers: "Reader evidence", packaging: "Packaging checklist", "next-book": "Next-book inheritance", research: "Voice and research evidence" };
+  const names = { adoption: "Existing-project adoption", readers: "Reader evidence", packaging: "Packaging checklist", "next-book": "Next-book inheritance", research: "Voice and research evidence", premise: "Premise laboratory" };
   label.textContent = "Guided review";
   title.textContent = names[workflow] || "Workflow";
   content.innerHTML = `<p>Loading workflow…</p>`;
