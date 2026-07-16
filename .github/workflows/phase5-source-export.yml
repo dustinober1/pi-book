@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/v1.3-phase5-audits-learning
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
