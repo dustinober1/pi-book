@@ -63,7 +63,7 @@ test("book-plan rejects an unresolved stress test", () => {
     strategy.plan_stress_test![0]!.status = "pending";
     assert.throws(() => applyNovelEvent(root, {
       eventType: "book-plan", expectedStage: "book-planning", expectedProjectHash: projectStateHash(root), files: bookPlanFiles(root, strategy),
-    }), /stress/i);
+    }), /early-genre-promise remains pending/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
