@@ -32,7 +32,10 @@ function guardedEvidencePaths(root: string, bookId: string): string[] {
 function calculateProjectHash(root: string, includeRunBookkeeping: boolean): string {
   const project = structuredClone(readProject(root));
   const book = readBook(root);
-  if (!includeRunBookkeeping) project.automation.active_run = null;
+  if (!includeRunBookkeeping) {
+    const automation = project.automation as typeof project.automation & { active_run?: unknown };
+    delete automation.active_run;
+  }
   const hash = createHash("sha256")
     .update("PROJECT.yaml\0")
     .update(stringifyYaml(project))
