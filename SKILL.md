@@ -81,6 +81,32 @@ Experiment assets must use their canonical directory paths, hashes must match no
 
 Drafting context receives only validated neutral must/prefer/avoid/monitor rules and a matching POV signature. It must exclude raw influence references, the source scene, all variant prose, scores, and unapproved experiment material. Unsafe existing voice files block drafting instead of leaking into context.
 
+## Research evidence and reader friction
+
+Use exactly four research lanes: `taste-and-voice`, `story-world`, `human-authenticity`, and `reader-and-market`. Planned and researching claims may remain incomplete. Before setting an item to `ready`, require registered `SRC-NNN` provenance, source reliability, an observation or verification date, confidence, fictionalization status and reason, knowledge scope, risks, at least one dramatic use, and the precise story decision affected.
+
+Source-register entries that support ready research must list the matching `RES-NNN` IDs in `supports_research_ids`. Do not let a source silently support a claim that it does not name. Existing legacy source entries remain parseable; provenance is enforced only when the ledger/source evidence is changed or rebuilt.
+
+Public-review observations are market evidence only. Accept only writer-supplied manual, pasted, linked, or CSV observations. Before storage:
+
+- remove reviewer names, handles, and profile URLs;
+- keep a paraphrase and at most a short excerpt;
+- derive ratings 1–2 as negative, 3 as mixed, and 4–5 as positive;
+- require an explicit sentiment when no rating exists;
+- never copy observations into `reader-experiments.yaml` or count them as human validation of this manuscript.
+
+Build clusters from observation IDs rather than merged prose. Preserve matching positive observations as `positive_counterweights`. Confidence may be:
+
+- `weak` with fewer than three observations or only one title;
+- `moderate` with at least three observations across two titles;
+- `strong` only with at least six observations across three titles, high execution relevance, and at least one positive counterweight.
+
+One-star-only evidence can never exceed moderate. Never record confidence above the deterministic maximum.
+
+For each project-relevant cluster, the writer chooses exactly one decision: `prevent`, `mitigate`, `accept-as-tradeoff`, or `irrelevant-to-project`. Only prevent and mitigate decisions may produce approved review-derived guardrails. Accepted tradeoffs must retain `source_cluster_ids` so the project can explain what cost was accepted and why.
+
+New chapter packets use ready `RES-NNN` IDs in `required_research`. Existing `SRC-NNN` references remain draftable with an advisory until a plan rebuild migrates them. Phase 3 validates readiness but does not add research-ledger nodes to the continuity graph; graph integration remains a later phase.
+
 ## Temporary browser wizard
 
 Use `/novel` or `/novel-wizard` for adoption, reader evidence, packaging, and next-book inheritance.
