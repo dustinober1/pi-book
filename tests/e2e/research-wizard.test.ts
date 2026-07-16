@@ -22,7 +22,7 @@ test("research workflow is available only through an authenticated loopback sess
   let session: Awaited<ReturnType<typeof startWizardSession>> | null = null;
   try {
     const root = initializeProject(parent, { projectName: "Research HTTP", projectType: "standalone", profile: "thriller" });
-    session = await startWizardSession({ root, workflow: "research", registry: createWizardRegistry(root, { research: createResearchWizardHandler(root) }), openBrowser: false, idleTimeoutMs: 60_000 });
+    session = await startWizardSession({ projectRoot: root, workflow: "research", registry: createWizardRegistry(root, { research: createResearchWizardHandler(root) }), openBrowser: false, idleTimeoutMs: 60_000 });
     assert.equal(new URL(session.url).hostname, "127.0.0.1");
     const unauthorized = await fetch(`${new URL(session.url).origin}/api/session`);
     assert.equal(unauthorized.status, 401);
