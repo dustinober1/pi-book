@@ -135,7 +135,9 @@ test("the installed Pi review command exposes and executes recalibration", async
         confirm: async () => false,
       },
     });
-    assert.equal(readAudits(root).audits.length, 1);
+    const audits = readAudits(root);
+    assert.equal(audits.audits.length, 1);
+    assert.equal(audits.audits[0]?.scope, "recalibration");
     assert.ok(notifications.some((item) => /recalibration/i.test(item.message) && item.level === "info"));
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
