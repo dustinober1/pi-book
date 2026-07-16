@@ -1,4 +1,6 @@
-import type { ProfileId, ProjectState, ProjectType, BookState } from "../domain/schemas.js";
+import type { ProfileId, ProjectType, BookState } from "../domain/schemas.js";
+import type { RuntimeProfileId } from "../domain/runtime-profile.js";
+import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import { stringifyYaml } from "../infrastructure/yaml.js";
 import { getProfile } from "../profiles/index.js";
 import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
@@ -14,7 +16,13 @@ import {
   defaultVoiceGuardrails,
 } from "../domain/v1-3-schemas.js";
 
-export interface ProjectTemplateOptions { projectName: string; projectType: ProjectType; profile: ProfileId; targetWords?: number }
+export interface ProjectTemplateOptions {
+  projectName: string;
+  projectType: ProjectType;
+  profile: ProfileId;
+  targetWords?: number;
+  runtimeProfile?: RuntimeProfileId;
+}
 
 export function bookTemplateFiles(bookId: string, bookNumber: number, profileId: ProfileId, targetWords = 100000): Record<string, string> {
   const profile = getProfile(profileId);
@@ -92,7 +100,7 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
 }
 
 export function projectTemplateFiles(options: ProjectTemplateOptions): Record<string, string> {
-  const project: ProjectState = {
+  const project: ProjectStateV14 = {
     schema_version: "1.0.0",
     novel_forge_version: NOVEL_FORGE_VERSION,
     project_name: options.projectName,
@@ -112,10 +120,18 @@ export function projectTemplateFiles(options: ProjectTemplateOptions): Record<st
       "package-approval": "open",
     },
     approvals: [],
-    automation: { max_chapters_per_run: 3, require_first_chapter_approval: true, git_checkpoints: true },
+    automation: {
+      max_chapters_per_run: 3,
+      require_first_chapter_approval: true,
+      git_checkpoints: true,
+      active_run: null,
+    },
+    runtime: {
+      profile: options.runtimeProfile ?? "full",
+      telemetry: true,
+    },
     migration_history: [],
   };
-  (project.automation as typeof project.automation & { active_run: null }).active_run = null;
   return {
     "PROJECT.yaml": stringifyYaml(project),
     "START-HERE.md": `# Start Here
