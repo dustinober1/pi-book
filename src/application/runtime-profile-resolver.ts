@@ -5,9 +5,9 @@ import {
 } from "../domain/runtime-profile.js";
 
 export interface RuntimeProfileResolutionInput {
-  explicit?: string;
-  project?: string;
-  local?: string;
+  explicit?: string | undefined;
+  project?: string | undefined;
+  local?: string | undefined;
 }
 
 export interface RuntimeLimitInput {
