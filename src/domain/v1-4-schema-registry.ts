@@ -1,8 +1,10 @@
 import type { TSchema } from "@sinclair/typebox";
 import { DecisionLedgerSchema, IntakeSchema } from "./v1-4-schemas.js";
 import { PremiseLabSchema } from "./v1-4-premise-schemas.js";
+import { ProjectV14Schema } from "./v1-4-project-schema.js";
 
 const registry: Array<[RegExp, TSchema]> = [
+  [/^PROJECT\.yaml$/, ProjectV14Schema],
   [/^series\/intake\.yaml$/, IntakeSchema],
   [/^series\/decision-ledger\.yaml$/, DecisionLedgerSchema],
   [/^books\/book-[0-9]{2}\/premise-lab\.yaml$/, PremiseLabSchema],

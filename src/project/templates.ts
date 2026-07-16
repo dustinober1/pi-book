@@ -115,6 +115,7 @@ export function projectTemplateFiles(options: ProjectTemplateOptions): Record<st
     automation: { max_chapters_per_run: 3, require_first_chapter_approval: true, git_checkpoints: true },
     migration_history: [],
   };
+  (project.automation as typeof project.automation & { active_run: null }).active_run = null;
   return {
     "PROJECT.yaml": stringifyYaml(project),
     "START-HERE.md": `# Start Here

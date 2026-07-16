@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import type { Stage } from "../domain/schemas.js";
+import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import { listChapterFiles, readText } from "../infrastructure/files.js";
 import { readBook, readProject } from "../project/store.js";
 import { gateDetail, gateEvidencePaths } from "./gate-metadata.js";
@@ -7,7 +8,8 @@ import { getProjectStatus } from "./status.js";
 
 export type GuideActionId =
   | "continue" | "approve" | "request-changes" | "view-evidence" | "repair"
-  | "status" | "readers" | "research" | "premise" | "adopt" | "add-book" | "advanced";
+  | "status" | "readers" | "research" | "premise" | "resume-run" | "pause-run" | "cancel-run"
+  | "adopt" | "add-book" | "advanced";
 
 export interface GuideAction {
   id: GuideActionId;
@@ -47,7 +49,7 @@ function readerStage(stage: Stage): boolean {
 }
 
 export function buildGuideScreen(root: string): GuideScreen {
-  const project = readProject(root);
+  const project = readProject(root) as ProjectStateV14;
   const book = readBook(root);
   const status = getProjectStatus(root);
   const gate = project.next_gate;
@@ -102,6 +104,16 @@ export function buildGuideScreen(root: string): GuideScreen {
     const premise = readText(join(root, "books", book.book_id, "premise-lab.yaml")) ?? "";
     if (!/selected_variant_id:\s*PV-[0-9]{3}/.test(premise)) actions.push(action("premise", "Compare and select a premise", "Open the local structural premise laboratory and record the writer's explicit selection."));
   }
+
+  const run = project.automation.active_run;
+  if (run?.status === "active") {
+    actions.push(action("pause-run", `Pause ${run.id}`, `Pause the persistent run before its next guarded event.`));
+    actions.push(action("cancel-run", `Cancel ${run.id}`, "Cancel the persistent run without changing completed creative work.", "danger"));
+  } else if (run?.status === "paused") {
+    actions.push(action("resume-run", `Resume ${run.id}`, `Resume from ${run.currentAction} after checking stage and creative-state hash.`));
+    actions.push(action("cancel-run", `Cancel ${run.id}`, "Cancel the paused run without changing completed creative work.", "danger"));
+  }
+
   actions.push(action("status", "View full status", "Show blockers, warnings, and progress."));
   actions.push(action("advanced", "Advanced options", "Recovery, browser workflows, metadata, and integrity tools."));
 

@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import type { BookState, ProjectState } from "../domain/schemas.js";
+import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import {
   TasteProfileSchema,
   VoiceExperimentFileSchema,
@@ -228,6 +229,17 @@ export function renderHandoff(project: ProjectState, book: BookState, status: Pr
     book.canon_locked ? `${book.book_id} canon is locked` : `${book.book_id} canon remains provisional`,
     `Current workflow stage is ${project.current_stage}`,
   ];
+  const run = (project as ProjectStateV14).automation.active_run;
+  const runLines = run ? [
+    `- Run: ${run.id}`,
+    `- Status: ${run.status}`,
+    `- Target: ${run.target}`,
+    `- Current action: ${run.currentAction}`,
+    `- Progress: ${run.completedEventKeys.length} completed event${run.completedEventKeys.length === 1 ? "" : "s"}`,
+    `- Stop reason: ${run.stopReason ?? "none"}`,
+    ...(run.status === "paused" ? ["- Exact resume command: `/novel-run --resume`"] : []),
+    ...(run.status === "active" ? ["- Pause command: `/novel-run --pause`"] : []),
+  ] : [];
   const continuation = [
     `Continue the Novel Forge project ${project.project_name}.`,
     `The active book is ${book.book_id} (${book.profile}) at stage ${project.current_stage}.`,
@@ -248,6 +260,7 @@ export function renderHandoff(project: ProjectState, book: BookState, status: Pr
     `- Active gate or blocker: ${project.next_gate ? gate : status.primaryBlocker ?? "none"}`,
     `- Current chapter: ${book.current_chapter}`,
     `- Manuscript words: ${book.actual_words}`,
+    ...(runLines.length ? ["", "## Automation run", "", ...runLines] : []),
     "",
     "## Locked and protected state",
     "",

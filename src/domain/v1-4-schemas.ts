@@ -80,6 +80,32 @@ export const IntakeSchema = Type.Object({
 }, { additionalProperties: false });
 export type IntakeState = Static<typeof IntakeSchema>;
 
+export const AutomationRunStatusSchema = Type.Union([
+  Type.Literal("active"),
+  Type.Literal("paused"),
+  Type.Literal("stopped"),
+  Type.Literal("completed"),
+  Type.Literal("cancelled"),
+]);
+export type AutomationRunStatus = Static<typeof AutomationRunStatusSchema>;
+
+export const AutomationRunStateSchema = Type.Object({
+  id: Type.String({ pattern: "^RUN-[0-9]{3}$" }),
+  status: AutomationRunStatusSchema,
+  target: Type.String({ minLength: 1 }),
+  startedStage: Type.String({ minLength: 1 }),
+  currentAction: Type.String({ minLength: 1 }),
+  requestedMaxChapters: Type.Integer({ minimum: 1, maximum: 10 }),
+  completedEventKeys: Type.Array(Type.String({ minLength: 1 })),
+  lastProjectHash: Type.String({ minLength: 1 }),
+  refillCount: Type.Integer({ minimum: 0 }),
+  retryCounts: Type.Record(Type.String({ minLength: 1 }), Type.Integer({ minimum: 0 })),
+  stopReason: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
+  startedAt: Type.String({ minLength: 1 }),
+  updatedAt: Type.String({ minLength: 1 }),
+}, { additionalProperties: false });
+export type AutomationRunState = Static<typeof AutomationRunStateSchema>;
+
 export interface V14Finding {
   severity: "blocker" | "warning";
   code: string;

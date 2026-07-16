@@ -42,22 +42,70 @@ async function upload(req: IncomingMessage, uploadRoot: string, limit: number): 
     const parser = Busboy({ headers: req.headers, limits: { files: 1, fileSize: limit, fields: 4 } });
     let record: WizardSource | null = null;
     let rejected = false;
+    let settled = false;
+    let parserFinished = false;
+    let writerFinished = false;
+
+    const fail = (error: Error): void => {
+      if (settled) return;
+      settled = true;
+      rejected = true;
+      reject(error);
+    };
+
+    const maybeResolve = (): void => {
+      if (settled || rejected || !parserFinished || !writerFinished) return;
+      settled = true;
+      if (record) resolve(record);
+      else reject(statusError(400, "No upload file received."));
+    };
+
     parser.on("file", (_name, stream, info) => {
       const extension = extname(info.filename).toLowerCase();
-      if (!allowedExtensions.has(extension)) { rejected = true; stream.resume(); reject(statusError(415, `Unsupported upload type ${extension || "unknown"}.`)); return; }
+      if (!allowedExtensions.has(extension)) {
+        rejected = true;
+        stream.resume();
+        fail(statusError(415, `Unsupported upload type ${extension || "unknown"}.`));
+        return;
+      }
+
       const sourceId = `source_${randomBytes(12).toString("hex")}`;
       const absolutePath = join(uploadRoot, `${sourceId}${extension}`);
+      const writer = createWriteStream(absolutePath);
       let size = 0;
+      let limitHandled = false;
+
       stream.on("data", (chunk: Buffer) => { size += chunk.length; });
-      stream.on("limit", () => { rejected = true; if (existsSync(absolutePath)) unlinkSync(absolutePath); reject(statusError(413, "Upload exceeds the session size limit.")); });
-      stream.pipe(createWriteStream(absolutePath));
-      stream.on("end", () => {
+      writer.on("error", (error) => {
         if (rejected) return;
-        record = { sourceId, absolutePath, originalName: basename(info.filename), mediaType: info.mimeType, byteSize: size };
+        fail(statusError(500, `Unable to store the wizard upload: ${error.message}`));
       });
+      writer.on("finish", () => {
+        writerFinished = true;
+        if (!rejected) record = { sourceId, absolutePath, originalName: basename(info.filename), mediaType: info.mimeType, byteSize: size };
+        maybeResolve();
+      });
+      stream.on("limit", () => {
+        if (limitHandled || settled) return;
+        limitHandled = true;
+        rejected = true;
+        stream.unpipe(writer);
+        stream.resume();
+        writer.on("error", () => undefined);
+        writer.once("close", () => {
+          if (existsSync(absolutePath)) unlinkSync(absolutePath);
+          fail(statusError(413, "Upload exceeds the session size limit."));
+        });
+        writer.destroy();
+      });
+      stream.pipe(writer);
     });
-    parser.on("error", reject);
-    parser.on("finish", () => { if (!rejected && record) resolve(record); else if (!rejected) reject(statusError(400, "No upload file received.")); });
+    parser.on("error", (error: unknown) => fail(error instanceof Error ? error : new Error(String(error))));
+    parser.on("finish", () => {
+      parserFinished = true;
+      if (!rejected && !record && !writerFinished) return;
+      maybeResolve();
+    });
     req.pipe(parser);
   });
 }
