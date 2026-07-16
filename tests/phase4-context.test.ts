@@ -8,8 +8,7 @@ import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject } from "../src/project/store.js";
 import { completePlot, completeStrategy, queueFixture, researchFixture, sourcesFixture } from "./phase4-fixtures.js";
 
-function setup(): { parent: string; root: string } {
-  const parent = mkdtempSync(join(tmpdir(), "novel-forge-phase4-context-"));
+function setup(parent: string): string {
   const root = initializeProject(parent, { projectName: "Phase 4 Context", projectType: "standalone", profile: "thriller" });
   const bookRoot = join(root, "books", "book-01");
   writeFileSync(join(root, "series", "canon.yaml"), stringifyYaml({
@@ -32,12 +31,13 @@ function setup(): { parent: string; root: string } {
   writeFileSync(join(bookRoot, "chapter-queue.yaml"), stringifyYaml(queueFixture()), "utf8");
   writeFileSync(join(bookRoot, "research-ledger.yaml"), stringifyYaml(researchFixture()), "utf8");
   writeFileSync(join(root, "research", "source-register.yaml"), stringifyYaml(sourcesFixture()), "utf8");
-  return { parent, root };
+  return root;
 }
 
 test("drafting context includes approved book guardrails and required ready claims", () => {
-  const { parent, root } = setup();
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-phase4-context-"));
   try {
+    const root = setup(parent);
     const context = buildChapterContext(root, 2);
     assert.match(context.text, /Approved book guardrails/);
     assert.match(context.text, /BOOK GUARDRAIL: preserve costly choices/);
@@ -49,8 +49,9 @@ test("drafting context includes approved book guardrails and required ready clai
 });
 
 test("drafting context excludes public observations and unrequired claims", () => {
-  const { parent, root } = setup();
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-phase4-context-"));
   try {
+    const root = setup(parent);
     const context = buildChapterContext(root, 2);
     assert.doesNotMatch(context.text, /RAW PUBLIC REVIEW BODY/);
     assert.doesNotMatch(context.text, /UNREQUIRED CLAIM MARKER/);
