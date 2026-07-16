@@ -1,0 +1,34 @@
+name: Apply Phase 7 documentation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/apply-phase7-docs.py
+      - .github/workflows/phase7-docs-apply.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1.3-phase7-release
+          fetch-depth: 0
+      - run: python scripts/apply-phase7-docs.py
+      - run: |
+          rm -f .github/workflows/phase7-docs-apply.yml
+          rm -f .github/workflows/phase7-source-export.yml
+          rm -f scripts/apply-phase7-docs.py
+          rm -f scripts/p7b6401
+          touch docs/.phase7-docs-ready
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs: finalize Novel Forge 1.3 release qualification [phase7-docs-applied]"
+          git push origin HEAD:agent/v1.3-phase7-release
