@@ -51,6 +51,7 @@ jobs:
           path: |
             typecheck.log
             test.log
+            constrained-runtime-benchmark.json
       - name: Enforce TypeScript result
         if: steps.typecheck.outputs.code != '0'
         run: exit 1
@@ -58,5 +59,7 @@ jobs:
         if: steps.typecheck.outputs.code == '0' && steps.tests.outputs.code != '0'
         run: exit 1
       - run: npm run eval
+      - name: Run constrained runtime benchmark
+        run: npm run benchmark:constrained-runtime > constrained-runtime-benchmark.json
       - run: npm run verify:release
       - run: npm pack --dry-run
