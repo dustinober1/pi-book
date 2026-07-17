@@ -28,7 +28,22 @@ test("standard and compact prompts retain every normalized normative entry", () 
 
 test("normative entries are stable and de-duplicated without changing order", () => {
   const duplicated: StageSpec = { ...spec, must: ["Preserve accepted tradeoffs.", "Preserve accepted tradeoffs.", "Require manuscript evidence."] };
-  assert.deepEqual(normativeEntries(duplicated).filter((entry) => entry === "Preserve accepted tradeoffs."), ["Preserve accepted tradeoffs."]);
+  assert.deepEqual(normativeEntries(duplicated), [
+    "Independent manuscript reviewer",
+    "Produce evidence-backed review findings without manufacturing reader evidence.",
+    "approved manuscript",
+    "remarkability.yaml",
+    "reader-experiments.yaml",
+    "Preserve accepted tradeoffs.",
+    "Require manuscript evidence.",
+    "Treat public reviews as reader evidence for this manuscript.",
+    "Turn voice metrics into prose quotas.",
+    "review-report.md",
+    "revision-tickets.yaml",
+    "Every blocker names concrete manuscript evidence.",
+    "Every ticket includes regression protection.",
+    "Submit the complete review through one guarded review event.",
+  ]);
 });
 
 test("book planning standard prompt retains the current controlling requirements", () => {
