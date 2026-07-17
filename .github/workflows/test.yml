@@ -63,3 +63,4 @@ jobs:
             typecheck.log
             test.log
             constrained-runtime-benchmark.json
+            package-lock.json
