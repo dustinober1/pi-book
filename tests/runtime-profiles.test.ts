@@ -55,6 +55,8 @@ test("runtime profile resolution follows explicit project local and compatibilit
 test("unknown runtime profiles fail instead of silently falling back", () => {
   assert.throws(() => parseRuntimeProfileId("small"), /Unknown runtime profile: small.*tiny-local, local, full/);
   assert.throws(() => resolveRuntimeProfile({ explicit: "small" }), /Unknown runtime profile: small/);
+  assert.throws(() => resolveRuntimeProfile({ project: "small" }), /Unknown runtime profile: small/);
+  assert.throws(() => resolveRuntimeProfile({ local: "small" }), /Unknown runtime profile: small/);
 });
 
 test("tiny-local and local normalize work into hard micro-step budgets", () => {
@@ -98,8 +100,13 @@ test("full preserves current explicit and project automation limits", () => {
     maxRevisionTickets: 9,
     graphDepth: 2,
   });
-  assert.equal(applyRuntimeLimits({
+  assert.deepEqual(applyRuntimeLimits({
     profile: RUNTIME_PROFILES.full,
     projectMaxChapters: 3,
-  }).maxChapters, 3);
+  }), {
+    maxChapters: 3,
+    maxArtifacts: null,
+    maxRevisionTickets: null,
+    graphDepth: 2,
+  });
 });
