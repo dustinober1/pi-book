@@ -21,6 +21,7 @@
     "audit:temporal": "node scripts/temporal-reference-audit.mjs",
     "audit:mechanics": "node scripts/copy-mechanics-audit.mjs",
     "eval": "node --import tsx scripts/evaluate-fixtures.ts",
+    "benchmark:constrained-runtime": "node --import tsx scripts/benchmark-constrained-runtime.ts",
     "eval:journeys": "node --import tsx --test tests/author-journey.test.ts tests/e2e/author-velocity-baseline.test.ts",
     "verify:release": "node --import tsx scripts/verify-v1-3-release.ts",
     "test:release": "node --import tsx --test tests/v1-3-release-evaluation.test.ts tests/e2e/v1-3-release-journey.test.ts tests/package-smoke.test.ts tests/e2e/packed-clean-start.test.ts tests/v1-3-release-checklist.test.ts"
