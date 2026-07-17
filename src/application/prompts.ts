@@ -1,23 +1,35 @@
 import { basename, join } from "node:path";
 import type { ChapterContext } from "../context/context-builder.js";
-import { ChapterQueueSchema, type ChapterQueueState, type RevisionTicket, type Stage } from "../domain/schemas.js";
-import { listChapterFiles, readText } from "../infrastructure/files.js";
-import { DecisionLedgerSchema, IntakeSchema, type DecisionLedger, type IntakeState } from "../domain/v1-4-schemas.js";
-import { PremiseLabSchema, type PremiseLab } from "../domain/v1-4-schemas.js";
+import { RUNTIME_PROFILES, type RuntimeProfile, type RuntimeProfileId } from "../domain/runtime-profile.js";
+import { ChapterQueueSchema, type ChapterQueueState, type RevisionTicket } from "../domain/schemas.js";
 import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
-import { packetWindowDecision } from "./packet-window.js";
-import { premiseLabFindings, selectedPremiseContext } from "./premise-lab.js";
+import { DecisionLedgerSchema, IntakeSchema, PremiseLabSchema, type DecisionLedger, type IntakeState, type PremiseLab } from "../domain/v1-4-schemas.js";
+import { listChapterFiles, readText } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
-import { intakePromptContext } from "./intake.js";
 import { getProfile } from "../profiles/index.js";
 import { readBook, readProject } from "../project/store.js";
 import { regressionChecklist } from "../review/review.js";
-import { projectStateHash, type NovelEventType } from "./events.js";
-
-function eventRule(root: string, eventType: NovelEventType, stage: Stage, extra = ""): string {
-  return `Do not write project files directly. When the content is ready, call the \`novel_apply_event\` tool with event_type \`${eventType}\`, expected_stage \`${stage}\`, expected_project_hash \`${projectStateHash(root)}\`, and only the allowed changed files. ${extra} The tool validates schemas, references, state transitions, file allowlists, stale writes, and commits the complete workflow event. If the tool returns a structured rejection code, correct only \`schema-validation\` or \`reference-validation\` payloads and resubmit once. For \`stale-stage\` or \`stale-project-hash\`, reload canonical state and rebuild the proposal. For all other rejection codes, stop automatic work and surface the failure.`;
-}
-
+import { packetWindowDecision } from "./packet-window.js";
+import { selectedPremiseContext } from "./premise-lab.js";
+import { intakePromptContext } from "./intake.js";
+import { projectStateHash } from "./events.js";
+import { compilePrompt } from "./prompt-compiler.js";
+import { resolveRuntimeProfile } from "./runtime-profile-resolver.js";
+import {
+  automationDraftStageSpec,
+  bookPlanStageSpec,
+  canonLockStageSpec,
+  draftStageSpec,
+  packageStageSpec,
+  premisePlanStageSpec,
+  queueStageSpec,
+  readerTestStageSpec,
+  reviewStageSpec,
+  revisionStageSpec,
+  seriesPlanStageSpec,
+  voicePlanStageSpec,
+} from "./stage-specs/index.js";
+import type { StageSpec } from "./stage-specs/types.js";
 
 function planningIntakeContext(root: string): string {
   const intakeText = readText(join(root, "series", "intake.yaml"));
@@ -27,45 +39,68 @@ function planningIntakeContext(root: string): string {
   return intakePromptContext(intake, ledger);
 }
 
-const interviewRule = `Inspect existing evidence first. Conduct a short author interview only for unresolved decisions: ask one question at a time and no more than four normal questions. Ask one additional question only when a genuine blocker prevents a complete required workflow artifact. Derive the detailed structure internally, then present the complete result for writer approval.`;
-
 function activePremiseLab(root: string): PremiseLab | null {
   const book = readBook(root);
   const text = readText(join(root, "books", book.book_id, "premise-lab.yaml"));
   return text ? parseYaml<PremiseLab>(text, PremiseLabSchema, `books/${book.book_id}/premise-lab.yaml`) : null;
 }
 
-export function premisePlanPrompt(root: string): string {
+function runtimeForPrompt(root: string, explicit?: RuntimeProfile): RuntimeProfile {
+  if (explicit) return explicit;
+  const project = readProject(root) as { runtime?: { profile?: RuntimeProfileId } };
+  return resolveRuntimeProfile({ project: project.runtime?.profile });
+}
+
+function renderPrompt(root: string, spec: StageSpec, explicit?: RuntimeProfile): string {
+  return compilePrompt(spec, runtimeForPrompt(root, explicit)).text;
+}
+
+export function premisePlanPrompt(root: string, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(root);
   const lab = activePremiseLab(root);
   const rawIdea = lab?.raw_idea.trim() || planningIntakeContext(root).match(/Original author idea:\n([^\n]+)/)?.[1] || "";
   const seedElements = lab?.seed_elements ?? [];
-  return `Use the novel-forge-for-pi skill.\n\nProject root: ${root}\nActive book: ${book.book_id}\n\nRaw author idea: ${rawIdea || "not yet supplied"}\nSeed elements: ${seedElements.length ? seedElements.join(", ") : "derive only from the author idea and explicit decisions"}\n\nPrepare three to five recognizable structural premise variants. Variant 1 is the raw-idea baseline or closest faithful expansion. Preserve every declared seed element in every variant. Give each variant a unique story engine, central final-page question, immediate gain, deferred cost, irreversible effect, differentiation, series potential, accepted tradeoffs, and neutral diagnostic observations. Do not score, rank, recommend, or choose a winner. Do not read or use private taste-profile influence names. Present the comparison for an explicit writer decision; the writer must select the final variant.\n\nUse the state-neutral \`premise-update\` event for comparison evidence and the decision ledger. Never select a variant without the matching writer decision.\n\n${eventRule(root, "premise-update", "book-planning")}`;
+  return renderPrompt(root, premisePlanStageSpec({
+    root,
+    bookId: book.book_id,
+    rawIdea,
+    seedElements,
+    projectHash: projectStateHash(root),
+  }), runtimeProfile);
 }
 
-export function voicePlanPrompt(root: string): string {
-  const intakeContext = planningIntakeContext(root);
-  const researchRule = eventRule(root, "research-update", "voice-intake", "Submit only the experiment YAML and its Markdown source, anonymous variants, and accepted baseline. This event does not advance stage or change gates.");
-  return `Use the novel-forge-for-pi skill.\n\nProject root: ${root}\n\n${intakeContext ? intakeContext + "\n\n" : ""}${interviewRule}\n\nFor voice intake, resolve intended reader effect, positive evidence, unwanted tendencies, productive imperfections, and lived-material boundaries. Start with the writer's own samples, accepted chapters, explicit decisions, and not-this-author examples. Writer samples and explicit decisions outrank an accepted baseline, the approved voice profile, external influence references, and genre defaults. Preserve productive roughness and never invent lived experience.\n\nFor each named influence, record the private reference only in series/taste-profile.yaml and capture both \`admired_for\` and \`not_for\`. Translate those answers into neutral derived traits. Never copy signature phrasing, distinctive imagery, character templates, or imitation instructions into the readable profile, guardrails, experiment prose, or drafting context.\n\nWhen existing evidence is insufficient to choose the opening voice, run one anonymous calibration:\n1. Use one representative 600–900 words source scene.\n2. Prepare anonymous variants A, B, and C, each 600–900 words and materially different only in high-level craft choices.\n3. Never label a variant with an author or book, and never include a raw influence name or title inside source, variants, or baseline.\n4. Present only A, B, and C for writer scoring on feels-like-the-book, desire to continue, character intimacy, naturalness, distinctiveness, and density.\n5. Preserve the writer's accepted or combined version as baseline.md and calculate its exact normalized content hash.\n6. Store experiment.yaml, source-scene.md, variant-a.md, variant-b.md, variant-c.md, and baseline.md through the non-transitioning \`research-update\` event.\n\n${researchRule}\n\nAfter any research-update, use the project_hash returned by that tool result for the final event instead of the earlier hash. Then prepare the complete atomic voice evidence bundle:\n- series/voice-profile.md — the readable voice compass, containing only neutral craft language;\n- series/taste-profile.yaml — canonical precedence, private influence roles, admired_for, not_for, and neutral derived traits;\n- series/voice-guardrails.yaml — operational must/prefer/avoid/monitor rules and the accepted baseline hash, with no named-author imitation instructions;\n- series/voice-experiments/index.yaml — the typed experiment index and accepted baseline hash, or an empty not-started index when calibration was unnecessary.\n\nUse the state-neutral \`intake-update\` event for any intake or decision-ledger evidence. Never silently rewrite assumption history or decision history.\n\nProduce complete required artifacts, not a questionnaire transcript.\n\n${eventRule(root, "voice-profile", "voice-intake", "If a research-update ran first, pass its returned project_hash as expected_project_hash for this final event.")}`;
+export function voicePlanPrompt(root: string, runtimeProfile?: RuntimeProfile): string {
+  return renderPrompt(root, voicePlanStageSpec({
+    root,
+    intakeContext: planningIntakeContext(root),
+    projectHash: projectStateHash(root),
+  }), runtimeProfile);
 }
 
-export function seriesPlanPrompt(root: string): string {
+export function seriesPlanPrompt(root: string, runtimeProfile?: RuntimeProfile): string {
   const project = readProject(root);
   const profile = getProfile(project.default_profile);
-  return `Use the novel-forge-for-pi skill.\n\nProject root: ${root}\n\n${interviewRule}\n\nFor series planning, resolve the recurring promise, escalation logic, recurring-cast pressure, and closure/carry rules. Do not over-plan future books scene by scene. Future books remain provisional. Produce the complete typed series state and required series bible rather than exposing schema fields to the writer.\n\nProfile questions to answer from evidence or the short interview:\n${profile.planningQuestions.map((item) => `- ${item}`).join("\n")}\n\nPrepare only series/series-bible.md, series/series-arc.yaml, series/canon.yaml, and series/story-threads.yaml.\n\n${eventRule(root, "series-plan", "series-planning")}`;
+  return renderPrompt(root, seriesPlanStageSpec({
+    root,
+    planningQuestions: profile.planningQuestions,
+    projectHash: projectStateHash(root),
+  }), runtimeProfile);
 }
 
-export function bookPlanPrompt(root: string): string {
-  const intakeContext = planningIntakeContext(root);
+export function bookPlanPrompt(root: string, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(root);
   const profile = getProfile(book.profile);
-  const premiseContext = selectedPremiseContext(activePremiseLab(root));
-  return `Use the novel-forge-for-pi skill.\n\nProject root: ${root}\nActive book: ${book.book_id}\n\n${intakeContext ? intakeContext + "\n\n" : ""}${premiseContext ? premiseContext + "\n\n" : ""}${interviewRule}\n\nThe four primary author decisions are:\n1. What is the safe, predictable version of this book that must be avoided?\n2. What can this project uniquely deliver?\n3. What moment should readers retell to someone else?\n4. What should remain alive after the ending?\n\nUse those answers plus existing evidence to derive the complete typed genre, plot, queue, continuity, thread, remarkability, research, and reader-strategy artifacts. The finished plan must still define the book promise, POV rules, conflicts, opposition, ending contract, research dependencies, acts, chapter causality, setup/payoff IDs, profile obligations, productive discomfort, 2–5 signature moments, productive disagreements, restrained motifs, a hand-sell reason, and accepted reader costs. Do not make the writer fill out the schema field by field.\n\nBuild a decision-and-consequence ledger in plot-grid.yaml. Every consequential choice records the chapter, the choice, its immediate gain, deferred cost, irreversible effect, and a forward payoff window inside planned chapters. Preserve fair setup-before-payoff order and avoid three consecutive chapters with the same scene engine.\n\nBefore book-plan approval, resolve all ten stress concerns with rationale and evidence: early genre promise, middle repetition, motivated risk, fair information, uneven alternatives or suspects, avoidable silence, redundant characters, the external ending contract, the emotional ending contract, and reference similarity plus intentional tradeoffs. A check may pass or be linked to an explicit accepted tradeoff; pending or blocked checks cannot proceed to approval.\n\nResearch uses exactly four lanes: taste-and-voice, story-world, human-authenticity, and reader-and-market. A claim may remain planned or researching while evidence is incomplete. Mark it ready only when it has registered source IDs, source reliability, an observation or verification date, confidence, fictionalization status, knowledge scope, risks, at least one dramatic use, and the exact story decision it affects.\n\nPublic-review observations are market evidence, never reader evidence for this manuscript. Accept only user-supplied manual, pasted, linked, or CSV observations. Store a paraphrase and at most a short excerpt; discard reviewer names, handles, and profile URLs. Derive ratings 1–2 as negative, 3 as mixed, and 4–5 as positive. Keep praise as positive counterweights instead of flattening it into complaint clusters. Confidence is weak below three observations or on one title, moderate at three observations across two titles, and strong only at six observations across three titles with high execution relevance and a positive counterweight. One-star-only evidence can never exceed moderate. Every project-relevant cluster requires the writer to choose prevent, mitigate, accept-as-tradeoff, or irrelevant-to-project. Only prevent or mitigate clusters may become approved review-derived guardrails. Never invent public-review evidence, and never update reader-experiments.yaml or manuscript validation claims from public observations.\n\nProfile planning questions to answer from evidence or the short interview:\n${profile.planningQuestions.map((item) => `- ${item}`).join("\n")}\n\nUse the state-neutral \`intake-update\` event for any intake or decision-ledger evidence. Never silently rewrite assumption history or decision history.
-
-Prepare only books/${book.book_id}/book-bible.md, books/${book.book_id}/genre.yaml, books/${book.book_id}/plot-grid.yaml, books/${book.book_id}/chapter-queue.yaml, books/${book.book_id}/continuity-delta.yaml, books/${book.book_id}/remarkability.yaml, books/${book.book_id}/research-ledger.yaml, books/${book.book_id}/book-strategy.yaml, research/source-register.yaml when provenance changes, and series/story-threads.yaml. The research ledger may contain planned or researching items, but do not mark unsupported claims ready. The book strategy may begin with empty public-review observations, but its expectation decisions and plan stress test must be complete for approval.\n\n${eventRule(root, "book-plan", "book-planning")}`;
+  return renderPrompt(root, bookPlanStageSpec({
+    root,
+    bookId: book.book_id,
+    intakeContext: planningIntakeContext(root),
+    premiseContext: selectedPremiseContext(activePremiseLab(root)),
+    planningQuestions: profile.planningQuestions,
+    projectHash: projectStateHash(root),
+  }), runtimeProfile);
 }
 
-export function queuePrompt(root: string): string {
+export function queuePrompt(root: string, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(root);
   const profile = getProfile(book.profile);
   const bookRoot = join(root, "books", book.book_id);
@@ -77,60 +112,105 @@ export function queuePrompt(root: string): string {
   const refillInstruction = window.needsRefill
     ? `Create packets only for chapters ${window.candidateChapters.join(", ")}. Preserve the existing active packet${preserve.length === 1 ? "" : "s"} for chapter${preserve.length === 1 ? "" : "s"} ${preserve.join(", ")}. Return one complete replacement chapter-queue.yaml containing the preserved active packets plus the new packets.`
     : `No refill is required because ${window.readyCount} ready packets remain. Preserve the active window and do not regenerate packets.`;
-  return `Use the novel-forge-for-pi skill.
-
-Project root: ${root}
-Active book: ${book.book_id}
-
-Maintain a rolling active window of at most six ready chapter packets. Refill only when fewer than two ready packets remain. Drafted, reviewed, and revised packets must not remain in the active window. ${refillInstruction}
-
-Every new packet must define purpose, causality, state change, scene engine, relevant IDs, research needs, target words, and an honest ending hook. Use remarkability.yaml to protect the retellable hook and planned signature moments without forcing every chapter to perform them. New required_research entries use only ready RES-NNN research-ledger IDs. Existing SRC-NNN references remain readable as legacy advisories and should be migrated during the next plan rebuild. Carry approved book guardrails into drafting context; never copy raw public-review observations into a packet. Generate only the requested refill packets.
-
-Required ${profile.label} profile fields:
-${profile.chapterPacketRequirements.map((item) => `- ${item}`).join("\n")}
-
-${eventRule(root, "chapter-queue", "chapter-queue")}`;
+  return renderPrompt(root, queueStageSpec({
+    root,
+    bookId: book.book_id,
+    refillInstruction,
+    profileLabel: profile.label,
+    packetRequirements: profile.chapterPacketRequirements,
+    projectHash: projectStateHash(root),
+  }), runtimeProfile);
 }
 
-export function draftPrompt(context: ChapterContext): string {
+export function draftPrompt(context: ChapterContext, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(context.root);
-  return `Use the novel-forge-for-pi skill.\n\nDraft exactly Chapter ${context.packet.chapter} for ${book.book_id}. Do not chase AI-detector patterns. Make the prose specific to the approved voice, characters, pressure, omissions, scene, and compact remarkability contract. Do not mechanically restate the hook, manufacture quotable lines, pad to target length, or turn audit metrics into prose quotas.\n\n${context.text}\n\n${eventRule(context.root, "draft-chapter", "drafting", `Pass chapter: ${context.packet.chapter}. Include the complete chapter Markdown plus any justified continuity, story-thread, or ticket deltas. Do not submit PROJECT.yaml, BOOK.yaml, STATUS.md, or HANDOFF.md; the tool derives them.`)}\n\nContext report: estimated ${context.report.estimatedTokens} tokens; excluded ${context.report.excluded.join(", ")}.`;
+  return renderPrompt(context.root, draftStageSpec({
+    root: context.root,
+    bookId: book.book_id,
+    chapter: context.packet.chapter,
+    contextText: context.text,
+    estimatedTokens: context.report.estimatedTokens,
+    excluded: context.report.excluded,
+    projectHash: projectStateHash(context.root),
+  }), runtimeProfile);
 }
 
-export function automationDraftPrompt(root: string, maxChapters: number, until?: string): string {
+export function automationDraftPrompt(root: string, maxChapters: number, until?: string, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(root);
   const profile = getProfile(book.profile);
-  return `Use the novel-forge-for-pi skill.\n\nProject root: ${root}\nActive book: ${book.book_id}\n\nRun a bounded drafting loop of no more than ${Math.max(1, Math.min(maxChapters, 10))} chapter workflow events, stopping earlier at ${until ?? "the next milestone gate"}, any human gate, blocker/high ticket, continuity conflict, reveal-order conflict, missing research, invalid packet, or context-budget problem.\n\nFor each chapter, reload state and call novel_apply_event once. Use the project_hash returned by the previous tool result as the expected_project_hash for the next chapter.\n\nProfile drafting rules:\n${profile.draftingRules.map((rule) => `- ${rule}`).join("\n")}\n\nDo not bypass approval. Do not run heavyweight review after each chapter. Do not create extra control files.\n\nInitial ${eventRule(root, "draft-chapter", "drafting", "Pass the selected chapter number and one coherent event at a time.")}`;
+  return renderPrompt(root, automationDraftStageSpec({
+    root,
+    bookId: book.book_id,
+    maxChapters: Math.max(1, Math.min(maxChapters, 10)),
+    until: until ?? "the next milestone gate",
+    draftingRules: profile.draftingRules,
+    projectHash: projectStateHash(root),
+  }), runtimeProfile);
 }
 
-export function reviewPrompt(root: string, scope: string): string {
+export function reviewPrompt(root: string, scope: string, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(root);
   const profile = getProfile(book.profile);
   const stage = readProject(root).current_stage;
-  return `Use the novel-forge-for-pi skill.\n\nProject root: ${root}\nReview scope: ${scope}\nActive book: ${book.book_id}\n\nRun independent review lanes without anchoring each lane to another lane's score:\n${profile.milestoneReviewLanes.map((item) => `- ${item}`).join("\n")}\n\nCompare the manuscript to remarkability.yaml without confusing planned ambition with achieved reader impact. Consult reader-experiments.yaml only for accepted source: human responses to this manuscript. Public-review observations in book-strategy.yaml are market-friction evidence only: use them to check planned tradeoffs and expectations, never to change reader metrics, verdicts, or claims that this manuscript was tested. Missing, simulated, model-only, or persona-only responses are not outside-reader evidence.\n\nVoice metrics are evidence, not quotas or automatic severity conclusions. Review their baseline and POV context, preserve declared intentional exceptions, and do not instruct the writer to hit a target sentence length, dialogue ratio, or fragment frequency. Review the scene engine sequence and state changes: flag more than two consecutive identical engines, dominant engines in a sufficiently large plan, state-neutral interviews or conversations, and adjacent chapters with indistinguishable state movement.\n\nAttach recurrence metadata only to a concrete recurring problem. Use one stable pattern ID and the current milestone scope. A learning rule becomes eligible only after three distinct chapters or two distinct milestone reviews. Eligibility is not approval: the writer must explicitly approve the proposed rule in book-strategy.yaml. Do not rewrite earlier prose or perform a retroactive sweep when a candidate is promoted.\n\nRequire manuscript evidence. Distinguish blockers from preferences, public-market friction, and wrong-reader noise. Preserve accepted tradeoffs. Prepare review-report.md and revision-tickets.yaml; the guarded event appends deterministic voice-audit evidence and scene-audit tickets atomically.\n\n${eventRule(root, "review", stage, `Pass scope: ${scope}.`)}`;
+  return renderPrompt(root, reviewStageSpec({
+    root,
+    bookId: book.book_id,
+    scope,
+    expectedStage: stage,
+    reviewLanes: profile.milestoneReviewLanes,
+    projectHash: projectStateHash(root),
+  }), runtimeProfile);
 }
 
-export function readerTestPrompt(root: string, scope: string): string {
+export function readerTestPrompt(root: string, scope: string, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(root);
   const project = readProject(root);
   const path = join(root, "books", book.book_id, "reader-experiments.yaml");
-  const existing = readText(path) ?? 'schema_version: "1.0.0"\nexperiments: []\n';
-  return `Use the novel-forge-for-pi skill.\n\nProject root: ${root}\nActive book: ${book.book_id}\nReader-test scope or action: ${scope}\n\nPrepare or update books/${book.book_id}/reader-experiments.yaml. This workflow records real reader evidence; it must never simulate readers, import public-review observations, convert model/persona reactions into human evidence, or mark validation complete without actual responses. Every response must use source: human. De-identify readers with stable IDs and preserve useful verbatim language.\n\nFor a new experiment, predeclare the exact target-reader segment, sample path or generated reader kit, variant, blind protocol, minimum_reader_count, and delayed session. Collect immediate continuation, purchase intent, confusion, trust breaks, and lines that worked. Collect delayed recall 24–72 hours later without reopening the sample.\n\nCalculate aggregate rates directly from recorded human rows. A validated verdict must meet the predeclared minimum in both immediate and delayed sessions. Keep the verdict blocked or insufficient-signal when sample size or delayed evidence is missing. Segment results instead of averaging target and wrong-reader reactions. Create revision tickets only for concrete, repeated, evidence-backed failures; do not rewrite manuscript prose in this event.\n\nExisting artifact:\n\n${existing}\n\n${eventRule(root, "reader-test", project.current_stage, `Pass scope: ${scope}. Submit reader-experiments.yaml, reader-kit files when preparing a kit, and only evidence-backed revision tickets.`)}`;
+  const existingArtifact = readText(path) ?? 'schema_version: "1.0.0"\nexperiments: []\n';
+  return renderPrompt(root, readerTestStageSpec({
+    root,
+    bookId: book.book_id,
+    scope,
+    expectedStage: project.current_stage,
+    existingArtifact,
+    projectHash: projectStateHash(root),
+  }), runtimeProfile);
 }
 
-export function revisionPrompt(root: string, tickets: RevisionTicket[]): string {
+export function revisionPrompt(root: string, tickets: RevisionTicket[], runtimeProfile?: RuntimeProfile): string {
   const book = readBook(root);
-  const details = tickets.map((ticket) => `## ${ticket.id}\nProblem: ${ticket.problem}\nRequired change: ${ticket.required_change}\nProtected: ${ticket.protected_constraints.join("; ") || "none"}\nAcceptance and regression:\n${regressionChecklist(ticket).map((item) => `- ${item}`).join("\n")}`).join("\n\n");
-  return `Use the novel-forge-for-pi skill.\n\nProject root: ${root}\nActive book: ${book.book_id}\n\nApply the smallest revision that satisfies these tickets while preserving canon, reveal order, voice, remarkability intent, accepted tradeoffs, and unaffected work.\n\n${details}\n\n${eventRule(root, "revise", "revision")}`;
+  const ticketDetails = tickets.map((ticket) => [
+    `${ticket.id}: ${ticket.problem}`,
+    `Required change: ${ticket.required_change}`,
+    `Protected: ${ticket.protected_constraints.join("; ") || "none"}`,
+    `Acceptance and regression: ${regressionChecklist(ticket).join(" | ")}`,
+  ].join("\n"));
+  return renderPrompt(root, revisionStageSpec({
+    root,
+    bookId: book.book_id,
+    ticketDetails,
+    projectHash: projectStateHash(root),
+  }), runtimeProfile);
 }
 
-export function canonLockPrompt(root: string): string {
+export function canonLockPrompt(root: string, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(root);
-  return `Use the novel-forge-for-pi skill.\n\nProject root: ${root}\nActive book: ${book.book_id}\n\nLock only facts evidenced by the approved manuscript and continuity delta. Prepare updates to series/canon.yaml, story-threads.yaml, and series-arc.yaml. Do not lock provisional future plans.\n\n${eventRule(root, "canon-lock", "canon-lock")}`;
+  return renderPrompt(root, canonLockStageSpec({
+    root,
+    bookId: book.book_id,
+    projectHash: projectStateHash(root),
+  }), runtimeProfile);
 }
 
-export function packagePrompt(root: string): string {
+export function packagePrompt(root: string, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(root);
-  const packageText = readText(join(root, "books", book.book_id, "package.md")) ?? "";
-  return `Use the novel-forge-for-pi skill.\n\nProject root: ${root}\nActive book: ${book.book_id}\n\nThe manuscript is compiled to delivery/manuscript.md. Prepare books/${book.book_id}/package.md with title options, series line, hook, blurb, category notes, cover concept, first-page promise, next-book read-through hook, achieved remarkability evidence, and open release risks. Do not claim validation or external review that did not happen; reader-experiments.yaml controls any reader-evidence claim. Public-review observations may support market positioning hypotheses only.\n\nExisting package:\n${packageText}\n\n${eventRule(root, "package", "packaging")}`;
+  const existingPackage = readText(join(root, "books", book.book_id, "package.md")) ?? "";
+  return renderPrompt(root, packageStageSpec({
+    root,
+    bookId: book.book_id,
+    existingPackage,
+    projectHash: projectStateHash(root),
+  }), runtimeProfile);
 }
+
+export { RUNTIME_PROFILES };

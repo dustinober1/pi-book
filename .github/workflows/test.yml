@@ -52,6 +52,8 @@ jobs:
       - run: npm run eval
       - name: Run constrained runtime benchmark
         run: npm run --silent benchmark:constrained-runtime > constrained-runtime-benchmark.json
+      - name: Run prompt compiler benchmark
+        run: npm run --silent benchmark:prompts > prompt-compiler-benchmark.json
       - run: npm run verify:release
       - run: npm pack --dry-run
       - name: Upload diagnostics
@@ -63,3 +65,4 @@ jobs:
             typecheck.log
             test.log
             constrained-runtime-benchmark.json
+            prompt-compiler-benchmark.json
