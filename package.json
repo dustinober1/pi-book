@@ -1,12 +1,22 @@
 {
   "name": "novel-forge-for-pi",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "A guided, series-capable Pi workflow for high-quality thriller and romantasy novels.",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
-  "repository": { "type": "git", "url": "https://github.com/dustinober1/pi-book.git" },
-  "keywords": ["pi-package", "novel-writing", "thriller", "romantasy", "series-writing", "continuity"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dustinober1/pi-book.git"
+  },
+  "keywords": [
+    "pi-package",
+    "novel-writing",
+    "thriller",
+    "romantasy",
+    "series-writing",
+    "continuity"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts tests/e2e/*.test.ts",
@@ -26,8 +36,27 @@
     "verify:release": "node --import tsx scripts/verify-v1-3-release.ts",
     "test:release": "node --import tsx --test tests/v1-3-release-evaluation.test.ts tests/e2e/v1-3-release-journey.test.ts tests/package-smoke.test.ts tests/e2e/packed-clean-start.test.ts tests/v1-3-release-checklist.test.ts"
   },
-  "pi": { "skills": ["."], "extensions": ["extensions/novel-forge.ts"] },
-  "files": ["SKILL.md", "README.md", "CHANGELOG.md", "RELEASE.md", "agents/", "extensions/", "src/", "profiles/", "references/", "scripts/", "wizard/"],
+  "pi": {
+    "skills": [
+      "."
+    ],
+    "extensions": [
+      "extensions/novel-forge.ts"
+    ]
+  },
+  "files": [
+    "SKILL.md",
+    "README.md",
+    "CHANGELOG.md",
+    "RELEASE.md",
+    "agents/",
+    "extensions/",
+    "src/",
+    "profiles/",
+    "references/",
+    "scripts/",
+    "wizard/"
+  ],
   "dependencies": {
     "@sinclair/typebox": "^0.34.52",
     "busboy": "^1.6.0",
@@ -51,5 +80,7 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   },
-  "peerDependencies": { "@earendil-works/pi-coding-agent": "^0.80.3" }
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.3"
+  }
 }
