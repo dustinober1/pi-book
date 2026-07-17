@@ -42,7 +42,7 @@ function buildBudgetedSections(sections: Array<{ title: string; body: string; re
   return output.join("");
 }
 
-export function buildChapterContext(root: string, requestedChapter?: number, maxChars = 72000): ChapterContext {
+export function buildChapterContext(root: string, requestedChapter?: number, maxChars = 72000, graphDepth: 1 | 2 = 2): ChapterContext {
   const project = readProject(root); const book = readBook(root); const bookRoot = join(root, "books", book.book_id);
   const queueText = readText(join(bookRoot, "chapter-queue.yaml")); const canonText = readText(join(root, "series", "canon.yaml"));
   const threadsText = readText(join(root, "series", "story-threads.yaml")); const plotText = readText(join(bookRoot, "plot-grid.yaml"));
@@ -73,7 +73,11 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
   const contextGuardrails = guardrails ? renderContextGuardrails(guardrails, packet.pov) : "";
   const bookGuardrails = renderApprovedBookGuardrails(strategy);
 
-  const graphResolution = resolveDraftingGraphContext(buildStoryGraph({ bookId: book.book_id, canon, threads, queue, plot, sources, research }), packet);
+  const graphResolution = resolveDraftingGraphContext(
+    buildStoryGraph({ bookId: book.book_id, canon, threads, queue, plot, sources, research }),
+    packet,
+    { maxDepth: graphDepth },
+  );
   const factIds = new Set(graphResolution.factIds);
   const relationshipIds = new Set(graphResolution.relationshipIds);
   const threadIds = new Set(graphResolution.threadIds);
