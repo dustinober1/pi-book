@@ -14,6 +14,7 @@ import { compileActiveBook } from "./package.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
 import { canRetryEvent, rejectionInstruction, type EventRejectionDetail } from "./event-rejection.js";
 import { creativeProjectStateHash } from "./project-hash.js";
+import { recordPreparedPersistentRun } from "./persistent-run-telemetry.js";
 import { applyRuntimeLimits, resolveRuntimeProfile } from "./runtime-profile-resolver.js";
 import { cancelAutomationRun, pauseAutomationRun, resumeAutomationRun, startAutomationRun } from "./automation-run.js";
 import { PremiseLabSchema, type PremiseLab } from "../domain/v1-4-schemas.js";
@@ -160,8 +161,16 @@ export function beginPersistentRun(root: string, options: BeginPersistentRunOpti
     creativeHash: creativeProjectStateHash(root),
     startedAt: now,
   });
-  persistRunProject(root, updated, `start automation ${updated.automation.active_run!.id}`, `Started automation run ${updated.automation.active_run!.id}`);
-  return { ...initial, message: `${initial.message} Persistent run ${updated.automation.active_run!.id} started.` };
+  const run = updated.automation.active_run!;
+  persistRunProject(root, updated, `start automation ${run.id}`, `Started automation run ${run.id}`);
+  const telemetryMessage = recordPreparedPersistentRun(root, {
+    telemetryEnabled: updated.runtime?.telemetry,
+    runId: run.id,
+    runtimeProfile: runtimeProfile.id,
+    promptChars: initial.prompt.length,
+    projectHashBefore: run.lastProjectHash,
+  });
+  return { ...initial, message: `${initial.message} Persistent run ${run.id} started.${telemetryMessage}` };
 }
 
 export function pausePersistentRun(root: string, now = new Date().toISOString()): RunDecision {
@@ -189,7 +198,7 @@ export function resumePersistentRun(root: string, now = new Date().toISOString()
     return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: `Automation run ${updated.automation.active_run.id} stopped because creative state changed. Reload and start a new run.` });
   }
   if (updated !== project) persistRunProject(root, updated, `resume automation ${updated.automation.active_run!.id}`, `Resumed automation run ${updated.automation.active_run!.id}`);
-  const run = updated.automation.active_run!;
+  const activeRun = updated.automation.active_run!;
   let decision: RunDecision;
   if (updated.current_stage === "book-planning") {
     const book = readBook(root);
@@ -198,9 +207,9 @@ export function resumePersistentRun(root: string, now = new Date().toISOString()
     const lab = text ? parseYaml<PremiseLab>(text, PremiseLabSchema, path) : null;
     if (lab && lab.variants.length === 0) decision = runtimeDecision(runtimeProfile, { action: "premise-plan", prompt: premisePlanPrompt(root), message: "Queued premise comparison before book architecture." });
     else if (lab && (!lab.selected_variant_id || !lab.selection_decision_id)) decision = runtimeDecision(runtimeProfile, { action: "premise-selection", prompt: null, message: "Automation stopped so the writer can select a premise variant." });
-    else decision = decideNextRun(root, { until: run.target, maxChapters: run.requestedMaxChapters, runtimeProfile: runtimeProfile.id });
-  } else decision = decideNextRun(root, { until: run.target, maxChapters: run.requestedMaxChapters, runtimeProfile: runtimeProfile.id });
-  return { ...decision, message: `${decision.message} Resumed ${run.id}.` };
+    else decision = decideNextRun(root, { until: activeRun.target, maxChapters: activeRun.requestedMaxChapters, runtimeProfile: runtimeProfile.id });
+  } else decision = decideNextRun(root, { until: activeRun.target, maxChapters: activeRun.requestedMaxChapters, runtimeProfile: runtimeProfile.id });
+  return { ...decision, message: `${decision.message} Resumed ${activeRun.id}.` };
 }
 
 export function directDraftDecision(root: string, chapter?: number): RunDecision {
