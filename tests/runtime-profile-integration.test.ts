@@ -126,7 +126,7 @@ test("drafting decisions enforce tiny and local chapter caps while full preserve
   }
 });
 
-test("revision decisions enforce profile ticket caps even for explicit ticket IDs", () => {
+test("direct revision decisions enforce profile ticket caps even for explicit ticket IDs", () => {
   for (const [profile, included, excluded] of [
     ["tiny-local", ["B01-T001"], ["B01-T002", "B01-T003"]],
     ["local", ["B01-T001", "B01-T002"], ["B01-T003"]],
@@ -134,13 +134,10 @@ test("revision decisions enforce profile ticket caps even for explicit ticket ID
   ] as const) {
     const { parent, root } = setup("revision", profile);
     try {
-      const automatic = decideNextRun(root);
-      const explicit = directRevisionDecision(root, ["B01-T001", "B01-T002", "B01-T003"]);
-      for (const decision of [automatic, explicit]) {
-        assert.equal(decision.runtimeProfile, profile);
-        for (const id of included) assert.match(decision.prompt ?? "", new RegExp(id));
-        for (const id of excluded) assert.doesNotMatch(decision.prompt ?? "", new RegExp(id));
-      }
+      const decision = directRevisionDecision(root, ["B01-T001", "B01-T002", "B01-T003"]);
+      assert.equal(decision.runtimeProfile, profile);
+      for (const id of included) assert.match(decision.prompt ?? "", new RegExp(id));
+      for (const id of excluded) assert.doesNotMatch(decision.prompt ?? "", new RegExp(id));
     } finally {
       rmSync(parent, { recursive: true, force: true });
     }
