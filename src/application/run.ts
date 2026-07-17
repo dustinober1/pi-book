@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { buildChapterContext } from "../context/context-builder.js";
+import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import { readText } from "../infrastructure/files.js";
 import { stringifyYaml } from "../infrastructure/yaml.js";
@@ -21,6 +22,7 @@ export interface RunOptions {
   approve?: string;
   until?: string;
   maxChapters?: number;
+  runtimeProfile?: RuntimeProfileId;
   noProse?: boolean;
   reviewOnly?: boolean;
   stopOnWarning?: boolean;
