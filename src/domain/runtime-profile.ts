@@ -1,4 +1,11 @@
-export type RuntimeProfileId = "tiny-local" | "local" | "full";
+import { Type, type Static } from "@sinclair/typebox";
+
+export const RuntimeProfileIdSchema = Type.Union([
+  Type.Literal("tiny-local"),
+  Type.Literal("local"),
+  Type.Literal("full"),
+]);
+export type RuntimeProfileId = Static<typeof RuntimeProfileIdSchema>;
 
 export type PromptStyle = "compact" | "standard";
 
