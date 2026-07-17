@@ -1,167 +1,88 @@
-# Novel Forge Release Checklist
+# Novel Forge Release Status and Checklist
 
-## Version 1.4.0 — Author Velocity baseline entry gate
+## Current verified release: v1.4.1
 
-The first 1.4 pull request changes evaluation only. It must not change production workflow behavior or package version.
+Novel Forge 1.4.1 is the pinned release for installation and supervised live-book pilots.
 
-- [ ] Four journey fixtures load and pass with at least one explicit current limitation each.
-- [ ] Four author questions report exactly four.
-- [ ] Duplicate accepted `draft-chapter` events do not inflate completed chapters.
-- [ ] Pause and resume under one run ID preserve all counters.
-- [ ] Rejected attempts and permitted retries are counted independently.
-- [ ] Human gates and requested targets remain explicit stop reasons.
-- [ ] `contextCharacters` records the maximum observed size.
-- [ ] Architecture and Novel Forge 1.3 release fixtures remain unchanged and passing.
-- [ ] Package version and dependency metadata remain unchanged.
-- [ ] Invalid YAML returns `schema-validation`, the exact relative path, and one-retry eligibility.
-- [ ] Missing canon or research references return `reference-validation`.
-- [ ] Stale stage/hash rejections require reload and are not retryable.
-- [ ] Disallowed paths and human gates never permit automatic retry.
-- [ ] Wizard and Pi-tool failures expose the same structured detail.
-- [ ] Unknown failures contain no stack trace, absolute project path, or raw thrown object.
-- [ ] New projects seed empty intake and decision-ledger files without invented evidence.
-- [ ] Existing 1.3 projects without intake files remain unblocked with one advisory.
-- [ ] Inferred assumptions never enter settled prompt decisions.
-- [ ] Confirm, correct, reject, supersede, and replace operations preserve immutable history.
-- [ ] Rejected decisions resolve to no usable choice.
-- [ ] `intake-update` is limited to the two canonical files and remains state-neutral.
+```bash
+pi install git:github.com/dustinober1/pi-book@v1.4.1
+```
 
+To test it for one Pi session without changing persistent package settings:
 
-## Version 1.3.0
+```bash
+pi -e git:github.com/dustinober1/pi-book@v1.4.1
+```
 
-Do not create the `v1.3.0` tag after the foundation PR alone. Create it only after all planned 1.3 phases are merged and the final `main` commit passes the complete Node 22.19.0 and Node 24 verification matrix through the repository's `Novel Forge tests` GitHub Actions workflow.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.4.1 release commit.
 
-### Version and compatibility
+## 1.4.1 release record
 
-- [ ] `package.json` reports `1.3.0`.
-- [ ] `package-lock.json` reports `1.3.0` in the root package metadata without dependency re-resolution.
-- [ ] New projects write `novel_forge_version: 1.3.0`.
-- [ ] New projects contain the series-level taste, voice-guardrail, and voice-experiment index files.
-- [ ] New books contain research-ledger, book-strategy, and voice-audit files in addition to the retained 1.2 publishing, marketing, and reader-kit files.
-- [ ] Version 1.2 projects remain readable without mandatory migration.
-- [ ] Missing 1.3 evidence produces one optional-backfill warning rather than a blocker.
-- [ ] Metadata-only upgrades do not invent evidence or hide missing-evidence warnings.
-- [ ] Projects written by a newer package version are blocked safely.
+- [x] `package.json`, `package-lock.json`, installed-version metadata, and new-project metadata report `1.4.1`.
+- [x] The exact release commit is tagged `v1.4.1`.
+- [x] Node 22.19.0 and Node 24 run `npm ci`, type checking, tests, evaluations, release verification, and package dry-run checks.
+- [x] Brief bootstrap preserves the supplied brief as read-only evidence and distinguishes explicit details from inference.
+- [x] Premise comparison leaves final selection to the writer.
+- [x] Persistent runs support bounded targets, pause, resume, cancellation, and stale-state protection.
+- [x] Rolling packet windows preserve completed work and avoid duplicate chapter preparation.
+- [x] Structured rejection envelopes enforce one corrected schema/reference retry, reload on stale state, and no automatic retry for unsafe failures.
+- [x] Existing 1.3 projects remain readable without invented evidence or silent manuscript changes.
+- [x] Packed-extension install, import, registration, and clean-start tests pass.
+- [x] Runtime package assets are allowlisted while tests, evaluations, workflows, and generated artifacts are excluded.
+- [x] Release notes state the writer-control, compatibility, and evaluation boundaries.
 
-### Evidence-contract acceptance
+The maintained 1.4.1 release notes are in `docs/releases/v1.4.1.md`. This local release is intentionally verified without GitHub Actions or remote publishing. The prior `v1.4.0` tag remains immutable. Historical 1.3 release notes remain in `docs/releases/v1.3.0.md`; historical implementation plans under `docs/superpowers/` are records and should not be treated as current installation instructions.
 
-- [ ] Every new 1.3 YAML artifact is validated by the guarded transaction layer.
-- [ ] Planned and researching claims may remain incomplete.
-- [ ] Ready claims require source provenance, verification, knowledge scope, risk, and at least one dramatic use.
-- [ ] Planned voice experiments may exist before variants or a baseline are produced.
-- [ ] Accepted voice experiments require exact anonymous variants A, B, and C plus a non-null baseline record.
-- [ ] Voice approval hashes the voice profile, taste profile, voice guardrails, and experiment index.
-- [ ] Book-plan approval hashes the book architecture, remarkability contract, research ledger, and book strategy.
+## Verify the current development tree
 
-### Research-update safety
+Run the complete local qualification sequence:
 
-- [ ] `research-update` is available only during the approved active creative stages.
-- [ ] It accepts only allowlisted taste, voice, research, strategy, audit, and source-register evidence.
-- [ ] It rejects empty, stale, duplicate, unsafe, manuscript, project-state, book-state, guidance, reader-evidence, publishing, marketing, and package-output submissions.
-- [ ] It does not advance stage, change gates or approvals, alter active-book status, or write manuscript prose.
-- [ ] Accepted updates still use schema validation, rollback, one Git checkpoint, `STATUS.md`, and `HANDOFF.md`.
-- [ ] The public `novel_apply_event` tool remains UTF-8 text-only.
+```bash
+npm ci
+npm run typecheck
+npm test
+npm run eval
+npm run benchmark:constrained-runtime
+npm run benchmark:prompts
+npm run verify:release
+npm run test:release
+npm pack --dry-run
+```
 
-### Influence and originality acceptance
+The repository's **Novel Forge tests** workflow is authoritative for the Node 22.19.0 and Node 24 matrix. A release candidate must pass both jobs on the exact commit that will be tagged.
 
-- [ ] Every influence records a specific role, admired qualities, excluded qualities, and neutral derived traits.
-- [ ] Writer decisions, writer samples, and an accepted baseline outrank external references.
-- [ ] Named-author imitation instructions are rejected from voice profiles, guardrails, experiment assets, and chapter context.
-- [ ] Anonymous A/B/C variants and the accepted baseline each contain 600–900 words.
-- [ ] Stored source, variant, and baseline hashes match normalized content exactly.
-- [ ] Score summaries are deterministic evidence and never select prose automatically.
-- [ ] Drafting context includes only validated neutral guardrails and a matching POV signature.
-- [ ] Raw influence references and voice-experiment prose never enter chapter drafting context.
+## Live-book pilot boundaries
 
-### Public-review and research acceptance
+A green release check demonstrates workflow contracts, compatibility, package boundaries, and deterministic safety behavior. It does not prove:
 
-- [ ] Public-review observations are paraphrase-first and exclude reviewer identity by default.
-- [ ] One- and two-star, three-star, and four- or five-star evidence remain distinct signals.
-- [ ] One-star-only clusters can never exceed moderate confidence.
-- [ ] Negative clusters retain positive counterweights and explicit writer decisions.
-- [ ] Public market evidence cannot update reader-experiment metrics or manuscript-validation claims.
-- [ ] Ready chapter packets cannot reference missing or unready research.
-- [ ] Research claims expose source provenance and dramatic use in bounded context.
+- full-book model performance;
+- literary or editorial quality;
+- publication success;
+- real-reader validation;
+- a specific completion time.
 
-### Book strategy and audit acceptance
+For the first live pilot:
 
-- [ ] Book strategy includes the reader promise, expectation decisions, friction decisions, accepted tradeoffs, originality risks, and approved guardrails.
-- [ ] Plot decisions track immediate gain, deferred cost, irreversible effect, and payoff window.
-- [ ] Voice-drift metrics are evidence rather than mechanical prose quotas.
-- [ ] Repeated scene engines and state-neutral repeated conversations are flagged.
-- [ ] Recurring revision problems become guardrail candidates only at the exact threshold.
-- [ ] Guardrail promotion requires writer approval and does not retroactively rewrite unrelated prose.
-- [ ] Chapter 1 and Chapter 3 create voice-audit evidence only when accepted baseline hash and metrics exist.
-- [ ] Missing baseline evidence skips voice auditing without blocking drafting.
-- [ ] Act and manuscript reviews append deterministic voice evidence without assigning automatic ticket severity.
-- [ ] Intentional voice exceptions remain recorded and protected.
-- [ ] Three distinct chapters or two distinct milestone reviews are the exact learning thresholds.
-- [ ] Duplicate tickets within one chapter count as one chapter occurrence.
-- [ ] Proposed and rejected learning rules never enter drafting context.
-- [ ] Approved learning rules match the exact ticket, chapter, and milestone evidence.
-- [ ] Audit and promotion paths do not modify existing manuscript files.
+1. Work from a copy or verified backup.
+2. Pin the package tag.
+3. Keep the Novel Forge Git worktree clean before guarded operations.
+4. Verify `/novel-start` and `/novel` before importing valuable material.
+5. For an existing manuscript, preview adoption before applying it.
+6. Exercise pause/resume, recovery, revision, and export before relying on the package for production work.
+7. Retain human editorial review and real-reader judgment.
 
-### Wizard and transaction safety
+`npm audit --omit=dev` currently reports moderate advisories in the transitive `exceljs` → `uuid` dependency path. Reassess this before broad use with untrusted inputs or before the next release; do not apply a forced breaking dependency downgrade without regression testing package and spreadsheet exports.
 
-- [ ] The wizard binds only to `127.0.0.1` on an ephemeral port.
-- [ ] Every API request requires the session credential and exact origin.
-- [ ] Sessions expire and delete their upload directories.
-- [ ] The browser has no direct filesystem-write or arbitrary-command route.
-- [ ] Confirmed actions enforce expected stage and project hash.
-- [ ] Binary files preserve exact bytes and participate in transaction rollback.
-- [ ] The research wizard exposes sanitized snapshots, previews, and typed proposals only.
-- [ ] `/novel-wizard research` opens Influence Palette, Anonymous Voice Comparison, Reader Friction, Research Ledger, and Revision Learning surfaces.
-- [ ] Initial research snapshots exclude manuscript prose, reader-response bodies, reviewer identity, source-scene prose, and variant prose.
-- [ ] Every research mutation requires a stored preview ID plus current stage and project hash.
-- [ ] Confirmed research actions return through `research-update` and leave stage, gates, approvals, and manuscript prose unchanged.
-- [ ] Public-review imports remain identity-stripped market evidence and never update manuscript reader metrics.
-- [ ] Voice variants are shown only as A/B/C; scores do not choose the baseline automatically.
-- [ ] Ready research claims require valid registered source support.
-- [ ] Learning eligibility never activates a rule without explicit writer approval.
-- [ ] Existing adoption, readers, packaging, and next-book wizard workflows remain passing.
+## Checklist for the next release
 
-### Existing 1.2 capability regression
-
-- [ ] DOCX, EPUB, Markdown, text, and chapter-directory adoption remains safe and atomic.
-- [ ] Reader kits remain isolated under `reader-kits/RE-NNN/`, with accepted human responses only affecting metrics.
-- [ ] Publishing and marketing YAML remain canonical sources for reproducible package outputs.
-- [ ] Source hashes prevent silent overwrite of stale outputs.
-- [ ] Next-book inheritance validates locked canon and active threads without inventing outcomes.
-- [ ] The continuity graph preserves bounded depth, explicit-before-discovered ordering, provisional restrictions, inactive-thread restrictions, later-book exclusions, and provenance reporting.
-- [ ] Undo continues to create revert commits and never rewrites history.
-
-### GitHub Actions verification
-
-Use the repository's `Novel Forge tests` workflow as the authoritative verification record. Every phase PR and the final merged `main` commit must pass both Node jobs before merge or release.
-
-- [ ] `npm ci` passes strictly from the committed lockfile.
-- [ ] `npm run typecheck` passes on Node 22.19.0 and Node 24.
-- [ ] `npm test` passes on Node 22.19.0 and Node 24.
-- [ ] `npm run eval` passes.
-- [ ] `npm run audit:voice -- <fixture-root>` returns deterministic JSON evidence or a clear non-mutating no-baseline result.
-- [ ] Real Pi command/tool lifecycle tests pass.
-- [ ] Packed-extension install/import/registration smoke tests pass.
-- [ ] `npm pack --dry-run` contains the new source contracts and bundled wizard assets.
-- [ ] The final diff contains no temporary workflow files, generated diagnostics, local artifacts, imported review corpora, or generated book outputs.
-
-
-### Phase 7 release qualification
-
-- [ ] Nine deterministic 1.3 release fixtures pass without claiming objective literary quality.
-- [ ] The clean-project journey records honest skips for writer prose, real human evidence, supplied adoption files, approved packaging, and locked-canon next-book creation.
-- [ ] `npm run verify:release` passes and reports all tree/package/release-note findings.
-- [ ] The one-time `release-v1.3` workflow verifies the merged main commit before creating the annotated tag and GitHub release.
-
-### Publish
-
-1. Merge every GitHub-Actions-verified 1.3 phase pull request to `main`.
-2. Confirm the final merged `main` commit's `Novel Forge tests` workflow is green under Node 22.19.0 and Node 24.
-3. Create annotated tag `v1.3.0` only on that verified `main` commit.
-4. Confirm installation with:
-
-   ```bash
-   pi install git:github.com/dustinober1/pi-book@v1.3.0
-   ```
-
-5. Run a clean `/novel-start` and `/novel` smoke test from the tagged package.
-6. Exercise taste intake, voice baseline, research update, review-observation analysis, chapter context, voice audit, one DOCX adoption, one reader CSV merge, one package export, and one next-book creation from the tagged package.
+- [ ] Choose a new semantic version; never move or rewrite an existing release tag.
+- [ ] Update `package.json`, `package-lock.json`, installed-version constants, project compatibility, `CHANGELOG.md`, release notes, and install examples together.
+- [ ] Preserve historical release notes and migration compatibility.
+- [ ] Run the complete Node 22.19.0 and Node 24 matrix on the exact candidate commit.
+- [ ] Run deterministic architecture, release, author-journey, constrained-runtime, and prompt-compiler evaluations.
+- [ ] Run packed-extension import/registration and clean-project tests.
+- [ ] Review production dependency advisories and document unresolved risk.
+- [ ] Confirm `npm pack --dry-run` contains every required runtime asset and no tests, local artifacts, imported corpora, generated books, or package tarballs.
+- [ ] Confirm the release notes preserve writer approval, premise selection, privacy, compatibility, and evaluation boundaries.
+- [ ] Create an annotated tag and GitHub release only after the verified commit is merged.
+- [ ] Smoke-test the pinned tag with a temporary Pi session and a disposable project.

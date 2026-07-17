@@ -224,4 +224,4 @@ Specialist commands are compatibility and precision tools. They do not replace `
 
 ## Release qualification
 
-Before publishing Novel Forge 1.3, run the complete Node 22.19.0 and Node 24 matrix, all nine deterministic release fixtures, the honest clean-project journey, packed-extension clean start, and `npm run verify:release`. Release checks verify contracts, compatibility, and package boundaries only. Never describe them as proof of literary excellence or substitute them for human editorial and reader judgment.
+Before publishing any Novel Forge release, run the complete Node 22.19.0 and Node 24 matrix, deterministic architecture and release fixtures, author-journey evaluations, clean-project and packed-extension tests, `npm run verify:release`, and `npm pack --dry-run`. Installable releases must use a pinned tag; Novel Forge 1.4.1 is `v1.4.1`. Release checks verify contracts, compatibility, packaging, and safety boundaries only. Never describe them as proof of full-book model behavior or literary excellence, or substitute them for human editorial and reader judgment.

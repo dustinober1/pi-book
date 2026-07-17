@@ -67,8 +67,8 @@ export function verifyV13ReleaseTree(root: string): ReleaseCheck[] {
   const absentBoundaries = boundaries.map((pattern, index) => pattern.test(release) ? null : index + 1).filter((value): value is number => value !== null);
   checks.push(check("release-note-boundaries", absentBoundaries.length === 0, absentBoundaries.length ? `Release notes miss boundary checks: ${absentBoundaries.join(", ")}.` : "Release notes contain all required boundaries."));
 
-  const readme = text(root, "README.md");
-  checks.push(check("readme-install", /pi install git:github\.com\/dustinober1\/pi-book@v1\.3\.0/.test(readme), "README contains the tagged install command."));
+  const historicalInstallNotes = text(root, "docs/releases/v1.3.0.md");
+  checks.push(check("readme-install", /pi install git:github\.com\/dustinober1\/pi-book@v1\.3\.0/.test(historicalInstallNotes), "Historical v1.3.0 release notes contain the tagged install command."));
 
   const releaseChecklist = text(root, "RELEASE.md");
   const duplicateLine = "- [ ] Existing adoption, readers, packaging, and next-book wizard workflows remain passing.";

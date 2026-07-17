@@ -12,8 +12,8 @@ test("new projects use the 1.4 contract and retain canonical 1.2 metadata files"
   const parent = temp();
   try {
     const root = initializeProject(parent, { projectName: "V14", projectType: "standalone", profile: "thriller" });
-    assert.equal(NOVEL_FORGE_VERSION, "1.4.0");
-    assert.equal(readProject(root).novel_forge_version, "1.4.0");
+    assert.equal(NOVEL_FORGE_VERSION, "1.4.1");
+    assert.equal(readProject(root).novel_forge_version, "1.4.1");
     assert.equal(existsSync(join(root, "books/book-01/publishing.yaml")), true);
     assert.equal(existsSync(join(root, "books/book-01/marketing.yaml")), true);
     assert.equal(existsSync(join(root, "books/book-01/reader-kits/index.yaml")), true);

@@ -4,11 +4,19 @@ Novel Forge is a guided, series-capable production workflow for high-quality **t
 
 ## Install
 
-After the verified 1.3.0 release tag is published:
+Install the verified 1.4.1 release from its pinned Git tag:
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.3.0
+pi install git:github.com/dustinober1/pi-book@v1.4.1
 ```
+
+To evaluate Novel Forge without adding it to persistent Pi settings, load the same pinned release for one session:
+
+```bash
+pi -e git:github.com/dustinober1/pi-book@v1.4.1
+```
+
+Pi packages execute with the user's system permissions. Review the source before installation, and use a copy of any irreplaceable manuscript for the first live-book pilot.
 
 ## Two-minute quick start
 
@@ -18,6 +26,8 @@ pi install git:github.com/dustinober1/pi-book@v1.3.0
 ```
 
 Run `/novel` whenever the current action finishes. It reads project state and shows only the choices that matter now: continue, review a gate, request changes, inspect evidence, adopt an existing manuscript, use real-reader evidence, package the book, recover safely, or create the next installment.
+
+For an existing book, start in a copied or backed-up working directory and choose **Adopt an existing manuscript** from `/novel`, or run `/novel-adopt`. Novel Forge leaves the adoption source unchanged and writes the managed project separately with guarded Git checkpoints.
 
 ## 1.4 author-journey throughput baseline
 
@@ -96,7 +106,7 @@ Complaint and mixed observations may be clustered only with their supporting IDs
 
 For each relevant cluster, the writer chooses **prevent**, **mitigate**, **accept as tradeoff**, or **irrelevant to project**. Only prevent and mitigate decisions may become approved review-derived guardrails. Accepted tradeoffs keep their source-cluster provenance. Public observations never update `reader-experiments.yaml`, reader metrics, verdicts, or claims that the manuscript was tested.
 
-New ready chapter packets reference `RES-NNN` research-ledger items. Existing `SRC-NNN` references remain readable as compatibility advisories until the next plan rebuild migrates them. Research-to-graph discovery, voice/scene audits, and the browser research wizard remain later 1.3 phases.
+New ready chapter packets reference `RES-NNN` research-ledger items. Existing `SRC-NNN` references remain readable as compatibility advisories until the next plan rebuild migrates them. The completed 1.3 release also includes research-to-graph discovery, voice and scene audits, revision learning, and the browser research wizard described below.
 
 ## Voice, scene, and revision-learning audits
 
@@ -378,20 +388,20 @@ npm run eval
 npm pack --dry-run
 ```
 
-The matrix runs on Node 22.19.0 and Node 24. See `CHANGELOG.md` and `RELEASE.md`; create `v1.3.0` only after all planned phases and the final merged-main verification pass are complete.
+The matrix runs on Node 22.19.0 and Node 24. See `CHANGELOG.md`, `RELEASE.md`, and `docs/releases/v1.4.1.md` for the current release record. The development branch may contain unreleased changes after the tag, so install `v1.4.1` rather than an unpinned branch for a reproducible pilot.
 
-## Install the verified 1.3 release
-
-```text
-pi install git:github.com/dustinober1/pi-book@v1.3.0
-```
-
-Novel Forge 1.3 ships with deterministic release fixtures, a clean-project evidence journey, packed-extension install/import tests, and a read-only release-tree verifier. Run:
+## Verify the current tree
 
 ```text
+npm ci
+npm run typecheck
+npm test
 npm run eval
+npm run benchmark:constrained-runtime
+npm run benchmark:prompts
 npm run verify:release
 npm run test:release
+npm pack --dry-run
 ```
 
-These checks verify contracts and safety boundaries. They do not establish objective literary quality; human editorial review and real human reader judgment remain required.
+Novel Forge 1.4 ships with deterministic release and author-journey fixtures, clean-project evidence journeys, packed-extension install/import tests, and a read-only release-tree verifier. These checks verify contracts, packaging, compatibility, and safety boundaries. They do not prove full-book model behavior, objective literary quality, publication success, or reader validation; human editorial review and real human reader judgment remain required.

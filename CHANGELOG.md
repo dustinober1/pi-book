@@ -1,6 +1,27 @@
 # Changelog
 
-## Unreleased — Author Velocity baselines
+## Unreleased
+
+### Added
+
+- Declarative stage specifications shared by standard and compact prompt renderers.
+- Deterministic prompt-compiler benchmarks, snapshots, normative-parity checks, and hard budget diagnostics.
+
+### Changed
+
+- Constrained-runtime prompts preserve the same normalized requirements while fitting the configured local and tiny-local budgets.
+
+
+## 1.4.1 — Documentation and local-release correction
+
+### Changed
+
+- Corrected active installation guidance to use the pinned `v1.4.1` release.
+- Added local-only release notes and verification instructions for supervised live-book pilots.
+- Kept the existing `v1.4.0` tag immutable; this patch does not use GitHub Actions or remote publishing.
+
+
+## 1.4.0 — Author Velocity
 
 ### Added
 
@@ -11,10 +32,17 @@
 - A bounded one-retry policy for schema/reference payload repairs, with mandatory reload for stale state and no automatic retry for unsafe failures.
 - Typed intake and append-only assumption/decision provenance, including numeric setup assumptions, explicit rejection, supersession, and decision replacement.
 - A state-neutral `intake-update` event and prompt compilation that uses writer decisions while keeping inference visibly unresolved.
+- Read-only brief bootstrap with explicit-versus-inferred intake provenance.
+- A neutral premise laboratory that compares structural variants while leaving selection to the writer.
+- Persistent bounded runs with explicit targets, pause, resume, cancellation, and stale-state protection.
+- Rolling chapter-packet windows that refill only the next useful planning horizon.
+- Full, local, and tiny-local runtime profiles with deterministic work and context limits.
 
-### Boundaries
+### Compatibility and boundaries
 
-- Baselines use no wall-clock timing, telemetry, remote service, workflow mutation, or claim that future Author Velocity targets already pass.
+- Existing 1.3 projects remain readable; metadata upgrades do not invent evidence or rewrite accepted creative work.
+- Writer approval remains mandatory at every human gate, and automation stops at gates, blockers, invalid context, and continuity or reveal-order conflicts.
+- Journey baselines use no wall-clock timing or remote service and do not claim literary quality, publication success, or reader validation.
 
 
 ## 1.3.0 — Author-taste and research foundation

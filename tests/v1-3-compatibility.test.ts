@@ -44,7 +44,7 @@ test("new projects seed all Novel Forge 1.3 evidence artifacts", () => {
     const root = initializeProject(parent, { projectName: "Taste Test", projectType: "standalone", profile: "thriller" });
     for (const path of seriesArtifacts) assert.equal(existsSync(join(root, path)), true, path);
     for (const path of bookArtifacts) assert.equal(existsSync(join(root, "books", "book-01", path)), true, path);
-    assert.equal(readProject(root).novel_forge_version, "1.4.0");
+    assert.equal(readProject(root).novel_forge_version, "1.4.1");
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
@@ -85,8 +85,8 @@ test("metadata upgrade does not hide missing optional 1.3 evidence", () => {
     removeOptionalArtifacts(root);
     recordVersion(root, "1.2.0");
 
-    assert.equal(upgradeProjectVersion(root), "1.4.0");
-    assert.equal(readProject(root).novel_forge_version, "1.4.0");
+    assert.equal(upgradeProjectVersion(root), "1.4.1");
+    assert.equal(readProject(root).novel_forge_version, "1.4.1");
     assert.ok(getProjectStatus(root).warnings.some((item) => /Optional Novel Forge 1\.3 research setup/i.test(item)));
   } finally {
     rmSync(parent, { recursive: true, force: true });
