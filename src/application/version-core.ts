@@ -1,6 +1,6 @@
 import type { ProjectState } from "../domain/schemas.js";
 
-export const NOVEL_FORGE_VERSION = "1.3.0" as const;
+export const NOVEL_FORGE_VERSION = "1.4.0" as const;
 
 export interface VersionFinding {
   severity: "blocker" | "warning";
