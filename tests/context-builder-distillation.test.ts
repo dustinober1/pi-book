@@ -34,18 +34,22 @@ test("tiny-local chapter context reports distillation and reuses exact cache pro
     const root = setup(parent);
     const first = buildChapterContext(root, 2, 12_000, 1, "tiny-local");
     assert.ok(first.text.length <= 12_000);
+    assert.ok(first.report.build);
+    assert.ok(first.report.cache);
     assert.equal(first.report.build.schemaVersion, "1.0.0");
     assert.equal(first.report.build.profileId, "tiny-local");
     assert.equal(first.report.cache.status, "miss");
     assert.ok(first.report.build.sections.some((section) => section.status === "compacted" || section.status === "omitted"));
 
     const second = buildChapterContext(root, 2, 12_000, 1, "tiny-local");
+    assert.ok(second.report.cache);
     assert.equal(second.report.cache.status, "hit");
     assert.equal(second.text, first.text);
 
     const canonPath = join(root, "series", "canon.yaml");
     writeFileSync(canonPath, `${readFileSync(canonPath, "utf8")}\n`, "utf8");
     const third = buildChapterContext(root, 2, 12_000, 1, "tiny-local");
+    assert.ok(third.report.cache);
     assert.equal(third.report.cache.status, "miss");
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
