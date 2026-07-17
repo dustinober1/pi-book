@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import {
   benchmarkReportJson,
   deterministicBenchmarkView,
@@ -45,4 +47,19 @@ test("benchmark JSON never includes synthetic manuscript prose or raw prompts", 
   assert.equal(json.includes("Use the novel-forge-for-pi skill."), false);
   assert.equal(json.includes("sample_chapter"), false);
   assert.match(json, /"scenario": "drafting-context"/);
+});
+
+test("CI retains a parseable benchmark JSON artifact without npm banners", () => {
+  const workflow = readFileSync(join(process.cwd(), ".github", "workflows", "test.yml"), "utf8");
+  assert.match(workflow, /npm run --silent benchmark:constrained-runtime > constrained-runtime-benchmark\.json/);
+
+  const command = process.platform === "win32" ? "npm.cmd" : "npm";
+  const result = spawnSync(command, ["run", "--silent", "benchmark:constrained-runtime"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout) as { schemaVersion?: string; results?: unknown[] };
+  assert.equal(report.schemaVersion, "1.0.0");
+  assert.equal(report.results?.length, expectedScenarios.length);
 });
