@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.4.2 — Repository organization
+
 ### Added
 
 - Declarative stage specifications shared by standard and compact prompt renderers.
@@ -11,6 +13,7 @@
 ### Changed
 
 - Constrained-runtime prompts preserve the same normalized requirements while fitting the configured local and tiny-local budgets.
+- Organizer checkpoints commit only explicit organizer paths and preserve unrelated staged or unstaged work.
 
 
 ## 1.4.1 — Documentation and local-release correction

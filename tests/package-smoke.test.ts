@@ -26,7 +26,7 @@ test("the packed extension imports, registers, and contains the 1.4 release surf
     assert.ok(commands.includes("novel-adopt"));
     assert.ok(commands.includes("novel-organize"));
     assert.deepEqual(tools, ["novel_apply_event"]);
-    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.4.1");
+    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.4.2");
     for (const asset of [
       "README.md", "SKILL.md", "CHANGELOG.md", "RELEASE.md",
       "wizard/index.html", "wizard/app.js", "wizard/styles.css",

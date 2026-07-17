@@ -4,16 +4,16 @@ Novel Forge is a guided, series-capable production workflow for high-quality **t
 
 ## Install
 
-Install the verified 1.4.1 release from its pinned Git tag:
+Install the verified 1.4.2 release from its pinned Git tag:
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.4.1
+pi install git:github.com/dustinober1/pi-book@v1.4.2
 ```
 
 To evaluate Novel Forge without adding it to persistent Pi settings, load the same pinned release for one session:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v1.4.1
+pi -e git:github.com/dustinober1/pi-book@v1.4.2
 ```
 
 Pi packages execute with the user's system permissions. Review the source before installation, and use a copy of any irreplaceable manuscript for the first live-book pilot.
@@ -404,7 +404,7 @@ npm run eval
 npm pack --dry-run
 ```
 
-The matrix runs on Node 22.19.0 and Node 24. See `CHANGELOG.md`, `RELEASE.md`, and `docs/releases/v1.4.1.md` for the current release record. The development branch may contain unreleased changes after the tag, so install `v1.4.1` rather than an unpinned branch for a reproducible pilot.
+The matrix runs on Node 22.19.0 and Node 24. See `CHANGELOG.md`, `RELEASE.md`, and `docs/releases/v1.4.2.md` for the current release record. The development branch may contain unreleased changes after the tag, so install `v1.4.2` rather than an unpinned branch for a reproducible pilot.
 
 ## Verify the current tree
 

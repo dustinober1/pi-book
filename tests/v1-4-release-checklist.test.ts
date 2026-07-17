@@ -5,13 +5,13 @@ import { join } from "node:path";
 import { verifyV14ReleaseTree } from "../scripts/verify-v1-4-release.js";
 import { NOVEL_FORGE_VERSION } from "../src/application/version-core.js";
 
-test("package lock installed version and release tree agree on 1.4.1", () => {
+test("package lock installed version and release tree agree on 1.4.2", () => {
   const root = process.cwd();
   const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"));
-  assert.equal(packageJson.version, "1.4.1");
-  assert.equal(lock.version, "1.4.1");
-  assert.equal(lock.packages[""].version, "1.4.1");
-  assert.equal(NOVEL_FORGE_VERSION, "1.4.1");
+  assert.equal(packageJson.version, "1.4.2");
+  assert.equal(lock.version, "1.4.2");
+  assert.equal(lock.packages[""].version, "1.4.2");
+  assert.equal(NOVEL_FORGE_VERSION, "1.4.2");
   assert.deepEqual(verifyV14ReleaseTree(root).filter((item) => !item.passed), []);
 });

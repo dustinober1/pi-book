@@ -32,8 +32,8 @@ export function verifyV14ReleaseTree(root: string): V14ReleaseCheck[] {
   const packageJson = JSON.parse(text(root, "package.json")) as { version: string; files: string[]; scripts: Record<string, string> };
   const lock = JSON.parse(text(root, "package-lock.json")) as { version: string; packages: Record<string, { version?: string }> };
 
-  checks.push(check("package-version", packageJson.version === "1.4.1", `package.json version is ${packageJson.version}.`));
-  checks.push(check("lock-version", lock.version === "1.4.1" && lock.packages[""]?.version === "1.4.1", `Lock versions are ${lock.version} and ${lock.packages[""]?.version ?? "missing"}.`));
+  checks.push(check("package-version", packageJson.version === "1.4.2", `package.json version is ${packageJson.version}.`));
+  checks.push(check("lock-version", lock.version === "1.4.2" && lock.packages[""]?.version === "1.4.2", `Lock versions are ${lock.version} and ${lock.packages[""]?.version ?? "missing"}.`));
   checks.push(check("release-script", packageJson.scripts["verify:release"] === "node --import tsx scripts/verify-v1-4-release.ts", `verify:release is ${packageJson.scripts["verify:release"] ?? "missing"}.`));
 
   const required = [
@@ -47,7 +47,7 @@ export function verifyV14ReleaseTree(root: string): V14ReleaseCheck[] {
     "docs/novel-forge-v1-4-resumable-runs.md",
     "docs/novel-forge-v1-4-rolling-packet-windows.md",
     "docs/novel-forge-v1-4-brief-autopilot.md",
-    "docs/releases/v1.4.1.md",
+    "docs/releases/v1.4.2.md",
     "README.md",
     "SKILL.md",
     "CHANGELOG.md",
@@ -60,14 +60,14 @@ export function verifyV14ReleaseTree(root: string): V14ReleaseCheck[] {
   const temporary = files.filter((path) => /^docs\/\.|^scripts\/(?:apply|fix)-v1-4|^\.github\/workflows\/apply-v1-4|\.tgz$/i.test(path));
   checks.push(check("no-temporary-files", temporary.length === 0, temporary.length ? `Temporary files: ${temporary.join(", ")}.` : "No temporary files remain."));
 
-  const release = existsSync(join(root, "docs/releases/v1.4.1.md")) ? text(root, "docs/releases/v1.4.1.md") : "";
+  const release = existsSync(join(root, "docs/releases/v1.4.2.md")) ? text(root, "docs/releases/v1.4.2.md") : "";
   const boundaries = [
     /writer.*approval|manual.*approval/i,
     /writer.*premise|does not.*select.*premise/i,
     /brief.*read.?only/i,
     /1\.3.*readable|older.*project/i,
     /not.*literary quality|workflow.*not.*quality/i,
-    /v1\.4\.1/i,
+    /v1\.4\.2/i,
   ];
   checks.push(check("release-note-boundaries", boundaries.every((pattern) => pattern.test(release)), "Release notes document approval, premise, brief, compatibility, and evaluation boundaries."));
 
