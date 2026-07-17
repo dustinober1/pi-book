@@ -43,3 +43,16 @@ test("corrupt cache entries are ignored", () => {
     assert.equal(readContextCache(root, key), null);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+test("tampered cache payloads are ignored even when JSON remains valid", () => {
+  const root = temp();
+  try {
+    const key = contextCacheKey(keyInput);
+    writeContextCache(root, key, { text: "valid", report: { schemaVersion: "1.0.0" } });
+    const path = join(root, ".pi-book", "cache", "v1", `${key}.json`);
+    const envelope = JSON.parse(readFileSync(path, "utf8"));
+    envelope.payload.text = "tampered";
+    writeFileSync(path, `${JSON.stringify(envelope)}\n`, "utf8");
+    assert.equal(readContextCache(root, key), null);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
