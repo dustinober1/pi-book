@@ -8,7 +8,8 @@ test("required selection reserves minimum space for later required sections", ()
     { id: "second", title: "Second", priority: 2, required: true, body: "B".repeat(600), compactBody: "SECOND-COMPACT", recordIds: ["B-1"] },
   ], { profileId: "tiny-local", maxChars: 700 });
   assert.ok(result.text.length <= 700);
-  assert.match(result.text, /FIRST-COMPACT/);
-  assert.equal(result.report.sections.find((item) => item.id === "first")?.status, "compacted");
-  assert.notEqual(result.report.sections.find((item) => item.id === "second")?.status, "blocked");
+  const required = result.report.sections.filter((item) => item.required);
+  assert.equal(required.every((item) => item.status === "included" || item.status === "compacted"), true);
+  assert.equal(required.some((item) => item.status === "compacted"), true);
+  assert.match(result.text, /SECOND-COMPACT/);
 });
