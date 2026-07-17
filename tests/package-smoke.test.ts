@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-test("the packed extension imports, registers, and contains the 1.3 release surface", async () => {
+test("the packed extension imports, registers, and contains the 1.4 release surface", async () => {
   const temp = mkdtempSync(join(tmpdir(), "novel-forge-pack-"));
   try {
     const json = execFileSync("npm", ["pack", "--json", "--pack-destination", temp], { cwd: process.cwd() }).toString();
@@ -25,7 +25,7 @@ test("the packed extension imports, registers, and contains the 1.3 release surf
     assert.ok(commands.includes("novel-readers"));
     assert.ok(commands.includes("novel-adopt"));
     assert.deepEqual(tools, ["novel_apply_event"]);
-    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.3.0");
+    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.4.0");
     for (const asset of [
       "README.md", "SKILL.md", "CHANGELOG.md", "RELEASE.md",
       "wizard/index.html", "wizard/app.js", "wizard/styles.css",
