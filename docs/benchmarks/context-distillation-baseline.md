@@ -2,6 +2,8 @@
 
 Date: 2026-07-16
 
+Status: implementation complete; exact-head qualification in progress.
+
 ## Acceptance criteria
 
 The final pull-request head must demonstrate all of the following on Node 22.19.0 and Node 24:
@@ -15,7 +17,7 @@ The final pull-request head must demonstrate all of the following on Node 22.19.
 - exact cache hits reproduce identical context text;
 - relevant source changes invalidate the cache;
 - unrelated files do not invalidate the cache unless included in the relevant source set;
-- corrupt cache entries are ignored and rebuilt;
+- corrupt or tampered cache entries are ignored and rebuilt;
 - existing graph-blocking, voice originality, packet validation, research readiness, public-review exclusion, and writer-gate behavior remains unchanged.
 
 ## Evidence boundary
