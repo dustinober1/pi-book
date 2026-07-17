@@ -63,3 +63,6 @@ jobs:
             typecheck.log
             test.log
             constrained-runtime-benchmark.json
+            src/application/stage-specs/index.ts
+            src/application/run.ts
+            src/application/prompts.ts
