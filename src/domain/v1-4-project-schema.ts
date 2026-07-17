@@ -1,14 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { ProjectSchema, type ProjectState } from "./schemas.js";
-import type { RuntimeProfileId } from "./runtime-profile.js";
+import { RuntimeProfileIdSchema, type RuntimeProfileId } from "./runtime-profile.js";
 import type { AutomationRunState } from "./v1-4-schemas.js";
 
 export const RuntimeProjectConfigSchema = Type.Object({
-  profile: Type.Optional(Type.Union([
-    Type.Literal("tiny-local"),
-    Type.Literal("local"),
-    Type.Literal("full"),
-  ])),
+  profile: Type.Optional(RuntimeProfileIdSchema),
   telemetry: Type.Optional(Type.Boolean()),
 }, { additionalProperties: false });
 
