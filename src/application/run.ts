@@ -218,7 +218,7 @@ export function directDraftDecision(root: string, chapter?: number): RunDecision
   try { assertOperationAllowed(project, "draft"); } catch (error) { return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: error instanceof Error ? error.message : String(error) }); }
   const status = getProjectStatus(root);
   if (status.blockers.length) return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." });
-  const context = buildChapterContext(root, chapter, runtimeProfile.maxContextChars, runtimeProfile.graphDepth);
+  const context = buildChapterContext(root, chapter, runtimeProfile.maxContextChars, runtimeProfile.graphDepth, runtimeProfile.id);
   return runtimeDecision(runtimeProfile, { action: "draft", prompt: draftPrompt(context, runtimeProfile), message: `Queued Chapter ${context.packet.chapter}.` });
 }
 
