@@ -26,8 +26,8 @@ export interface ChapterContextReport {
   included: string[];
   excluded: string[];
   graph: { maxDepth: 1 | 2; selections: StoryGraphSelection[]; blocked: StoryGraphBlockedSelection[] };
-  build: ContextBuildReport;
-  cache: { status: "hit" | "miss" | "write-failed"; key: string };
+  build?: ContextBuildReport;
+  cache?: { status: "hit" | "miss" | "write-failed"; key: string };
 }
 
 export interface ChapterContext { root: string; bookId: string; packet: ChapterPacket; text: string; report: ChapterContextReport }
@@ -141,7 +141,7 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
   const cached = readContextCache(root, key);
   let text: string;
   let build: ContextBuildReport;
-  let cacheStatus: ChapterContextReport["cache"]["status"] = "miss";
+  let cacheStatus: "hit" | "miss" | "write-failed" = "miss";
   if (cached && isBuildReport(cached.report)) {
     text = cached.text;
     build = cached.report;
