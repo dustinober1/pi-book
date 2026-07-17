@@ -21,7 +21,7 @@ test("prompt budget errors expose stage profile counts and largest sections", ()
   assert.throws(
     () => compilePrompt(spec, constrained),
     (error: unknown) => {
-      assert.ok(error instanceof PromptBudgetError);
+      if (!(error instanceof PromptBudgetError)) return false;
       assert.equal(error.stageId, "oversized-stage");
       assert.equal(error.profileId, "local");
       assert.equal(error.maxChars, 120);
