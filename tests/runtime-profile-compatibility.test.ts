@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { creativeProjectStateHash } from "../src/application/project-hash.js";
+import { resumePersistentRun } from "../src/application/run.js";
 import { resolveRuntimeProfile } from "../src/application/runtime-profile-resolver.js";
 import { ProjectV14Schema, type ProjectStateV14 } from "../src/domain/v1-4-project-schema.js";
 import { parseYaml, stringifyYaml } from "../src/infrastructure/yaml.js";
@@ -84,4 +86,57 @@ test("active runs created before runtimeProfile existed remain readable", () => 
     };
     assert.doesNotThrow(() => parseYaml(stringifyYaml(project), ProjectV14Schema, "PROJECT.yaml"));
   });
+});
+
+test("invalid runtime profiles inside active runs fail schema validation", () => {
+  withProject((root) => {
+    const path = join(root, "PROJECT.yaml");
+    const project = parseYaml<Record<string, any>>(readFileSync(path, "utf8"), undefined, "PROJECT.yaml");
+    project.automation.active_run = {
+      id: "RUN-001",
+      status: "paused",
+      target: "midpoint-review",
+      startedStage: project.current_stage,
+      currentAction: "draft-chapter:1",
+      requestedMaxChapters: 3,
+      runtimeProfile: "small",
+      completedEventKeys: [],
+      lastProjectHash: "creative-hash",
+      refillCount: 0,
+      retryCounts: {},
+      stopReason: null,
+      startedAt: "2026-07-16T12:00:00Z",
+      updatedAt: "2026-07-16T12:01:00Z",
+    };
+    writeFileSync(path, stringifyYaml(project), "utf8");
+    assert.throws(() => readProject(root), /runtimeProfile|schema validation/i);
+  });
+});
+
+test("legacy active runs without a stored profile resume with compatibility full", () => {
+  withProject((root) => {
+    const path = join(root, "PROJECT.yaml");
+    const project = readProject(root);
+    project.runtime = { profile: "tiny-local", telemetry: true };
+    project.automation.active_run = {
+      id: "RUN-001",
+      status: "paused",
+      target: "next-milestone",
+      startedStage: project.current_stage,
+      currentAction: "voice",
+      requestedMaxChapters: 3,
+      completedEventKeys: [],
+      lastProjectHash: creativeProjectStateHash(root),
+      refillCount: 0,
+      retryCounts: {},
+      stopReason: null,
+      startedAt: "2026-07-16T12:00:00Z",
+      updatedAt: "2026-07-16T12:01:00Z",
+    };
+    writeFileSync(path, stringifyYaml(project), "utf8");
+
+    const decision = resumePersistentRun(root, "2026-07-16T12:02:00Z");
+    assert.equal(decision.runtimeProfile, "full");
+    assert.match(decision.message, /Runtime profile: full/);
+  }, "tiny-local");
 });
