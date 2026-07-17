@@ -69,7 +69,9 @@ function setup(stage: "drafting" | "revision", runtimeProfile: RuntimeProfileId)
     }],
   }), "utf8");
   writeFileSync(join(root, "books", "book-01", "plot-grid.yaml"), stringifyYaml(completePlot()), "utf8");
-  writeFileSync(join(root, "books", "book-01", "chapter-queue.yaml"), stringifyYaml(queueFixture()), "utf8");
+  const queue = queueFixture();
+  for (const packet of queue.packets) packet.required_research = [];
+  writeFileSync(join(root, "books", "book-01", "chapter-queue.yaml"), stringifyYaml(queue), "utf8");
   writeFileSync(join(root, "books", "book-01", "remarkability.yaml"), stringifyYaml({
     schema_version: "1.0.0",
     safe_obvious_version: "A routine archive breach.",
