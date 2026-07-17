@@ -17,3 +17,17 @@ test("run option parsing rejects unsafe chapter counts and unknown stop targets"
     stopOnWarning: false,
   });
 });
+
+test("run option parsing accepts only known runtime profiles", () => {
+  assert.deepEqual(parseRunOptions("--runtime-profile tiny-local"), {
+    runtimeProfile: "tiny-local",
+    resume: false,
+    pause: false,
+    cancel: false,
+    noProse: false,
+    reviewOnly: false,
+    stopOnWarning: false,
+  });
+  assert.throws(() => parseRunOptions("--runtime-profile small"), /Unknown runtime profile: small/);
+  assert.throws(() => parseRunOptions("--resume --runtime-profile local"), /cannot be combined|run-control/i);
+});
