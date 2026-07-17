@@ -1,6 +1,7 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import type { ProfileId, ProjectType, Stage } from "../domain/schemas.js";
+import { parseRuntimeProfileId } from "../domain/runtime-profile.js";
 import { listProfiles } from "../profiles/index.js";
 import { initializeProject, requireProjectRoot, readProject } from "../project/store.js";
 import { addBook } from "../project/add-book.js";
@@ -239,7 +240,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
   pi.registerCommand("novel-wizard", { description: "Open the temporary local browser wizard for adoption, readers, packaging, next-book, research, or premise work", getArgumentCompletions: (prefix) => { const filtered = ["adoption", "readers", "packaging", "next-book", "research", "premise"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const requested = tokens(args)[0] as WizardWorkflow | undefined; if (requested && !["adoption", "readers", "packaging", "next-book", "research", "premise"].includes(requested)) throw new Error("Wizard workflow must be adoption, readers, packaging, next-book, research, or premise."); await openWizard(root, context, requested); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-start", { description: "Create a project from an idea or authorized brief and optionally auto-advance to the next writer gate", handler: async (args, context) => {
     const supplied = tokens(args);
-    const flagsWithValues = new Set(["--profile", "--type", "--target-words", "--brief", "--auto-to"]);
+    const flagsWithValues = new Set(["--profile", "--type", "--target-words", "--brief", "--auto-to", "--runtime-profile"]);
     const positional: string[] = [];
     for (let index = 0; index < supplied.length; index += 1) {
       const item = supplied[index]!;
@@ -254,7 +255,15 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     if (!typeInput) return;
     const targetInput = flagValue(supplied, "--target-words") || await context.ui.input("Book 1 target words:", profileInput === "romantasy" ? "110000" : "100000");
     const targetWords = Number.parseInt(targetInput ?? "100000", 10) || 100000;
-    const root = initializeProject(context.cwd, { projectName, projectType: typeInput, profile: profileInput, targetWords });
+    const rawRuntimeProfile = flagValue(supplied, "--runtime-profile");
+    const runtimeProfile = rawRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
+    const root = initializeProject(context.cwd, {
+      projectName,
+      projectType: typeInput,
+      profile: profileInput,
+      targetWords,
+      ...(runtimeProfile ? { runtimeProfile } : {}),
+    });
     const briefPath = flagValue(supplied, "--brief");
     if (briefPath) bootstrapProjectFromBrief(root, briefPath, { profile: profileInput, targetWords });
     refreshGuidance(root, { lastAction: briefPath ? "Initialized project from authorized brief" : "Initialized project" });
@@ -266,7 +275,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
   } });
   pi.registerCommand("novel-status", { description: "Show Novel Forge decisions, blockers, warnings, progress, and next action", handler: async (_args, context) => { try { const root = requireProjectRoot(context.cwd); context.ui.notify(refreshGuidance(root).markdown, "info"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-plan", { description: "Build or repair voice, series, or active-book architecture", getArgumentCompletions: (prefix) => { const filtered = ["voice", "series", "book"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const items = tokens(args); if (items.includes("--add-book")) { if (items.includes("--force")) { const target = Number.parseInt(flagValue(items, "--target-words") ?? "100000", 10) || 100000; const bookId = addBook(root, target, { force: true }); context.ui.notify(`Force-created ${bookId} and made it active. Run /novel.`, "info"); } else await openWizard(root, context, "next-book"); return; } const prompt = planPromptFor(root, items[0] ?? ""); if (!context.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" }); else pi.sendUserMessage(prompt); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
-  pi.registerCommand("novel-run", { description: "Start, resume, pause, or cancel persistent safe work until a gate, blocker, or requested limit", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const options = parseRunOptions(args); const decision = options.resume ? resumePersistentRun(root) : options.pause ? pausePersistentRun(root) : options.cancel ? cancelPersistentRun(root) : (options.until || options.maxChapters) ? beginPersistentRun(root, { target: options.until ?? "next-milestone", maxChapters: options.maxChapters ?? readProject(root).automation.max_chapters_per_run }) : decideNextRun(root, options); sendDecision(pi, context, decision); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-run", { description: "Start, resume, pause, or cancel persistent safe work until a gate, blocker, or requested limit", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const options = parseRunOptions(args); const decision = options.resume ? resumePersistentRun(root) : options.pause ? pausePersistentRun(root) : options.cancel ? cancelPersistentRun(root) : (options.until || options.maxChapters) ? beginPersistentRun(root, { target: options.until ?? "next-milestone", maxChapters: options.maxChapters ?? readProject(root).automation.max_chapters_per_run, ...(options.runtimeProfile ? { runtimeProfile: options.runtimeProfile } : {}) }) : decideNextRun(root, options); sendDecision(pi, context, decision); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-draft", { description: "Draft the next approved chapter packet with bounded context", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const chapter = Number.parseInt(tokens(args)[0] ?? "", 10); sendDecision(pi, context, directDraftDecision(root, Number.isFinite(chapter) ? chapter : undefined)); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-review", { description: "Review a chapter, act, manuscript, or series through profile-specific lanes", getArgumentCompletions: (prefix) => { const filtered = ["chapter", "act", "manuscript", "series"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const scope = tokens(args)[0] ?? "act"; assertReviewAllowed(readProject(root), scope); sendDecision(pi, context, { action: "review", prompt: reviewPrompt(root, scope), message: `Queued ${scope} review.` }); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-readers", { description: "Open the guided reader-kit and CSV evidence wizard", handler: async (_args, context) => { try { await guidedReaders(requireProjectRoot(context.cwd), context); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });

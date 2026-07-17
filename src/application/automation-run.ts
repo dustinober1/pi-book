@@ -1,3 +1,4 @@
+import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import type { AutomationRunState } from "../domain/v1-4-schemas.js";
 import type { EventRejectionDetail } from "./event-rejection.js";
@@ -7,6 +8,7 @@ export interface StartAutomationRunInput {
   target: string;
   currentAction: string;
   requestedMaxChapters: number;
+  runtimeProfile?: RuntimeProfileId;
   creativeHash: string;
   startedAt: string;
 }
@@ -51,6 +53,7 @@ export function startAutomationRun(project: ProjectStateV14, input: StartAutomat
     startedStage: project.current_stage,
     currentAction,
     requestedMaxChapters: input.requestedMaxChapters,
+    ...(input.runtimeProfile ? { runtimeProfile: input.runtimeProfile } : {}),
     completedEventKeys: [],
     lastProjectHash: creativeHash,
     refillCount: 0,

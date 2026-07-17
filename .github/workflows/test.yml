@@ -43,6 +43,17 @@ jobs:
           echo "code=$code" >> "$GITHUB_OUTPUT"
           cat test.log
           exit 0
+      - name: Enforce TypeScript result
+        if: steps.typecheck.outputs.code != '0'
+        run: exit 1
+      - name: Enforce test result
+        if: steps.typecheck.outputs.code == '0' && steps.tests.outputs.code != '0'
+        run: exit 1
+      - run: npm run eval
+      - name: Run constrained runtime benchmark
+        run: npm run --silent benchmark:constrained-runtime > constrained-runtime-benchmark.json
+      - run: npm run verify:release
+      - run: npm pack --dry-run
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -51,12 +62,4 @@ jobs:
           path: |
             typecheck.log
             test.log
-      - name: Enforce TypeScript result
-        if: steps.typecheck.outputs.code != '0'
-        run: exit 1
-      - name: Enforce test result
-        if: steps.typecheck.outputs.code == '0' && steps.tests.outputs.code != '0'
-        run: exit 1
-      - run: npm run eval
-      - run: npm run verify:release
-      - run: npm pack --dry-run
+            constrained-runtime-benchmark.json

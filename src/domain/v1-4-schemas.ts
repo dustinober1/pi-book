@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { RuntimeProfileIdSchema } from "./runtime-profile.js";
 
 export const AssumptionStatusSchema = Type.Union([
   Type.Literal("inferred"),
@@ -96,6 +97,7 @@ export const AutomationRunStateSchema = Type.Object({
   startedStage: Type.String({ minLength: 1 }),
   currentAction: Type.String({ minLength: 1 }),
   requestedMaxChapters: Type.Integer({ minimum: 1, maximum: 10 }),
+  runtimeProfile: Type.Optional(RuntimeProfileIdSchema),
   completedEventKeys: Type.Array(Type.String({ minLength: 1 })),
   lastProjectHash: Type.String({ minLength: 1 }),
   refillCount: Type.Integer({ minimum: 0 }),

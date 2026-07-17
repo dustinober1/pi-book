@@ -1,4 +1,5 @@
 import type { RunOptions } from "../application/run.js";
+import { parseRuntimeProfileId } from "../domain/runtime-profile.js";
 
 export const allowedUntilTargets = ["voice-approval", "book-plan-approval", "first-chapter-approval", "act-1-review", "midpoint-review", "pre-final-act-review", "manuscript-review", "next-milestone"] as const;
 export function tokens(args: string): string[] { return args.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) => token.replace(/^["']|["']$/g, "")) ?? []; }
@@ -8,12 +9,15 @@ export function parseRunOptions(args: string): RunOptions {
   const approve = flagValue(items, "--approve");
   const until = flagValue(items, "--until");
   const rawMax = flagValue(items, "--max-chapters");
+  const hasRuntimeProfile = items.includes("--runtime-profile");
+  const rawRuntimeProfile = flagValue(items, "--runtime-profile");
+  const runtimeProfile = hasRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
   const resume = items.includes("--resume");
   const pause = items.includes("--pause");
   const cancel = items.includes("--cancel");
   if ([resume, pause, cancel].filter(Boolean).length > 1) throw new Error("Use only one of --resume, --pause, or --cancel; these controls are mutually exclusive.");
-  if ((resume || pause || cancel) && (approve || until || rawMax || items.includes("--no-prose") || items.includes("--review-only"))) {
-    throw new Error("Run-control flags cannot be combined with approval, target, chapter, no-prose, or review-only options.");
+  if ((resume || pause || cancel) && (approve || until || rawMax || hasRuntimeProfile || items.includes("--no-prose") || items.includes("--review-only"))) {
+    throw new Error("Run-control flags cannot be combined with approval, target, chapter, runtime-profile, no-prose, or review-only options.");
   }
   if (until && !allowedUntilTargets.includes(until as never)) throw new Error(`Unknown --until target: ${until}. Allowed: ${allowedUntilTargets.join(", ")}.`);
   let maxChapters: number | undefined;
@@ -22,6 +26,7 @@ export function parseRunOptions(args: string): RunOptions {
     ...(approve ? { approve } : {}),
     ...(until ? { until } : {}),
     ...(maxChapters ? { maxChapters } : {}),
+    ...(runtimeProfile ? { runtimeProfile } : {}),
     resume,
     pause,
     cancel,
