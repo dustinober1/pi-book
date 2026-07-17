@@ -19,6 +19,7 @@ export interface ContextCachePayload {
 interface ContextCacheEnvelope {
   schemaVersion: "1.0.0";
   key: string;
+  payloadHash: string;
   payload: ContextCachePayload;
 }
 
@@ -32,8 +33,12 @@ function normalizedInput(input: ContextCacheKeyInput): object {
   };
 }
 
+function hashJson(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
 export function contextCacheKey(input: ContextCacheKeyInput): string {
-  return createHash("sha256").update(JSON.stringify(normalizedInput(input))).digest("hex");
+  return hashJson(normalizedInput(input));
 }
 
 function cachePath(root: string, key: string): string {
@@ -44,7 +49,7 @@ export function writeContextCache(root: string, key: string, payload: ContextCac
   const path = cachePath(root, key);
   mkdirSync(dirname(path), { recursive: true });
   const temporary = `${path}.${process.pid}.${Date.now()}.tmp`;
-  const envelope: ContextCacheEnvelope = { schemaVersion: "1.0.0", key, payload };
+  const envelope: ContextCacheEnvelope = { schemaVersion: "1.0.0", key, payloadHash: hashJson(payload), payload };
   try {
     writeFileSync(temporary, `${JSON.stringify(envelope)}\n`, "utf8");
     renameSync(temporary, path);
@@ -58,7 +63,8 @@ export function readContextCache(root: string, key: string): ContextCachePayload
   if (!existsSync(path)) return null;
   try {
     const parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<ContextCacheEnvelope>;
-    if (parsed.schemaVersion !== "1.0.0" || parsed.key !== key || !parsed.payload || typeof parsed.payload.text !== "string") return null;
+    if (parsed.schemaVersion !== "1.0.0" || parsed.key !== key || !parsed.payload || typeof parsed.payload.text !== "string" || typeof parsed.payloadHash !== "string") return null;
+    if (hashJson(parsed.payload) !== parsed.payloadHash) return null;
     return parsed.payload;
   } catch {
     return null;
