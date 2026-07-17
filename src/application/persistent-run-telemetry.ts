@@ -3,7 +3,7 @@ import { storeRunReport } from "../infrastructure/run-report-store.js";
 import { createRunReport, resolveTelemetryEnabled } from "./run-telemetry.js";
 
 export interface PreparedPersistentRunTelemetry {
-  telemetryEnabled?: boolean;
+  telemetryEnabled?: boolean | undefined;
   runId: string;
   runtimeProfile: RuntimeProfileId;
   promptChars: number;
