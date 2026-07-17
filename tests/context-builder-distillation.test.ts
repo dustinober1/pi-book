@@ -39,7 +39,7 @@ test("tiny-local chapter context reports distillation and reuses exact cache pro
     assert.equal(first.report.build.schemaVersion, "1.0.0");
     assert.equal(first.report.build.profileId, "tiny-local");
     assert.equal(first.report.cache.status, "miss");
-    assert.ok(first.report.build.sections.some((section) => section.status === "compacted" || section.status === "omitted"));
+    assert.equal(first.report.build.sections.filter((section) => section.required).every((section) => section.status === "included" || section.status === "compacted"), true);
 
     const second = buildChapterContext(root, 2, 12_000, 1, "tiny-local");
     assert.ok(second.report.cache);
