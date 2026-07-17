@@ -42,6 +42,10 @@ function runtimeFor(project: ProjectStateV14, explicit?: RuntimeProfileId): Runt
   return resolveRuntimeProfile({ explicit, project: project.runtime?.profile });
 }
 
+function runtimeForActiveRun(project: ProjectStateV14): RuntimeProfile {
+  return resolveRuntimeProfile({ explicit: project.automation.active_run?.runtimeProfile ?? "full" });
+}
+
 function runtimeDecision(profile: RuntimeProfile, decision: Omit<RunDecision, "runtimeProfile">): RunDecision {
   return {
     ...decision,
@@ -162,7 +166,7 @@ export function beginPersistentRun(root: string, options: BeginPersistentRunOpti
 
 export function pausePersistentRun(root: string, now = new Date().toISOString()): RunDecision {
   const project = projectV14(root);
-  const runtimeProfile = runtimeFor(project, project.automation.active_run?.runtimeProfile);
+  const runtimeProfile = runtimeForActiveRun(project);
   const updated = pauseAutomationRun(project, now);
   if (updated !== project) persistRunProject(root, updated, `pause automation ${updated.automation.active_run!.id}`, `Paused automation run ${updated.automation.active_run!.id}`);
   return runtimeDecision(runtimeProfile, { action: "paused-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is paused.` });
@@ -170,7 +174,7 @@ export function pausePersistentRun(root: string, now = new Date().toISOString())
 
 export function cancelPersistentRun(root: string, now = new Date().toISOString()): RunDecision {
   const project = projectV14(root);
-  const runtimeProfile = runtimeFor(project, project.automation.active_run?.runtimeProfile);
+  const runtimeProfile = runtimeForActiveRun(project);
   const updated = cancelAutomationRun(project, now);
   if (updated !== project) persistRunProject(root, updated, `cancel automation ${updated.automation.active_run!.id}`, `Cancelled automation run ${updated.automation.active_run!.id}`);
   return runtimeDecision(runtimeProfile, { action: "cancelled-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is cancelled.` });
@@ -178,7 +182,7 @@ export function cancelPersistentRun(root: string, now = new Date().toISOString()
 
 export function resumePersistentRun(root: string, now = new Date().toISOString()): RunDecision {
   const project = projectV14(root);
-  const runtimeProfile = runtimeFor(project, project.automation.active_run?.runtimeProfile);
+  const runtimeProfile = runtimeForActiveRun(project);
   const updated = resumeAutomationRun(project, project.current_stage, creativeProjectStateHash(root), now);
   if (updated.automation.active_run?.status === "stopped") {
     persistRunProject(root, updated, `stop automation ${updated.automation.active_run.id}`, `Stopped automation run ${updated.automation.active_run.id}`);
