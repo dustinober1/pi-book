@@ -88,7 +88,7 @@ export function voicePlanStageSpec(input: VoicePlanStageInput): StageSpec {
     ],
     avoid: [
       "Never copy signature phrasing, distinctive imagery, character templates, or imitation instructions into the readable profile, guardrails, experiment prose, or drafting context.",
-      "Never label a calibration variant with an author or book.",
+      "Never label a variant with an author or book.",
       "Never include a raw influence name or title inside source, variants, or baseline.",
       "Never silently rewrite assumption history or decision history.",
     ],
@@ -250,7 +250,13 @@ export function draftStageSpec(input: DraftStageInput): StageSpec {
     avoid: ["Do not chase AI-detector patterns.", "Do not mechanically restate the hook.", "Do not manufacture quotable lines.", "Do not pad to target length.", "Do not turn audit metrics into prose quotas.", "Do not submit PROJECT.yaml, BOOK.yaml, STATUS.md, or HANDOFF.md; the tool derives them."],
     outputs: [`complete Chapter ${input.chapter} Markdown`, "only justified continuity, story-thread, or ticket deltas"],
     validation: ["The chapter satisfies its approved packet and context.", "Canon and reveal order remain intact.", "No excluded context is invented."],
-    toolRules: eventToolRules({ eventType: "draft-chapter", expectedStage: "drafting", projectHash: input.projectHash, extra: `Pass chapter: ${input.chapter}.` }),
+    toolRules: [
+      "Never write project files directly; apply one guarded novel_apply_event.",
+      `Call novel_apply_event with event_type draft-chapter, expected_stage drafting, expected_project_hash ${input.projectHash}, chapter ${input.chapter}, and only allowed changed files.`,
+      "Tool validation of schemas, references, stage, file allowlists, stale state, and the complete commit is authoritative.",
+      "Correct and retry once only for schema-validation or reference-validation.",
+      "Reload and rebuild for stale-stage or stale-project-hash; stop and surface every other rejection.",
+    ],
   };
 }
 
@@ -333,7 +339,7 @@ export function readerTestStageSpec(input: ReaderTestStageInput): StageSpec {
     objective: `Prepare or update books/${input.bookId}/reader-experiments.yaml for ${input.scope}.`,
     inputs: [`Project root: ${input.root}`, `Active book: ${input.bookId}`, `Reader-test scope or action: ${input.scope}`, `Existing artifact:\n${input.existingArtifact}`],
     must: ["Every response must use source: human.", "De-identify readers with stable IDs and preserve useful verbatim language.", "For a new experiment, predeclare the exact target-reader segment, sample path or generated reader kit, variant, blind protocol, minimum_reader_count, and delayed session.", "Collect immediate continuation, purchase intent, confusion, trust breaks, and lines that worked.", "Collect delayed recall 24–72 hours later without reopening the sample.", "Calculate aggregate rates directly from recorded human rows.", "A validated verdict must meet the predeclared minimum in both immediate and delayed sessions.", "Keep the verdict blocked or insufficient-signal when sample size or delayed evidence is missing.", "Segment results instead of averaging target and wrong-reader reactions.", "Create revision tickets only for concrete, repeated, evidence-backed failures."],
-    avoid: ["Never simulate readers.", "Never import public-review observations.", "Never convert model or persona reactions into human evidence.", "Never mark validation complete without actual responses.", "Do not rewrite manuscript prose in this event."],
+    avoid: ["Never simulate readers.", "This workflow must never import public-review observations.", "Never convert model or persona reactions into human evidence.", "Never mark validation complete without actual responses.", "Do not rewrite manuscript prose in this event."],
     outputs: [`books/${input.bookId}/reader-experiments.yaml`, "reader-kit files when preparing a kit", "only evidence-backed revision tickets"],
     validation: ["All responses have source: human.", "Validated verdicts meet both immediate and delayed minimums.", "Target and wrong-reader segments remain separate.", "No public-review or simulated evidence is present."],
     toolRules: eventToolRules({ eventType: "reader-test", expectedStage: input.expectedStage, projectHash: input.projectHash, extra: `Pass scope: ${input.scope}.` }),

@@ -10,7 +10,7 @@ import { getProfile } from "../profiles/index.js";
 import { readBook, readProject } from "../project/store.js";
 import { regressionChecklist } from "../review/review.js";
 import { packetWindowDecision } from "./packet-window.js";
-import { premiseLabFindings, selectedPremiseContext } from "./premise-lab.js";
+import { selectedPremiseContext } from "./premise-lab.js";
 import { intakePromptContext } from "./intake.js";
 import { projectStateHash } from "./events.js";
 import { compilePrompt } from "./prompt-compiler.js";

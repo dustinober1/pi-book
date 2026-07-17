@@ -107,35 +107,35 @@ export function decideNextRun(root: string, options: RunOptions = {}): RunDecisi
   if (status.blockers.length) return finish({ action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." });
   if (options.stopOnWarning && status.warnings.length) return finish({ action: "warning-stop", prompt: null, message: status.warnings[0] ?? "Project warning." });
   if (options.reviewOnly) {
-    if (project.current_stage === "act-review") return finish({ action: "review", prompt: reviewPrompt(root, "act"), message: "Queued act review." });
-    if (project.current_stage === "manuscript-review") return finish({ action: "review", prompt: reviewPrompt(root, "manuscript"), message: "Queued manuscript review." });
+    if (project.current_stage === "act-review") return finish({ action: "review", prompt: reviewPrompt(root, "act", runtimeProfile), message: "Queued act review." });
+    if (project.current_stage === "manuscript-review") return finish({ action: "review", prompt: reviewPrompt(root, "manuscript", runtimeProfile), message: "Queued manuscript review." });
     return finish({ action: "blocked", prompt: null, message: `Review-only mode is not available during ${project.current_stage}.` });
   }
   switch (project.current_stage) {
-    case "voice-intake": return finish({ action: "voice", prompt: voicePlanPrompt(root), message: "Queued voice intake." });
-    case "series-planning": return finish({ action: "series-plan", prompt: seriesPlanPrompt(root), message: "Queued series plan." });
-    case "book-planning": return finish({ action: "book-plan", prompt: bookPlanPrompt(root), message: "Queued book plan." });
-    case "chapter-queue": return finish({ action: "queue", prompt: queuePrompt(root), message: "Queued chapter packets." });
+    case "voice-intake": return finish({ action: "voice", prompt: voicePlanPrompt(root, runtimeProfile), message: "Queued voice intake." });
+    case "series-planning": return finish({ action: "series-plan", prompt: seriesPlanPrompt(root, runtimeProfile), message: "Queued series plan." });
+    case "book-planning": return finish({ action: "book-plan", prompt: bookPlanPrompt(root, runtimeProfile), message: "Queued book plan." });
+    case "chapter-queue": return finish({ action: "queue", prompt: queuePrompt(root, runtimeProfile), message: "Queued chapter packets." });
     case "drafting": {
-      if (options.noProse) return finish({ action: "queue", prompt: queuePrompt(root), message: "No-prose mode queued packet maintenance." });
+      if (options.noProse) return finish({ action: "queue", prompt: queuePrompt(root, runtimeProfile), message: "No-prose mode queued packet maintenance." });
       const limits = applyRuntimeLimits({
         profile: runtimeProfile,
         projectMaxChapters: project.automation.max_chapters_per_run,
         ...(options.maxChapters !== undefined ? { requestedMaxChapters: options.maxChapters } : {}),
       });
-      return finish({ action: "bounded-draft", prompt: automationDraftPrompt(root, limits.maxChapters, options.until), message: `Queued a bounded drafting run of up to ${limits.maxChapters} chapter(s).` });
+      return finish({ action: "bounded-draft", prompt: automationDraftPrompt(root, limits.maxChapters, options.until, runtimeProfile), message: `Queued a bounded drafting run of up to ${limits.maxChapters} chapter(s).` });
     }
-    case "act-review": return finish({ action: "review", prompt: reviewPrompt(root, "act"), message: "Queued act review." });
+    case "act-review": return finish({ action: "review", prompt: reviewPrompt(root, "act", runtimeProfile), message: "Queued act review." });
     case "revision": {
       const tickets = openBlockingTickets(readTickets(root));
       const ticketLimit = runtimeProfile.maxRevisionTickets ?? 3;
-      return finish({ action: "revise", prompt: revisionPrompt(root, tickets.slice(0, ticketLimit)), message: `Queued ${Math.min(ticketLimit, tickets.length)} blocking ticket(s).` });
+      return finish({ action: "revise", prompt: revisionPrompt(root, tickets.slice(0, ticketLimit), runtimeProfile), message: `Queued ${Math.min(ticketLimit, tickets.length)} blocking ticket(s).` });
     }
-    case "manuscript-review": return finish({ action: "review", prompt: reviewPrompt(root, "manuscript"), message: "Queued manuscript review." });
-    case "canon-lock": return finish({ action: "canon-lock", prompt: canonLockPrompt(root), message: "Queued canon lock." });
+    case "manuscript-review": return finish({ action: "review", prompt: reviewPrompt(root, "manuscript", runtimeProfile), message: "Queued manuscript review." });
+    case "canon-lock": return finish({ action: "canon-lock", prompt: canonLockPrompt(root, runtimeProfile), message: "Queued canon lock." });
     case "packaging": {
       const compiled = compileActiveBook(root);
-      return finish({ action: "package", prompt: packagePrompt(root), message: `Compiled ${compiled.chapters} chapters (${compiled.words} words) and queued packaging.` });
+      return finish({ action: "package", prompt: packagePrompt(root, runtimeProfile), message: `Compiled ${compiled.chapters} chapters (${compiled.words} words) and queued packaging.` });
     }
     case "complete": return finish({ action: "complete", prompt: null, message: "Project is complete." });
   }
@@ -205,7 +205,7 @@ export function resumePersistentRun(root: string, now = new Date().toISOString()
     const path = join(root, "books", book.book_id, "premise-lab.yaml");
     const text = readText(path);
     const lab = text ? parseYaml<PremiseLab>(text, PremiseLabSchema, path) : null;
-    if (lab && lab.variants.length === 0) decision = runtimeDecision(runtimeProfile, { action: "premise-plan", prompt: premisePlanPrompt(root), message: "Queued premise comparison before book architecture." });
+    if (lab && lab.variants.length === 0) decision = runtimeDecision(runtimeProfile, { action: "premise-plan", prompt: premisePlanPrompt(root, runtimeProfile), message: "Queued premise comparison before book architecture." });
     else if (lab && (!lab.selected_variant_id || !lab.selection_decision_id)) decision = runtimeDecision(runtimeProfile, { action: "premise-selection", prompt: null, message: "Automation stopped so the writer can select a premise variant." });
     else decision = decideNextRun(root, { until: activeRun.target, maxChapters: activeRun.requestedMaxChapters, runtimeProfile: runtimeProfile.id });
   } else decision = decideNextRun(root, { until: activeRun.target, maxChapters: activeRun.requestedMaxChapters, runtimeProfile: runtimeProfile.id });
@@ -219,7 +219,7 @@ export function directDraftDecision(root: string, chapter?: number): RunDecision
   const status = getProjectStatus(root);
   if (status.blockers.length) return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." });
   const context = buildChapterContext(root, chapter, runtimeProfile.maxContextChars, runtimeProfile.graphDepth);
-  return runtimeDecision(runtimeProfile, { action: "draft", prompt: draftPrompt(context), message: `Queued Chapter ${context.packet.chapter}.` });
+  return runtimeDecision(runtimeProfile, { action: "draft", prompt: draftPrompt(context, runtimeProfile), message: `Queued Chapter ${context.packet.chapter}.` });
 }
 
 export function directRevisionDecision(root: string, ticketIds: string[] = []): RunDecision {
@@ -230,7 +230,7 @@ export function directRevisionDecision(root: string, ticketIds: string[] = []): 
   const ticketLimit = runtimeProfile.maxRevisionTickets ?? 3;
   const selected = (ticketIds.length ? tickets.filter((ticket) => ticketIds.includes(ticket.id)) : tickets).slice(0, ticketLimit);
   if (!selected.length) return runtimeDecision(runtimeProfile, { action: "no-tickets", prompt: null, message: "No open tickets matched the request." });
-  return runtimeDecision(runtimeProfile, { action: "revise", prompt: revisionPrompt(root, selected), message: `Queued revision for ${selected.map((ticket) => ticket.id).join(", ")}.` });
+  return runtimeDecision(runtimeProfile, { action: "revise", prompt: revisionPrompt(root, selected, runtimeProfile), message: `Queued revision for ${selected.map((ticket) => ticket.id).join(", ")}.` });
 }
 
 export function bookPath(root: string): string { return join(root, "books", readBook(root).book_id); }
