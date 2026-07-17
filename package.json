@@ -33,6 +33,7 @@
     "eval": "node --import tsx scripts/evaluate-fixtures.ts",
     "benchmark:constrained-runtime": "node --import tsx scripts/benchmark-constrained-runtime.ts",
     "benchmark:prompts": "node --import tsx scripts/benchmark-prompts.ts",
+    "benchmark:context": "node --import tsx scripts/benchmark-context-distillation.ts",
     "eval:journeys": "node --import tsx --test tests/author-journey.test.ts tests/e2e/author-velocity-baseline.test.ts",
     "verify:release": "node --import tsx scripts/verify-v1-4-release.ts",
     "test:release": "node --import tsx --test tests/v1-4-release-checklist.test.ts tests/e2e/v1-4-release-journey.test.ts tests/package-smoke.test.ts tests/e2e/packed-clean-start.test.ts"
