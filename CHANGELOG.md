@@ -6,6 +6,7 @@
 
 - Declarative stage specifications shared by standard and compact prompt renderers.
 - Deterministic prompt-compiler benchmarks, snapshots, normative-parity checks, and hard budget diagnostics.
+- `/novel-organize` for read-only mixed-repository scanning, provisional source classification, in-place project initialization, hash-verified organization, confirmed archival, manifests, and rollback-safe moves.
 
 ### Changed
 

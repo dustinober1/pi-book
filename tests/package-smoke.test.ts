@@ -19,11 +19,12 @@ test("the packed extension imports, registers, and contains the 1.4 release surf
     const commands: string[] = [];
     const tools: string[] = [];
     module.default({ registerCommand(name: string) { commands.push(name); }, registerTool(tool: { name: string }) { tools.push(tool.name); }, sendUserMessage() {} });
-    assert.equal(commands.length, 13);
+    assert.equal(commands.length, 14);
     assert.ok(commands.includes("novel"));
     assert.ok(commands.includes("novel-wizard"));
     assert.ok(commands.includes("novel-readers"));
     assert.ok(commands.includes("novel-adopt"));
+    assert.ok(commands.includes("novel-organize"));
     assert.deepEqual(tools, ["novel_apply_event"]);
     assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.4.1");
     for (const asset of [
@@ -31,7 +32,8 @@ test("the packed extension imports, registers, and contains the 1.4 release surf
       "wizard/index.html", "wizard/app.js", "wizard/styles.css",
       "src/domain/v1-3-schemas.ts", "src/domain/v1-3-research-schemas.ts",
       "src/domain/v1-3-architecture-schemas.ts", "src/domain/v1-3-audit-schemas.ts",
-      "src/application/research/wizard.ts", "src/evaluation/v1-3-release.ts", "src/evaluation/v1-3-journey.ts",
+      "src/application/research/wizard.ts", "src/application/organizer/scan.ts", "src/application/organizer/apply.ts",
+      "src/infrastructure/organization-transaction.ts", "src/evaluation/v1-3-release.ts", "src/evaluation/v1-3-journey.ts",
     ]) assert.equal(existsSync(resolve(packageRoot, asset)), true, asset);
     assert.equal(packedPaths.some((path) => path.startsWith("tests/")), false);
     assert.equal(packedPaths.some((path) => path.startsWith("evals/")), false);

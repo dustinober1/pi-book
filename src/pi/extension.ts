@@ -22,6 +22,9 @@ import type { WizardWorkflow } from "../wizard/types.js";
 import { normalizeEventRejection, rejectionInstruction } from "../application/event-rejection.js";
 import { bootstrapProjectFromBrief } from "../application/brief-bootstrap.js";
 import { beginAutopilotRun } from "../application/autopilot.js";
+import { applyRepositoryOrganization, summarizeArchiveList } from "../application/organizer/apply.js";
+import { renderOrganizationPreview, scanWritingRepository } from "../application/organizer/scan.js";
+import { basename, resolve } from "node:path";
 
 function errorText(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 
@@ -139,7 +142,7 @@ function repairPrompt(root: string): string {
 async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): Promise<void> {
   let root: string;
   try { root = requireProjectRoot(context.cwd); }
-  catch { context.ui.notify("No Novel Forge project found. Run /novel-start first.", "warning"); return; }
+  catch { context.ui.notify("No Novel Forge project found. Run /novel-start for a new idea or /novel-organize to scan a mixed existing writing repository.", "warning"); return; }
   const screen = buildGuideScreen(root);
   const labels = screen.actions.map((action) => action.label);
   const selected = await context.ui.select(`${screen.title}\n${screen.summary}`, labels);
@@ -282,5 +285,45 @@ export function registerNovelForge(pi: ExtensionAPI): void {
   pi.registerCommand("novel-revise", { description: "Apply open revision tickets with acceptance and regression checks", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); sendDecision(pi, context, directRevisionDecision(root, tokens(args).filter((item) => /^B\d+-T\d+$/i.test(item)))); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-package", { description: "Open the packaging checklist, metadata, and complete-export wizard", handler: async (_args, context) => { try { const root = requireProjectRoot(context.cwd); assertOperationAllowed(readProject(root), "package"); context.ui.notify(formatChecklist(root), "info"); await openWizard(root, context, "packaging"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-adopt", { description: "Preview and adopt an existing DOCX, EPUB, Markdown, text, or chapter-directory manuscript", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); await guidedAdoption(root, context, tokens(args).join(" ") || undefined); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-organize", { description: "Scan and safely organize a mixed writing repository into Novel Forge", handler: async (args, context) => { try {
+    const items = tokens(args);
+    const root = resolve(flagValue(items, "--path") || context.cwd);
+    const preview = scanWritingRepository(root);
+    const rendered = renderOrganizationPreview(preview);
+    context.ui.notify(rendered, "info");
+    if (items.includes("--dry-run")) return;
+    if (!preview.totals.selected) throw new Error("No supported writing files were found to organize.");
+    const flagsWithValues = new Set(["--path", "--profile", "--type", "--target-words", "--runtime-profile"]);
+    const positional: string[] = [];
+    for (let index = 0; index < items.length; index += 1) {
+      const item = items[index]!;
+      if (flagsWithValues.has(item)) { index += 1; continue; }
+      if (!item.startsWith("--")) positional.push(item);
+    }
+    const projectName = positional.join(" ") || await context.ui.input("Project name:", basename(root));
+    if (!projectName) return;
+    const profile = (flagValue(items, "--profile") || await context.ui.select("Novel profile:", listProfiles().map((item) => item.id))) as ProfileId | undefined;
+    if (!profile || !["thriller", "romantasy"].includes(profile)) return;
+    const projectType = (flagValue(items, "--type") || await context.ui.select("Project type:", ["standalone", "planned-series", "open-ended-series"])) as ProjectType | undefined;
+    if (!projectType || !["standalone", "planned-series", "open-ended-series"].includes(projectType)) return;
+    const targetRaw = flagValue(items, "--target-words") || await context.ui.input("Book 1 target words:", profile === "romantasy" ? "110000" : "100000");
+    const targetWords = Number.parseInt(targetRaw ?? "", 10);
+    if (!Number.isInteger(targetWords) || targetWords < 1000) throw new Error("Target words must be an integer of at least 1000.");
+    const rawRuntimeProfile = flagValue(items, "--runtime-profile");
+    const runtimeProfile = rawRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
+    const confirmed = await context.ui.confirm("Apply proposed repository structure", "Create Novel Forge files in this repository and copy the confirmed writing files?");
+    if (!confirmed) return;
+    const provisionalConfirmed = await context.ui.confirm("Acknowledge provisional classifications", "Confirm that filename/folder classifications are provisional source-material mappings only and will not become canon, plot state, approvals, research claims, review findings, or reader evidence.");
+    if (!provisionalConfirmed) return;
+    const archiveConfirmed = await context.ui.confirm("Archive superseded originals", summarizeArchiveList(preview));
+    if (!archiveConfirmed) return;
+    const result = applyRepositoryOrganization(root, preview, {
+      project: { projectName, projectType, profile, targetWords, ...(runtimeProfile ? { runtimeProfile } : {}) },
+      confirmApply: true,
+      confirmArchive: true,
+      confirmProvisional: true,
+    });
+    context.ui.notify(`Repository organized in place. ${result.organized} files copied, ${result.archived} originals moved to ${result.archiveRoot}, and ${result.chapters} chapter candidates preserved. Review ${result.reportPath}, then run /novel. ${result.gitMessage}`, "info");
+  } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-migrate", { description: "Administrative: migrate a Genesis v0.4 project into Novel Forge without deleting manuscript files", handler: async (args, context) => { try { const items = tokens(args); const profile = (items.find((item) => ["thriller", "romantasy"].includes(item)) || await context.ui.select("Profile for migrated project:", ["thriller", "romantasy"])) as ProfileId | undefined; if (!profile) return; const result = migrateGenesisProject(context.cwd, profile, { dryRun: items.includes("--dry-run"), force: items.includes("--force") }); if (result.dryRun) context.ui.notify(result.report, "info"); else { refreshGuidance(result.root, { lastAction: "Migrated Genesis project" }); context.ui.notify(`Migration complete. Review ${result.reportPath} and run /novel.`, "info"); } } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
 }

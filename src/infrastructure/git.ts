@@ -4,19 +4,27 @@ import { join } from "node:path";
 
 export interface GitCheckpointResult { initialized: boolean; committed: boolean; message: string }
 export interface GitHeadInfo { sha: string; subject: string }
+export interface GitCheckpointOptions { forceAdd?: boolean; noVerify?: boolean; onlyPaths?: boolean }
 
 function run(root: string, args: string[]): string {
   return execFileSync("git", args, { cwd: root, stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
 }
 
-function commitArgs(root: string, message: string): string[] {
+function commitArgs(root: string, message: string, options: GitCheckpointOptions = {}, paths: string[] = []): string[] {
+  const commit = [
+    "commit",
+    ...(options.noVerify ? ["--no-verify"] : []),
+    ...(options.onlyPaths ? ["--only"] : []),
+    "-m", message,
+    ...(options.onlyPaths && paths.length ? ["--", ...paths] : []),
+  ];
   try {
-    if (run(root, ["config", "user.name"]) && run(root, ["config", "user.email"])) return ["commit", "-m", message];
+    if (run(root, ["config", "user.name"]) && run(root, ["config", "user.email"])) return commit;
   } catch {}
   return [
     "-c", "user.name=Novel Forge",
     "-c", "user.email=novel-forge@localhost",
-    "commit", "-m", message,
+    ...commit,
   ];
 }
 
@@ -40,6 +48,22 @@ export function gitHeadInfo(root: string): GitHeadInfo | null {
   } catch { return null; }
 }
 
+export function gitTopLevel(root: string): string | null {
+  try { return run(root, ["rev-parse", "--show-toplevel"]); }
+  catch { return null; }
+}
+
+export function gitStagedPaths(root: string): string[] {
+  try { return run(root, ["diff", "--cached", "--name-only", "-z"]).split("\0").filter(Boolean); }
+  catch { return []; }
+}
+
+export function gitTrackedPaths(root: string, paths: string[]): string[] {
+  if (!paths.length) return [];
+  try { return run(root, ["--literal-pathspecs", "ls-files", "-z", "--", ...paths]).split("\0").filter(Boolean); }
+  catch { return []; }
+}
+
 export function beginRevertHead(root: string): GitHeadInfo {
   const head = gitHeadInfo(root);
   if (!head) throw new Error("Git HEAD is unavailable; nothing can be undone safely.");
@@ -51,16 +75,24 @@ export function abortRevert(root: string): void {
   try { run(root, ["revert", "--abort"]); } catch {}
 }
 
-export function commitWorkflowEvent(root: string, relativePaths: string[], message: string): GitCheckpointResult {
+export function commitWorkflowEvent(root: string, relativePaths: string[], message: string, options: GitCheckpointOptions = {}): GitCheckpointResult {
   if (!ensureGit(root)) return { initialized: false, committed: false, message: "Git initialization failed; files were written without a checkpoint." };
   try {
-    if (relativePaths.length) run(root, ["add", "--", ...relativePaths]);
+    if (relativePaths.length) run(root, ["--literal-pathspecs", "add", ...(options.forceAdd ? ["-f"] : []), "--", ...relativePaths]);
     const staged = run(root, ["diff", "--cached", "--name-only"]);
     if (!staged) return { initialized: true, committed: false, message: "No staged changes required a checkpoint." };
-    run(root, commitArgs(root, message));
+    const commit = commitArgs(root, message, options, relativePaths);
+    run(root, options.onlyPaths ? ["--literal-pathspecs", ...commit] : commit);
     return { initialized: true, committed: true, message };
   } catch (error) {
-    return { initialized: true, committed: false, message: `Files were written, but Git checkpoint failed: ${error instanceof Error ? error.message : String(error)}` };
+    if (relativePaths.length) {
+      try { run(root, ["--literal-pathspecs", "reset", "--mixed", "HEAD", "--", ...relativePaths]); }
+      catch {
+        try { run(root, ["--literal-pathspecs", "rm", "--cached", "-r", "--ignore-unmatch", "--", ...relativePaths]); }
+        catch {}
+      }
+    }
+    return { initialized: true, committed: false, message: `Files were written, but Git checkpoint failed and organizer paths were unstaged: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 

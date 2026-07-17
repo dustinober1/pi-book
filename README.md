@@ -180,6 +180,21 @@ The wizard:
 
 Every confirmed action returns to Novel Forge's typed application services and preserves expected-stage and project-hash checks, schema validation, rollback, one Git checkpoint, `STATUS.md`, `HANDOFF.md`, and guarded undo.
 
+## Organize a half-complete writing repository
+
+Use `/novel-organize` from the root of an uninitialized repository containing mixed chapters, drafts, outlines, notes, research, documents, and assets. Add `--dry-run` to print the deterministic scan and proposed map without changing anything:
+
+```text
+/novel-organize --dry-run
+/novel-organize My Novel --profile thriller --type standalone --target-words 100000
+```
+
+The organizer works in place. It excludes Git internals, existing `.archive` content, dotfiles, ignored/generated paths, dependency trees, code, configuration, lockfiles, and repository documentation. Explicit chapter headings and numeric filenames are structural evidence; classifications inferred from names or folders are visibly provisional. Notes remain source material and are never promoted into canon, plot state, approvals, research claims, review findings, or reader evidence.
+
+Before applying, Novel Forge shows the complete proposed map and separately asks the author to approve the structure, acknowledge provisional classifications, and approve the exact archive list. Confirmed files are copied byte-for-byte into conservative canonical or source-material paths and hash-verified. Only then are their originals moved to `.archive/<timestamp>/files/`. The adjacent `manifest.yaml` records original, canonical, and archive paths, byte counts, classifications, reasons, and SHA-256 hashes. The operation initializes Novel Forge at the repository root and leaves the workflow at voice intake/book planning. It attempts one Git checkpoint without staging unrelated work; if Git rejects the commit, organizer paths are unstaged and the result reports the failure without discarding the verified archive.
+
+The transaction refuses symlink roots and paths, stale scans, changed sources, existing canonical state files, nested Git repositories, unresolved destination collisions, and pre-existing staged changes. Proposed filename collisions receive deterministic hash suffixes. A live failure rolls back automatically. An external interruption leaves a private journal for manual inspection rather than trusting repository-authored recovery instructions. Existing Novel Forge projects remain outside this workflow—use adoption or integrity repair instead.
+
 ## Adopt an existing project
 
 Use `/novel`, `/novel-adopt`, or `/novel-wizard adoption`.
@@ -363,6 +378,7 @@ Binary files are accepted only by trusted internal application services for adop
 | `/novel-revise` | Apply open revision tickets |
 | `/novel-package` | Open packaging readiness and export workflows |
 | `/novel-adopt` | Open existing-project adoption |
+| `/novel-organize` | Scan and organize a mixed, half-complete writing repository in place |
 | `/novel-migrate` | Migrate a Genesis v0.4 project |
 
 ## Version compatibility

@@ -157,6 +157,14 @@ The wizard must:
 - never write project files directly or invoke arbitrary commands;
 - enforce expected stage and project hash before apply.
 
+## Mixed-repository organization
+
+Use `/novel-organize` only at the root of an uninitialized writing repository. Scan read-only first and exclude Git internals, `.archive`, dotfiles, Git-ignored/generated/dependency paths, code, configuration, lockfiles, and repository documentation. Never follow symlinks. Treat explicit chapter headings and numeric filenames as structural; treat all filename/folder semantic classification as provisional.
+
+Show the complete proposed map before mutation. Require separate confirmation for the proposed structure, provisional classifications, and the exact archive list. Copy confirmed bytes into conservative manuscript, source-material, research-note, document, or adopted-asset paths; verify hashes; then move only confirmed superseded originals into `.archive/<timestamp>/files/`. Write a manifest with original/canonical/archive paths, bytes, classifications, reasons, and source/canonical SHA-256 hashes.
+
+Apply initialization, copies, archive moves, report, status, handoff, and manifest through the dedicated rollback transaction. Resolve proposed filename collisions with deterministic hash suffixes and refuse any remaining path/case collision. Refuse stale previews, changed sources, symlink ancestors, existing `PROJECT.yaml` or canonical state files, nested Git repositories, and pre-existing staged changes. Keep imported work at voice intake/book planning and never manufacture canon, plot state, approvals, research claims, review findings, or reader evidence. Roll back live failures automatically; do not execute a repository-authored recovery journal after an external interruption.
+
 ## Existing-project adoption
 
 Support DOCX, EPUB, Markdown, text, and chapter directories. Prefer Pandoc when available and use the Node fallback otherwise.
@@ -217,6 +225,7 @@ Undo requires initialized Git, a clean worktree, and a `Novel Forge:` commit at 
 /novel-revise
 /novel-package
 /novel-adopt
+/novel-organize
 /novel-migrate
 ```
 
