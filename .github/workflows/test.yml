@@ -51,7 +51,7 @@ jobs:
         run: exit 1
       - run: npm run eval
       - name: Run constrained runtime benchmark
-        run: npm run benchmark:constrained-runtime > constrained-runtime-benchmark.json
+        run: npm run --silent benchmark:constrained-runtime > constrained-runtime-benchmark.json
       - run: npm run verify:release
       - run: npm pack --dry-run
       - name: Upload diagnostics
