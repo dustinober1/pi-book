@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { buildChapterContext } from "../context/context-builder.js";
-import type { RuntimeProfileId } from "../domain/runtime-profile.js";
+import type { RuntimeProfile, RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import { readText } from "../infrastructure/files.js";
 import { stringifyYaml } from "../infrastructure/yaml.js";
@@ -14,6 +14,7 @@ import { compileActiveBook } from "./package.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
 import { canRetryEvent, rejectionInstruction, type EventRejectionDetail } from "./event-rejection.js";
 import { creativeProjectStateHash } from "./project-hash.js";
+import { applyRuntimeLimits, resolveRuntimeProfile } from "./runtime-profile-resolver.js";
 import { cancelAutomationRun, pauseAutomationRun, resumeAutomationRun, startAutomationRun } from "./automation-run.js";
 import { PremiseLabSchema, type PremiseLab } from "../domain/v1-4-schemas.js";
 import { parseYaml } from "../infrastructure/yaml.js";
@@ -30,11 +31,23 @@ export interface RunOptions {
   pause?: boolean;
   cancel?: boolean;
 }
-export interface RunDecision { action: string; prompt: string | null; message: string }
-export interface BeginPersistentRunOptions { target: string; maxChapters: number; now?: string }
+export interface RunDecision { action: string; prompt: string | null; message: string; runtimeProfile?: RuntimeProfileId }
+export interface BeginPersistentRunOptions { target: string; maxChapters: number; runtimeProfile?: RuntimeProfileId; now?: string }
 
 function projectV14(root: string): ProjectStateV14 {
   return readProject(root) as ProjectStateV14;
+}
+
+function runtimeFor(project: ProjectStateV14, explicit?: RuntimeProfileId): RuntimeProfile {
+  return resolveRuntimeProfile({ explicit, project: project.runtime?.profile });
+}
+
+function runtimeDecision(profile: RuntimeProfile, decision: Omit<RunDecision, "runtimeProfile">): RunDecision {
+  return {
+    ...decision,
+    runtimeProfile: profile.id,
+    message: `${decision.message} Runtime profile: ${profile.id}.`,
+  };
 }
 
 function nextRunId(project: ProjectStateV14): string {
@@ -52,12 +65,14 @@ function persistRunProject(root: string, project: ProjectStateV14, subject: stri
 }
 
 export function approveProjectGate(root: string, gate: string, note = ""): RunDecision {
+  const runtimeProfile = runtimeFor(projectV14(root));
   const project = approveGate(root, structuredClone(readProject(root)), gate, note);
   applyGuidedProjectEvent(root, [{ path: "PROJECT.yaml", content: stringifyYaml(project) }], `Novel Forge: approve ${gate}`, { lastAction: `Approved ${gate}` });
-  return { action: "approved", prompt: null, message: `Approved ${gate}. Current stage: ${project.current_stage}.` };
+  return runtimeDecision(runtimeProfile, { action: "approved", prompt: null, message: `Approved ${gate}. Current stage: ${project.current_stage}.` });
 }
 
 export function rejectProjectGate(root: string, gate: string, note: string): RunDecision {
+  const runtimeProfile = runtimeFor(projectV14(root));
   const project = structuredClone(readProject(root));
   if (project.next_gate !== gate) throw new Error(`Gate ${gate} is not active.`);
   if (project.gates[gate] !== "pending") throw new Error(`Gate ${gate} must be pending before changes can be requested.`);
@@ -72,55 +87,72 @@ export function rejectProjectGate(root: string, gate: string, note: string): Run
     { path: "PROJECT.yaml", content: stringifyYaml(project) },
     { path, content: entry },
   ], `Novel Forge: reject ${gate}`, { lastAction: `Requested changes to ${gate}` });
-  return { action: "rejected", prompt: null, message: `Changes requested for ${gate}. The gate remains active until repaired and approved.` };
+  return runtimeDecision(runtimeProfile, { action: "rejected", prompt: null, message: `Changes requested for ${gate}. The gate remains active until repaired and approved.` });
 }
 
 export function decideNextRun(root: string, options: RunOptions = {}): RunDecision {
-  if (options.approve) return approveProjectGate(root, options.approve);
+  const project = projectV14(root);
+  const runtimeProfile = runtimeFor(project, options.runtimeProfile);
+  const finish = (decision: Omit<RunDecision, "runtimeProfile">): RunDecision => runtimeDecision(runtimeProfile, decision);
+  if (options.approve) {
+    const approved = approveProjectGate(root, options.approve);
+    return { ...approved, runtimeProfile: runtimeProfile.id, message: approved.message.replace(/ Runtime profile: [^.]+\.$/, ` Runtime profile: ${runtimeProfile.id}.`) };
+  }
   const status = getProjectStatus(root);
-  if (status.blockers.length) return { action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." };
-  if (options.stopOnWarning && status.warnings.length) return { action: "warning-stop", prompt: null, message: status.warnings[0] ?? "Project warning." };
-  const project = readProject(root);
+  if (status.blockers.length) return finish({ action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." });
+  if (options.stopOnWarning && status.warnings.length) return finish({ action: "warning-stop", prompt: null, message: status.warnings[0] ?? "Project warning." });
   if (options.reviewOnly) {
-    if (project.current_stage === "act-review") return { action: "review", prompt: reviewPrompt(root, "act"), message: "Queued act review." };
-    if (project.current_stage === "manuscript-review") return { action: "review", prompt: reviewPrompt(root, "manuscript"), message: "Queued manuscript review." };
-    return { action: "blocked", prompt: null, message: `Review-only mode is not available during ${project.current_stage}.` };
+    if (project.current_stage === "act-review") return finish({ action: "review", prompt: reviewPrompt(root, "act"), message: "Queued act review." });
+    if (project.current_stage === "manuscript-review") return finish({ action: "review", prompt: reviewPrompt(root, "manuscript"), message: "Queued manuscript review." });
+    return finish({ action: "blocked", prompt: null, message: `Review-only mode is not available during ${project.current_stage}.` });
   }
   switch (project.current_stage) {
-    case "voice-intake": return { action: "voice", prompt: voicePlanPrompt(root), message: "Queued voice intake." };
-    case "series-planning": return { action: "series-plan", prompt: seriesPlanPrompt(root), message: "Queued series plan." };
-    case "book-planning": return { action: "book-plan", prompt: bookPlanPrompt(root), message: "Queued book plan." };
-    case "chapter-queue": return { action: "queue", prompt: queuePrompt(root), message: "Queued chapter packets." };
+    case "voice-intake": return finish({ action: "voice", prompt: voicePlanPrompt(root), message: "Queued voice intake." });
+    case "series-planning": return finish({ action: "series-plan", prompt: seriesPlanPrompt(root), message: "Queued series plan." });
+    case "book-planning": return finish({ action: "book-plan", prompt: bookPlanPrompt(root), message: "Queued book plan." });
+    case "chapter-queue": return finish({ action: "queue", prompt: queuePrompt(root), message: "Queued chapter packets." });
     case "drafting": {
-      if (options.noProse) return { action: "queue", prompt: queuePrompt(root), message: "No-prose mode queued packet maintenance." };
-      const maxChapters = options.maxChapters ?? project.automation.max_chapters_per_run;
-      return { action: "bounded-draft", prompt: automationDraftPrompt(root, maxChapters, options.until), message: `Queued a bounded drafting run of up to ${maxChapters} chapter(s).` };
+      if (options.noProse) return finish({ action: "queue", prompt: queuePrompt(root), message: "No-prose mode queued packet maintenance." });
+      const limits = applyRuntimeLimits({
+        profile: runtimeProfile,
+        projectMaxChapters: project.automation.max_chapters_per_run,
+        ...(options.maxChapters !== undefined ? { requestedMaxChapters: options.maxChapters } : {}),
+      });
+      return finish({ action: "bounded-draft", prompt: automationDraftPrompt(root, limits.maxChapters, options.until), message: `Queued a bounded drafting run of up to ${limits.maxChapters} chapter(s).` });
     }
-    case "act-review": return { action: "review", prompt: reviewPrompt(root, "act"), message: "Queued act review." };
+    case "act-review": return finish({ action: "review", prompt: reviewPrompt(root, "act"), message: "Queued act review." });
     case "revision": {
       const tickets = openBlockingTickets(readTickets(root));
-      return { action: "revise", prompt: revisionPrompt(root, tickets.slice(0, 3)), message: `Queued ${Math.min(3, tickets.length)} blocking ticket(s).` };
+      const ticketLimit = runtimeProfile.maxRevisionTickets ?? 3;
+      return finish({ action: "revise", prompt: revisionPrompt(root, tickets.slice(0, ticketLimit)), message: `Queued ${Math.min(ticketLimit, tickets.length)} blocking ticket(s).` });
     }
-    case "manuscript-review": return { action: "review", prompt: reviewPrompt(root, "manuscript"), message: "Queued manuscript review." };
-    case "canon-lock": return { action: "canon-lock", prompt: canonLockPrompt(root), message: "Queued canon lock." };
+    case "manuscript-review": return finish({ action: "review", prompt: reviewPrompt(root, "manuscript"), message: "Queued manuscript review." });
+    case "canon-lock": return finish({ action: "canon-lock", prompt: canonLockPrompt(root), message: "Queued canon lock." });
     case "packaging": {
       const compiled = compileActiveBook(root);
-      return { action: "package", prompt: packagePrompt(root), message: `Compiled ${compiled.chapters} chapters (${compiled.words} words) and queued packaging.` };
+      return finish({ action: "package", prompt: packagePrompt(root), message: `Compiled ${compiled.chapters} chapters (${compiled.words} words) and queued packaging.` });
     }
-    case "complete": return { action: "complete", prompt: null, message: "Project is complete." };
+    case "complete": return finish({ action: "complete", prompt: null, message: "Project is complete." });
   }
 }
 
 export function beginPersistentRun(root: string, options: BeginPersistentRunOptions): RunDecision {
-  const initial = decideNextRun(root, { until: options.target, maxChapters: options.maxChapters });
-  if (!initial.prompt) return initial;
   const project = projectV14(root);
+  const runtimeProfile = runtimeFor(project, options.runtimeProfile);
+  const limits = applyRuntimeLimits({
+    profile: runtimeProfile,
+    projectMaxChapters: project.automation.max_chapters_per_run,
+    requestedMaxChapters: options.maxChapters,
+  });
+  const initial = decideNextRun(root, { until: options.target, maxChapters: limits.maxChapters, runtimeProfile: runtimeProfile.id });
+  if (!initial.prompt) return initial;
   const now = options.now ?? new Date().toISOString();
   const updated = startAutomationRun(project, {
     id: nextRunId(project),
     target: options.target,
     currentAction: initial.action,
-    requestedMaxChapters: options.maxChapters,
+    requestedMaxChapters: limits.maxChapters,
+    runtimeProfile: runtimeProfile.id,
     creativeHash: creativeProjectStateHash(root),
     startedAt: now,
   });
@@ -130,24 +162,27 @@ export function beginPersistentRun(root: string, options: BeginPersistentRunOpti
 
 export function pausePersistentRun(root: string, now = new Date().toISOString()): RunDecision {
   const project = projectV14(root);
+  const runtimeProfile = runtimeFor(project, project.automation.active_run?.runtimeProfile);
   const updated = pauseAutomationRun(project, now);
   if (updated !== project) persistRunProject(root, updated, `pause automation ${updated.automation.active_run!.id}`, `Paused automation run ${updated.automation.active_run!.id}`);
-  return { action: "paused-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is paused.` };
+  return runtimeDecision(runtimeProfile, { action: "paused-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is paused.` });
 }
 
 export function cancelPersistentRun(root: string, now = new Date().toISOString()): RunDecision {
   const project = projectV14(root);
+  const runtimeProfile = runtimeFor(project, project.automation.active_run?.runtimeProfile);
   const updated = cancelAutomationRun(project, now);
   if (updated !== project) persistRunProject(root, updated, `cancel automation ${updated.automation.active_run!.id}`, `Cancelled automation run ${updated.automation.active_run!.id}`);
-  return { action: "cancelled-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is cancelled.` };
+  return runtimeDecision(runtimeProfile, { action: "cancelled-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is cancelled.` });
 }
 
 export function resumePersistentRun(root: string, now = new Date().toISOString()): RunDecision {
   const project = projectV14(root);
+  const runtimeProfile = runtimeFor(project, project.automation.active_run?.runtimeProfile);
   const updated = resumeAutomationRun(project, project.current_stage, creativeProjectStateHash(root), now);
   if (updated.automation.active_run?.status === "stopped") {
     persistRunProject(root, updated, `stop automation ${updated.automation.active_run.id}`, `Stopped automation run ${updated.automation.active_run.id}`);
-    return { action: "blocked", prompt: null, message: `Automation run ${updated.automation.active_run.id} stopped because creative state changed. Reload and start a new run.` };
+    return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: `Automation run ${updated.automation.active_run.id} stopped because creative state changed. Reload and start a new run.` });
   }
   if (updated !== project) persistRunProject(root, updated, `resume automation ${updated.automation.active_run!.id}`, `Resumed automation run ${updated.automation.active_run!.id}`);
   const run = updated.automation.active_run!;
@@ -157,29 +192,32 @@ export function resumePersistentRun(root: string, now = new Date().toISOString()
     const path = join(root, "books", book.book_id, "premise-lab.yaml");
     const text = readText(path);
     const lab = text ? parseYaml<PremiseLab>(text, PremiseLabSchema, path) : null;
-    if (lab && lab.variants.length === 0) decision = { action: "premise-plan", prompt: premisePlanPrompt(root), message: "Queued premise comparison before book architecture." };
-    else if (lab && (!lab.selected_variant_id || !lab.selection_decision_id)) decision = { action: "premise-selection", prompt: null, message: "Automation stopped so the writer can select a premise variant." };
-    else decision = decideNextRun(root, { until: run.target, maxChapters: run.requestedMaxChapters });
-  } else decision = decideNextRun(root, { until: run.target, maxChapters: run.requestedMaxChapters });
+    if (lab && lab.variants.length === 0) decision = runtimeDecision(runtimeProfile, { action: "premise-plan", prompt: premisePlanPrompt(root), message: "Queued premise comparison before book architecture." });
+    else if (lab && (!lab.selected_variant_id || !lab.selection_decision_id)) decision = runtimeDecision(runtimeProfile, { action: "premise-selection", prompt: null, message: "Automation stopped so the writer can select a premise variant." });
+    else decision = decideNextRun(root, { until: run.target, maxChapters: run.requestedMaxChapters, runtimeProfile: runtimeProfile.id });
+  } else decision = decideNextRun(root, { until: run.target, maxChapters: run.requestedMaxChapters, runtimeProfile: runtimeProfile.id });
   return { ...decision, message: `${decision.message} Resumed ${run.id}.` };
 }
 
 export function directDraftDecision(root: string, chapter?: number): RunDecision {
-  const project = readProject(root);
-  try { assertOperationAllowed(project, "draft"); } catch (error) { return { action: "blocked", prompt: null, message: error instanceof Error ? error.message : String(error) }; }
+  const project = projectV14(root);
+  const runtimeProfile = runtimeFor(project);
+  try { assertOperationAllowed(project, "draft"); } catch (error) { return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: error instanceof Error ? error.message : String(error) }); }
   const status = getProjectStatus(root);
-  if (status.blockers.length) return { action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." };
-  const context = buildChapterContext(root, chapter);
-  return { action: "draft", prompt: draftPrompt(context), message: `Queued Chapter ${context.packet.chapter}.` };
+  if (status.blockers.length) return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." });
+  const context = buildChapterContext(root, chapter, runtimeProfile.maxContextChars, runtimeProfile.graphDepth);
+  return runtimeDecision(runtimeProfile, { action: "draft", prompt: draftPrompt(context), message: `Queued Chapter ${context.packet.chapter}.` });
 }
 
 export function directRevisionDecision(root: string, ticketIds: string[] = []): RunDecision {
-  const project = readProject(root);
-  try { assertOperationAllowed(project, "revise"); } catch (error) { return { action: "blocked", prompt: null, message: error instanceof Error ? error.message : String(error) }; }
+  const project = projectV14(root);
+  const runtimeProfile = runtimeFor(project);
+  try { assertOperationAllowed(project, "revise"); } catch (error) { return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: error instanceof Error ? error.message : String(error) }); }
   const tickets = readTickets(root).tickets.filter((ticket) => ["open", "in-progress"].includes(ticket.status));
-  const selected = ticketIds.length ? tickets.filter((ticket) => ticketIds.includes(ticket.id)) : tickets.slice(0, 3);
-  if (!selected.length) return { action: "no-tickets", prompt: null, message: "No open tickets matched the request." };
-  return { action: "revise", prompt: revisionPrompt(root, selected), message: `Queued revision for ${selected.map((ticket) => ticket.id).join(", ")}.` };
+  const ticketLimit = runtimeProfile.maxRevisionTickets ?? 3;
+  const selected = (ticketIds.length ? tickets.filter((ticket) => ticketIds.includes(ticket.id)) : tickets).slice(0, ticketLimit);
+  if (!selected.length) return runtimeDecision(runtimeProfile, { action: "no-tickets", prompt: null, message: "No open tickets matched the request." });
+  return runtimeDecision(runtimeProfile, { action: "revise", prompt: revisionPrompt(root, selected), message: `Queued revision for ${selected.map((ticket) => ticket.id).join(", ")}.` });
 }
 
 export function bookPath(root: string): string { return join(root, "books", readBook(root).book_id); }
