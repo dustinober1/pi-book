@@ -1,0 +1,47 @@
+name: Apply tiny prompt budget repair
+
+on:
+  push:
+    branches: [feat/compact-prompt-compiler]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/compact-prompt-compiler
+          fetch-depth: 0
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/application/stage-specs/index.ts')
+          text = path.read_text()
+          replacements = {
+            'inputs: [input.contextText, `Context report: estimated ${input.estimatedTokens} tokens; excluded ${input.excluded.join(", ")}.`],': 'inputs: [input.contextText, `Context: ~${input.estimatedTokens} tokens; excluded: ${input.excluded.join(", ")}.`],',
+            '"Make the prose specific to the approved voice, characters, pressure, omissions, scene, and compact remarkability contract."': '"Make prose specific to the approved voice, characters, pressure, omissions, scene, and compact remarkability contract."',
+            '"Do not submit PROJECT.yaml, BOOK.yaml, STATUS.md, or HANDOFF.md; the tool derives them."': '"Do not submit PROJECT.yaml, BOOK.yaml, STATUS.md, or HANDOFF.md; they are derived."',
+            '`complete Chapter ${input.chapter} Markdown`': '`Chapter ${input.chapter} Markdown`',
+            '"The chapter satisfies its approved packet and context."': '"Chapter satisfies its approved packet and context."',
+            '"Never write project files directly; apply one guarded novel_apply_event.",': '"Use one guarded novel_apply_event; never write project files directly.",',
+            '`Call novel_apply_event with event_type draft-chapter, expected_stage drafting, expected_project_hash ${input.projectHash}, chapter ${input.chapter}, and only allowed changed files.`': '`Send event_type=draft-chapter, expected_stage=drafting, expected_project_hash=${input.projectHash}, chapter=${input.chapter}, and only allowed files.`',
+            '"Tool validation of schemas, references, stage, file allowlists, stale state, and the complete commit is authoritative.",': '"Tool validation of schemas, references, stage, allowlists, stale state, and atomic commit is authoritative.",',
+            '"Correct and retry once only for schema-validation or reference-validation.",\n      "Reload and rebuild for stale-stage or stale-project-hash; stop and surface every other rejection.",': '"Retry once only for schema-validation or reference-validation. Reload for stale-stage or stale-project-hash; stop on any other rejection.",',
+          }
+          for old, new in replacements.items():
+            if old not in text:
+              raise SystemExit(f'missing replacement target: {old}')
+            text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+      - run: |
+          rm .github/workflows/apply-tiny-prompt-budget-repair.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/application/stage-specs/index.ts .github/workflows/apply-tiny-prompt-budget-repair.yml
+          git commit -m "fix: fit draft prompt within tiny-local budget"
+          git push origin HEAD:feat/compact-prompt-compiler
