@@ -4,3 +4,5 @@ coverage/
 *.tgz
 .novel-forge-txn-*/
 scripts/.novel-forge-test-*
+.pi-book/runs/
+.pi-book/cache/
