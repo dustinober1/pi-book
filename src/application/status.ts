@@ -1,6 +1,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ContinuityDeltaSchema, GenreConfigSchema, PlotGridSchema, ReaderExperimentsSchema, RemarkabilitySchema, type ContinuityDeltaState, type GenreConfig, type PlotGridState, type ReaderExperimentsState, type RemarkabilityState } from "../domain/schemas.js";
+import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import { newestFiles, readText } from "../infrastructure/files.js";
 import { gitState } from "../infrastructure/git.js";
 import { parseYaml } from "../infrastructure/yaml.js";
@@ -11,6 +12,7 @@ import { collectProjectIntegrityFindings } from "./integrity.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 import { getProfile } from "../profiles/index.js";
 import { gateDetail } from "./gate-metadata.js";
+import { resolveRuntimeProfile } from "./runtime-profile-resolver.js";
 import { versionFindings } from "./version-core.js";
 
 export interface ProjectStatus {
@@ -21,6 +23,7 @@ export interface ProjectStatus {
   reason: string;
   recommendedCommand: string;
   primaryBlocker: string | null;
+  runtimeProfile: RuntimeProfileId;
   markdown: string;
 }
 
@@ -95,6 +98,7 @@ function optionalV13ArtifactPaths(bookId: string): string[] {
 
 export function getProjectStatus(root: string, options: ProjectStatusOptions = {}): ProjectStatus {
   const project = readProject(root);
+  const runtimeProfile = resolveRuntimeProfile({ project: project.runtime?.profile });
   const book = readBook(root);
   const tickets = readTickets(root);
   const blockers: string[] = [];
@@ -195,6 +199,7 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     `- Project: ${project.project_name}`,
     `- Type: ${project.project_type}`,
     `- Profile: ${book.profile}`,
+    `- Runtime profile: ${runtimeProfile.id}`,
     `- Active book: ${book.book_id}`,
     `- Stage: ${project.current_stage}`,
     `- Next gate: ${project.next_gate ?? "none"}${project.next_gate ? ` (${project.gates[project.next_gate] ?? "unknown"})` : ""}`,
@@ -223,6 +228,7 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     reason: decision.reason,
     recommendedCommand: decision.command,
     primaryBlocker: blockers[0] ?? null,
+    runtimeProfile: runtimeProfile.id,
     markdown,
   };
 }
