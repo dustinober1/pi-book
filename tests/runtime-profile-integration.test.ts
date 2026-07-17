@@ -92,7 +92,11 @@ function setup(stage: "drafting" | "revision", runtimeProfile: RuntimeProfileId)
     hand_sell_reason: "A procedural thriller with a building that falsifies its record.",
     accepted_reader_costs: ["Moral discomfort without reassurance."],
   }), "utf8");
-  writeFileSync(join(root, "books", "book-01", "revision-tickets.yaml"), stringifyYaml(tickets()), "utf8");
+  writeFileSync(
+    join(root, "books", "book-01", "revision-tickets.yaml"),
+    stringifyYaml(stage === "revision" ? tickets() : { schema_version: "1.0.0", tickets: [] }),
+    "utf8",
+  );
   return { parent, root };
 }
 
