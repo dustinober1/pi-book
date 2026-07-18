@@ -29,7 +29,26 @@ export interface ManuscriptDocument {
 export interface ProseLintInput {
   documents: readonly ManuscriptDocument[];
   baselineMetrics?: Readonly<Record<string, number>>;
+  projectContext?: ProjectLintContext;
   rules: readonly LintRule[];
+}
+
+export interface ProjectLintContext {
+  projectRoot: string;
+  bookId: string;
+  chapterFiles: readonly { path: string; number: number | null }[];
+  canonEntries: readonly { id: string; subject: string; fact: string; locked: boolean }[];
+  canonNames: readonly string[];
+  canonIds: readonly string[];
+  threadIds: readonly string[];
+  sourceIds: readonly string[];
+  packetReferences: readonly { chapter: number; kind: "canon" | "thread" | "source"; id: string }[];
+  plotThreadReferences: readonly { chapter: number; id: string }[];
+}
+
+export interface ReportOptions {
+  title?: string;
+  rulePrefixes?: readonly string[];
 }
 
 export interface LintRule {
