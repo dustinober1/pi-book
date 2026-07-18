@@ -195,7 +195,12 @@ function reviewText(result: ProseLintResult, selected: readonly LintFinding[], e
   if (selected.length === 0) lines.push("- No findings selected within this evidence budget.");
   for (const finding of selected) {
     const excerptText = excerptLimit === 0 || finding.excerpt.trim() === "" ? "" : ` Excerpt: “${inline(finding.excerpt, excerptLimit)}”`;
-    lines.push(`- ${location(finding)} — ${finding.ruleId} (${finding.confidence}): ${inline(finding.message, 140)}${excerptText}`);
+    const countText = finding.ruleId === "repetition/near-duplicate"
+      && typeof finding.evidence.fullFindingCount === "number"
+      && typeof finding.evidence.omittedFindingCount === "number"
+      ? ` Full match count: ${finding.evidence.fullFindingCount}; rule-cap omissions: ${finding.evidence.omittedFindingCount}.`
+      : "";
+    lines.push(`- ${location(finding)} — ${finding.ruleId} (${finding.confidence}): ${inline(finding.message, 140)}${countText}${excerptText}`);
   }
   lines.push("", `- ${omitted} ${omitted === 1 ? "finding" : "findings"} omitted from this bounded summary.`);
   if (result.failures.length > 0) {

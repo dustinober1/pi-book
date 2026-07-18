@@ -107,3 +107,22 @@ test("review evidence reports exact omissions when required mechanical findings 
   assert.match(summary, /5 findings omitted/);
   assert.doesNotMatch(summary, new RegExp("x".repeat(160)));
 });
+
+test("bounded review evidence retains truthful full near-duplicate match counts", () => {
+  const near = finding({
+    ruleId: "repetition/near-duplicate",
+    class: "repetition",
+    confidence: "review",
+    evidence: { similarity: 0.8537, fullFindingCount: 24_090, omittedFindingCount: 24_050, pairMultiplicity: 1 },
+  });
+  const result: ProseLintResult = {
+    findings: [near],
+    failures: [],
+    counts: { mechanical: 0, consistency: 0, repetition: 1, "style-pattern": 0 },
+    wordCount: 4_000,
+  };
+
+  const summary = renderReviewLintEvidence(result, { maxFindings: 1, maxCharacters: 500 });
+  assert.match(summary, /Full match count: 24090; rule-cap omissions: 24050\./);
+  assert.ok(summary.length <= 500);
+});

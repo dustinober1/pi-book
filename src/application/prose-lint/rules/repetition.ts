@@ -4,6 +4,7 @@ import { compareDeterministicText } from "../order.js";
 const VERSION = "1.0.0";
 const STOP_PHRASE_VERSION = "1.0.0";
 const MAX_LOCATIONS = 5;
+export const REPETITION_FINDING_LIMIT = 40;
 const FUNCTION_WORDS = new Set([
   "a", "an", "and", "as", "at", "be", "been", "but", "by", "for", "from", "had", "has", "have", "he", "her",
   "him", "his", "i", "if", "in", "is", "it", "its", "me", "my", "not", "of", "on", "or", "our", "she", "so",
@@ -29,6 +30,16 @@ interface DuplicateCandidate extends LocatedText {
   normalized: string;
   trigramSet: ReadonlySet<string>;
   sequence: number;
+}
+
+interface DuplicateGroup {
+  normalized: string;
+  occurrences: DuplicateCandidate[];
+  representative: DuplicateCandidate;
+  trigramSet: ReadonlySet<string>;
+  tokenCount: number;
+  sequence: number;
+  spanCounts: ReadonlyMap<string, { paragraphs: number; sentences: number }>;
 }
 
 interface Occurrence {
@@ -100,7 +111,9 @@ function repeatedSequences(
           if (isStoppedPhrase(tokens)) continue;
           const phrase = tokens.join(" ");
           const occurrence = { document, line: item.line, excerpt: bounded(item.text) };
-          groups.set(phrase, [...(groups.get(phrase) ?? []), occurrence]);
+          const occurrences = groups.get(phrase);
+          if (occurrences === undefined) groups.set(phrase, [occurrence]);
+          else occurrences.push(occurrence);
         }
       }
     }
@@ -108,7 +121,14 @@ function repeatedSequences(
   return groups;
 }
 
-function sequenceFinding(ruleId: string, label: "phrase" | "opening", value: string, occurrences: readonly Occurrence[]): LintFinding {
+function sequenceFinding(
+  ruleId: string,
+  label: "phrase" | "opening",
+  value: string,
+  occurrences: readonly Occurrence[],
+  fullFindingCount: number,
+  omittedFindingCount: number,
+): LintFinding {
   const first = ordered(occurrences)[0] as Occurrence;
   const measured = evidenceForOccurrences(occurrences);
   return {
@@ -119,9 +139,33 @@ function sequenceFinding(ruleId: string, label: "phrase" | "opening", value: str
     location: { path: first.document.path, line: first.line },
     excerpt: first.excerpt,
     message: label === "phrase" ? "This phrase recurs often enough to merit contextual review." : "This three-word opening recurs often enough to merit contextual review.",
-    evidence: { [label]: value, ...measured, stopPhraseVersion: STOP_PHRASE_VERSION },
+    evidence: { [label]: value, ...measured, stopPhraseVersion: STOP_PHRASE_VERSION, fullFindingCount, omittedFindingCount },
     reviewAction: "Review the listed uses in context and keep intentional repetition unchanged.",
   };
+}
+
+function cappedSequenceFindings(
+  ruleId: string,
+  label: "phrase" | "opening",
+  groups: ReadonlyMap<string, Occurrence[]>,
+  eligible: (occurrences: readonly Occurrence[]) => boolean,
+): LintFinding[] {
+  const qualifying = [...groups.entries()].filter(([, occurrences]) => eligible(occurrences));
+  qualifying.sort((left, right) =>
+    right[1].length - left[1].length
+    || right[0].split(" ").length - left[0].split(" ").length
+    || compareDeterministicText(left[0], right[0]));
+  const fullFindingCount = qualifying.length;
+  const retained = qualifying.slice(0, REPETITION_FINDING_LIMIT);
+  const omittedFindingCount = fullFindingCount - retained.length;
+  return retained.map(([value, occurrences]) => sequenceFinding(
+    ruleId,
+    label,
+    value,
+    occurrences,
+    fullFindingCount,
+    omittedFindingCount,
+  ));
 }
 
 export function createNgramRule(options: { minimumCount?: number } = {}): LintRule {
@@ -135,11 +179,9 @@ export function createNgramRule(options: { minimumCount?: number } = {}): LintRu
         line: paragraph.line,
         text: paragraph.text,
       })), [2, 3, 4, 5]);
-      return [...groups.entries()]
-        .filter(([, occurrences]) => minimumCount === undefined
-          ? reachesRepetitionThreshold(occurrences)
-          : occurrences.length >= minimumCount)
-        .map(([phrase, occurrences]) => sequenceFinding(this.id, "phrase", phrase, occurrences));
+      return cappedSequenceFindings(this.id, "phrase", groups, (occurrences) => minimumCount === undefined
+        ? reachesRepetitionThreshold(occurrences)
+        : occurrences.length >= minimumCount);
     },
   };
 }
@@ -152,9 +194,7 @@ function openingRule(id: string, source: (document: ManuscriptDocument) => Array
     version: VERSION,
     run(input) {
       const groups = repeatedSequences(input, source, [3]);
-      return [...groups.entries()]
-        .filter(([, occurrences]) => reachesRepetitionThreshold(occurrences))
-        .map(([opening, occurrences]) => sequenceFinding(this.id, "opening", opening, occurrences));
+      return cappedSequenceFindings(this.id, "opening", groups, reachesRepetitionThreshold);
     },
   };
 }
@@ -274,10 +314,9 @@ function pairFinding(ruleId: string, first: LocatedText, second: LocatedText, ev
   };
 }
 
-// These caps bound both serialized evidence and near-duplicate similarity work for large manuscripts.
-export const DUPLICATE_FINDING_LIMIT = 40;
+// Duplicate rules calculate complete counts but retain only this many serialized findings.
+export const DUPLICATE_FINDING_LIMIT = REPETITION_FINDING_LIMIT;
 export const DUPLICATE_LOCATION_LIMIT = 8;
-export const NEAR_DUPLICATE_COMPARISON_LIMIT = 20_000;
 // Jaccard cannot reach 0.85 when the smaller unique-trigram count is below 85% of the larger count.
 export const NEAR_DUPLICATE_MIN_LENGTH_RATIO = 0.85;
 
@@ -361,90 +400,135 @@ function jaccard(left: ReadonlySet<string>, right: ReadonlySet<string>): number 
   return intersection / (left.size + right.size - intersection);
 }
 
-function uniqueNearCandidates(input: ProseLintInput): DuplicateCandidate[] {
-  const byNormalized = new Map<string, DuplicateCandidate>();
-  for (const candidate of duplicateCandidates(input)) {
-    if (candidate.tokens.length < 12 || byNormalized.has(candidate.normalized)) continue;
-    byNormalized.set(candidate.normalized, candidate);
+function spanCounts(occurrences: readonly DuplicateCandidate[]): ReadonlyMap<string, { paragraphs: number; sentences: number }> {
+  const counts = new Map<string, { paragraphs: number; sentences: number }>();
+  for (const occurrence of occurrences) {
+    const key = `${occurrence.document.path}\u0000${occurrence.paragraphIndex}`;
+    const item = counts.get(key) ?? { paragraphs: 0, sentences: 0 };
+    item[occurrence.kind === "paragraph" ? "paragraphs" : "sentences"] += 1;
+    counts.set(key, item);
   }
-  return [...byNormalized.values()].sort((left, right) =>
-    left.trigramSet.size - right.trigramSet.size
-    || left.tokens.length - right.tokens.length
-    || left.sequence - right.sequence);
+  return counts;
 }
 
-function comparisonEligibility(candidates: readonly DuplicateCandidate[]): { starts: number[]; count: number } {
-  const starts: number[] = [];
-  let count = 0;
-  let left = 0;
-  for (let right = 0; right < candidates.length; right += 1) {
-    const longest = (candidates[right] as DuplicateCandidate).trigramSet.size;
-    while (left < right && (candidates[left] as DuplicateCandidate).trigramSet.size / longest < NEAR_DUPLICATE_MIN_LENGTH_RATIO) left += 1;
-    starts.push(left);
-    count += right - left;
+function nearDuplicateGroups(input: ProseLintInput): DuplicateGroup[] {
+  const byNormalized = new Map<string, DuplicateCandidate[]>();
+  for (const candidate of duplicateCandidates(input)) {
+    if (candidate.tokens.length < 12) continue;
+    const occurrences = byNormalized.get(candidate.normalized);
+    if (occurrences === undefined) byNormalized.set(candidate.normalized, [candidate]);
+    else occurrences.push(candidate);
   }
-  return { starts, count };
+  return [...byNormalized.entries()].map(([normalized, occurrences]) => {
+    const representative = occurrences[0] as DuplicateCandidate;
+    return {
+      normalized,
+      occurrences,
+      representative,
+      trigramSet: representative.trigramSet,
+      tokenCount: representative.tokens.length,
+      sequence: representative.sequence,
+      spanCounts: spanCounts(occurrences),
+    };
+  }).sort((left, right) =>
+    left.trigramSet.size - right.trigramSet.size
+    || left.tokenCount - right.tokenCount
+    || left.sequence - right.sequence
+    || compareDeterministicText(left.normalized, right.normalized));
+}
+
+function nonOverlappingMultiplicity(left: DuplicateGroup, right: DuplicateGroup): number {
+  let invalid = 0;
+  for (const [key, leftCounts] of left.spanCounts) {
+    const rightCounts = right.spanCounts.get(key);
+    if (rightCounts === undefined) continue;
+    const leftTotal = leftCounts.paragraphs + leftCounts.sentences;
+    const rightTotal = rightCounts.paragraphs + rightCounts.sentences;
+    invalid += leftTotal * rightTotal - leftCounts.sentences * rightCounts.sentences;
+  }
+  return left.occurrences.length * right.occurrences.length - invalid;
+}
+
+function firstNonOverlappingPair(left: DuplicateGroup, right: DuplicateGroup): [DuplicateCandidate, DuplicateCandidate] {
+  for (const first of left.occurrences) {
+    for (const second of right.occurrences) if (!spansOverlap(first, second)) return [first, second];
+  }
+  throw new Error("Near-duplicate multiplicity did not have a representative pair.");
+}
+
+function minimumIntersection(leftSize: number, rightSize: number): number {
+  return Math.ceil((0.85 * (leftSize + rightSize)) / 1.85 - 1e-12);
 }
 
 const nearDuplicateRule: LintRule = {
   id: "repetition/near-duplicate",
   version: VERSION,
   run(input) {
-    const candidates = uniqueNearCandidates(input);
-    const eligibility = comparisonEligibility(candidates);
-    const eligible = eligibility.count;
-    const comparisonsOmitted = Math.max(0, eligible - NEAR_DUPLICATE_COMPARISON_LIMIT);
-    const retainedLimit = comparisonsOmitted > 0 ? DUPLICATE_FINDING_LIMIT - 1 : DUPLICATE_FINDING_LIMIT;
-    const retained: Array<{ first: DuplicateCandidate; second: DuplicateCandidate; similarity: number }> = [];
-    let comparedCount = 0;
+    const groups = nearDuplicateGroups(input);
+    const inverted = new Map<string, number[]>();
+    const retained: Array<{
+      first: DuplicateCandidate;
+      second: DuplicateCandidate;
+      firstGroup: DuplicateGroup;
+      secondGroup: DuplicateGroup;
+      similarity: number;
+      pairMultiplicity: number;
+    }> = [];
     let fullFindingCount = 0;
-    scan: for (let right = 1; right < candidates.length; right += 1) {
-      const firstEligible = eligibility.starts[right] as number;
-      for (let left = firstEligible; left < right; left += 1) {
-        if (comparedCount === NEAR_DUPLICATE_COMPARISON_LIMIT) break scan;
-        comparedCount += 1;
-        const first = candidates[left] as DuplicateCandidate;
-        const second = candidates[right] as DuplicateCandidate;
-        if (spansOverlap(first, second)) continue;
-        const similarity = jaccard(first.trigramSet, second.trigramSet);
+    let fullUniquePairCount = 0;
+    let retainedMultiplicity = 0;
+    for (let rightIndex = 0; rightIndex < groups.length; rightIndex += 1) {
+      const right = groups[rightIndex] as DuplicateGroup;
+      const intersections = new Map<number, number>();
+      for (const trigram of right.trigramSet) {
+        for (const leftIndex of inverted.get(trigram) ?? []) {
+          intersections.set(leftIndex, (intersections.get(leftIndex) ?? 0) + 1);
+        }
+      }
+      const candidates = [...intersections.entries()].filter(([leftIndex, intersection]) => {
+        const left = groups[leftIndex] as DuplicateGroup;
+        if (left.trigramSet.size / right.trigramSet.size < NEAR_DUPLICATE_MIN_LENGTH_RATIO) return false;
+        return intersection >= minimumIntersection(left.trigramSet.size, right.trigramSet.size);
+      }).sort((left, rightItem) => left[0] - rightItem[0]);
+      for (const [leftIndex] of candidates) {
+        const left = groups[leftIndex] as DuplicateGroup;
+        const similarity = jaccard(left.trigramSet, right.trigramSet);
         if (similarity < 0.85) continue;
-        fullFindingCount += 1;
-        if (retained.length < retainedLimit) retained.push({ first, second, similarity });
+        const pairMultiplicity = nonOverlappingMultiplicity(left, right);
+        if (pairMultiplicity === 0) continue;
+        fullFindingCount += pairMultiplicity;
+        fullUniquePairCount += 1;
+        if (retained.length < DUPLICATE_FINDING_LIMIT) {
+          const [first, second] = firstNonOverlappingPair(left, right);
+          retained.push({ first, second, firstGroup: left, secondGroup: right, similarity, pairMultiplicity });
+          retainedMultiplicity += pairMultiplicity;
+        }
+      }
+      for (const trigram of right.trigramSet) {
+        const postings = inverted.get(trigram);
+        if (postings === undefined) inverted.set(trigram, [rightIndex]);
+        else postings.push(rightIndex);
       }
     }
-    const omittedFindingCount = fullFindingCount - retained.length;
+    const omittedFindingCount = fullFindingCount - retainedMultiplicity;
     const commonEvidence = {
       threshold: 0.85,
       trigramCardinalityRatioThreshold: NEAR_DUPLICATE_MIN_LENGTH_RATIO,
-      comparisonLimit: NEAR_DUPLICATE_COMPARISON_LIMIT,
-      eligibleComparisonCount: eligible,
-      comparedCount,
-      omittedComparisonCount: eligible - comparedCount,
       fullFindingCount,
       omittedFindingCount,
-      omittedLocationCount: 0,
+      fullUniquePairCount,
+      omittedUniquePairCount: fullUniquePairCount - retained.length,
     };
-    const findings = retained.map(({ first, second, similarity }) => pairFinding(this.id, first, second, {
+    return retained.map(({ first, second, firstGroup, secondGroup, similarity, pairMultiplicity }) => pairFinding(this.id, first, second, {
       ...commonEvidence,
       similarity: Math.round(similarity * 10_000) / 10_000,
       firstTokenCount: first.tokens.length,
       secondTokenCount: second.tokens.length,
+      firstOccurrenceCount: firstGroup.occurrences.length,
+      secondOccurrenceCount: secondGroup.occurrences.length,
+      pairMultiplicity,
+      omittedLocationCount: firstGroup.occurrences.length + secondGroup.occurrences.length - 2,
     }));
-    if (comparisonsOmitted > 0) {
-      const first = candidates[0];
-      findings.push({
-        ruleId: this.id,
-        ruleVersion: VERSION,
-        class: "repetition",
-        confidence: "review",
-        location: { path: first?.document.path ?? ".", ...(first === undefined ? {} : { line: first.line }) },
-        excerpt: "",
-        message: "Near-duplicate comparison evidence was deterministically bounded for this manuscript scope.",
-        evidence: { evidenceOnly: true, ...commonEvidence },
-        reviewAction: "Review the reported pairs first; additional length-eligible comparisons were omitted by the documented safety limit.",
-      });
-    }
-    return findings;
   },
 };
 

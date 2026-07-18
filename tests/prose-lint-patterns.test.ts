@@ -92,6 +92,39 @@ test("body-language repetition reports per-term cross-document and dense-local e
   ]), result);
 });
 
+test("sequence repetition rules cap a highly repetitive four-thousand-word corpus with truthful totals", () => {
+  const paragraphs = Array.from({ length: 60 }, (_, pattern) => Array.from({ length: 4 }, (_, use) => [
+    `signal${pattern}`,
+    `marker${pattern}`,
+    `rises${pattern}`,
+    "through the copper station while watchers count lanterns",
+    `before dawn cycle${use}`,
+    "returns again tonight",
+  ].join(" ") + ".")).flat();
+  const documents = [{ path: "long.md", text: paragraphs.join("\n\n") }];
+  const rules = repetitionRules.filter((rule) => [
+    "repetition/ngram",
+    "repetition/sentence-opening",
+    "repetition/paragraph-opening",
+  ].includes(rule.id));
+  const first = lint(documents, rules);
+  const second = lint(documents, rules);
+
+  assert.ok(first.wordCount >= 3_800 && first.wordCount <= 4_200, `${first.wordCount} words`);
+  assert.deepEqual(second, first);
+  for (const ruleId of rules.map((rule) => rule.id)) {
+    const findings = first.findings.filter((finding) => finding.ruleId === ruleId);
+    assert.equal(findings.length, 40, ruleId);
+    const fullFindingCount = Number(findings[0]?.evidence.fullFindingCount);
+    assert.ok(fullFindingCount > 40, `${ruleId} full count ${fullFindingCount}`);
+    assert.ok(findings.every((finding) => finding.evidence.fullFindingCount === fullFindingCount));
+    assert.ok(findings.every((finding) => finding.evidence.omittedFindingCount === fullFindingCount - 40));
+    assert.ok(findings.every((finding) => ruleId === "repetition/ngram"
+      ? typeof finding.evidence.phrase === "string"
+      : typeof finding.evidence.opening === "string"));
+  }
+});
+
 test("duplicate rules report exact pairs and only near-duplicate passages at or above 0.85 similarity", () => {
   const exact = "The brass key waited under a cracked blue tile beside the silent stove.";
   const baseTokens = Array.from({ length: 40 }, (_, index) => `token${index + 1}`);
@@ -125,6 +158,25 @@ test("near-duplicate detection does not compare a paragraph with its own contain
   }]);
 
   assert.deepEqual(result.findings.filter((item) => item.ruleId === "repetition/near-duplicate"), []);
+});
+
+test("near-duplicate totals multiply token-identical group occurrences without duplicate comparisons", () => {
+  const base = Array.from({ length: 40 }, (_, index) => `token${index + 1}`);
+  const changed = [...base];
+  changed[20] = "changed";
+  const rules = repetitionRules.filter((rule) => rule.id === "repetition/near-duplicate");
+  const result = lint([{
+    path: "multiplicity.md",
+    text: [
+      ...Array.from({ length: 3 }, () => `${base.join(" ")}.`),
+      ...Array.from({ length: 4 }, () => `${changed.join(" ")}.`),
+    ].join("\n\n"),
+  }], rules);
+
+  assert.equal(result.findings.length, 1);
+  assert.equal(result.findings[0]?.evidence.pairMultiplicity, 12);
+  assert.equal(result.findings[0]?.evidence.fullFindingCount, 12);
+  assert.equal(result.findings[0]?.evidence.omittedFindingCount, 0);
 });
 
 test("exact duplicate sentences on the same Markdown line retain distinct stable spans", () => {
@@ -164,13 +216,13 @@ test("duplicate rules bound pair work and output while retaining deterministic f
   assert.equal(exactFindings[0]?.evidence.omittedFindingCount, 0);
 
   const nearFindings = first.findings.filter((finding) => finding.ruleId === "repetition/near-duplicate");
-  assert.ok(nearFindings.length <= 40, `${nearFindings.length} near-duplicate findings`);
-  const limit = nearFindings.find((finding) => finding.evidence.evidenceOnly === true);
-  assert.ok(limit);
-  assert.ok(Number(limit.evidence.eligibleComparisonCount) > Number(limit.evidence.comparedCount));
-  assert.ok(Number(limit.evidence.omittedComparisonCount) > 0);
-  assert.ok(Number(limit.evidence.fullFindingCount) > 0);
-  assert.ok(Number(limit.evidence.omittedFindingCount) > 0);
+  assert.equal(nearFindings.length, 40);
+  assert.ok(nearFindings.every((finding) => finding.evidence.fullFindingCount === 24_090));
+  assert.ok(nearFindings.every((finding) => finding.evidence.omittedFindingCount === 24_050));
+  assert.ok(nearFindings.every((finding) => finding.evidence.pairMultiplicity === 1));
+  assert.ok(nearFindings.every((finding) => finding.evidence.evidenceOnly === undefined));
+  assert.ok(nearFindings.every((finding) => finding.evidence.comparisonLimit === undefined));
+  assert.ok(nearFindings.every((finding) => finding.evidence.omittedComparisonCount === undefined));
 });
 
 function styleFixture() {
