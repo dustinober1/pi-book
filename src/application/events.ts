@@ -185,6 +185,15 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     ]);
     if (missing.length) throw new Error(`voice-profile event is missing required output: ${missing.join(", ")}`);
   }
+  if (input.eventType === "series-plan") {
+    const missing = missingRequiredPaths(input.files, [
+      "series/series-bible.md",
+      "series/series-arc.yaml",
+      "series/canon.yaml",
+      "series/story-threads.yaml",
+    ]);
+    if (missing.length) throw new Error(`series-plan event is missing required output: ${missing.join(", ")}`);
+  }
   if (input.eventType === "book-plan") {
     const requiredBookPlan = [
       `books/${book.book_id}/book-bible.md`,

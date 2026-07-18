@@ -113,11 +113,19 @@ export function seriesPlanStageSpec(input: SeriesPlanStageInput): StageSpec {
     role: "a series architecture planner",
     objective: "Define the recurring promise, escalation logic, recurring-cast pressure, and closure/carry rules without over-planning future books.",
     inputs: [`Project root: ${input.root}`, interviewRule, ...input.planningQuestions.map((question) => `Profile question: ${question}`)],
-    must: ["Future books remain provisional.", "Produce the complete typed series state and required series bible rather than exposing schema fields to the writer."],
+    must: [
+      "Future books remain provisional.",
+      "Produce the complete typed series state and required series bible rather than exposing schema fields to the writer.",
+      "series/canon.yaml top level requires schema_version 1.0.0, facts as an array, and relationships as an array.",
+      "For series/canon.yaml, facts entries require non-empty string fields id, category, subject, fact, and source, plus status and introduced_in; status must be locked or provisional, and introduced_in is a string or null.",
+      "For series/canon.yaml, relationship entries require id, characters, state, trust, public_status, private_status, unresolved, and status; characters is an array of at least two strings, unresolved is an array of strings, and status must be locked or provisional.",
+      "series/story-threads.yaml top level requires schema_version 1.0.0 and threads as an array.",
+      "For series/story-threads.yaml, thread entries require id, type, setup, reader_knows, characters_know, status, intended_payoff, and last_advanced_in; id and type are non-empty strings, characters_know is a string-to-string map, intended_payoff and last_advanced_in are each a string or null, and status is only planned, open, advanced, paid-off, or abandoned.",
+    ],
     avoid: ["Do not over-plan future books scene by scene.", "Do not lock provisional future-book facts as canon."],
     outputs: ["series/series-bible.md", "series/series-arc.yaml", "series/canon.yaml", "series/story-threads.yaml"],
     validation: ["Every recurring promise and escalation rule is explicit.", "Future-book material is marked provisional.", "Only the declared four files change."],
-    toolRules: eventToolRules({ eventType: "series-plan", expectedStage: "series-planning", projectHash: input.projectHash }),
+    toolRules: eventToolRules({ eventType: "series-plan", expectedStage: "series-planning", projectHash: input.projectHash, extra: "Submit all four series-plan files in one event: series-bible.md, series-arc.yaml, canon.yaml, and story-threads.yaml." }),
   };
 }
 

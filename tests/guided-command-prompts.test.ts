@@ -35,6 +35,18 @@ test("planning prompts conduct short one-at-a-time author interviews", () => {
     assert.match(voice, /research-update/i);
     assert.match(voice, /writer samples.*outrank/i);
 
+    const series = seriesPlanPrompt(root);
+    assert.match(series, /canon\.yaml top level requires schema_version 1\.0\.0, facts as an array, and relationships as an array/i);
+    assert.match(series, /facts entries require.*id, category, subject, fact,.*source.*status.*introduced_in/i);
+    assert.match(series, /relationship entries require id, characters.*state, trust, public_status, private_status, unresolved,.*status/i);
+    assert.match(series, /characters is an array of at least two strings.*unresolved is an array of strings/i);
+    assert.match(series, /story-threads\.yaml top level requires schema_version 1\.0\.0 and threads as an array/i);
+    assert.match(series, /thread entries require id, type, setup, reader_knows, characters_know, status, intended_payoff,.*last_advanced_in/i);
+    assert.match(series, /characters_know is a string-to-string map.*intended_payoff and last_advanced_in are each a string or null/i);
+    assert.match(series, /status must be locked or provisional/i);
+    assert.match(series, /planned, open, advanced, paid-off, or abandoned/i);
+    assert.match(series, /submit all four series-plan files in one event/i);
+
     const book = bookPlanPrompt(root);
     assert.match(book, /safe, predictable version/i);
     assert.match(book, /uniquely deliver/i);
