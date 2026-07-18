@@ -128,6 +128,7 @@ function contextLocation(context: ProjectLintContext, chapter?: number): { path:
 const chapterSequenceRule: LintRule = {
   id: "consistency/chapter-sequence",
   version: VERSION,
+  requirements: { projectContext: [] },
   run(input) {
     const context = input.projectContext;
     if (context === undefined) return [];
@@ -160,6 +161,7 @@ function duplicates(values: readonly string[]): string[] {
 const duplicateIdRule: LintRule = {
   id: "consistency/duplicate-id",
   version: VERSION,
+  requirements: { projectContext: ["canon", "threads", "sources", "research"] },
   run(input) {
     const context = input.projectContext;
     if (context === undefined) return [];
@@ -178,6 +180,7 @@ const duplicateIdRule: LintRule = {
 const relationshipCharactersRule: LintRule = {
   id: "consistency/relationship-characters",
   version: VERSION,
+  requirements: { projectContext: ["canon"] },
   run(input) {
     const relationships = input.projectContext?.relationships ?? [];
     return relationships.flatMap((relationship) => {
@@ -195,6 +198,7 @@ const relationshipCharactersRule: LintRule = {
 const canonNameCaseRule: LintRule = {
   id: "consistency/canon-name-case",
   version: VERSION,
+  requirements: { projectContext: ["canon"] },
   run(input) {
     const names = input.projectContext?.canonNames.filter((name) => (name.match(/\p{L}/gu)?.length ?? 0) >= 2) ?? [];
     const findings: LintFinding[] = [];
@@ -216,6 +220,7 @@ const canonNameCaseRule: LintRule = {
 const canonNumberRule: LintRule = {
   id: "consistency/canon-number",
   version: VERSION,
+  requirements: { projectContext: ["canon"] },
   run(input) {
     const entries = input.projectContext?.canonEntries.filter((entry) => entry.locked) ?? [];
     const findings: LintFinding[] = [];
@@ -242,6 +247,7 @@ const canonNumberRule: LintRule = {
 const missingReferenceRule: LintRule = {
   id: "consistency/missing-reference",
   version: VERSION,
+  requirements: { projectContext: ["canon", "threads", "sources", "research", "queue", "plot"] },
   run(input) {
     const context = input.projectContext;
     if (context === undefined) return [];
@@ -271,6 +277,7 @@ const missingReferenceRule: LintRule = {
 const threadStatusRule: LintRule = {
   id: "consistency/thread-status",
   version: VERSION,
+  requirements: { projectContext: ["threads", "queue"] },
   run(input) {
     const context = input.projectContext;
     if (context === undefined) return [];

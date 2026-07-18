@@ -32,22 +32,39 @@ test("all eight legacy scanner entry points retain their titles and rule-family 
       ...Array.from({ length: 4 }, () => "It was not fear but focus."),
     ].join("\n\n"), "utf8");
     writeFileSync(join(bookRoot, "manuscript", "chapters", "02-filler.md"), `${Array.from({ length: 2_000 }, (_, index) => `word${index}`).join(" ")}.\n`, "utf8");
-    const scripts: Array<[string, string, RegExp]> = [
-      ["ngram-audit.mjs", "Novel Forge n-gram audit", /repetition\/ngram/],
-      ["rhetorical-pattern-audit.mjs", "Novel Forge rhetorical-pattern audit", /style-pattern\/not-x-but-y/],
-      ["continuity-scan.mjs", "Novel Forge continuity scan", /consistency\/canon-number/],
-      ["integrity-audit.mjs", "Novel Forge structured-integrity audit", /consistency\/missing-reference/],
-      ["structure-audit.mjs", "Novel Forge structure audit", /consistency\/chapter-structure/],
-      ["spelling-consistency-audit.mjs", "Novel Forge spelling-consistency audit", /consistency\/spelling/],
-      ["temporal-reference-audit.mjs", "Novel Forge temporal-reference audit", /consistency\/temporal-reference/],
-      ["copy-mechanics-audit.mjs", "Novel Forge copy-mechanics audit", /mechanics\/doubled-word/],
+    const scripts: Array<[string, string, RegExp, string[], RegExp]> = [
+      ["ngram-audit.mjs", "Novel Forge n-gram audit", /repetition\/ngram/, ["Repeated phrases for review"], /- “.+” — \d+ uses across \d+ file\(s\)/],
+      ["rhetorical-pattern-audit.mjs", "Novel Forge rhetorical-pattern audit", /style-pattern\/not-x-but-y/, ["Pattern counts"], /- .+: not X but Y × \d+/],
+      ["continuity-scan.mjs", "Novel Forge continuity scan", /consistency\/canon-number/, ["Potential conflicts"], /- .+ \/ CAN-AGE: possible numeric divergence near “.+”/],
+      ["integrity-audit.mjs", "Novel Forge structured-integrity audit", /consistency\/missing-reference/, ["Integrity findings"], /- Chapter 1 references missing canon CAN-MISSING\./],
+      ["structure-audit.mjs", "Novel Forge structure audit", /consistency\/chapter-structure/, ["Manuscript summary", "Structural review flags"], /- 2 chapter file\(s\), \d+ words/],
+      ["spelling-consistency-audit.mjs", "Novel Forge spelling-consistency audit", /consistency\/spelling/, ["Mixed-system findings"], /- color\/colour mixed — US in .+; UK in .+/],
+      ["temporal-reference-audit.mjs", "Novel Forge temporal-reference audit", /consistency\/temporal-reference/, ["References requiring chronology review"], /- .+:\d+ — tomorrow — .+/],
+      ["copy-mechanics-audit.mjs", "Novel Forge copy-mechanics audit", /mechanics\/doubled-word/, ["Mechanical findings"], /- .+:\d+ — doubled word — .+/],
     ];
-    for (const [script, title, finding] of scripts) {
+    for (const [script, title, finding, sections, summary] of scripts) {
       const output = execFileSync("node", [resolve("scripts", script), root], { cwd: process.cwd() }).toString();
       assert.match(output, new RegExp(`^# ${title}$`, "m"));
       assert.match(output, finding);
+      assert.deepEqual([...output.matchAll(/^## (.+)$/gm)].map((match) => match[1]), sections, script);
+      assert.match(output, summary, script);
     }
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("the direct n-gram scanner accepts --min-count and applies the legacy threshold", () => {
+  const root = mkdtempSync(join(tmpdir(), "novel-forge-ngram-threshold-"));
+  try {
+    writeFileSync(join(root, "01.md"), "Copper moon rising.\n\nCopper moon falling.\n", "utf8");
+    const script = resolve("scripts/ngram-audit.mjs");
+    const two = execFileSync("node", [script, root, "--min-count", "2"], { cwd: process.cwd(), encoding: "utf8" });
+    const three = execFileSync("node", [script, root, "--min-count", "3"], { cwd: process.cwd(), encoding: "utf8" });
+
+    assert.match(two, /“copper moon” — 2 uses across 1 file\(s\)/);
+    assert.match(three, /^## Repeated phrases for review\n\n- none$/m);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("an absolute legacy scanner path runs from an unrelated working directory", () => {
@@ -66,5 +83,24 @@ test("an absolute legacy scanner path runs from an unrelated working directory",
   } finally {
     rmSync(parent, { recursive: true, force: true });
     rmSync(unrelated, { recursive: true, force: true });
+  }
+});
+
+test("a mechanics-only legacy scanner ignores malformed unrelated canonical artifacts", () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-scanner-filtered-"));
+  try {
+    const project = initializeProject(parent, { projectName: "Filtered Scanner", projectType: "standalone", profile: "thriller" });
+    writeFileSync(join(project, "books", "book-01", "manuscript", "chapters", "01-opening.md"), "# Opening\n\nThe the lantern failed.\n", "utf8");
+    writeFileSync(join(project, "series", "canon.yaml"), "facts: [this is not valid", "utf8");
+
+    const result = spawnSync("node", [resolve("scripts/copy-mechanics-audit.mjs"), project], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /mechanics\/doubled-word/);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
   }
 });

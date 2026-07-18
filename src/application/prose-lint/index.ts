@@ -4,14 +4,17 @@ export { normalizeDocument } from "./normalize.js";
 export { renderProseLintJson, renderProseLintMarkdown, renderReviewLintEvidence } from "./report.js";
 export { mechanicalRules } from "./rules/mechanics.js";
 export { projectConsistencyRules } from "./rules/project-consistency.js";
-export { repetitionRules } from "./rules/repetition.js";
+export { createNgramRule, repetitionRules } from "./rules/repetition.js";
 export { stylePatternRules } from "./rules/style-patterns.js";
 export type {
   LintClass,
   LintConfidence,
   LintFinding,
   LintRule,
+  LintRuleRequirements,
+  LegacyReportKind,
   ManuscriptDocument,
+  ProjectContextArtifact,
   ProjectLintContext,
   ProseLintInput,
   ProseLintResult,

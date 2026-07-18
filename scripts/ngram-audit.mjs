@@ -1,3 +1,3 @@
 import { forwardProseLint } from "./lib/prose-lint-forwarder.mjs";
 
-forwardProseLint({ title: "Novel Forge n-gram audit", rulePrefixes: ["repetition/ngram"] });
+forwardProseLint({ title: "Novel Forge n-gram audit", rulePrefixes: ["repetition/ngram"], legacyReport: "ngram", supportsMinCount: true });

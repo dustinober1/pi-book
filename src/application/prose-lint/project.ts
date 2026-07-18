@@ -15,13 +15,13 @@ import { listChapterFiles, listFilesRecursive, readText } from "../../infrastruc
 import { parseYaml } from "../../infrastructure/yaml.js";
 import { readBook, readProject } from "../../project/store.js";
 import { normalizeDocument } from "./normalize.js";
+import { compareDeterministicText } from "./order.js";
 import { mechanicalRules } from "./rules/mechanics.js";
 import { projectConsistencyRules } from "./rules/project-consistency.js";
 import { repetitionRules } from "./rules/repetition.js";
 import { stylePatternRules } from "./rules/style-patterns.js";
-import type { ProjectLintContext, ProseLintInput } from "./types.js";
+import type { LintRule, ProjectContextArtifact, ProjectLintContext, ProseLintInput } from "./types.js";
 
-const numericCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 const romanActNumbers = new Map([
   "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
   "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX",
@@ -51,7 +51,7 @@ function orderedFiles(root: string, files: readonly string[]): Array<{ absolute:
     if (left.number !== null && right.number !== null && left.number !== right.number) return left.number - right.number;
     if (left.number !== null && right.number === null) return -1;
     if (left.number === null && right.number !== null) return 1;
-    return numericCollator.compare(left.path, right.path);
+    return compareDeterministicText(left.path, right.path);
   });
 }
 
@@ -77,15 +77,27 @@ interface ProjectArtifacts {
   plot: PlotGridPhase4;
 }
 
-function projectArtifacts(root: string, bookId: string): ProjectArtifacts {
+function projectArtifacts(root: string, bookId: string, requested: ReadonlySet<ProjectContextArtifact>): ProjectArtifacts {
   const bookRoot = join(root, "books", bookId);
   return {
-    canon: readYaml<CanonState>(join(root, "series", "canon.yaml"), CanonSchema, { schema_version: "1.0.0", facts: [], relationships: [] }),
-    threads: readYaml<StoryThreadsState>(join(root, "series", "story-threads.yaml"), StoryThreadsSchema, { schema_version: "1.0.0", threads: [] }),
-    sources: readYaml<SourceRegisterV13>(join(root, "research", "source-register.yaml"), SourceRegisterV13Schema, { schema_version: "1.0.0", sources: [] }),
-    research: readYaml<ResearchLedger>(join(bookRoot, "research-ledger.yaml"), ResearchLedgerSchema, { schema_version: "1.0.0", items: [] }),
-    queue: readYaml<ChapterQueueState>(join(bookRoot, "chapter-queue.yaml"), ChapterQueueSchema, { schema_version: "1.0.0", active_window: "", packets: [] }),
-    plot: readYaml<PlotGridPhase4>(join(bookRoot, "plot-grid.yaml"), PlotGridPhase4Schema, { schema_version: "1.0.0", acts: [], chapters: [] }),
+    canon: requested.has("canon")
+      ? readYaml<CanonState>(join(root, "series", "canon.yaml"), CanonSchema, { schema_version: "1.0.0", facts: [], relationships: [] })
+      : { schema_version: "1.0.0", facts: [], relationships: [] },
+    threads: requested.has("threads")
+      ? readYaml<StoryThreadsState>(join(root, "series", "story-threads.yaml"), StoryThreadsSchema, { schema_version: "1.0.0", threads: [] })
+      : { schema_version: "1.0.0", threads: [] },
+    sources: requested.has("sources")
+      ? readYaml<SourceRegisterV13>(join(root, "research", "source-register.yaml"), SourceRegisterV13Schema, { schema_version: "1.0.0", sources: [] })
+      : { schema_version: "1.0.0", sources: [] },
+    research: requested.has("research")
+      ? readYaml<ResearchLedger>(join(bookRoot, "research-ledger.yaml"), ResearchLedgerSchema, { schema_version: "1.0.0", items: [] })
+      : { schema_version: "1.0.0", items: [] },
+    queue: requested.has("queue")
+      ? readYaml<ChapterQueueState>(join(bookRoot, "chapter-queue.yaml"), ChapterQueueSchema, { schema_version: "1.0.0", active_window: "", packets: [] })
+      : { schema_version: "1.0.0", active_window: "", packets: [] },
+    plot: requested.has("plot")
+      ? readYaml<PlotGridPhase4>(join(bookRoot, "plot-grid.yaml"), PlotGridPhase4Schema, { schema_version: "1.0.0", acts: [], chapters: [] })
+      : { schema_version: "1.0.0", acts: [], chapters: [] },
   };
 }
 
@@ -148,8 +160,32 @@ function defaultRules() {
   ];
 }
 
-export function loadProseLintInput(target: string, options: { scope?: string } = {}): ProseLintInput {
+function requirementsFor(rules: readonly LintRule[]): {
+  baselineMetrics: boolean;
+  projectContext: boolean;
+  artifacts: Set<ProjectContextArtifact>;
+} {
+  const artifacts = new Set<ProjectContextArtifact>();
+  let baselineMetrics = false;
+  let projectContext = false;
+  for (const rule of rules) {
+    baselineMetrics ||= rule.requirements?.baselineMetrics === true;
+    if (rule.requirements?.projectContext !== undefined) {
+      projectContext = true;
+      for (const artifact of rule.requirements.projectContext) artifacts.add(artifact);
+    }
+  }
+  return { baselineMetrics, projectContext, artifacts };
+}
+
+function isActScope(scope: string | undefined): boolean {
+  const normalized = scope?.trim().toLocaleLowerCase("en-US");
+  return normalized === "act" || (normalized !== undefined && /^act(?:[\s_-]+)/u.test(normalized));
+}
+
+export function loadProseLintInput(target: string, options: { scope?: string; rules?: readonly LintRule[] } = {}): ProseLintInput {
   const resolved = resolve(target);
+  const rules = options.rules ?? defaultRules();
   try {
     if (!statSync(resolved).isDirectory()) throw new Error("not a directory");
   } catch {
@@ -162,9 +198,14 @@ export function loadProseLintInput(target: string, options: { scope?: string } =
     const chapterRoot = join(resolved, "books", book.book_id, "manuscript", "chapters");
     const allFiles = orderedFiles(chapterRoot, listChapterFiles(join(resolved, "books", book.book_id)));
     if (allFiles.length === 0) throw new Error(`No Markdown files found for active book ${book.book_id}.`);
-    const artifacts = projectArtifacts(resolved, book.book_id);
+    const requirements = requirementsFor(rules);
+    if (isActScope(options.scope)) {
+      requirements.artifacts.add("queue");
+      requirements.artifacts.add("plot");
+    }
+    const artifacts = projectArtifacts(resolved, book.book_id, requirements.artifacts);
     const files = filesForScope(allFiles, options.scope, artifacts);
-    const guardrailText = readText(join(resolved, "series", "voice-guardrails.yaml"));
+    const guardrailText = requirements.baselineMetrics ? readText(join(resolved, "series", "voice-guardrails.yaml")) : null;
     const guardrails = guardrailText === null ? undefined : parseYaml<VoiceGuardrails>(guardrailText, VoiceGuardrailsSchema, "series/voice-guardrails.yaml");
     const acceptedMetrics = guardrails === undefined
       ? []
@@ -176,8 +217,8 @@ export function loadProseLintInput(target: string, options: { scope?: string } =
     return {
       documents: documentsFor(files),
       ...(baselineAccepted ? { baselineMetrics: Object.fromEntries(acceptedMetrics) } : {}),
-      projectContext: contextFor(resolved, book.book_id, chapterFiles, artifacts),
-      rules: defaultRules(),
+      ...(requirements.projectContext ? { projectContext: contextFor(resolved, book.book_id, chapterFiles, artifacts) } : {}),
+      rules,
     };
   }
 
@@ -187,11 +228,10 @@ export function loadProseLintInput(target: string, options: { scope?: string } =
   } catch {
     throw new Error(`Cannot read prose-lint target: ${target}`);
   }
-  const normalizedScope = options.scope?.trim().toLocaleLowerCase("en-US");
-  if (normalizedScope === "act" || (normalizedScope !== undefined && /^act(?:[\s_-]+)/u.test(normalizedScope))) {
+  if (isActScope(options.scope)) {
     throw new Error(`Prose-lint act scope “${options.scope}” requires Novel Forge project metadata.`);
   }
   const files = orderedFiles(resolved, markdownFiles);
   if (files.length === 0) throw new Error(`No Markdown files found in prose-lint target: ${target}`);
-  return { documents: documentsFor(files), rules: defaultRules() };
+  return { documents: documentsFor(files), rules };
 }

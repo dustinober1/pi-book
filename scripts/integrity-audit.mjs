@@ -9,4 +9,5 @@ forwardProseLint({
     "consistency/missing-reference",
     "consistency/thread-status",
   ],
+  legacyReport: "integrity",
 });

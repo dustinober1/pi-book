@@ -1,4 +1,5 @@
 import { extractVoiceMetrics } from "../../voice-audit.js";
+import { compareDeterministicText } from "../order.js";
 import type { LintFinding, LintRule, ManuscriptDocument, ProseLintInput } from "../types.js";
 
 const VERSION = "1.0.0";
@@ -71,7 +72,7 @@ function occurrenceMetric(input: ProseLintInput, occurrences: readonly PatternOc
 function groupedDominant<T extends { key: string; occurrence: PatternOccurrence }>(items: readonly T[]): PatternOccurrence[] {
   const groups = new Map<string, PatternOccurrence[]>();
   for (const item of items) groups.set(item.key, [...(groups.get(item.key) ?? []), item.occurrence]);
-  return [...groups.entries()].sort((left, right) => right[1].length - left[1].length || left[0].localeCompare(right[0]))[0]?.[1] ?? [];
+  return [...groups.entries()].sort((left, right) => right[1].length - left[1].length || compareDeterministicText(left[0], right[0]))[0]?.[1] ?? [];
 }
 
 function metricOccurrences(input: ProseLintInput, terms: Set<string>, repeatsOnly = false): PatternOccurrence[] {
@@ -217,6 +218,7 @@ function ruleFor(definition: PatternDefinition): LintRule {
   return {
     id: definition.id,
     version: VERSION,
+    requirements: { baselineMetrics: true },
     run(input) {
       const occurrences = definition.occurrences(input);
       const text = corpusMetricText(input.documents);

@@ -1,4 +1,5 @@
 import type { LintClass, LintFinding, ProseLintResult, ReportOptions } from "./types.js";
+import { compareDeterministicText } from "./order.js";
 
 const classes: readonly LintClass[] = ["mechanical", "consistency", "repetition", "style-pattern"];
 const classTitles: Record<LintClass, string> = {
@@ -20,7 +21,112 @@ function location(finding: LintFinding): string {
   return `${finding.location.path}${finding.location.line === undefined ? "" : `:${finding.location.line}`}`;
 }
 
+function chapterLabel(path: string): string {
+  return path.replace(/\\/g, "/").split("/").at(-1) ?? path;
+}
+
+function legacyLine(finding: LintFinding, text: string): string {
+  return `${text} <!-- ${finding.ruleId} -->`;
+}
+
+function locationFiles(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return [...new Set(value.split(", ").map((item) => chapterLabel(item.replace(/:\d+$/u, ""))))].join(", ");
+}
+
+function legacySections(result: ProseLintResult, options: ReportOptions): Array<[string, string[]]> {
+  const findings = result.findings.filter((finding) => matches(finding.ruleId, options.rulePrefixes));
+  const failures = result.failures.filter((failure) => matches(failure.ruleId, options.rulePrefixes));
+  const withFailures = (lines: string[]) => [
+    ...lines,
+    ...failures.map((failure) => `Rule failure ${failure.ruleId}: ${inline(failure.message, 300)}`),
+  ];
+  switch (options.legacyReport) {
+    case "ngram": {
+      const lines = [...findings].sort((left, right) => {
+        const countDifference = Number(right.evidence.count) - Number(left.evidence.count);
+        if (countDifference !== 0) return countDifference;
+        const leftWords = String(left.evidence.phrase ?? "").split(" ").length;
+        const rightWords = String(right.evidence.phrase ?? "").split(" ").length;
+        if (leftWords !== rightWords) return rightWords - leftWords;
+        const leftPhrase = String(left.evidence.phrase ?? "");
+        const rightPhrase = String(right.evidence.phrase ?? "");
+        return compareDeterministicText(leftPhrase, rightPhrase);
+      }).slice(0, 40).map((finding) => legacyLine(
+        finding,
+        `“${String(finding.evidence.phrase ?? "")}” — ${Number(finding.evidence.count)} uses across ${Number(finding.evidence.documentCount ?? finding.evidence.chapterCount ?? 0)} file(s)`,
+      ));
+      return [["Repeated phrases for review", withFailures(lines)]];
+    }
+    case "rhetoric": {
+      const labels: Record<string, string> = {
+        "style-pattern/negative-parallelism": "negative parallelism",
+        "style-pattern/not-x-but-y": "not X but Y",
+        "style-pattern/aphoristic-close": "aphoristic close",
+        "style-pattern/three-part-cadence": "three-part cadence",
+        "style-pattern/rhetorical-question": "rhetorical question",
+        "style-pattern/fragment": "fragment",
+        "style-pattern/em-dash": "em dash",
+        "style-pattern/filter-word": "filter word",
+        "style-pattern/body-language-repetition": "body-language repetition",
+        "style-pattern/repeated-transition": "repeated transition",
+        "style-pattern/paragraph-shape": "paragraph shape",
+        "style-pattern/repeated-ending-syntax": "repeated ending syntax",
+      };
+      return [["Pattern counts", withFailures(findings.map((finding) => legacyLine(
+        finding,
+        `${chapterLabel(String(finding.evidence.localPath ?? finding.location.path))}: ${labels[finding.ruleId] ?? finding.ruleId} × ${Number(finding.evidence.localCount ?? finding.evidence.count ?? 1)}`,
+      )))]];
+    }
+    case "continuity":
+      return [["Potential conflicts", withFailures(findings.map((finding) => legacyLine(
+        finding,
+        `${chapterLabel(finding.location.path)} / ${String(finding.evidence.canonId ?? "canon")}: possible numeric divergence near “${inline(finding.excerpt, 140)}”`,
+      )))]];
+    case "integrity":
+      return [["Integrity findings", withFailures(findings.map((finding) => legacyLine(finding, finding.message)))]];
+    case "structure":
+      return [
+        ["Manuscript summary", [`${options.documentCount ?? 0} chapter file(s), ${result.wordCount} words`]],
+        ["Structural review flags", withFailures(findings.map((finding) => legacyLine(finding, `${chapterLabel(finding.location.path)} ${finding.message.charAt(0).toLocaleLowerCase("en-US")}${finding.message.slice(1)}`)))],
+      ];
+    case "spelling":
+      return [["Mixed-system findings", withFailures(findings.map((finding) => {
+        const [first = "first", second = "second"] = String(finding.evidence.pair ?? "").split("/");
+        return legacyLine(finding, `${first}/${second} mixed — US in ${locationFiles(finding.evidence.firstLocations)}; UK in ${locationFiles(finding.evidence.secondLocations)}`);
+      }))]];
+    case "temporal":
+      return [["References requiring chronology review", withFailures(findings.map((finding) => legacyLine(
+        finding,
+        `${chapterLabel(finding.location.path)}:${finding.location.line ?? 1} — ${String(finding.evidence.marker ?? "marker")} — ${inline(finding.excerpt, 140)}`,
+      )))]];
+    case "mechanics": {
+      const labels: Record<string, string> = {
+        "mechanics/doubled-word": "doubled word",
+        "mechanics/punctuation-spacing": "space before punctuation",
+        "mechanics/repeated-punctuation": "repeated punctuation",
+        "mechanics/drafting-marker": "drafting marker",
+        "mechanics/unbalanced-punctuation": "unbalanced punctuation",
+      };
+      return [["Mechanical findings", withFailures(findings.map((finding) => legacyLine(
+        finding,
+        `${chapterLabel(finding.location.path)}:${finding.location.line ?? 1} — ${labels[finding.ruleId] ?? finding.ruleId} — ${inline(finding.excerpt, 140)}`,
+      )))]];
+    }
+  }
+  return [];
+}
+
+function renderLegacyProseLintMarkdown(result: ProseLintResult, options: ReportOptions): string {
+  const lines = [`# ${options.title ?? "Novel Forge deterministic prose lint"}`, ""];
+  for (const [heading, items] of legacySections(result, options)) {
+    lines.push(`## ${heading}`, "", ...(items.length === 0 ? ["- none"] : items.map((item) => `- ${item}`)), "");
+  }
+  return lines.join("\n");
+}
+
 export function renderProseLintMarkdown(result: ProseLintResult, options: ReportOptions = {}): string {
+  if (options.legacyReport !== undefined) return renderLegacyProseLintMarkdown(result, options);
   const findings = result.findings.filter((finding) => matches(finding.ruleId, options.rulePrefixes));
   const failures = result.failures.filter((failure) => matches(failure.ruleId, options.rulePrefixes));
   const lines = [

@@ -66,6 +66,32 @@ test("phrase repetition applies cross-document and local thresholds while filter
   assert.ok(result.findings.every((item) => !/AI[- ]written|AI probability/i.test(item.message)));
 });
 
+test("body-language repetition reports per-term cross-document and dense-local evidence with bounded locations", () => {
+  const result = lint([
+    { path: "01.md", text: "Her hand closed. His hand opened. Their hand signals stopped. Her eyes narrowed. His eyes closed. Their eyes met." },
+    { path: "02.md", text: "A hand lifted. The hand fell. One hand trembled. Another hand steadied. Her eyes widened." },
+  ]);
+  const hand = result.findings.find((finding) => finding.ruleId === "repetition/body-language" && finding.evidence.term === "hand");
+  const eyes = result.findings.find((finding) => finding.ruleId === "repetition/body-language" && finding.evidence.term === "eyes");
+
+  assert.ok(hand);
+  assert.equal(hand.ruleVersion, "1.0.0");
+  assert.equal(hand.class, "repetition");
+  assert.equal(hand.confidence, "review");
+  assert.equal(hand.evidence.count, 7);
+  assert.equal(hand.evidence.documentCount, 2);
+  assert.equal(hand.evidence.densestDocumentCount, 4);
+  assert.equal(hand.evidence.omittedLocationCount, 2);
+  assert.equal(String(hand.evidence.locations).split(", ").length, 5);
+  assert.ok(eyes);
+  assert.equal(eyes.evidence.count, 4);
+  assert.equal(eyes.evidence.documentCount, 2);
+  assert.deepEqual(lint([
+    { path: "01.md", text: "Her hand closed. His hand opened. Their hand signals stopped. Her eyes narrowed. His eyes closed. Their eyes met." },
+    { path: "02.md", text: "A hand lifted. The hand fell. One hand trembled. Another hand steadied. Her eyes widened." },
+  ]), result);
+});
+
 test("duplicate rules report exact pairs and only near-duplicate passages at or above 0.85 similarity", () => {
   const exact = "The brass key waited under a cracked blue tile beside the silent stove.";
   const baseTokens = Array.from({ length: 40 }, (_, index) => `token${index + 1}`);
@@ -110,6 +136,41 @@ test("exact duplicate sentences on the same Markdown line retain distinct stable
   assert.equal(finding.evidence.firstLocation, "same-line.md:1");
   assert.equal(finding.evidence.secondLocation, "same-line.md:1");
   assert.notEqual(finding.evidence.firstSpan, finding.evidence.secondSpan);
+});
+
+test("duplicate rules bound pair work and output while retaining deterministic full and omitted counts", () => {
+  const exact = "The brass key waited beneath the cracked blue tile beside the silent iron stove.";
+  const base = Array.from({ length: 40 }, (_, index) => `signal${index + 1}`);
+  const documents = Array.from({ length: 220 }, (_, index) => {
+    const near = [...base];
+    near[20] = `variant${index + 1}`;
+    return { path: `${String(index + 1).padStart(3, "0")}-chapter.md`, text: `${exact}\n\n${near.join(" ")}.` };
+  });
+
+  const started = performance.now();
+  const rules = repetitionRules.filter((rule) => rule.id === "repetition/exact-duplicate" || rule.id === "repetition/near-duplicate");
+  const first = lint(documents, rules);
+  const elapsed = performance.now() - started;
+  const second = lint(documents, rules);
+  assert.deepEqual(second, first);
+  assert.ok(elapsed < 8_000, `duplicate scan took ${elapsed.toFixed(0)}ms`);
+
+  const exactFindings = first.findings.filter((finding) => finding.ruleId === "repetition/exact-duplicate");
+  assert.equal(exactFindings.length, 1);
+  assert.equal(exactFindings[0]?.evidence.occurrenceCount, 220);
+  assert.equal(exactFindings[0]?.evidence.pairCount, 24_090);
+  assert.ok(Number(exactFindings[0]?.evidence.omittedLocationCount) > 0);
+  assert.equal(exactFindings[0]?.evidence.fullFindingCount, 1);
+  assert.equal(exactFindings[0]?.evidence.omittedFindingCount, 0);
+
+  const nearFindings = first.findings.filter((finding) => finding.ruleId === "repetition/near-duplicate");
+  assert.ok(nearFindings.length <= 40, `${nearFindings.length} near-duplicate findings`);
+  const limit = nearFindings.find((finding) => finding.evidence.evidenceOnly === true);
+  assert.ok(limit);
+  assert.ok(Number(limit.evidence.eligibleComparisonCount) > Number(limit.evidence.comparedCount));
+  assert.ok(Number(limit.evidence.omittedComparisonCount) > 0);
+  assert.ok(Number(limit.evidence.fullFindingCount) > 0);
+  assert.ok(Number(limit.evidence.omittedFindingCount) > 0);
 });
 
 function styleFixture() {

@@ -57,11 +57,23 @@ export interface ProjectLintContext {
 export interface ReportOptions {
   title?: string;
   rulePrefixes?: readonly string[];
+  legacyReport?: LegacyReportKind;
+  documentCount?: number;
+}
+
+export type LegacyReportKind = "ngram" | "rhetoric" | "continuity" | "integrity" | "structure" | "spelling" | "temporal" | "mechanics";
+
+export type ProjectContextArtifact = "canon" | "threads" | "sources" | "research" | "queue" | "plot";
+
+export interface LintRuleRequirements {
+  baselineMetrics?: boolean;
+  projectContext?: readonly ProjectContextArtifact[];
 }
 
 export interface LintRule {
   id: string;
   version: string;
+  requirements?: LintRuleRequirements;
   run(input: ProseLintInput): LintFinding[];
 }
 

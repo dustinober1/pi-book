@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -16,6 +16,7 @@ test("the packed extension imports, registers, and contains the 1.4 release surf
     const packageRoot = resolve(temp, "package");
     execFileSync("npm", ["install", "--omit=dev", "--ignore-scripts", "--no-audit", "--no-fund"], { cwd: packageRoot, stdio: "pipe" });
     const module = await import(pathToFileURL(resolve(packageRoot, "extensions", "novel-forge.ts")).href);
+    const store = await import(pathToFileURL(resolve(packageRoot, "src", "project", "store.ts")).href);
     const commands: string[] = [];
     const tools: string[] = [];
     module.default({ registerCommand(name: string) { commands.push(name); }, registerTool(tool: { name: string }) { tools.push(tool.name); }, sendUserMessage() {} });
@@ -26,6 +27,13 @@ test("the packed extension imports, registers, and contains the 1.4 release surf
     assert.ok(commands.includes("novel-adopt"));
     assert.ok(commands.includes("novel-organize"));
     assert.deepEqual(tools, ["novel_apply_event"]);
+    const project = store.initializeProject(temp, { projectName: "Packed Prose Audit", projectType: "standalone", profile: "thriller" });
+    writeFileSync(resolve(project, "books", "book-01", "manuscript", "chapters", "01-opening.md"), "# Opening\n\nThe the lantern failed.\n", "utf8");
+    const proseOutput = execFileSync("npm", ["run", "audit:prose", "--", project], { cwd: packageRoot, encoding: "utf8" });
+    const legacyOutput = execFileSync("node", [resolve(packageRoot, "scripts", "copy-mechanics-audit.mjs"), project], { cwd: packageRoot, encoding: "utf8" });
+    assert.match(proseOutput, /mechanics\/doubled-word/);
+    assert.match(legacyOutput, /^# Novel Forge copy-mechanics audit$/m);
+    assert.match(legacyOutput, /mechanics\/doubled-word/);
     assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.5.0");
     for (const asset of [
       "README.md", "SKILL.md", "CHANGELOG.md", "RELEASE.md",

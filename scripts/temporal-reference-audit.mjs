@@ -1,3 +1,3 @@
 import { forwardProseLint } from "./lib/prose-lint-forwarder.mjs";
 
-forwardProseLint({ title: "Novel Forge temporal-reference audit", rulePrefixes: ["consistency/temporal-reference"] });
+forwardProseLint({ title: "Novel Forge temporal-reference audit", rulePrefixes: ["consistency/temporal-reference"], legacyReport: "temporal" });
