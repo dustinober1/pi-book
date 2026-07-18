@@ -40,9 +40,17 @@ export interface ProjectLintContext {
   canonEntries: readonly { id: string; subject: string; fact: string; locked: boolean }[];
   canonNames: readonly string[];
   canonIds: readonly string[];
+  relationships: readonly { id: string; characters: readonly string[] }[];
+  threads: readonly { id: string; status: "planned" | "open" | "advanced" | "paid-off" | "abandoned" }[];
   threadIds: readonly string[];
   sourceIds: readonly string[];
-  packetReferences: readonly { chapter: number; kind: "canon" | "thread" | "source"; id: string }[];
+  researchIds: readonly string[];
+  packetReferences: readonly {
+    chapter: number;
+    status: "blocked" | "ready" | "drafted" | "reviewed" | "revised";
+    kind: "canon" | "thread" | "source";
+    id: string;
+  }[];
   plotThreadReferences: readonly { chapter: number; id: string }[];
 }
 

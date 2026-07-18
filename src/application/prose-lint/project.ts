@@ -10,7 +10,7 @@ import {
 } from "../../domain/schemas.js";
 import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../../domain/v1-3-architecture-schemas.js";
 import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../../domain/v1-3-research-schemas.js";
-import { VoiceGuardrailsSchema, type VoiceGuardrails } from "../../domain/v1-3-schemas.js";
+import { ResearchLedgerSchema, VoiceGuardrailsSchema, type ResearchLedger, type VoiceGuardrails } from "../../domain/v1-3-schemas.js";
 import { listChapterFiles, listFilesRecursive, readText } from "../../infrastructure/files.js";
 import { parseYaml } from "../../infrastructure/yaml.js";
 import { readBook, readProject } from "../../project/store.js";
@@ -57,13 +57,34 @@ function documentsFor(files: readonly { absolute: string; path: string }[]) {
   });
 }
 
-function contextFor(root: string, bookId: string, chapterFiles: readonly { path: string; number: number | null }[]): ProjectLintContext {
+interface ProjectArtifacts {
+  canon: CanonState;
+  threads: StoryThreadsState;
+  sources: SourceRegisterV13;
+  research: ResearchLedger;
+  queue: ChapterQueueState;
+  plot: PlotGridPhase4;
+}
+
+function projectArtifacts(root: string, bookId: string): ProjectArtifacts {
   const bookRoot = join(root, "books", bookId);
-  const canon = readYaml<CanonState>(join(root, "series", "canon.yaml"), CanonSchema, { schema_version: "1.0.0", facts: [], relationships: [] });
-  const threads = readYaml<StoryThreadsState>(join(root, "series", "story-threads.yaml"), StoryThreadsSchema, { schema_version: "1.0.0", threads: [] });
-  const sources = readYaml<SourceRegisterV13>(join(root, "research", "source-register.yaml"), SourceRegisterV13Schema, { schema_version: "1.0.0", sources: [] });
-  const queue = readYaml<ChapterQueueState>(join(bookRoot, "chapter-queue.yaml"), ChapterQueueSchema, { schema_version: "1.0.0", active_window: "", packets: [] });
-  const plot = readYaml<PlotGridPhase4>(join(bookRoot, "plot-grid.yaml"), PlotGridPhase4Schema, { schema_version: "1.0.0", acts: [], chapters: [] });
+  return {
+    canon: readYaml<CanonState>(join(root, "series", "canon.yaml"), CanonSchema, { schema_version: "1.0.0", facts: [], relationships: [] }),
+    threads: readYaml<StoryThreadsState>(join(root, "series", "story-threads.yaml"), StoryThreadsSchema, { schema_version: "1.0.0", threads: [] }),
+    sources: readYaml<SourceRegisterV13>(join(root, "research", "source-register.yaml"), SourceRegisterV13Schema, { schema_version: "1.0.0", sources: [] }),
+    research: readYaml<ResearchLedger>(join(bookRoot, "research-ledger.yaml"), ResearchLedgerSchema, { schema_version: "1.0.0", items: [] }),
+    queue: readYaml<ChapterQueueState>(join(bookRoot, "chapter-queue.yaml"), ChapterQueueSchema, { schema_version: "1.0.0", active_window: "", packets: [] }),
+    plot: readYaml<PlotGridPhase4>(join(bookRoot, "plot-grid.yaml"), PlotGridPhase4Schema, { schema_version: "1.0.0", acts: [], chapters: [] }),
+  };
+}
+
+function contextFor(
+  root: string,
+  bookId: string,
+  chapterFiles: readonly { path: string; number: number | null }[],
+  artifacts: ProjectArtifacts,
+): ProjectLintContext {
+  const { canon, threads, sources, research, queue, plot } = artifacts;
   const canonNames = [...new Set([
     ...canon.facts.map((fact) => fact.subject.trim()),
     ...canon.relationships.flatMap((relationship) => relationship.characters.map((name) => name.trim())),
@@ -76,15 +97,34 @@ function contextFor(root: string, bookId: string, chapterFiles: readonly { path:
     canonEntries: canon.facts.map((fact) => ({ id: fact.id, subject: fact.subject, fact: fact.fact, locked: fact.status === "locked" })),
     canonNames,
     canonIds: [...canon.facts.map((fact) => fact.id), ...canon.relationships.map((relationship) => relationship.id)],
+    relationships: canon.relationships.map((relationship) => ({ id: relationship.id, characters: [...relationship.characters] })),
+    threads: threads.threads.map((thread) => ({ id: thread.id, status: thread.status })),
     threadIds: threads.threads.map((thread) => thread.id),
     sourceIds: sources.sources.map((source) => source.id),
+    researchIds: research.items.map((item) => item.id),
     packetReferences: queue.packets.flatMap((packet) => [
-      ...packet.continuity_refs.map((id) => ({ chapter: packet.chapter, kind: "canon" as const, id })),
-      ...packet.story_thread_refs.map((id) => ({ chapter: packet.chapter, kind: "thread" as const, id })),
-      ...packet.required_research.map((id) => ({ chapter: packet.chapter, kind: "source" as const, id })),
+      ...packet.continuity_refs.map((id) => ({ chapter: packet.chapter, status: packet.status, kind: "canon" as const, id })),
+      ...packet.story_thread_refs.map((id) => ({ chapter: packet.chapter, status: packet.status, kind: "thread" as const, id })),
+      ...packet.required_research.map((id) => ({ chapter: packet.chapter, status: packet.status, kind: "source" as const, id })),
     ]),
     plotThreadReferences: plot.chapters.flatMap((chapter) => [...chapter.setup_ids, ...chapter.payoff_ids].map((id) => ({ chapter: chapter.chapter, id }))),
   };
+}
+
+function filesForScope(
+  files: readonly { absolute: string; path: string; number: number | null }[],
+  scope: string | undefined,
+  artifacts: ProjectArtifacts,
+) {
+  const normalized = scope?.trim().toLocaleLowerCase("en-US");
+  if (normalized === undefined || normalized === "" || normalized === "manuscript") return [...files];
+  if (normalized !== "act" && !normalized.startsWith("act-")) return [...files];
+  const requestedId = normalized === "act" ? artifacts.queue.active_window.trim() : scope?.trim() ?? "";
+  const act = artifacts.plot.acts.find((item) => item.id.toLocaleLowerCase("en-US") === requestedId.toLocaleLowerCase("en-US"));
+  if (act === undefined) throw new Error(`Cannot resolve prose-lint act scope “${scope}”.`);
+  const selected = files.filter((file) => file.number !== null && file.number >= act.start_chapter && file.number <= act.end_chapter);
+  if (selected.length === 0) throw new Error(`No numbered Markdown files found for prose-lint act scope “${scope}”.`);
+  return selected;
 }
 
 function defaultRules() {
@@ -96,7 +136,7 @@ function defaultRules() {
   ];
 }
 
-export function loadProseLintInput(target: string, _options: { scope?: string } = {}): ProseLintInput {
+export function loadProseLintInput(target: string, options: { scope?: string } = {}): ProseLintInput {
   const resolved = resolve(target);
   try {
     if (!statSync(resolved).isDirectory()) throw new Error("not a directory");
@@ -108,18 +148,23 @@ export function loadProseLintInput(target: string, _options: { scope?: string } 
     const project = readProject(resolved);
     const book = readBook(resolved, project.active_book);
     const chapterRoot = join(resolved, "books", book.book_id, "manuscript", "chapters");
-    const files = orderedFiles(chapterRoot, listChapterFiles(join(resolved, "books", book.book_id)));
-    if (files.length === 0) throw new Error(`No Markdown files found for active book ${book.book_id}.`);
+    const allFiles = orderedFiles(chapterRoot, listChapterFiles(join(resolved, "books", book.book_id)));
+    if (allFiles.length === 0) throw new Error(`No Markdown files found for active book ${book.book_id}.`);
+    const artifacts = projectArtifacts(resolved, book.book_id);
+    const files = filesForScope(allFiles, options.scope, artifacts);
     const guardrailText = readText(join(resolved, "series", "voice-guardrails.yaml"));
-    const baselineMetrics = guardrailText === null
-      ? {}
-      : Object.fromEntries(Object.entries(parseYaml<VoiceGuardrails>(guardrailText, VoiceGuardrailsSchema, "series/voice-guardrails.yaml").baseline.metrics)
-        .filter(([, value]) => Number.isFinite(value)));
-    const chapterFiles = files.map(({ path, number }) => ({ path, number }));
+    const guardrails = guardrailText === null ? undefined : parseYaml<VoiceGuardrails>(guardrailText, VoiceGuardrailsSchema, "series/voice-guardrails.yaml");
+    const acceptedMetrics = guardrails === undefined
+      ? []
+      : Object.entries(guardrails.baseline.metrics).filter(([, value]) => Number.isFinite(value));
+    const baselineAccepted = guardrails?.baseline.path?.trim()
+      && guardrails.baseline.content_hash?.trim()
+      && acceptedMetrics.length > 0;
+    const chapterFiles = allFiles.map(({ path, number }) => ({ path, number }));
     return {
       documents: documentsFor(files),
-      baselineMetrics,
-      projectContext: contextFor(resolved, book.book_id, chapterFiles),
+      ...(baselineAccepted ? { baselineMetrics: Object.fromEntries(acceptedMetrics) } : {}),
+      projectContext: contextFor(resolved, book.book_id, chapterFiles, artifacts),
       rules: defaultRules(),
     };
   }
@@ -129,6 +174,10 @@ export function loadProseLintInput(target: string, _options: { scope?: string } 
     markdownFiles = listFilesRecursive(resolved, (path) => /\.md$/i.test(path));
   } catch {
     throw new Error(`Cannot read prose-lint target: ${target}`);
+  }
+  const normalizedScope = options.scope?.trim().toLocaleLowerCase("en-US");
+  if (normalizedScope === "act" || normalizedScope?.startsWith("act-")) {
+    throw new Error(`Prose-lint act scope “${options.scope}” requires Novel Forge project metadata.`);
   }
   const files = orderedFiles(resolved, markdownFiles);
   if (files.length === 0) throw new Error(`No Markdown files found in prose-lint target: ${target}`);

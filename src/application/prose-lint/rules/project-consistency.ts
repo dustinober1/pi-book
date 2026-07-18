@@ -167,10 +167,28 @@ const duplicateIdRule: LintRule = {
       ...duplicates(context.canonIds).map((id) => ({ id, kind: "canon", path: "series/canon.yaml" })),
       ...duplicates(context.threadIds).map((id) => ({ id, kind: "story thread", path: "series/story-threads.yaml" })),
       ...duplicates(context.sourceIds).map((id) => ({ id, kind: "research source", path: "research/source-register.yaml" })),
+      ...duplicates(context.researchIds).map((id) => ({ id, kind: "research ledger", path: `books/${context.bookId}/research-ledger.yaml` })),
     ].map((item) => finding(this.id, "high", { path: item.path }, item.id, `Duplicate ${item.kind} id: ${item.id}.`, {
       id: item.id,
       kind: item.kind,
     }, "Give every structured record a unique stable identifier."));
+  },
+};
+
+const relationshipCharactersRule: LintRule = {
+  id: "consistency/relationship-characters",
+  version: VERSION,
+  run(input) {
+    const relationships = input.projectContext?.relationships ?? [];
+    return relationships.flatMap((relationship) => {
+      const repeated = duplicates(relationship.characters);
+      return repeated.length === 0 ? [] : [
+        finding(this.id, "high", { path: "series/canon.yaml" }, relationship.id, `Relationship ${relationship.id} repeats a character id.`, {
+          relationshipId: relationship.id,
+          repeatedCharacters: repeated.join(", "),
+        }, "Remove duplicate character identifiers from the structured relationship record."),
+      ];
+    });
   },
 };
 
@@ -230,7 +248,7 @@ const missingReferenceRule: LintRule = {
     const known = {
       canon: new Set(context.canonIds),
       thread: new Set(context.threadIds),
-      source: new Set(context.sourceIds),
+      source: new Set([...context.sourceIds, ...context.researchIds]),
     };
     const packetFindings = context.packetReferences.flatMap((reference) => known[reference.kind].has(reference.id) ? [] : [
       finding(this.id, "high", contextLocation(context, reference.chapter), "", `Chapter ${reference.chapter} references missing ${reference.kind} ${reference.id}.`, {
@@ -250,13 +268,36 @@ const missingReferenceRule: LintRule = {
   },
 };
 
+const threadStatusRule: LintRule = {
+  id: "consistency/thread-status",
+  version: VERSION,
+  run(input) {
+    const context = input.projectContext;
+    if (context === undefined) return [];
+    const threads = new Map(context.threads.map((thread) => [thread.id, thread.status]));
+    return context.packetReferences.flatMap((reference) => {
+      if (reference.kind !== "thread" || reference.status !== "ready") return [];
+      const status = threads.get(reference.id);
+      if (status !== "paid-off" && status !== "abandoned") return [];
+      return [finding(this.id, "high", contextLocation(context, reference.chapter), "", `Ready Chapter ${reference.chapter} references ${status} thread ${reference.id}.`, {
+        chapter: reference.chapter,
+        id: reference.id,
+        packetStatus: reference.status,
+        threadStatus: status,
+      }, "Remove the terminal thread reference or explicitly reopen the structured story thread before drafting.")];
+    });
+  },
+};
+
 export const projectConsistencyRules: readonly LintRule[] = [
   spellingRule,
   temporalRule,
   structureRule,
   chapterSequenceRule,
   duplicateIdRule,
+  relationshipCharactersRule,
   canonNameCaseRule,
   canonNumberRule,
   missingReferenceRule,
+  threadStatusRule,
 ];
