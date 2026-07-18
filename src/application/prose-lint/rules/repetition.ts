@@ -18,6 +18,9 @@ interface LocatedText {
   line: number;
   text: string;
   tokens: readonly string[];
+  spanId: string;
+  kind: "paragraph" | "sentence";
+  paragraphIndex: number;
 }
 
 interface Occurrence {
@@ -152,19 +155,49 @@ function normalizedTokens(text: string): string[] {
   return (text.normalize("NFKC").match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu) ?? []).map((token) => token.toLocaleLowerCase("en-US"));
 }
 
+function paragraphIndexForLine(document: ManuscriptDocument, line: number): number {
+  for (let index = document.paragraphs.length - 1; index >= 0; index -= 1) {
+    if ((document.paragraphs[index]?.line ?? Number.MAX_SAFE_INTEGER) <= line) return index;
+  }
+  return -1;
+}
+
 function passages(document: ManuscriptDocument): LocatedText[] {
-  const unique = new Map<string, LocatedText>();
-  for (const paragraph of document.paragraphs) {
-    unique.set(`${paragraph.line}:${paragraph.tokens.join(" ")}`, {
-      document, line: paragraph.line, text: paragraph.text, tokens: paragraph.tokens,
-    });
-  }
-  for (const sentence of document.sentences) {
+  const sentencePassages = document.sentences.map((sentence, sentenceIndex): LocatedText => {
     const tokens = normalizedTokens(sentence.text);
-    const key = `${sentence.line}:${tokens.join(" ")}`;
-    if (!unique.has(key)) unique.set(key, { document, line: sentence.line, text: sentence.text, tokens });
-  }
-  return [...unique.values()];
+    const paragraphIndex = paragraphIndexForLine(document, sentence.line);
+    return {
+      document,
+      line: sentence.line,
+      text: sentence.text,
+      tokens,
+      spanId: `sentence:${sentenceIndex}`,
+      kind: "sentence",
+      paragraphIndex,
+    };
+  });
+  const paragraphPassages = document.paragraphs.flatMap((paragraph, paragraphIndex): LocatedText[] => {
+    const containedSentences = sentencePassages.filter((sentence) => sentence.paragraphIndex === paragraphIndex);
+    if (containedSentences.length === 1 && containedSentences[0]?.tokens.join(" ") === paragraph.tokens.join(" ")) return [];
+    return [{
+      document,
+      line: paragraph.line,
+      text: paragraph.text,
+      tokens: paragraph.tokens,
+      spanId: `paragraph:${paragraphIndex}`,
+      kind: "paragraph",
+      paragraphIndex,
+    }];
+  });
+  return [
+    ...paragraphPassages,
+    ...sentencePassages,
+  ];
+}
+
+function spansOverlap(first: LocatedText, second: LocatedText): boolean {
+  if (first.document.path !== second.document.path || first.paragraphIndex !== second.paragraphIndex) return false;
+  return first.kind === "paragraph" || second.kind === "paragraph";
 }
 
 function pairFinding(ruleId: string, first: LocatedText, second: LocatedText, evidence: LintFinding["evidence"]): LintFinding {
@@ -181,6 +214,8 @@ function pairFinding(ruleId: string, first: LocatedText, second: LocatedText, ev
     evidence: {
       firstLocation: `${first.document.path}:${first.line}`,
       secondLocation: `${second.document.path}:${second.line}`,
+      firstSpan: first.spanId,
+      secondSpan: second.spanId,
       ...evidence,
     },
     reviewAction: "Compare both locations and confirm whether the reuse is intentional.",
@@ -201,8 +236,11 @@ const exactDuplicateRule: LintRule = {
     for (const occurrences of groups.values()) {
       for (let left = 0; left < occurrences.length; left += 1) {
         for (let right = left + 1; right < occurrences.length; right += 1) {
-          findings.push(pairFinding(this.id, occurrences[left] as LocatedText, occurrences[right] as LocatedText, {
-            tokenCount: (occurrences[left] as LocatedText).tokens.length,
+          const first = occurrences[left] as LocatedText;
+          const second = occurrences[right] as LocatedText;
+          if (spansOverlap(first, second)) continue;
+          findings.push(pairFinding(this.id, first, second, {
+            tokenCount: first.tokens.length,
           }));
         }
       }
@@ -233,6 +271,7 @@ const nearDuplicateRule: LintRule = {
       for (let right = left + 1; right < candidates.length; right += 1) {
         const first = candidates[left] as LocatedText;
         const second = candidates[right] as LocatedText;
+        if (spansOverlap(first, second)) continue;
         if (first.tokens.join(" ") === second.tokens.join(" ")) continue;
         const similarity = jaccard(trigrams(first.tokens), trigrams(second.tokens));
         if (similarity < 0.85) continue;

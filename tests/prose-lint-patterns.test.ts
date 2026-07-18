@@ -91,6 +91,27 @@ test("duplicate rules report exact pairs and only near-duplicate passages at or 
   assert.ok(Number(nearFindings[0]?.evidence.similarity) >= 0.85);
 });
 
+test("near-duplicate detection does not compare a paragraph with its own contained sentence", () => {
+  const longSentence = Array.from({ length: 40 }, (_, index) => `word${index + 1}`).join(" ");
+  const result = lint([{
+    path: "self.md",
+    text: `${longSentence}. Go now.`,
+  }]);
+
+  assert.deepEqual(result.findings.filter((item) => item.ruleId === "repetition/near-duplicate"), []);
+});
+
+test("exact duplicate sentences on the same Markdown line retain distinct stable spans", () => {
+  const sentence = "The brass key waited under a cracked blue tile beside the silent stove.";
+  const result = lint([{ path: "same-line.md", text: `${sentence} ${sentence}` }]);
+  const finding = result.findings.find((item) => item.ruleId === "repetition/exact-duplicate");
+
+  assert.ok(finding);
+  assert.equal(finding.evidence.firstLocation, "same-line.md:1");
+  assert.equal(finding.evidence.secondLocation, "same-line.md:1");
+  assert.notEqual(finding.evidence.firstSpan, finding.evidence.secondSpan);
+});
+
 function styleFixture() {
   const concentrated = [
     "However, not from fear, not from doubt. She wanted truth, but she needed proof, and she demanded time. Still. Why had the bell stopped? She saw her hand—her hand stayed steady. The hour always collects its debts.",
@@ -164,6 +185,15 @@ test("baseline-aware style rules use fixed delta and ratio thresholds, including
     not_x_but_y_rate_per_1000: 15,
   });
   assert.equal(belowDelta.findings.some((item) => item.ruleId === "style-pattern/not-x-but-y"), false);
+});
+
+test("baseline style metrics ignore Markdown headings and never cite excluded heading text", () => {
+  const result = lint([{ path: "heading-only.md", text: "# Alone" }], stylePatternRules, {
+    fragment_ratio: 0,
+  });
+
+  assert.equal(result.findings.some((item) => item.ruleId === "style-pattern/fragment"), false);
+  assert.equal(result.findings.some((item) => item.excerpt.includes("Alone")), false);
 });
 
 test("the default registry preserves mechanical, repetition, then style rule order", () => {

@@ -39,8 +39,19 @@ function excerpt(text: string): string {
   return text.trim().slice(0, 160);
 }
 
+function proseText(document: ManuscriptDocument): string {
+  return document.paragraphs.map((paragraph) => paragraph.text).join("\n\n");
+}
+
 function corpusText(documents: readonly ManuscriptDocument[]): string {
-  return documents.map((document) => document.scanText).join("\n\n");
+  return documents.map(proseText).join("\n\n");
+}
+
+function firstProseOccurrence(document: ManuscriptDocument): PatternOccurrence | undefined {
+  const sentence = document.sentences[0];
+  if (sentence !== undefined) return { document, line: sentence.line, excerpt: excerpt(sentence.text) };
+  const paragraph = document.paragraphs[0];
+  return paragraph === undefined ? undefined : { document, line: paragraph.line, excerpt: excerpt(paragraph.text) };
 }
 
 function sentenceOccurrences(document: ManuscriptDocument, predicate: (sentence: string) => boolean): PatternOccurrence[] {
@@ -67,12 +78,12 @@ function metricOccurrences(input: ProseLintInput, terms: Set<string>, repeatsOnl
   const result: PatternOccurrence[] = [];
   const seen = new Map<string, number>();
   for (const document of input.documents) {
-    for (const [index, line] of document.scanText.split("\n").entries()) {
-      for (const token of tokens(line)) {
+    for (const paragraph of document.paragraphs) {
+      for (const token of paragraph.tokens) {
         if (!terms.has(token)) continue;
         const count = seen.get(token) ?? 0;
         seen.set(token, count + 1);
-        if (!repeatsOnly || count > 0) result.push({ document, line: index + 1, excerpt: excerpt(line) });
+        if (!repeatsOnly || count > 0) result.push({ document, line: paragraph.line, excerpt: excerpt(paragraph.text) });
       }
     }
   }
@@ -137,8 +148,8 @@ const patternDefinitions: readonly PatternDefinition[] = [
     id: "style-pattern/em-dash",
     baselineKey: "em_dash_rate_per_1000",
     message: "Em dashes are concentrated in this manuscript scope.",
-    occurrences: (input) => input.documents.flatMap((document) => document.scanText.split("\n").flatMap((line, index) =>
-      [...line.matchAll(/—/g)].map(() => ({ document, line: index + 1, excerpt: excerpt(line) })))),
+    occurrences: (input) => input.documents.flatMap((document) => document.paragraphs.flatMap((paragraph) =>
+      [...paragraph.text.matchAll(/—/g)].map(() => ({ document, line: paragraph.line, excerpt: excerpt(paragraph.text) })))),
   },
   {
     id: "style-pattern/filter-word",
@@ -219,9 +230,7 @@ function ruleFor(definition: PatternDefinition): LintRule {
         const delta = round4(corpus.rate - baselineRate);
         const ratioSatisfied = baselineRate === 0 ? corpus.rate >= 2 : corpus.rate >= baselineRate * 1.5;
         if (Math.abs(delta) < 2 || !ratioSatisfied) return [];
-        findingLocation = occurrences[0] ?? (input.documents[0] === undefined ? undefined : {
-          document: input.documents[0], line: 1, excerpt: excerpt(input.documents[0].scanText),
-        });
+        findingLocation = occurrences[0] ?? input.documents.map(firstProseOccurrence).find((item) => item !== undefined);
         evidence = {
           count: corpus.count,
           currentRate: corpus.rate,
@@ -237,13 +246,11 @@ function ruleFor(definition: PatternDefinition): LintRule {
         const corpusConcentrationRate = ratePerThousand(corpus.count, totalWords);
         const local = input.documents.map((document) => {
           const localOccurrences = occurrences.filter((occurrence) => occurrence.document.path === document.path);
-          const count = definition.metric?.(document.scanText).count ?? localOccurrences.length;
+          const count = definition.metric?.(proseText(document)).count ?? localOccurrences.length;
           return { document, occurrences: localOccurrences, count, rate: ratePerThousand(count, document.wordCount) };
         }).sort((left, right) => right.rate - left.rate || left.document.order - right.document.order)[0];
         if (local === undefined || local.rate < corpusConcentrationRate * 2) return [];
-        findingLocation = local.occurrences[0] ?? {
-          document: local.document, line: 1, excerpt: excerpt(local.document.scanText),
-        };
+        findingLocation = local.occurrences[0] ?? firstProseOccurrence(local.document);
         evidence = {
           count: corpus.count,
           corpusRate: corpusConcentrationRate,
