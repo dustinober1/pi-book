@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.6.0 — Deterministic Prose Lint
 
 ### Added
 

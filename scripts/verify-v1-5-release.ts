@@ -89,7 +89,8 @@ export function verifyV15ReleaseTree(root: string): V15ReleaseCheck[] {
   checks.push(check("package-allowlist", allowlistValid, "Package allowlist includes runtime assets and excludes tests, evaluations, and workflows."));
 
   const ci = text(root, ".github/workflows/test.yml");
-  const releaseWorkflow = text(root, ".github/workflows/release-v1-5.yml");
+  const releaseWorkflowPath = join(root, ".github/workflows/release-v1-5.yml");
+  const releaseWorkflow = existsSync(releaseWorkflowPath) ? readFileSync(releaseWorkflowPath, "utf8") : "";
   checks.push(check("ci-release-verification", /npm run verify:release/.test(ci) && /npm pack --dry-run/.test(ci), "Main CI runs the canonical release verifier and package dry run."));
   checks.push(check("release-workflow", /Node 22\.19\.0|22\.19\.0/.test(releaseWorkflow) && /'24'/.test(releaseWorkflow) && /v1\.5\.0/.test(releaseWorkflow), "Release workflow verifies Node 22.19.0 and 24 before creating v1.5.0."));
 
