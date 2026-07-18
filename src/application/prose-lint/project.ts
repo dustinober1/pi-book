@@ -22,9 +22,20 @@ import { stylePatternRules } from "./rules/style-patterns.js";
 import type { ProjectLintContext, ProseLintInput } from "./types.js";
 
 const numericCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+const romanActNumbers = new Map([
+  "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
+  "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX",
+].map((value, index) => [value.toLocaleLowerCase("en-US"), String(index + 1)]));
 
 function portable(path: string): string {
   return path.replace(/\\/g, "/");
+}
+
+function canonicalActLabel(value: string): string {
+  const normalized = value.trim().toLocaleLowerCase("en-US").replace(/^act(?:[\s_-]+)/u, "").trim();
+  const arabic = /^\d+$/u.test(normalized) ? Number(normalized) : 0;
+  if (Number.isSafeInteger(arabic) && arabic > 0) return String(arabic);
+  return romanActNumbers.get(normalized) ?? normalized;
 }
 
 function chapterNumber(path: string): number | null {
@@ -118,9 +129,10 @@ function filesForScope(
 ) {
   const normalized = scope?.trim().toLocaleLowerCase("en-US");
   if (normalized === undefined || normalized === "" || normalized === "manuscript") return [...files];
-  if (normalized !== "act" && !normalized.startsWith("act-")) return [...files];
+  if (normalized !== "act" && !/^act(?:[\s_-]+)/u.test(normalized)) return [...files];
   const requestedId = normalized === "act" ? artifacts.queue.active_window.trim() : scope?.trim() ?? "";
-  const act = artifacts.plot.acts.find((item) => item.id.toLocaleLowerCase("en-US") === requestedId.toLocaleLowerCase("en-US"));
+  const requestedKey = canonicalActLabel(requestedId);
+  const act = artifacts.plot.acts.find((item) => canonicalActLabel(item.id) === requestedKey);
   if (act === undefined) throw new Error(`Cannot resolve prose-lint act scope “${scope}”.`);
   const selected = files.filter((file) => file.number !== null && file.number >= act.start_chapter && file.number <= act.end_chapter);
   if (selected.length === 0) throw new Error(`No numbered Markdown files found for prose-lint act scope “${scope}”.`);
@@ -176,7 +188,7 @@ export function loadProseLintInput(target: string, options: { scope?: string } =
     throw new Error(`Cannot read prose-lint target: ${target}`);
   }
   const normalizedScope = options.scope?.trim().toLocaleLowerCase("en-US");
-  if (normalizedScope === "act" || normalizedScope?.startsWith("act-")) {
+  if (normalizedScope === "act" || (normalizedScope !== undefined && /^act(?:[\s_-]+)/u.test(normalizedScope))) {
     throw new Error(`Prose-lint act scope “${options.scope}” requires Novel Forge project metadata.`);
   }
   const files = orderedFiles(resolved, markdownFiles);

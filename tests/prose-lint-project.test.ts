@@ -261,13 +261,13 @@ function scopeFixture(): { parent: string; root: string } {
   writeFileSync(join(bookRoot, "plot-grid.yaml"), stringifyYaml({
     schema_version: "1.0.0",
     acts: [
-      { id: "act-1", purpose: "opening", start_chapter: 1, end_chapter: 2, gate: null },
-      { id: "ACT-2", purpose: "ending", start_chapter: 3, end_chapter: 4, gate: null },
+      { id: "I", purpose: "opening", start_chapter: 1, end_chapter: 2, gate: null },
+      { id: "II", purpose: "ending", start_chapter: 3, end_chapter: 4, gate: null },
     ],
     chapters: [],
     decisions: [],
   }), "utf8");
-  writeFileSync(join(bookRoot, "chapter-queue.yaml"), stringifyYaml({ schema_version: "1.0.0", active_window: "act-2", packets: [] }), "utf8");
+  writeFileSync(join(bookRoot, "chapter-queue.yaml"), stringifyYaml({ schema_version: "1.0.0", active_window: "Act I", packets: [] }), "utf8");
   return { parent, root };
 }
 
@@ -283,9 +283,17 @@ test("project scope selects manuscript, explicit acts, and the active act withou
     assert.equal(runProseLint(firstAct).wordCount, firstAct.documents.reduce((total, document) => total + document.wordCount, 0));
     assert.ok(runProseLint(firstAct).wordCount < runProseLint(manuscript).wordCount);
 
-    const activeAct = loadProseLintInput(root, { scope: "act" });
-    assert.deepEqual(activeAct.documents.map((document) => document.path), ["03-chapter.md", "04-chapter.md"]);
     assert.throws(() => loadProseLintInput(root, { scope: "act-99" }), /Cannot resolve prose-lint act scope.*act-99/i);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("bare act scope canonicalizes queue label Act I to plot act id I", () => {
+  const { parent, root } = scopeFixture();
+  try {
+    const activeAct = loadProseLintInput(root, { scope: "act" });
+    assert.deepEqual(activeAct.documents.map((document) => document.path), ["01-chapter.md", "02-chapter.md"]);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
