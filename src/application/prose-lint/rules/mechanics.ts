@@ -96,9 +96,10 @@ const draftingMarkerRule: LintRule = {
     const findings: LintFinding[] = [];
     for (const document of input.documents) {
       for (const { line, number } of eligibleLines(document)) {
-        const marker = /\[\[(?:TODO|FIXME):[^\]\r\n]+\]\]|\bTKTK\b/.exec(line);
-        if (marker?.[0] !== undefined) {
-          findings.push(finding(this.id, document, line, number, "Unresolved drafting marker remains.", { marker: marker[0] }));
+        const marker = /\[\[(?:TODO|FIXME):[^\]\r\n]+\]\]/.exec(line);
+        const markerText = marker?.[0] ?? (line.trim() === "TKTK" ? "TKTK" : undefined);
+        if (markerText !== undefined) {
+          findings.push(finding(this.id, document, line, number, "Unresolved drafting marker remains.", { marker: markerText }));
         }
       }
     }

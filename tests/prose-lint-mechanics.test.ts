@@ -14,6 +14,7 @@ test("mechanical rules report deterministic, line-specific findings outside Mark
     "[[TODO: repair]]",
     "[[FIXME: resolve]]",
     "TKTK",
+    "The label TKTK is mentioned.",
     "The thought remained (unfinished.",
     "```ts",
     "const duplicate duplicate = 'wait , no?!?! [[TODO: hidden]] TKTK (';",
@@ -36,13 +37,28 @@ test("mechanical rules report deterministic, line-specific findings outside Mark
     "mechanics/repeated-punctuation",
     "mechanics/unbalanced-punctuation",
   ]);
-  assert.deepEqual(result.findings.map((finding) => finding.location.line), [2, 5, 6, 7, 3, 4, 8]);
+  assert.deepEqual(result.findings.map((finding) => finding.location.line), [2, 5, 6, 7, 3, 4, 9]);
   assert.equal(result.findings[0]?.class, "mechanical");
   assert.equal(result.findings[0]?.confidence, "high");
   assert.ok(result.findings.every((finding) => finding.excerpt.length <= 160));
   assert.equal(result.counts.mechanical, 7);
   assert.equal(result.failures.length, 0);
   assert.equal(source, original);
+});
+
+test("normalization keeps a longer fenced block closed only by an equal-or-longer delimiter", () => {
+  const source = [
+    "````",
+    "```",
+    "duplicate duplicate",
+    "````",
+  ].join("\n");
+
+  const document = normalizeDocument("03-long-fence.md", source, 1);
+  const result = runProseLint({ documents: [document], rules: mechanicalRules });
+
+  assert.deepEqual(document.scanText.split("\n"), ["", "", "", ""]);
+  assert.equal(result.findings.some((finding) => finding.ruleId === "mechanics/doubled-word"), false);
 });
 
 test("normalization preserves source lines while blanking fenced code and deriving Markdown-aware text views", () => {

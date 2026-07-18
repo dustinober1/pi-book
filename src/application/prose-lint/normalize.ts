@@ -6,7 +6,7 @@ const headingPattern = /^\s{0,3}#{1,6}(?:\s|$)/;
 const sceneBreaks = new Set(["***", "---", "___"]);
 
 function tokensFor(text: string): string[] {
-  return (text.match(wordPattern) ?? []).map((token) => token.toLocaleLowerCase());
+  return (text.match(wordPattern) ?? []).map((token) => token.toLowerCase());
 }
 
 function isExcludedMarkdownLine(line: string): boolean {
@@ -25,18 +25,24 @@ function sentencesForLine(line: string, lineNumber: number): Array<{ text: strin
 export function normalizeDocument(path: string, text: string, order: number): ManuscriptDocument {
   const lines = text.split(/\r?\n/);
   const scanLines: string[] = [];
-  let fenceDelimiter: "`" | "~" | undefined;
+  let fenceDelimiter: { character: "`" | "~"; length: number } | undefined;
 
   for (const line of lines) {
     const fence = line.match(fencePattern);
     if (fenceDelimiter !== undefined) {
       scanLines.push("");
-      if (fence?.[1]?.[0] === fenceDelimiter) fenceDelimiter = undefined;
+      const delimiter = fence?.[1];
+      if (delimiter !== undefined
+        && delimiter[0] === fenceDelimiter.character
+        && delimiter.length >= fenceDelimiter.length) {
+        fenceDelimiter = undefined;
+      }
       continue;
     }
 
-    if (fence?.[1] !== undefined) {
-      fenceDelimiter = fence[1][0] as "`" | "~";
+    const delimiter = fence?.[1];
+    if (delimiter !== undefined) {
+      fenceDelimiter = { character: delimiter[0] as "`" | "~", length: delimiter.length };
       scanLines.push("");
       continue;
     }
