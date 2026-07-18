@@ -437,7 +437,7 @@ git commit -m "feat: supply prose lint evidence to reviews"
 **Interfaces:**
 - Documents: automatic act/manuscript behavior, explicit command, legacy commands, finding classes, non-authorship language, read-only behavior, and failure semantics.
 
-- [ ] **Step 1: Document the public behavior**
+- [x] **Step 1: Document the public behavior**
 
 Add a concise README section after voice/scene audits with:
 
@@ -448,17 +448,17 @@ npm run audit:prose -- /path/to/novel-project --format json
 
 Explain that the engine is deterministic, local, read-only, automatically summarized at act/manuscript review, and never detects authorship or rewrites prose. List the four finding classes and state that legacy audit commands remain available.
 
-- [ ] **Step 2: Add an unreleased changelog entry**
+- [x] **Step 2: Add an unreleased changelog entry**
 
 Record the unified prose-lint command, automatic bounded review evidence, scanner compatibility, and explicit non-authorship boundary without assigning a release version that the user did not request.
 
-- [ ] **Step 3: Run focused lint and scanner tests**
+- [x] **Step 3: Run focused lint and scanner tests**
 
 Run: `node --import tsx --test tests/prose-lint-*.test.ts tests/scanners.test.ts tests/phase5-prompts.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 4: Run the complete repository verification**
+- [x] **Step 4: Run the complete repository verification**
 
 Run:
 
@@ -472,13 +472,13 @@ npm pack --dry-run
 
 Expected: every command exits `0`; the packed file list includes `scripts/prose-lint.ts`, the compatibility forwarder, and `src/application/prose-lint/`.
 
-- [ ] **Step 5: Inspect mutation and repository state**
+- [x] **Step 5: Inspect mutation and repository state**
 
 Run: `git diff --check && git status --short`
 
 Expected: only intentional implementation and documentation changes remain; no generated manuscript, audit report, package archive, or temporary fixture is present.
 
-- [ ] **Step 6: Commit documentation and final verification state**
+- [x] **Step 6: Commit documentation and final verification state**
 
 ```bash
 git add README.md CHANGELOG.md docs/superpowers/plans/2026-07-18-prose-lint-implementation.md

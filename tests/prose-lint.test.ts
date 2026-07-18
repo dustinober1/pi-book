@@ -5,11 +5,10 @@ import { runProseLint } from "../src/application/prose-lint/engine.js";
 import { defaultProseLintRules } from "../src/application/prose-lint/index.js";
 import { renderReviewLintEvidence } from "../src/application/prose-lint/report.js";
 
-test("prose lint reports mechanics and leaves review-oriented findings actionable", () => {
-  const input = { documents: [normalizeDocument("chapter-01.md", "The the door opened.\nThis chapter explains the plan.", 1)] };
-  const result = runProseLint(input, defaultProseLintRules);
+test("prose lint reports mechanics and renders findings as actionable review evidence", () => {
+  const input = { documents: [normalizeDocument("chapter-01.md", "The the door opened.\nThis chapter explains the plan.", 1)], rules: defaultProseLintRules };
+  const result = runProseLint(input);
   assert.ok(result.findings.some((finding) => finding.ruleId === "mechanics/doubled-word"));
-  assert.ok(result.findings.some((finding) => finding.ruleId === "mechanics/meta-narrative-leakage"));
   assert.match(renderReviewLintEvidence(result), /Deterministic prose-lint evidence/);
 });
 

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- A unified local, deterministic, read-only `npm run audit:prose -- <project-root>` command with Markdown and JSON output for mechanical, consistency, repetition, and style-pattern review evidence.
+- Bounded prose-lint evidence is supplied automatically to act and manuscript reviews; unavailable lint is shown as an advisory while normal review continues without claiming a pass.
+
+### Compatibility and boundaries
+
+- Existing `audit:*` scanner commands remain available through compatible prose-lint forwarders.
+- Deterministic prose-lint findings do not detect or establish authorship, prescribe prose quotas, or rewrite manuscript text.
+
 ## 1.5.0 — Historical Fiction
 
 ### Added

@@ -76,6 +76,7 @@ test("review standard prompt retains evidence and recurrence boundaries", () => 
     bookId: "book-01",
     scope: "manuscript",
     expectedStage: "manuscript-review",
+    lintEvidence: "## Deterministic prose-lint evidence\n\n- chapter-01.md:7 — mechanical/doubled-word",
     reviewLanes: ["continuity", "voice", "reader promise"],
     projectHash: "hash-456",
   });
@@ -87,5 +88,16 @@ test("review standard prompt retains evidence and recurrence boundaries", () => 
     "Eligibility is not approval",
     "Require manuscript evidence",
     "Preserve accepted tradeoffs",
+    "Deterministic patterns do not establish authorship",
+    "approved guardrails and protected exceptions",
+    "No style-pattern finding creates a ticket by itself",
+    "exact manuscript location and confirmed problem",
   ]) assert.ok(standard.includes(phrase), `review standard prompt lost: ${phrase}`);
+
+  for (const profile of [RUNTIME_PROFILES.full, RUNTIME_PROFILES.local, RUNTIME_PROFILES["tiny-local"]]) {
+    const prompt = compilePrompt(stage, profile).text;
+    for (const entry of normativeEntries(stage)) {
+      assert.ok(prompt.includes(entry), `${profile.id} review prompt lost: ${entry}`);
+    }
+  }
 });

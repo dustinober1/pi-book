@@ -1,17 +1,6 @@
 export type LintClass = "mechanical" | "consistency" | "repetition" | "style-pattern";
-export type LintConfidence = "high" | "medium" | "review";
 
-export interface ManuscriptDocument {
-  path: string;
-  order: number;
-  text: string;
-  scanText: string;
-  lines: readonly string[];
-  tokens: readonly string[];
-  sentences: readonly { text: string; line: number }[];
-  paragraphs: readonly { text: string; line: number; tokens: readonly string[] }[];
-  wordCount: number;
-}
+export type LintConfidence = "high" | "medium" | "review";
 
 export interface LintFinding {
   ruleId: string;
@@ -25,25 +14,66 @@ export interface LintFinding {
   reviewAction: string;
 }
 
-export interface ProjectLintContext {
-  projectRoot?: string;
-  bookId?: string;
-  chapterFiles?: readonly { path: string; number: number | null }[];
-  canonNames?: readonly string[];
-  canonIds?: readonly string[];
-  threadIds?: readonly string[];
-  sourceIds?: readonly string[];
+export interface ManuscriptDocument {
+  path: string;
+  order: number;
+  text: string;
+  scanText: string;
+  lines: readonly string[];
+  tokens: readonly string[];
+  sentences: readonly { text: string; line: number }[];
+  paragraphs: readonly { text: string; line: number; tokens: readonly string[] }[];
+  wordCount: number;
 }
 
 export interface ProseLintInput {
   documents: readonly ManuscriptDocument[];
   baselineMetrics?: Readonly<Record<string, number>>;
   projectContext?: ProjectLintContext;
+  rules: readonly LintRule[];
+}
+
+export interface ProjectLintContext {
+  projectRoot: string;
+  bookId: string;
+  chapterFiles: readonly { path: string; number: number | null }[];
+  canonEntries: readonly { id: string; subject: string; fact: string; locked: boolean }[];
+  canonNames: readonly string[];
+  canonIds: readonly string[];
+  relationships: readonly { id: string; characters: readonly string[] }[];
+  threads: readonly { id: string; status: "planned" | "open" | "advanced" | "paid-off" | "abandoned" }[];
+  threadIds: readonly string[];
+  sourceIds: readonly string[];
+  researchIds: readonly string[];
+  packetReferences: readonly {
+    chapter: number;
+    status: "blocked" | "ready" | "drafted" | "reviewed" | "revised";
+    kind: "canon" | "thread" | "source";
+    id: string;
+  }[];
+  plotThreadReferences: readonly { chapter: number; id: string }[];
+}
+
+export interface ReportOptions {
+  title?: string;
+  rulePrefixes?: readonly string[];
+  legacyReport?: LegacyReportKind;
+  documentCount?: number;
+}
+
+export type LegacyReportKind = "ngram" | "rhetoric" | "continuity" | "integrity" | "structure" | "spelling" | "temporal" | "mechanics";
+
+export type ProjectContextArtifact = "canon" | "threads" | "sources" | "research" | "queue" | "plot";
+
+export interface LintRuleRequirements {
+  baselineMetrics?: boolean;
+  projectContext?: readonly ProjectContextArtifact[];
 }
 
 export interface LintRule {
   id: string;
   version: string;
+  requirements?: LintRuleRequirements;
   run(input: ProseLintInput): LintFinding[];
 }
 

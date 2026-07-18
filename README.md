@@ -154,6 +154,17 @@ The scene audit uses existing chapter packets and plot-grid state changes. It fl
 
 Deterministic scene findings become revision tickets; they never edit manuscript prose. Tickets may carry a stable recurrence pattern and milestone-review identifier. A pattern becomes eligible for a reusable learning rule only after **three distinct chapters** or **two distinct milestone reviews**. Eligibility is not approval. The writer must explicitly approve the rule in `book-strategy.yaml`, and only approved rules enter future chapter context. Promotion never launches a retroactive rewrite of earlier chapters.
 
+## Deterministic prose lint
+
+The local, deterministic, read-only prose-lint engine reports four classes of review evidence: **mechanical**, **consistency**, **repetition**, and **style-pattern** findings. Run it explicitly in Markdown or JSON:
+
+```bash
+npm run audit:prose -- /path/to/novel-project
+npm run audit:prose -- /path/to/novel-project --format json
+```
+
+Act and manuscript reviews automatically receive a bounded lint summary; chapter reviews do not. Findings are evidence to verify in manuscript context, not authorship detection, prose quotas, or rewrite instructions—the engine never determines who wrote text and never changes prose. If lint cannot be loaded or run during a review, the prompt shows a visible unavailable advisory and continues the normal manuscript and structured-integrity review without implying that lint passed. The CLI reports rule failures and exits nonzero; legacy `audit:*` scanner commands remain available as compatible forwarders.
+
 ## Guided voice and research wizard
 
 Use the normal `/novel` workflow and choose **Review voice and research evidence**, or open the optional surface directly:
