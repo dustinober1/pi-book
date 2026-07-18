@@ -2,7 +2,7 @@
 
 ## Submission Blockers
 
-- [ ] No narrative line refers to "the chapter," "Chapter N," "the book's rules," "this book," "the story," "threat movement," "relationship movement," or similar craft scaffolding unless explicitly approved as metafiction.
+- [x] No narrative line refers to "the chapter," "Chapter N," "the book's rules," "this book," "the story," "threat movement," "relationship movement," or similar craft scaffolding unless explicitly approved as metafiction.
 - [ ] Timeline is internally coherent from March 14 through the final ruling.
 - [ ] Daughter's grade is consistent, with any historical school references clearly framed as past.
 - [ ] Legal roles are legible: who moves for emergency modification, who defends county/vendor records, what the evaluator is, and what the court is deciding.
