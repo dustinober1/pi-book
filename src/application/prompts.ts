@@ -14,6 +14,7 @@ import { selectedPremiseContext } from "./premise-lab.js";
 import { intakePromptContext } from "./intake.js";
 import { projectStateHash } from "./events.js";
 import { compilePrompt } from "./prompt-compiler.js";
+import { loadProseLintInput, renderReviewLintEvidence, runProseLint } from "./prose-lint/index.js";
 import { resolveRuntimeProfile } from "./runtime-profile-resolver.js";
 import {
   automationDraftStageSpec,
@@ -53,6 +54,19 @@ function runtimeForPrompt(root: string, explicit?: RuntimeProfile): RuntimeProfi
 
 function renderPrompt(root: string, spec: StageSpec, explicit?: RuntimeProfile): string {
   return compilePrompt(spec, runtimeForPrompt(root, explicit)).text;
+}
+
+function reviewLintEvidence(root: string, scope: string, maxCharacters: number): string {
+  const normalizedScope = scope.trim().toLocaleLowerCase("en-US");
+  if (normalizedScope !== "act" && !normalizedScope.startsWith("act-") && normalizedScope !== "manuscript") return "";
+  try {
+    const result = runProseLint(loadProseLintInput(root, { scope }));
+    return renderReviewLintEvidence(result, { maxCharacters });
+  } catch (error) {
+    const rawMessage = error instanceof Error ? error.message : String(error);
+    const message = rawMessage.replace(/\s+/g, " ").trim().replace(/[.]+$/u, "").slice(0, 240) || "unknown error";
+    return `Deterministic prose lint unavailable: ${message}. Continue normal manuscript and structured-integrity review; do not imply that the lint passed.`;
+  }
 }
 
 export function premisePlanPrompt(root: string, runtimeProfile?: RuntimeProfile): string {
@@ -151,17 +165,20 @@ export function automationDraftPrompt(root: string, maxChapters: number, until?:
 }
 
 export function reviewPrompt(root: string, scope: string, runtimeProfile?: RuntimeProfile): string {
+  const runtime = runtimeForPrompt(root, runtimeProfile);
   const book = readBook(root);
   const profile = getProfile(book.profile);
   const stage = readProject(root).current_stage;
-  return renderPrompt(root, reviewStageSpec({
+  const lintCap = runtime.id === "full" ? 5_000 : runtime.id === "local" ? 1_400 : 700;
+  return compilePrompt(reviewStageSpec({
     root,
     bookId: book.book_id,
     scope,
     expectedStage: stage,
+    lintEvidence: reviewLintEvidence(root, scope, Math.min(lintCap, runtime.maxPromptChars)),
     reviewLanes: profile.milestoneReviewLanes,
     projectHash: projectStateHash(root),
-  }), runtimeProfile);
+  }), runtime).text;
 }
 
 export function readerTestPrompt(root: string, scope: string, runtimeProfile?: RuntimeProfile): string {

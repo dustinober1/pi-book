@@ -300,6 +300,7 @@ export interface ReviewStageInput {
   bookId: string;
   scope: string;
   expectedStage: string;
+  lintEvidence: string;
   reviewLanes: readonly string[];
   projectHash: string;
 }
@@ -309,7 +310,7 @@ export function reviewStageSpec(input: ReviewStageInput): StageSpec {
     id: "review",
     role: "an independent evidence-backed manuscript reviewer",
     objective: `Review ${input.scope} through independent review lanes without anchoring each lane to another lane's score.`,
-    inputs: [`Project root: ${input.root}`, `Active book: ${input.bookId}`, `Review scope: ${input.scope}`, ...input.reviewLanes.map((lane) => `Independent review lane: ${lane}`)],
+    inputs: [`Project root: ${input.root}`, `Active book: ${input.bookId}`, `Review scope: ${input.scope}`, ...input.reviewLanes.map((lane) => `Independent review lane: ${lane}`), input.lintEvidence],
     must: [
       "Run independent review lanes without anchoring each lane to another lane's score.",
       "Compare the manuscript to remarkability.yaml without confusing planned ambition with achieved reader impact.",
@@ -326,11 +327,14 @@ export function reviewStageSpec(input: ReviewStageInput): StageSpec {
       "Require manuscript evidence.",
       "Distinguish blockers from preferences, public-market friction, and wrong-reader noise.",
       "Preserve accepted tradeoffs.",
+      "Deterministic patterns do not establish authorship.",
+      "Verify every deterministic finding in manuscript context against approved guardrails and protected exceptions before creating any ticket.",
+      "No style-pattern finding creates a ticket by itself.",
       "Prepare review-report.md and revision-tickets.yaml; the guarded event appends deterministic voice-audit evidence and scene-audit tickets atomically.",
     ],
     avoid: ["Do not rewrite earlier prose or perform a retroactive sweep when a candidate is promoted.", "Do not treat public reviews as reader evidence for this manuscript.", "Do not convert metrics into mechanical prose quotas.", "Do not issue unsupported blockers."],
     outputs: ["review-report.md", "revision-tickets.yaml", "deterministic voice-audit and scene-audit evidence appended by the guarded event"],
-    validation: ["Every blocker cites manuscript evidence.", "Every ticket protects unaffected work and accepted tradeoffs.", "Reader claims derive only from recorded human responses to this manuscript.", "Recurrence eligibility never bypasses explicit writer approval."],
+    validation: ["Every blocker cites manuscript evidence.", "Every ticket protects unaffected work and accepted tradeoffs.", "Every lint-derived ticket cites the exact manuscript location and confirmed problem.", "Reader claims derive only from recorded human responses to this manuscript.", "Recurrence eligibility never bypasses explicit writer approval."],
     toolRules: eventToolRules({ eventType: "review", expectedStage: input.expectedStage, projectHash: input.projectHash, extra: `Pass scope: ${input.scope}.` }),
   };
 }

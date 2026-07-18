@@ -58,6 +58,7 @@ function benchmarkSpecs(): Array<{ id: string; spec: StageSpec }> {
         bookId,
         scope: "manuscript",
         expectedStage: "manuscript-review",
+        lintEvidence: "",
         reviewLanes: [
           "continuity and reveal order",
           "voice and point-of-view integrity",

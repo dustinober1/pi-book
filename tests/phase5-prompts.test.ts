@@ -17,6 +17,9 @@ test("review prompt treats voice metrics as evidence and requires writer approva
     assert.match(prompt, /three distinct chapters|two milestone reviews/i);
     assert.match(prompt, /explicitly approve|writer approval/i);
     assert.match(prompt, /do not rewrite|no retroactive/i);
+    assert.match(prompt, /deterministic patterns do not establish authorship/i);
+    assert.match(prompt, /no style-pattern finding creates a ticket by itself/i);
+    assert.match(prompt, /exact manuscript location and confirmed problem/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
