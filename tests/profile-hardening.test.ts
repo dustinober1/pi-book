@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { ChapterPacket, GenreConfig, PlotGridState } from "../src/domain/schemas.js";
 import { romantasyProfile } from "../src/profiles/romantasy.js";
 import { thrillerProfile } from "../src/profiles/thriller.js";
+import { thrillerArchitectureFindings } from "../src/profiles/thriller.js";
 import { getProfile } from "../src/profiles/index.js";
 
 const packet = { chapter: 1, title: "x", status: "ready", pov: "x", purpose: "x", scene_engine: "x", pressure_movement: "x", character_movement: "x", relationship_movement: "x", story_thread_refs: [], continuity_refs: [], character_refs: [], required_research: [], profile_fields: {}, ending_hook: "x", milestone_gate: null, target_words: 1000 } as ChapterPacket;
@@ -23,6 +24,12 @@ test("genre configuration and whole-book architecture receive profile validation
   const plot = { schema_version: "1.0.0", acts: [{ id: "act-1", purpose: "setup", start_chapter: 1, end_chapter: 10, gate: null }], chapters: [{ chapter: 1, act: "act-1", causality: "and then", state_change: "none", setup_ids: [], payoff_ids: [], profile_obligations: [] }] } as PlotGridState;
   assert.ok(thrillerProfile.validatePlot(plot).some((finding) => finding.severity === "blocker" || finding.severity === "high"));
   assert.ok(romantasyProfile.validatePlot(plot).some((finding) => finding.severity === "blocker" || finding.severity === "high"));
+});
+
+test("thriller architecture flags missing clock, objective, opposition benefit, and counterevidence", () => {
+  const plot = { schema_version: "1.0.0", acts: [], chapters: [1, 2, 3].map((chapter) => ({ chapter, act: "act-1", causality: "therefore", state_change: "pressure rises", setup_ids: [], payoff_ids: [], profile_obligations: [] })) } as never;
+  const findings = thrillerArchitectureFindings(plot);
+  assert.equal(findings.length, 4);
 });
 
 test("historical fiction rejects invalid settings requirements and packet value types", () => {

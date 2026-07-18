@@ -2,6 +2,7 @@ import type { ProfileId, ProjectType, BookState } from "../domain/schemas.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import { stringifyYaml } from "../infrastructure/yaml.js";
+import { thrillerEvidenceTemplate } from "../domain/thriller-evidence.js";
 import { getProfile } from "../profiles/index.js";
 import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
 import { defaultMarketingMetadata, defaultPublishingMetadata } from "../domain/v1-2-schemas.js";
@@ -99,6 +100,7 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
     [`${base}/reader-kits/index.yaml`]: stringifyYaml({ schema_version: "1.0.0", experiments: [] }),
     [`${base}/research-ledger.yaml`]: stringifyYaml(defaultResearchLedger()),
     [`${base}/book-strategy.yaml`]: stringifyYaml(strategy),
+    ...(profile.id === "thriller" ? { [`${base}/thriller-evidence.yaml`]: stringifyYaml(thrillerEvidenceTemplate()) } : {}),
     [`${base}/voice-audits.yaml`]: stringifyYaml(defaultVoiceAudits()),
     [`${base}/premise-lab.yaml`]: stringifyYaml(defaultPremiseLab(bookId)),
     ...historicalFiles,

@@ -158,9 +158,14 @@ export function reviewPrompt(root: string, scope: string, runtimeProfile?: Runti
   const book = readBook(root);
   const profile = getProfile(book.profile);
   const stage = readProject(root).current_stage;
-  const lintEvidence = /act|manuscript/i.test(scope)
-    ? renderReviewLintEvidence(runProseLint(loadProseLintInput(root), defaultProseLintRules), { maxFindings: 16, maxCharacters: 4000 })
-    : undefined;
+  let lintEvidence: string | undefined;
+  if (/act|manuscript/i.test(scope)) {
+    try {
+      lintEvidence = renderReviewLintEvidence(runProseLint(loadProseLintInput(root), defaultProseLintRules), { maxFindings: 16, maxCharacters: 4000 });
+    } catch {
+      lintEvidence = "## Deterministic prose-lint evidence\n\nNo manuscript chapters are available for this review scope yet; continue with normal review lanes.";
+    }
+  }
   return renderPrompt(root, reviewStageSpec({
     root,
     bookId: book.book_id,
