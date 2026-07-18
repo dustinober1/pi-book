@@ -2,7 +2,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ContinuityDeltaSchema, GenreConfigSchema, PlotGridSchema, ReaderExperimentsSchema, RemarkabilitySchema, type ContinuityDeltaState, type GenreConfig, type PlotGridState, type ReaderExperimentsState, type RemarkabilityState } from "../domain/schemas.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
-import { newestFiles, readText } from "../infrastructure/files.js";
+import { listChapterFiles, newestFiles, readText } from "../infrastructure/files.js";
 import { gitState } from "../infrastructure/git.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { manuscriptWordCount } from "../context/context-builder.js";
@@ -14,6 +14,7 @@ import { getProfile } from "../profiles/index.js";
 import { gateDetail } from "./gate-metadata.js";
 import { resolveRuntimeProfile } from "./runtime-profile-resolver.js";
 import { versionFindings } from "./version-core.js";
+import { actBoundaryFindings, overdueMilestone } from "./act-boundaries.js";
 
 export interface ProjectStatus {
   blockers: string[];
@@ -70,6 +71,14 @@ function decisionText(project: ReturnType<typeof readProject>, blockers: string[
     };
   }
   if (blockers.length) {
+    if (blockers[0]?.startsWith("Overdue milestone review required:")) {
+      return {
+        headline: "A milestone review is overdue.",
+        reason: blockers[0],
+        nextAction: "Recover the overdue act review before drafting continues.",
+        command: "/novel",
+      };
+    }
     return {
       headline: "Novel Forge needs one issue resolved before it can continue.",
       reason: blockers[0] ?? "A blocking integrity issue exists.",
@@ -151,7 +160,11 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
   const plotPath = join(bookRoot, "plot-grid.yaml");
   if (existsSync(plotPath) && !["voice-intake", "series-planning", "book-planning"].includes(project.current_stage)) {
     const plot = parseYaml<PlotGridState>(readText(plotPath) ?? "", PlotGridSchema, "plot-grid.yaml");
+    for (const finding of actBoundaryFindings(plot)) blockers.push(finding.message);
     for (const finding of getProfile(book.profile).validatePlot(plot)) (finding.severity === "blocker" ? blockers : warnings).push(finding.message);
+    const drafted = new Set(listChapterFiles(bookRoot).map((path) => path.match(/(?:^|\/)(?:0*)(\d+)(?:[-_ .]|$)/)?.[1]).filter(Boolean).map(Number));
+    const overdue = overdueMilestone(plot, drafted, project.gates);
+    if (overdue?.gate && !project.next_gate) blockers.push(`Overdue milestone review required: ${overdue.gate} (Chapters ${overdue.startChapter}-${overdue.endChapter}).`);
   }
 
   const remarkabilityPath = join(bookRoot, "remarkability.yaml");

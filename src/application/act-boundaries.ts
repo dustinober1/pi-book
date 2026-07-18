@@ -57,3 +57,10 @@ export function reviewChapterRange(plot: PlotGridState, scope: string, activeGat
   return { startChapter: act.start_chapter, endChapter: act.end_chapter };
 }
 
+export function overdueMilestone(plot: PlotGridState, draftedChapters: ReadonlySet<number>, gates: Readonly<Record<string, string>>): ActBoundary | null {
+  return [...plot.acts]
+    .filter((act) => Boolean(act.gate) && act.end_chapter > 0 && [...draftedChapters].some((chapter) => chapter > act.end_chapter))
+    .sort((left, right) => left.end_chapter - right.end_chapter)
+    .map((act) => ({ actId: act.id, startChapter: act.start_chapter, endChapter: act.end_chapter, gate: act.gate }))
+    .find((act) => act.gate !== null && gates[act.gate] !== "approved") ?? null;
+}

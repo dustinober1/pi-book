@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { explainFirstBlocker, inspectUndo, runIntegritySummary, undoLastNovelEvent } from "../src/application/recovery.js";
+import { explainFirstBlocker, inspectUndo, reconcileMilestoneState, runIntegritySummary, undoLastNovelEvent } from "../src/application/recovery.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readProject, writeProjectEvent } from "../src/project/store.js";
 
@@ -77,5 +77,28 @@ test("recovery explains the first blocker and summarizes integrity", () => {
     assert.match(explanation, /Voice Profile/i);
     assert.match(explanation, /\/novel/);
     assert.match(runIntegritySummary(root), /Integrity/i);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("recovery identifies an overdue act review without deleting later chapters", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Overdue Act", projectType: "standalone", profile: "thriller" });
+    const project = readProject(root);
+    project.current_stage = "drafting";
+    project.next_gate = null;
+    project.gates["first-chapter-approval"] = "approved";
+    writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
+    writeFileSync(join(root, "books", "book-01", "plot-grid.yaml"), stringifyYaml({
+      schema_version: "1.0.0",
+      acts: [{ id: "ACT-1", purpose: "entry", start_chapter: 1, end_chapter: 6, gate: "act-1-review" }],
+      chapters: [],
+    }), "utf8");
+    mkdirSync(join(root, "books", "book-01", "manuscript", "chapters"), { recursive: true });
+    writeFileSync(join(root, "books", "book-01", "manuscript", "chapters", "09-later.md"), "# Later\n\nStill provisional.\n", "utf8");
+    const recovery = reconcileMilestoneState(root);
+    assert.deepEqual(recovery?.chapterRange, { startChapter: 1, endChapter: 6 });
+    assert.equal(recovery?.gate, "act-1-review");
+    assert.match(recovery?.findings[0] ?? "", /Chapters 1-6/);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });

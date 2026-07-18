@@ -1,4 +1,11 @@
+import { join } from "node:path";
 import { abortRevert, beginRevertHead, commitWorkflowEvent, gitHeadInfo, gitState } from "../infrastructure/git.js";
+import { PlotGridSchema, type PlotGridState, type ProjectState } from "../domain/schemas.js";
+import { listChapterFiles, readText } from "../infrastructure/files.js";
+import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
+import { readBook, readProject } from "../project/store.js";
+import { applyGuidedProjectEvent } from "./handoff.js";
+import { overdueMilestone } from "./act-boundaries.js";
 import { collectProjectIntegrityFindings } from "./integrity.js";
 import { buildGuideScreen } from "./guide.js";
 import { refreshGuidance } from "./handoff.js";
@@ -16,6 +23,45 @@ export interface UndoResult {
   originalSha: string;
   originalSubject: string;
   commitMessage: string;
+}
+
+function chapterNumber(path: string): number | null {
+  const match = path.match(/(?:^|\/)(?:0*)(\d+)(?:[-_ .]|$)/);
+  return match ? Number.parseInt(match[1] ?? "", 10) : null;
+}
+
+export interface MilestoneRecovery {
+  gate: string;
+  chapterRange: { startChapter: number; endChapter: number };
+  findings: string[];
+}
+
+export function reconcileMilestoneState(root: string): MilestoneRecovery | null {
+  const project = readProject(root);
+  const book = readBook(root);
+  const plotText = readText(join(root, "books", book.book_id, "plot-grid.yaml"));
+  if (!plotText) return null;
+  const plot = parseYaml<PlotGridState>(plotText, PlotGridSchema, "plot-grid.yaml");
+  const drafted = new Set(listChapterFiles(join(root, "books", book.book_id)).map(chapterNumber).filter((value): value is number => value !== null));
+  const overdue = overdueMilestone(plot, drafted, project.gates);
+  if (!overdue || !overdue.gate) return null;
+  return {
+    gate: overdue.gate,
+    chapterRange: { startChapter: overdue.startChapter, endChapter: overdue.endChapter },
+    findings: [`Drafted chapters extend beyond an unreviewed milestone: ${overdue.gate} covers Chapters ${overdue.startChapter}-${overdue.endChapter}.`],
+  };
+}
+
+export function recoverOverdueActReview(root: string, gate: string): MilestoneRecovery {
+  const recovery = reconcileMilestoneState(root);
+  if (!recovery || recovery.gate !== gate) throw new Error(`No overdue milestone review found for ${gate}.`);
+  const project = structuredClone(readProject(root)) as ProjectState;
+  if (!(gate in project.gates)) throw new Error(`Unknown milestone gate: ${gate}.`);
+  project.gates[gate] = "pending";
+  project.next_gate = gate;
+  project.current_stage = "act-review";
+  applyGuidedProjectEvent(root, [{ path: "PROJECT.yaml", content: stringifyYaml(project) }], `Novel Forge: recover ${gate}`, { lastAction: `Recovered overdue ${gate}` });
+  return recovery;
 }
 
 export function inspectUndo(root: string): UndoInspection {
