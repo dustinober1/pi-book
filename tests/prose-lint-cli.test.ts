@@ -32,6 +32,7 @@ test("the prose-lint CLI renders deterministic Markdown and JSON without mutatin
 
     assert.match(markdown, /^# Novel Forge deterministic prose lint/m);
     assert.match(markdown, /mechanics\/doubled-word/);
+    assert.equal(firstJson, secondJson);
     assert.deepEqual(JSON.parse(firstJson), JSON.parse(secondJson));
     for (const [path, hash] of hashes) assert.equal(createHash("sha256").update(readFileSync(path)).digest("hex"), hash);
   } finally {

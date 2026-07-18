@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
+import { initializeProject } from "../src/project/store.js";
 
 test("all eight legacy scanner entry points retain their titles and rule-family findings", () => {
   const root = mkdtempSync(join(tmpdir(), "novel-forge-scanners-"));
@@ -47,4 +48,23 @@ test("all eight legacy scanner entry points retain their titles and rule-family 
       assert.match(output, finding);
     }
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("an absolute legacy scanner path runs from an unrelated working directory", () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-scanner-absolute-"));
+  const unrelated = mkdtempSync(join(tmpdir(), "novel-forge-unrelated-cwd-"));
+  try {
+    const project = initializeProject(parent, { projectName: "Absolute Scanner", projectType: "standalone", profile: "thriller" });
+    writeFileSync(join(project, "books", "book-01", "manuscript", "chapters", "01-opening.md"), "# Opening\n\nThe copper moon rose.\n", "utf8");
+    const result = spawnSync("node", [resolve("scripts/ngram-audit.mjs"), project], {
+      cwd: unrelated,
+      encoding: "utf8",
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /^# Novel Forge n-gram audit$/m);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+    rmSync(unrelated, { recursive: true, force: true });
+  }
 });
