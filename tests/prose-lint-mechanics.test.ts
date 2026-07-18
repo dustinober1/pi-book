@@ -46,6 +46,22 @@ test("mechanical rules report deterministic, line-specific findings outside Mark
   assert.equal(source, original);
 });
 
+test("doubled-word detection supports non-ASCII words without matching substrings", () => {
+  const source = [
+    "Café café.",
+    "é é.",
+  ].join("\n");
+
+  const result = runProseLint({
+    documents: [normalizeDocument("unicode.md", source, 1)],
+    rules: mechanicalRules,
+  });
+  const doubledWords = result.findings.filter((finding) => finding.ruleId === "mechanics/doubled-word");
+
+  assert.deepEqual(doubledWords.map((finding) => finding.location.line), [1, 2]);
+  assert.deepEqual(doubledWords.map((finding) => finding.evidence.word), ["Café", "é"]);
+});
+
 test("normalization keeps a longer fenced block closed only by an equal-or-longer delimiter", () => {
   const source = [
     "````",

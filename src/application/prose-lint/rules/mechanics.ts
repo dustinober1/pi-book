@@ -45,7 +45,7 @@ const doubledWordRule: LintRule = {
     const findings: LintFinding[] = [];
     for (const document of input.documents) {
       for (const { line, number } of eligibleLines(document)) {
-        const match = /\b([\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?)\s+\1\b/iu.exec(line);
+        const match = /(?<![\p{L}\p{N}'’-])([\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*)\s+\1(?![\p{L}\p{N}'’-])/iu.exec(line);
         if (match?.[1] !== undefined) {
           findings.push(finding(this.id, document, line, number, "Adjacent word is repeated.", { word: match[1] }));
         }
