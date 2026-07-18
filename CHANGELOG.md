@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.5.0 — Historical Fiction
+
 ### Added
 
 - A first-class `historical-fiction` profile with balanced defaults, exact genre settings, planning questions, packet requirements, drafting rules, review lanes, and ending rules.
