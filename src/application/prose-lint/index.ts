@@ -1,0 +1,10 @@
+import { runProseLint } from "./engine.js";
+import { mechanicalRules } from "./rules/mechanics.js";
+import { projectConsistencyRules } from "./rules/project-consistency.js";
+import { repetitionRules } from "./rules/repetition.js";
+import { stylePatternRules } from "./rules/style-patterns.js";
+export * from "./engine.js";
+export * from "./normalize.js";
+export * from "./types.js";
+export const defaultProseLintRules = [...mechanicalRules, ...projectConsistencyRules, ...repetitionRules, ...stylePatternRules];
+export { mechanicalRules, projectConsistencyRules, repetitionRules, stylePatternRules, runProseLint };

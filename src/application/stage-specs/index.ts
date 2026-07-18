@@ -302,6 +302,7 @@ export interface ReviewStageInput {
   expectedStage: string;
   reviewLanes: readonly string[];
   projectHash: string;
+  lintEvidence?: string;
 }
 
 export function reviewStageSpec(input: ReviewStageInput): StageSpec {
@@ -309,7 +310,7 @@ export function reviewStageSpec(input: ReviewStageInput): StageSpec {
     id: "review",
     role: "an independent evidence-backed manuscript reviewer",
     objective: `Review ${input.scope} through independent review lanes without anchoring each lane to another lane's score.`,
-    inputs: [`Project root: ${input.root}`, `Active book: ${input.bookId}`, `Review scope: ${input.scope}`, ...input.reviewLanes.map((lane) => `Independent review lane: ${lane}`)],
+    inputs: [`Project root: ${input.root}`, `Active book: ${input.bookId}`, `Review scope: ${input.scope}`, ...(input.lintEvidence ? [input.lintEvidence] : []), ...input.reviewLanes.map((lane) => `Independent review lane: ${lane}`)],
     must: [
       "Run independent review lanes without anchoring each lane to another lane's score.",
       "Compare the manuscript to remarkability.yaml without confusing planned ambition with achieved reader impact.",

@@ -15,6 +15,10 @@ import { intakePromptContext } from "./intake.js";
 import { projectStateHash } from "./events.js";
 import { compilePrompt } from "./prompt-compiler.js";
 import { resolveRuntimeProfile } from "./runtime-profile-resolver.js";
+import { loadProseLintInput } from "./prose-lint/project.js";
+import { defaultProseLintRules } from "./prose-lint/index.js";
+import { runProseLint } from "./prose-lint/engine.js";
+import { renderReviewLintEvidence } from "./prose-lint/report.js";
 import {
   automationDraftStageSpec,
   bookPlanStageSpec,
@@ -154,6 +158,9 @@ export function reviewPrompt(root: string, scope: string, runtimeProfile?: Runti
   const book = readBook(root);
   const profile = getProfile(book.profile);
   const stage = readProject(root).current_stage;
+  const lintEvidence = /act|manuscript/i.test(scope)
+    ? renderReviewLintEvidence(runProseLint(loadProseLintInput(root), defaultProseLintRules), { maxFindings: 16, maxCharacters: 4000 })
+    : undefined;
   return renderPrompt(root, reviewStageSpec({
     root,
     bookId: book.book_id,
@@ -161,6 +168,7 @@ export function reviewPrompt(root: string, scope: string, runtimeProfile?: Runti
     expectedStage: stage,
     reviewLanes: profile.milestoneReviewLanes,
     projectHash: projectStateHash(root),
+    ...(lintEvidence ? { lintEvidence } : {}),
   }), runtimeProfile);
 }
 
