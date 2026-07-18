@@ -1,10 +1,13 @@
 import { join } from "node:path";
-import { CanonSchema, ChapterQueueSchema, PlotGridSchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type PlotGridState, type StoryThreadsState } from "../domain/schemas.js";
+import { CanonSchema, ChapterQueueSchema, GenreConfigSchema, PlotGridSchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type GenreConfig, type PlotGridState, type StoryThreadsState } from "../domain/schemas.js";
 import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
 import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
+import { DecisionLedgerSchema, type DecisionLedger } from "../domain/v1-4-schemas.js";
+import { HistoricalContextSchema, InventionLedgerSchema, type HistoricalContext, type InventionLedger } from "../domain/historical-fiction.js";
 import { readText } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { readBook } from "../project/store.js";
+import { historicalIntegrityFindings } from "./historical-integrity.js";
 
 export interface IntegrityFinding { severity: "blocker" | "warning"; message: string }
 
@@ -66,5 +69,26 @@ export function collectProjectIntegrityFindings(root: string): IntegrityFinding[
   const sources = parseYaml<SourceRegisterV13>(sourcesText, SourceRegisterV13Schema, "source-register.yaml");
   const research = parseYaml<ResearchLedger>(researchText, ResearchLedgerSchema, "research-ledger.yaml");
   const plot = parseYaml<PlotGridState>(plotText, PlotGridSchema, "plot-grid.yaml");
-  return queue.packets.filter((packet) => packet.status === "ready").flatMap((packet) => packetReferenceFindings(packet, canon, threads, sources, plot, research));
+  const findings = queue.packets.filter((packet) => packet.status === "ready").flatMap((packet) => packetReferenceFindings(packet, canon, threads, sources, plot, research));
+  if (book.profile !== "historical-fiction") return findings;
+
+  const contextText = readText(join(bookRoot, "historical-context.yaml"));
+  const inventionsText = readText(join(bookRoot, "invention-ledger.yaml"));
+  const genreText = readText(join(bookRoot, "genre.yaml"));
+  const decisionsText = readText(join(root, "series", "decision-ledger.yaml"));
+  if (!contextText || !inventionsText || !genreText || !decisionsText) {
+    const severity = queue.packets.some((packet) => packet.status === "ready") ? "blocker" : "warning";
+    return [...findings, { severity, message: "Historical-fiction book requires historical-context.yaml and invention-ledger.yaml before drafting." }];
+  }
+  const historical = historicalIntegrityFindings({
+    genre: parseYaml<GenreConfig>(genreText, GenreConfigSchema, "genre.yaml"),
+    context: parseYaml<HistoricalContext>(contextText, HistoricalContextSchema, "historical-context.yaml"),
+    inventions: parseYaml<InventionLedger>(inventionsText, InventionLedgerSchema, "invention-ledger.yaml"),
+    research,
+    sources,
+    queue,
+    plot,
+    decisions: parseYaml<DecisionLedger>(decisionsText, DecisionLedgerSchema, "decision-ledger.yaml"),
+  });
+  return [...findings, ...historical];
 }
