@@ -50,6 +50,7 @@ import { readerFrictionFindings } from "./review-observations.js";
 import { researchEvidenceFindings } from "./research-evidence.js";
 import { compactPacketWindow, packetWindowDecision, packetWindowFindings } from "./packet-window.js";
 import { historicalIntegrityFindings } from "./historical-integrity.js";
+import { actBoundaryFindings, requiredMilestoneGate } from "./act-boundaries.js";
 
 export { projectStateHash } from "./project-hash.js";
 
@@ -291,9 +292,21 @@ function validateArchitecture(root: string, files: FileChange[], book: BookState
   const genre = parseOverlay<GenreConfig>(root, files, `${bookRoot}/genre.yaml`, GenreConfigSchema);
   const plot = parseOverlay<PlotGridPhase4>(root, files, `${bookRoot}/plot-grid.yaml`, PlotGridPhase4Schema);
   const queue = parseOverlay<ChapterQueueState>(root, files, `${bookRoot}/chapter-queue.yaml`, ChapterQueueSchema);
-  const findings = [...profile.validateGenreConfig(genre), ...(event === "book-plan" || event === "chapter-queue" ? profile.validatePlot(plot) : [])];
+  const findings = [
+    ...profile.validateGenreConfig(genre),
+    ...actBoundaryFindings(plot).map((finding) => ({ severity: finding.severity, category: "act-boundary", message: finding.message } as const)),
+    ...(event === "book-plan" || event === "chapter-queue" ? profile.validatePlot(plot) : []),
+  ];
   const packets = chapter ? queue.packets.filter((packet) => packet.chapter === chapter) : event === "book-plan" || event === "chapter-queue" ? queue.packets.filter((packet) => packet.status === "ready") : [];
-  for (const packet of packets) findings.push(...profile.validatePacket(packet));
+  for (const packet of packets) {
+    findings.push(...profile.validatePacket(packet));
+    const expectedGate = requiredMilestoneGate(plot, packet.chapter);
+    if (packet.milestone_gate && packet.milestone_gate !== expectedGate) {
+      findings.push({ severity: "blocker", category: "act-boundary", message: `Chapter ${packet.chapter} packet gate ${packet.milestone_gate} disagrees with plot-derived gate ${expectedGate ?? "none"}.` });
+    } else if (event !== "draft-chapter" && expectedGate && packet.milestone_gate !== expectedGate) {
+      findings.push({ severity: "blocker", category: "act-boundary", message: `Chapter ${packet.chapter} must carry plot-derived milestone gate ${expectedGate}.` });
+    }
+  }
   const blockers = findings.filter((finding) => finding.severity === "blocker");
   if (blockers.length) throw new Error(`Profile validation blocked ${event}:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
 
@@ -363,12 +376,13 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
         project.gates["first-chapter-approval"] = "pending";
         project.next_gate = "first-chapter-approval";
         project.current_stage = "drafting";
-      } else if (packet.milestone_gate) {
-        if (!(packet.milestone_gate in project.gates)) throw new Error(`Unknown milestone gate: ${packet.milestone_gate}`);
-        project.gates[packet.milestone_gate] = "pending";
-        project.next_gate = packet.milestone_gate;
+      } else if (requiredMilestoneGate(plot, input.chapter)) {
+        const milestoneGate = requiredMilestoneGate(plot, input.chapter)!;
+        if (!(milestoneGate in project.gates)) throw new Error(`Unknown milestone gate: ${milestoneGate}`);
+        project.gates[milestoneGate] = "pending";
+        project.next_gate = milestoneGate;
         project.current_stage = "act-review";
-        book.act_checkpoint = packet.milestone_gate;
+        book.act_checkpoint = milestoneGate;
       } else {
         const manuscriptNumbers = new Set(listChapterFiles(join(root, "books", book.book_id)).map(chapterNumber).filter((item): item is number => item !== null));
         manuscriptNumbers.add(input.chapter);
