@@ -18,4 +18,4 @@
 - [x] Elena has at least one meaningful non-case pressure or relationship.
 - [x] The Executive's public-good argument is dramatized through a concrete beneficiary or case.
 - [x] The Engineer has aftermath or cost after the breach.
-- [ ] Final pages end on image or action rather than one extra generalization.
+- [x] Final pages end on image or action rather than one extra generalization.
