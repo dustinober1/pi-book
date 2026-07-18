@@ -143,6 +143,7 @@ Run the deterministic scene audit during review. Flag more than two consecutive 
 Use stable recurrence pattern IDs only for genuinely repeated problems. A pattern is promotion-eligible after three distinct chapters or two distinct milestone reviews. Eligibility never activates a rule. Store proposed, approved, or rejected learning rules in `book-strategy.yaml`; validate approved rules against the exact supporting ticket IDs, distinct chapters, and milestone reviews. Only writer-approved rules enter future drafting context, and promotion must not trigger a retroactive rewrite.
 
 The read-only `npm run audit:voice -- <project-root>` command may print diagnostics but must not mutate project state or replace guarded workflow events.
+The read-only `npm run audit:prose -- <project-root>` command provides deterministic manuscript signals. Treat findings as review evidence, not authorship detection or prose quotas. Thriller projects use `thriller-evidence.yaml` for exact artifact labels, provenance, access limits, and explicit non-proof statements.
 
 ## Structured event rejections
 

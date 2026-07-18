@@ -140,7 +140,10 @@ Voice evidence includes sentence and paragraph distributions, dialogue ratio, fr
 
 ```bash
 npm run audit:voice -- /path/to/novel-project
+npm run audit:prose -- /path/to/novel-project
 ```
+
+`audit:prose` is read-only and reports mechanical, continuity, repetition, and style-pattern signals as review evidence. Act and manuscript review prompts include a bounded report automatically; findings never prescribe prose quotas or automatic rewrites.
 
 The scene audit uses existing chapter packets and plot-grid state changes. It flags:
 
