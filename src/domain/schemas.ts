@@ -1,8 +1,17 @@
 import { Type, type Static, type TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 
-export const ProfileIdSchema = Type.Union([Type.Literal("thriller"), Type.Literal("romantasy")]);
+export const PROFILE_IDS = ["thriller", "romantasy", "historical-fiction"] as const;
+export const ProfileIdSchema = Type.Union([
+  Type.Literal("thriller"),
+  Type.Literal("romantasy"),
+  Type.Literal("historical-fiction"),
+]);
 export type ProfileId = Static<typeof ProfileIdSchema>;
+
+export function isProfileId(value: unknown): value is ProfileId {
+  return typeof value === "string" && (PROFILE_IDS as readonly string[]).includes(value);
+}
 
 export const ProjectTypeSchema = Type.Union([
   Type.Literal("standalone"), Type.Literal("planned-series"), Type.Literal("open-ended-series"),
