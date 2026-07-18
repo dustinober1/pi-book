@@ -12,8 +12,8 @@
 
 ## Tightening
 
-- [ ] Explicit theme statements are cut where the scene already proves the point.
-- [ ] Aphoristic paragraph endings are reserved for high-pressure turns.
+- [x] Explicit theme statements are cut where the scene already proves the point.
+- [x] Aphoristic paragraph endings are reserved for high-pressure turns.
 - [x] The daughter's most conceptual lines are reduced to the strongest five or six.
 - [x] Elena has at least one meaningful non-case pressure or relationship.
 - [x] The Executive's public-good argument is dramatized through a concrete beneficiary or case.
