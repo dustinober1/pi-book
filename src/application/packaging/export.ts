@@ -4,9 +4,10 @@ import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 import ExcelJS from "exceljs";
 import { strToU8, zipSync } from "fflate";
 import type { PackageManifest, PublishingMetadata, ReaderExperimentFile } from "../../domain/v1-2-schemas.js";
+import { HistoricalContextSchema, InventionLedgerSchema, type HistoricalContext, type InventionLedger } from "../../domain/historical-fiction.js";
 import type { TransactionFileChange } from "../../infrastructure/transaction.js";
 import { countWords, listChapterFiles, readText } from "../../infrastructure/files.js";
-import { stringifyYaml } from "../../infrastructure/yaml.js";
+import { parseYaml, stringifyYaml } from "../../infrastructure/yaml.js";
 import { readBook, readProject } from "../../project/store.js";
 import { exportWithPandoc } from "../../conversion/pandoc-export.js";
 import { readReaderExperiment, readReaderIndex } from "../readers/store.js";
@@ -146,6 +147,36 @@ function sourceDigest(parts: Array<string | Uint8Array>): string {
   return hash.digest("hex");
 }
 
+function historicalNote(context: HistoricalContext, ledger: InventionLedger): string | null {
+  const disclosed = ledger.entries.filter((entry) => entry.disclosure !== "none");
+  if (!disclosed.length) return null;
+  const lines = [
+    "# Historical Note",
+    "",
+    "This note identifies tracked narrative inventions and departures selected for disclosure. It does not claim evidence beyond the registered sources and research records.",
+    "",
+    "## Disclosed choices",
+    "",
+  ];
+  for (const entry of disclosed) {
+    const evidence = entry.source_ids.length || entry.research_ids.length
+      ? `Registered evidence: ${[...entry.source_ids, ...entry.research_ids].join(", ")}.`
+      : "Historical basis: declared narrative invention; no citation asserted.";
+    lines.push(
+      `- **${entry.id} — ${entry.classification} (${entry.disclosure})**: ${entry.claim}`,
+      `  Rationale: ${entry.rationale}`,
+      `  Story necessity: ${entry.story_necessity}`,
+      `  ${evidence}`,
+    );
+  }
+  if (context.uncertainties.length) {
+    lines.push("", "## Declared uncertainty", "");
+    for (const uncertainty of context.uncertainties) lines.push(`- ${uncertainty.id} (${uncertainty.kind}): ${uncertainty.statement}`);
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
 export async function buildPackageArtifacts(root: string, options: PackageBuildOptions = {}): Promise<PackageBuildResult> {
   const project = readProject(root);
   const book = readBook(root);
@@ -154,7 +185,26 @@ export async function buildPackageArtifacts(root: string, options: PackageBuildO
   const manuscript = compileManuscript(root, book.book_id, publishing.title || book.title || project.project_name);
   const readerIndex = readReaderIndex(root, book.book_id);
   const experiments = readerIndex.experiments.map((entry) => readReaderExperiment(root, book.book_id, entry.id));
-  const sourceHash = sourceDigest([manuscript.markdown, stringifyYaml(publishing), stringifyYaml(marketing), ...experiments.map((experiment) => stringifyYaml(experiment))]);
+  let renderedHistoricalNote: string | null = null;
+  const historicalHashParts: string[] = [];
+  if (book.profile === "historical-fiction") {
+    const historicalPath = join(root, "books", book.book_id, "historical-context.yaml");
+    const inventionPath = join(root, "books", book.book_id, "invention-ledger.yaml");
+    const historicalText = readText(historicalPath);
+    const inventionText = readText(inventionPath);
+    if (!historicalText || !inventionText) throw new Error("Historical packaging requires historical-context.yaml and invention-ledger.yaml.");
+    const context = parseYaml<HistoricalContext>(historicalText, HistoricalContextSchema, "historical-context.yaml");
+    const ledger = parseYaml<InventionLedger>(inventionText, InventionLedgerSchema, "invention-ledger.yaml");
+    historicalHashParts.push(historicalText, inventionText);
+    renderedHistoricalNote = historicalNote(context, ledger);
+  }
+  const sourceHash = sourceDigest([
+    manuscript.markdown,
+    stringifyYaml(publishing),
+    stringifyYaml(marketing),
+    ...experiments.map((experiment) => stringifyYaml(experiment)),
+    ...historicalHashParts,
+  ]);
 
   let docx: Uint8Array;
   let epub: Uint8Array;
@@ -193,6 +243,7 @@ export async function buildPackageArtifacts(root: string, options: PackageBuildO
     { path: `${base}/ad-variants.md`, format: "markdown", content: marketingFile("Advertising Variants", marketing.advertisements.items), required: false },
     { path: `${base}/audiobook-metadata.md`, format: "markdown", content: `# Audiobook Metadata\n\n- Narrator: ${publishing.audiobook.narrator}\n- Producer: ${publishing.audiobook.producer}\n- Duration placeholder: ${publishing.audiobook.duration_minutes} minutes\n- ISBN: ${publishing.identifiers.audiobook_isbn}\n- Distribution notes: ${publishing.audiobook.distribution_notes}\n\n${marketingFile("Audiobook Promotion", marketing.audiobook_promotion.items)}`, required: false },
     { path: `${base}/series-page-copy.md`, format: "markdown", content: marketingFile("Series Page Copy", marketing.series_page.items), required: false },
+    ...(renderedHistoricalNote ? [{ path: `${base}/historical-note.md`, format: "markdown", content: renderedHistoricalNote, required: true }] : []),
   ];
   const generatedAt = new Date().toISOString();
   const manifest: PackageManifest = {

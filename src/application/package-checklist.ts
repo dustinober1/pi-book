@@ -1,16 +1,23 @@
 import { existsSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
-import { ReaderExperimentsSchema, type ProfileId, type ReaderExperimentsState } from "../domain/schemas.js";
+import { ChapterQueueSchema, GenreConfigSchema, ReaderExperimentsSchema, type ChapterQueueState, type GenreConfig, type ProfileId, type ReaderExperimentsState } from "../domain/schemas.js";
+import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
+import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
+import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
+import { DecisionLedgerSchema, type DecisionLedger } from "../domain/v1-4-schemas.js";
+import { HistoricalContextSchema, InventionLedgerSchema, type HistoricalContext, type InventionLedger } from "../domain/historical-fiction.js";
 import { listChapterFiles, readText } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { openBlockingTickets } from "../review/review.js";
 import { readBook, readProject, readTickets } from "../project/store.js";
 import { readReaderExperiment, readReaderIndex } from "./readers/store.js";
 import { marketingMetadataFindings, publishingMetadataFindings, readMarketingMetadata, readPublishingMetadata } from "./packaging/metadata.js";
+import { historicalIntegrityFindings } from "./historical-integrity.js";
 
 export type PackagingChecklistId =
   | "manuscript" | "manuscript-approval" | "canon-lock" | "blocking-tickets" | "reader-claims"
-  | "publishing-metadata" | "marketing-metadata" | "assets" | "audiobook" | "export-readiness" | "package-artifact";
+  | "publishing-metadata" | "marketing-metadata" | "assets" | "audiobook" | "export-readiness" | "package-artifact"
+  | "historical-disclosure";
 
 export interface PackagingChecklistItem {
   id: PackagingChecklistId;
@@ -74,6 +81,46 @@ function item(id: PackagingChecklistId, label: string, complete: boolean, blocki
   return { id, label, complete, blocking, detail, evidencePaths, repairAction };
 }
 
+function historicalDisclosureItem(root: string, bookId: string): PackagingChecklistItem {
+  const base = `books/${bookId}`;
+  try {
+    const parse = <T>(path: string, schema: object): T => {
+      const text = readText(join(root, path));
+      if (!text) throw new Error(`${path} is required.`);
+      return parseYaml<T>(text, schema as never, path);
+    };
+    const findings = historicalIntegrityFindings({
+      genre: parse<GenreConfig>(`${base}/genre.yaml`, GenreConfigSchema),
+      context: parse<HistoricalContext>(`${base}/historical-context.yaml`, HistoricalContextSchema),
+      inventions: parse<InventionLedger>(`${base}/invention-ledger.yaml`, InventionLedgerSchema),
+      research: parse<ResearchLedger>(`${base}/research-ledger.yaml`, ResearchLedgerSchema),
+      sources: parse<SourceRegisterV13>("research/source-register.yaml", SourceRegisterV13Schema),
+      queue: parse<ChapterQueueState>(`${base}/chapter-queue.yaml`, ChapterQueueSchema),
+      plot: parse<PlotGridPhase4>(`${base}/plot-grid.yaml`, PlotGridPhase4Schema),
+      decisions: parse<DecisionLedger>("series/decision-ledger.yaml", DecisionLedgerSchema),
+    }).filter((finding) => finding.severity === "blocker");
+    return item(
+      "historical-disclosure",
+      "Historical disclosure",
+      findings.length === 0,
+      true,
+      findings.length ? findings.map((finding) => finding.message).join(" ") : "Historical evidence, invention approvals, and disclosure levels are internally consistent.",
+      [`${base}/historical-context.yaml`, `${base}/invention-ledger.yaml`, "series/decision-ledger.yaml"],
+      "Resolve historical evidence findings and record every required writer decision before packaging.",
+    );
+  } catch (error) {
+    return item(
+      "historical-disclosure",
+      "Historical disclosure",
+      false,
+      true,
+      error instanceof Error ? error.message : "Historical disclosure evidence is unavailable.",
+      [`${base}/historical-context.yaml`, `${base}/invention-ledger.yaml`, "series/decision-ledger.yaml"],
+      "Restore and validate the historical context and invention ledger before packaging.",
+    );
+  }
+}
+
 export function buildPackagingChecklist(root: string): PackagingChecklist {
   const project = readProject(root);
   const book = readBook(root);
@@ -126,6 +173,7 @@ export function buildPackagingChecklist(root: string): PackagingChecklist {
     item("audiobook", "Audiobook metadata", audiobookComplete, false, audiobookComplete ? "Audiobook metadata contains at least one production identifier." : "Narrator, producer, duration, ISBN, and distribution fields remain optional placeholders.", [`${base}/publishing.yaml`, `${base}/marketing.yaml`], "Complete audiobook production fields when an edition is planned."),
     item("export-readiness", "Export engine readiness", manuscript.complete && publishingComplete, true, manuscript.complete && publishingComplete ? "Required manuscript and metadata inputs are ready for DOCX, EPUB, Markdown, CSV, and XLSX generation." : "Export inputs remain incomplete.", [`${base}/manuscript/`, `${base}/publishing.yaml`], "Resolve manuscript and publishing metadata blockers."),
     item("package-artifact", "Editorial package", existsSync(manifestPath) || packageText.length > 40, false, existsSync(manifestPath) ? "A v1.2 package manifest exists." : packageText.length > 40 ? "The legacy package artifact contains substantive material." : "The packaging workflow will create the production package.", [`${base}/exports/package-manifest.yaml`, `${base}/package.md`], "Generate or regenerate the complete author package."),
+    ...(book.profile === "historical-fiction" ? [historicalDisclosureItem(root, book.book_id)] : []),
   ];
   const ready = items.filter((check) => check.blocking).every((check) => check.complete);
   return { ready, items, summary: ready ? "Packaging prerequisites are satisfied." : "Resolve incomplete blocking checklist items before final package approval." };
