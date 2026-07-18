@@ -10,6 +10,7 @@ import {
   type CanonState,
   type ChapterQueueState,
   type GenreConfig,
+  type ProfileId,
   type ProjectState,
   type ReaderExperimentsState,
   type RemarkabilityState,
@@ -26,6 +27,7 @@ import {
 import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
 import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
 import { DecisionLedgerSchema, IntakeSchema, PremiseLabSchema, intakeDecisionFindings, type DecisionLedger, type IntakeState, type PremiseLab } from "../domain/v1-4-schemas.js";
+import { HistoricalContextSchema, InventionLedgerSchema, type HistoricalContext, type InventionLedger } from "../domain/historical-fiction.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import type { FileChange } from "../infrastructure/transaction.js";
 import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
@@ -47,6 +49,7 @@ import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact
 import { readerFrictionFindings } from "./review-observations.js";
 import { researchEvidenceFindings } from "./research-evidence.js";
 import { compactPacketWindow, packetWindowDecision, packetWindowFindings } from "./packet-window.js";
+import { historicalIntegrityFindings } from "./historical-integrity.js";
 
 export { projectStateHash } from "./project-hash.js";
 
@@ -72,8 +75,11 @@ const eventStages: Record<NovelEventType, Stage[]> = {
 
 function normalized(path: string): string { return path.replace(/\\/g, "/").replace(/^\.\//, ""); }
 
-function allowedPath(event: NovelEventType, path: string, bookId: string, chapter?: number): boolean {
+function allowedPath(event: NovelEventType, path: string, bookId: string, profile: ProfileId, chapter?: number): boolean {
   const book = `books/${bookId}`;
+  if (profile === "historical-fiction" && ["book-plan", "research-update"].includes(event)
+    && [`${book}/historical-context.yaml`, `${book}/invention-ledger.yaml`].includes(path)) return true;
+  if (profile === "historical-fiction" && event === "research-update" && path === "series/decision-ledger.yaml") return true;
   const exact: Record<NovelEventType, string[]> = {
     "voice-profile": ["series/voice-profile.md", "series/taste-profile.yaml", "series/voice-guardrails.yaml", "series/voice-experiments/index.yaml"],
     "series-plan": ["series/series-bible.md", "series/series-arc.yaml", "series/canon.yaml", "series/story-threads.yaml"],
@@ -161,7 +167,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     file.path = normalized(file.path);
     if (seen.has(file.path)) throw new Error(`Duplicate event path: ${file.path}`);
     seen.add(file.path);
-    if (!allowedPath(input.eventType, file.path, book.book_id, input.chapter)) throw new Error(`${file.path} is not allowed for ${input.eventType}.`);
+    if (!allowedPath(input.eventType, file.path, book.book_id, book.profile, input.chapter)) throw new Error(`${file.path} is not allowed for ${input.eventType}.`);
   }
   const required: Partial<Record<NovelEventType, RegExp>> = {
     "voice-profile": /series\/voice-profile\.md$/,
@@ -202,6 +208,12 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
       `books/${book.book_id}/research-ledger.yaml`,
       `books/${book.book_id}/book-strategy.yaml`,
     ];
+    if (book.profile === "historical-fiction") {
+      requiredBookPlan.push(
+        `books/${book.book_id}/historical-context.yaml`,
+        `books/${book.book_id}/invention-ledger.yaml`,
+      );
+    }
     const missing = missingRequiredPaths(input.files, requiredBookPlan);
     if (missing.length) throw new Error(`book-plan event is missing required output: ${missing.join(", ")}`);
     const remarkability = parseOverlay<RemarkabilityState>(root, input.files, `books/${book.book_id}/remarkability.yaml`, RemarkabilitySchema);
@@ -217,6 +229,9 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     validateResearchAndFriction(root, input.files, book, input.eventType);
     validateRevisionLearning(root, input.files, book);
   }
+  if (input.eventType === "research-update" && book.profile === "historical-fiction") {
+    validateHistoricalIntegrity(root, input.files, book);
+  }
   if (input.eventType === "premise-update" || (input.eventType === "book-plan" && overlay(root, input.files, `books/${book.book_id}/premise-lab.yaml`))) {
     const lab = parseOverlay<PremiseLab>(root, input.files, `books/${book.book_id}/premise-lab.yaml`, PremiseLabSchema);
     const ledger = parseOverlay<DecisionLedger>(root, input.files, "series/decision-ledger.yaml", DecisionLedgerSchema);
@@ -231,6 +246,23 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     const ledger = parseOverlay<DecisionLedger>(root, input.files, "series/decision-ledger.yaml", DecisionLedgerSchema);
     const blockers = intakeDecisionFindings(intake, ledger).filter((finding) => finding.severity === "blocker");
     if (blockers.length) throw new Error(`Intake and decision ledger validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+  }
+}
+
+function validateHistoricalIntegrity(root: string, files: FileChange[], book: BookState): void {
+  const bookRoot = `books/${book.book_id}`;
+  const blockers = historicalIntegrityFindings({
+    genre: parseOverlay<GenreConfig>(root, files, `${bookRoot}/genre.yaml`, GenreConfigSchema),
+    context: parseOverlay<HistoricalContext>(root, files, `${bookRoot}/historical-context.yaml`, HistoricalContextSchema),
+    inventions: parseOverlay<InventionLedger>(root, files, `${bookRoot}/invention-ledger.yaml`, InventionLedgerSchema),
+    research: parseOverlay<ResearchLedger>(root, files, `${bookRoot}/research-ledger.yaml`, ResearchLedgerSchema),
+    sources: parseOverlay<SourceRegisterV13>(root, files, "research/source-register.yaml", SourceRegisterV13Schema),
+    queue: parseOverlay<ChapterQueueState>(root, files, `${bookRoot}/chapter-queue.yaml`, ChapterQueueSchema),
+    plot: parseOverlay<PlotGridPhase4>(root, files, `${bookRoot}/plot-grid.yaml`, PlotGridPhase4Schema),
+    decisions: parseOverlay<DecisionLedger>(root, files, "series/decision-ledger.yaml", DecisionLedgerSchema),
+  }).filter((finding) => finding.severity === "blocker");
+  if (blockers.length) {
+    throw new Error(`Historical integrity validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
 }
 
@@ -273,6 +305,8 @@ function validateArchitecture(root: string, files: FileChange[], book: BookState
     const referenceBlockers = packets.flatMap((packet) => packetReferenceFindings(packet, canon, threads, sources, plot, research)).filter((finding) => finding.severity === "blocker");
     if (referenceBlockers.length) throw new Error(`Reference validation blocked ${event}:\n${referenceBlockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
+
+  if (book.profile === "historical-fiction") validateHistoricalIntegrity(root, files, book);
 
   if (event === "book-plan" || event === "chapter-queue") {
     const drafted = new Set(listChapterFiles(join(root, "books", book.book_id)).map(chapterNumber).filter((item): item is number => item !== null));
