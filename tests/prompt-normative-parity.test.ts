@@ -53,6 +53,8 @@ test("book planning standard prompt retains the current controlling requirements
     intakeContext: "Original author idea: A signal nobody else can hear.",
     premiseContext: "Selected premise: variant-2.",
     planningQuestions: ["What pressure makes delay costly?"],
+    profileRules: [],
+    profileOutputs: [],
     projectHash: "hash-123",
   });
   const standard = compilePrompt(stage, RUNTIME_PROFILES.full).text;

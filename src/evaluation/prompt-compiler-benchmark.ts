@@ -46,6 +46,8 @@ function benchmarkSpecs(): Array<{ id: string; spec: StageSpec }> {
           "Which ending consequence must remain unresolved?",
           "What recurring-cast pressure belongs to later books?",
         ],
+        profileRules: [],
+        profileOutputs: [],
         projectHash,
       }),
     },

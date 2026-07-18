@@ -135,6 +135,8 @@ export interface BookPlanStageInput {
   intakeContext: string;
   premiseContext: string;
   planningQuestions: readonly string[];
+  profileRules: readonly string[];
+  profileOutputs: readonly string[];
   projectHash: string;
 }
 
@@ -174,6 +176,7 @@ export function bookPlanStageSpec(input: BookPlanStageInput): StageSpec {
       "Use the state-neutral intake-update event for any intake or decision-ledger evidence.",
       "The research ledger may contain planned or researching items, but do not mark unsupported claims ready.",
       "The book strategy may begin with empty public-review observations, but its expectation decisions and plan stress test must be complete for approval.",
+      ...input.profileRules,
     ],
     avoid: [
       "Do not make the writer fill out the schema field by field.",
@@ -193,6 +196,7 @@ export function bookPlanStageSpec(input: BookPlanStageInput): StageSpec {
       `books/${input.bookId}/book-strategy.yaml`,
       "research/source-register.yaml when provenance changes",
       "series/story-threads.yaml",
+      ...input.profileOutputs.map((output) => `books/${input.bookId}/${output}`),
     ],
     validation: [
       "All required typed artifacts are complete.",
@@ -202,6 +206,7 @@ export function bookPlanStageSpec(input: BookPlanStageInput): StageSpec {
       "Every ready research claim has complete provenance and dramatic use.",
       "Public-review evidence remains separate from human reader evidence.",
       "The writer retains premise and gate approval authority.",
+      ...(input.profileRules.length ? ["Every profile-specific planning and evidence rule is satisfied."] : []),
     ],
     toolRules: eventToolRules({ eventType: "book-plan", expectedStage: "book-planning", projectHash: input.projectHash }),
   };

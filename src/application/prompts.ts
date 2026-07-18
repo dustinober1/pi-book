@@ -96,6 +96,8 @@ export function bookPlanPrompt(root: string, runtimeProfile?: RuntimeProfile): s
     intakeContext: planningIntakeContext(root),
     premiseContext: selectedPremiseContext(activePremiseLab(root)),
     planningQuestions: profile.planningQuestions,
+    profileRules: profile.bookPlanRules,
+    profileOutputs: profile.bookPlanOutputs,
     projectHash: projectStateHash(root),
   }), runtimeProfile);
 }

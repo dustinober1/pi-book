@@ -140,6 +140,17 @@ export const historicalFictionProfile: NovelProfile = {
     "Which inferred, composite, invented, or counterfactual elements need explicit tracking or disclosure?",
   ],
   chapterPacketRequirements: requiredProfileFields,
+  bookPlanRules: [
+    "Complete historical-context.yaml with ordered chronology, period constraints, knowledge boundaries, language conventions, uncertainties, and settings that exactly match genre.yaml.",
+    "Complete invention-ledger.yaml for every documented, inferred, compressed, composite, invented, or counterfactual intervention that affects the story.",
+    "High-risk historical claims require ready, non-low-confidence RES-NNN evidence with registered source provenance; medium-risk claims require evidence or an explicit invention.",
+    "A required invention decision uses subject historical-invention:INV-NNN and choice accept:<classification>:<risk>:<disclosure>; major counterfactuals also require explicit-writer-approved policy.",
+    "Do not invent citations, quotations, archive holdings, source titles, URLs, or conclusions; preserve contested evidence and uncertainty.",
+  ],
+  bookPlanOutputs: [
+    "historical-context.yaml",
+    "invention-ledger.yaml",
+  ],
   milestoneReviewLanes: [
     "chronology and historical causality",
     "research provenance and uncertainty",

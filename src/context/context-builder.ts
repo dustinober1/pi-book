@@ -1,9 +1,11 @@
 import { basename, join } from "node:path";
-import { CanonSchema, ChapterQueueSchema, RemarkabilitySchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type RemarkabilityState, type StoryThreadsState } from "../domain/schemas.js";
+import { CanonSchema, ChapterQueueSchema, GenreConfigSchema, RemarkabilitySchema, StoryThreadsSchema, type CanonState, type ChapterPacket, type ChapterQueueState, type GenreConfig, type RemarkabilityState, type StoryThreadsState } from "../domain/schemas.js";
 import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
 import { BookStrategyPhase5Schema, type BookStrategyPhase5 } from "../domain/v1-3-audit-schemas.js";
 import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
 import { ResearchLedgerSchema, TasteProfileSchema, VoiceGuardrailsSchema, defaultTasteProfile, defaultVoiceGuardrails, type ResearchLedger, type TasteProfile, type VoiceGuardrails } from "../domain/v1-3-schemas.js";
+import { DecisionLedgerSchema, type DecisionLedger } from "../domain/v1-4-schemas.js";
+import { HistoricalContextSchema, InventionLedgerSchema, type HistoricalContext, type InventionLedger } from "../domain/historical-fiction.js";
 import { renderApprovedBookGuardrails } from "../application/book-strategy.js";
 import { packetReferenceFindings } from "../application/integrity.js";
 import { renderContextGuardrails, voiceSafetyFindings } from "../application/influence-palette.js";
@@ -12,6 +14,7 @@ import { parseYaml } from "../infrastructure/yaml.js";
 import { getProfile } from "../profiles/index.js";
 import { readBook, readProject } from "../project/store.js";
 import { buildStoryGraph, resolveDraftingGraphContext, type StoryGraphBlockedSelection, type StoryGraphSelection } from "./story-graph.js";
+import { historicalIntegrityFindings } from "../application/historical-integrity.js";
 
 export interface ChapterContextReport {
   estimatedTokens: number;
@@ -63,6 +66,33 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
   const blockers = [...profileBlockers.map((item) => item.message), ...referenceBlockers.map((item) => item.message)];
   if (blockers.length) throw new Error(`Chapter packet is not draftable:\n${blockers.map((item) => `- ${item}`).join("\n")}`);
 
+  let historicalContext: HistoricalContext | null = null;
+  let inventionLedger: InventionLedger | null = null;
+  if (book.profile === "historical-fiction") {
+    const historicalText = readText(join(bookRoot, "historical-context.yaml"));
+    const inventionText = readText(join(bookRoot, "invention-ledger.yaml"));
+    const genreText = readText(join(bookRoot, "genre.yaml"));
+    const decisionsText = readText(join(root, "series", "decision-ledger.yaml"));
+    if (!historicalText || !inventionText || !genreText || !decisionsText) {
+      throw new Error("Historical drafting requires historical-context.yaml, invention-ledger.yaml, genre.yaml, and series/decision-ledger.yaml.");
+    }
+    historicalContext = parseYaml<HistoricalContext>(historicalText, HistoricalContextSchema, "historical-context.yaml");
+    inventionLedger = parseYaml<InventionLedger>(inventionText, InventionLedgerSchema, "invention-ledger.yaml");
+    const historicalBlockers = historicalIntegrityFindings({
+      genre: parseYaml<GenreConfig>(genreText, GenreConfigSchema, "genre.yaml"),
+      context: historicalContext,
+      inventions: inventionLedger,
+      research,
+      sources,
+      queue,
+      plot,
+      decisions: parseYaml<DecisionLedger>(decisionsText, DecisionLedgerSchema, "series/decision-ledger.yaml"),
+    }).filter((finding) => finding.severity === "blocker");
+    if (historicalBlockers.length) {
+      throw new Error(`Historical context is not draftable:\n${historicalBlockers.map((item) => `- ${item.message}`).join("\n")}`);
+    }
+  }
+
   const tasteText = readText(join(root, "series", "taste-profile.yaml"));
   const guardrailsText = readText(join(root, "series", "voice-guardrails.yaml"));
   const voiceProfileText = readText(join(root, "series", "voice-profile.md")) ?? "";
@@ -82,15 +112,52 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
   const relationshipIds = new Set(graphResolution.relationshipIds);
   const threadIds = new Set(graphResolution.threadIds);
   const researchIds = new Set(graphResolution.researchIds);
+  const chronologyRefs = new Set(Array.isArray(packet.profile_fields["chronology_refs"]) ? packet.profile_fields["chronology_refs"].filter((item): item is string => typeof item === "string") : []);
+  const constraintRefs = new Set(Array.isArray(packet.profile_fields["constraint_refs"]) ? packet.profile_fields["constraint_refs"].filter((item): item is string => typeof item === "string") : []);
+  const inventionRefs = new Set(Array.isArray(packet.profile_fields["invention_refs"]) ? packet.profile_fields["invention_refs"].filter((item): item is string => typeof item === "string") : []);
+  const knowledgeBoundaryRef = typeof packet.profile_fields["knowledge_boundary"] === "string" ? packet.profile_fields["knowledge_boundary"] : null;
+  const historicalChronology = historicalContext?.chronology.filter((item) => chronologyRefs.has(item.id)) ?? [];
+  const historicalConstraints = historicalContext?.constraints.filter((item) => constraintRefs.has(item.id)) ?? [];
+  const historicalKnowledge = historicalContext?.knowledge_boundaries.filter((item) => item.id === knowledgeBoundaryRef) ?? [];
+  const historicalInventions = inventionLedger?.entries.filter((item) => inventionRefs.has(item.id)) ?? [];
+  const historicalResearchIds = new Set([
+    ...packet.required_research,
+    ...historicalChronology.flatMap((item) => item.research_ids),
+    ...historicalConstraints.flatMap((item) => item.research_ids),
+    ...historicalKnowledge.flatMap((item) => item.research_ids),
+    ...historicalInventions.flatMap((item) => item.research_ids),
+  ]);
+  for (const id of historicalResearchIds) researchIds.add(id);
   const relevantFacts = canon.facts.filter((fact) => factIds.has(fact.id));
   const relevantRelationships = canon.relationships.filter((relationship) => relationshipIds.has(relationship.id));
   const relevantThreads = threads.threads.filter((thread) => threadIds.has(thread.id));
   const relevantResearch = research.items.filter((item) => item.status === "ready" && researchIds.has(item.id));
-  const sourceIds = new Set([...graphResolution.sourceIds, ...relevantResearch.flatMap((item) => item.source_ids)]);
+  const historicalDirectSourceIds = [
+    ...historicalChronology.flatMap((item) => item.source_ids),
+    ...historicalConstraints.flatMap((item) => item.source_ids),
+    ...historicalInventions.flatMap((item) => item.source_ids),
+  ];
+  const sourceIds = new Set([...graphResolution.sourceIds, ...relevantResearch.flatMap((item) => item.source_ids), ...historicalDirectSourceIds]);
   const relevantSources = sources.sources.filter((source) => sourceIds.has(source.id));
   const plotEntry = plot.chapters.find((item) => item.chapter === packet.chapter) ?? null;
   const chapterFiles = listChapterFiles(bookRoot); const previousPath = previousChapterPath(chapterFiles, packet.chapter);
   const previous = previousPath ? readText(previousPath) ?? "" : "_No prior chapter exists._";
+  const historicalUncertainties = historicalContext?.uncertainties.filter((item) =>
+    (item.invention_ref && inventionRefs.has(item.invention_ref))
+    || item.research_ids.some((id) => historicalResearchIds.has(id))) ?? [];
+  const historicalSection = historicalContext && inventionLedger ? JSON.stringify({
+    risk: packet.profile_fields["historical_risk"],
+    pressure: packet.profile_fields["historical_pressure"],
+    material_world: packet.profile_fields["material_world"],
+    chronology: historicalChronology,
+    constraints: historicalConstraints,
+    knowledge_boundary: historicalKnowledge,
+    inventions: historicalInventions,
+    ready_research: relevantResearch.filter((item) => historicalResearchIds.has(item.id)),
+    source_provenance: relevantSources.filter((item) => sourceIds.has(item.id)),
+    language_conventions: historicalContext.language_conventions,
+    uncertainties: historicalUncertainties,
+  }, null, 2) : null;
   const sections = [
     { title: "Approved chapter packet", body: JSON.stringify(packet, null, 2), required: true, cap: 12000 },
     { title: "Relevant canon facts", body: JSON.stringify(relevantFacts, null, 2), required: true, cap: 7000 },
@@ -98,6 +165,7 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     { title: "Relevant story threads", body: JSON.stringify(relevantThreads, null, 2), required: true, cap: 7000 },
     ...(relevantResearch.length ? [{ title: "Required ready research claims", body: JSON.stringify(relevantResearch, null, 2), required: true, cap: 8000 }] : []),
     ...(relevantSources.length ? [{ title: "Graph-selected research provenance", body: JSON.stringify(relevantSources, null, 2), required: true, cap: 5000 }] : []),
+    ...(historicalSection ? [{ title: "Historical scene contract", body: historicalSection, required: true, cap: 14000 }] : []),
     { title: "Plot-grid entry", body: JSON.stringify(plotEntry, null, 2), required: true, cap: 5000 },
     { title: "Previous chapter ending/context", body: previous, required: true, cap: 12000 },
     { title: "Remarkability contract", body: JSON.stringify(remarkability, null, 2), required: false, cap: 6000 },
@@ -123,6 +191,10 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     ...relevantThreads.map((thread) => `thread ${thread.id}`),
     ...relevantResearch.map((item) => `research ${item.id}`),
     ...relevantSources.map((source) => `source ${source.id}`),
+    ...historicalChronology.map((item) => `historical chronology ${item.id}`),
+    ...historicalConstraints.map((item) => `historical constraint ${item.id}`),
+    ...historicalKnowledge.map((item) => `historical knowledge ${item.id}`),
+    ...historicalInventions.map((item) => `historical invention ${item.id}`),
     ...graphIncluded,
     "remarkability contract",
     ...(contextGuardrails ? ["approved voice guardrails"] : []),
@@ -137,7 +209,7 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     report: {
       estimatedTokens: Math.ceil(text.length / 4),
       included,
-      excluded: ["unreferenced canon", "unreferenced story threads", "unrequired research claims", "unapproved book guardrails", "non-adjacent chapters", "future books", "graph-blocked unsafe records", "raw public reviews", "raw influence references", "voice experiment source and variants", "reader experiment responses", "packaging files", "legacy artifacts"],
+      excluded: ["unreferenced canon", "unreferenced story threads", "unrequired research claims", ...(historicalContext ? ["unreferenced historical chronology", "unreferenced historical constraints", "unreferenced historical inventions", "unreferenced historical knowledge boundaries"] : []), "unapproved book guardrails", "non-adjacent chapters", "future books", "graph-blocked unsafe records", "raw public reviews", "raw influence references", "voice experiment source and variants", "reader experiment responses", "packaging files", "legacy artifacts"],
       graph: { maxDepth: graphResolution.maxDepth, selections: graphResolution.selections, blocked: graphResolution.blocked },
     },
   };
