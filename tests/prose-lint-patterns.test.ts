@@ -196,6 +196,17 @@ test("baseline style metrics ignore Markdown headings and never cite excluded he
   assert.equal(result.findings.some((item) => item.excerpt.includes("Alone")), false);
 });
 
+test("baseline fragment metrics preserve normalized hard-wrapped sentence boundaries", () => {
+  const result = lint([{ path: "wrapped.md", text: "These are four words\nToo late." }], stylePatternRules, {
+    fragment_ratio: 0,
+  });
+  const finding = result.findings.find((item) => item.ruleId === "style-pattern/fragment");
+
+  assert.ok(finding);
+  assert.equal(finding.location.line, 2);
+  assert.equal(finding.excerpt, "Too late.");
+});
+
 test("the default registry preserves mechanical, repetition, then style rule order", () => {
   assert.ok(defaultProseLintRules.length > repetitionRules.length + stylePatternRules.length);
   assert.equal(defaultProseLintRules.findIndex((rule) => rule.id === repetitionRules[0]?.id) > 0, true);

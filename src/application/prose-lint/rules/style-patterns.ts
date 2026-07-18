@@ -39,12 +39,12 @@ function excerpt(text: string): string {
   return text.trim().slice(0, 160);
 }
 
-function proseText(document: ManuscriptDocument): string {
-  return document.paragraphs.map((paragraph) => paragraph.text).join("\n\n");
+function metricText(document: ManuscriptDocument): string {
+  return document.sentences.map((sentence) => sentence.text).join("\n");
 }
 
-function corpusText(documents: readonly ManuscriptDocument[]): string {
-  return documents.map(proseText).join("\n\n");
+function corpusMetricText(documents: readonly ManuscriptDocument[]): string {
+  return documents.map(metricText).join("\n");
 }
 
 function firstProseOccurrence(document: ManuscriptDocument): PatternOccurrence | undefined {
@@ -219,7 +219,7 @@ function ruleFor(definition: PatternDefinition): LintRule {
     version: VERSION,
     run(input) {
       const occurrences = definition.occurrences(input);
-      const text = corpusText(input.documents);
+      const text = corpusMetricText(input.documents);
       const corpus = definition.metric?.(text) ?? occurrenceMetric(input, occurrences);
       const baseline = input.baselineMetrics?.[definition.baselineKey];
       let evidence: LintFinding["evidence"];
@@ -246,7 +246,7 @@ function ruleFor(definition: PatternDefinition): LintRule {
         const corpusConcentrationRate = ratePerThousand(corpus.count, totalWords);
         const local = input.documents.map((document) => {
           const localOccurrences = occurrences.filter((occurrence) => occurrence.document.path === document.path);
-          const count = definition.metric?.(proseText(document)).count ?? localOccurrences.length;
+          const count = definition.metric?.(metricText(document)).count ?? localOccurrences.length;
           return { document, occurrences: localOccurrences, count, rate: ratePerThousand(count, document.wordCount) };
         }).sort((left, right) => right.rate - left.rate || left.document.order - right.document.order)[0];
         if (local === undefined || local.rate < corpusConcentrationRate * 2) return [];
