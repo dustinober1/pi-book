@@ -61,6 +61,21 @@ test("normalization keeps a longer fenced block closed only by an equal-or-longe
   assert.equal(result.findings.some((finding) => finding.ruleId === "mechanics/doubled-word"), false);
 });
 
+test("normalization does not close a fenced block when delimiter text has trailing content", () => {
+  const source = [
+    "```",
+    "```not-a-closing-fence",
+    "duplicate duplicate",
+    "```",
+  ].join("\n");
+
+  const document = normalizeDocument("04-fence-content.md", source, 1);
+  const result = runProseLint({ documents: [document], rules: mechanicalRules });
+
+  assert.deepEqual(document.scanText.split("\n"), ["", "", "", ""]);
+  assert.equal(result.findings.some((finding) => finding.ruleId === "mechanics/doubled-word"), false);
+});
+
 test("normalization preserves source lines while blanking fenced code and deriving Markdown-aware text views", () => {
   const source = [
     "First sentence. Second sentence!",

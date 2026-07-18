@@ -32,9 +32,12 @@ export function normalizeDocument(path: string, text: string, order: number): Ma
     if (fenceDelimiter !== undefined) {
       scanLines.push("");
       const delimiter = fence?.[1];
+      const matchedFence = fence?.[0];
       if (delimiter !== undefined
+        && matchedFence !== undefined
         && delimiter[0] === fenceDelimiter.character
-        && delimiter.length >= fenceDelimiter.length) {
+        && delimiter.length >= fenceDelimiter.length
+        && line.slice(matchedFence.length).trim() === "") {
         fenceDelimiter = undefined;
       }
       continue;
