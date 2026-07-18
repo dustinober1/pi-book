@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.1 — Pi Extension Compatibility
+
+### Fixed
+
+- Replaced an unavailable TypeBox regex constructor so the extension loads in Pi 0.80.10 and compatible runtimes.
+
 ## 1.6.0 — Deterministic Prose Lint
 
 ### Added

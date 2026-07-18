@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { thrillerEvidenceTemplate, validateThrillerEvidenceLedger } from "../src/domain/thriller-evidence.js";
+
+test("thriller evidence schemas use the Pi-compatible string pattern constructor", () => {
+  const source = readFileSync(new URL("../src/domain/thriller-evidence.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /Type\.RegExp/);
+  assert.match(source, /Type\.String\(\{ pattern: "\^EVD-\[0-9\]\{3\}\$" \}\)/);
+});
 
 test("thriller evidence ledger requires provenance limits and stable ids", () => {
   const ledger = thrillerEvidenceTemplate();

@@ -34,7 +34,7 @@ test("the packed extension imports, registers, and contains the 1.4 release surf
     assert.match(proseOutput, /mechanics\/doubled-word/);
     assert.match(legacyOutput, /^# Novel Forge copy-mechanics audit$/m);
     assert.match(legacyOutput, /mechanics\/doubled-word/);
-    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.6.0");
+    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.6.1");
     for (const asset of [
       "README.md", "SKILL.md", "CHANGELOG.md", "RELEASE.md",
       "wizard/index.html", "wizard/app.js", "wizard/styles.css",

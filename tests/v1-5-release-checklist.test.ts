@@ -9,9 +9,9 @@ test("the historical v1.5 release checker rejects current v1.6 metadata", () => 
   const root = process.cwd();
   const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"));
-  assert.equal(packageJson.version, "1.6.0");
-  assert.equal(lock.version, "1.6.0");
-  assert.equal(lock.packages[""].version, "1.6.0");
-  assert.equal(NOVEL_FORGE_VERSION, "1.6.0");
+  assert.equal(packageJson.version, "1.6.1");
+  assert.equal(lock.version, "1.6.1");
+  assert.equal(lock.packages[""].version, "1.6.1");
+  assert.equal(NOVEL_FORGE_VERSION, "1.6.1");
   assert.ok(verifyV15ReleaseTree(root).some((item) => item.id === "package-version" && !item.passed));
 });

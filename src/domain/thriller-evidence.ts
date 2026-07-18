@@ -1,10 +1,10 @@
 import { Type, type Static } from "@sinclair/typebox";
 
 export const ThrillerEvidenceEntrySchema = Type.Object({
-  id: Type.RegExp(/^EVD-[0-9]{3}$/), artifact: Type.String({ minLength: 1 }), version: Type.String({ minLength: 1 }),
+  id: Type.String({ pattern: "^EVD-[0-9]{3}$" }), artifact: Type.String({ minLength: 1 }), version: Type.String({ minLength: 1 }),
   exact_labels: Type.Array(Type.String({ minLength: 1 })), source: Type.String({ minLength: 1 }), access_restriction: Type.String({ minLength: 1 }),
   permitted_readers: Type.Array(Type.String({ minLength: 1 })), proves: Type.Array(Type.String({ minLength: 1 })), does_not_prove: Type.Array(Type.String({ minLength: 1 })),
-  first_appearance: Type.Integer({ minimum: 1 }), supersedes: Type.Union([Type.RegExp(/^EVD-[0-9]{3}$/), Type.Null()]),
+  first_appearance: Type.Integer({ minimum: 1 }), supersedes: Type.Union([Type.String({ pattern: "^EVD-[0-9]{3}$" }), Type.Null()]),
 });
 export const ThrillerEvidenceLedgerSchema = Type.Object({ schema_version: Type.Literal("1.0.0"), entries: Type.Array(ThrillerEvidenceEntrySchema) });
 export type ThrillerEvidenceEntry = Static<typeof ThrillerEvidenceEntrySchema>;

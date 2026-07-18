@@ -1,31 +1,31 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v1.6.0
+## Current verified release: v1.6.1
 
-Novel Forge 1.6.0 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 1.6.1 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.6.0
+pi install git:github.com/dustinober1/pi-book@v1.6.1
 ```
 
 To test it for one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v1.6.0
+pi -e git:github.com/dustinober1/pi-book@v1.6.1
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.6.0 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.6.1 release commit.
 
-## 1.6.0 release record
+## 1.6.1 release record
 
-- [x] `package.json`, `package-lock.json`, installed-version metadata, and new-project metadata report `1.6.0`.
+- [x] `package.json`, `package-lock.json`, installed-version metadata, and new-project metadata report `1.6.1`.
 - [x] A unified deterministic prose-lint command reports mechanical, consistency, repetition, and style-pattern findings without mutating manuscript text.
 - [x] Legacy `audit:*` scanners retain their compatible report families and flags.
 - [x] Act and manuscript reviews receive bounded lint evidence; unavailable lint is advisory and never represented as a pass.
 - [x] The lint does not detect authorship or AI use, set prose quotas, rewrite prose, or replace editorial and reader judgment.
 - [x] Packed-extension install, import, registration, clean-start, type, unit, integration, end-to-end, evaluation, and release checks pass.
 
-The maintained release notes are in `docs/releases/v1.6.0.md`. Earlier release notes, including `docs/releases/v1.5.0.md`, and existing tags remain immutable. Historical implementation plans under `docs/superpowers/` are records and are not current installation instructions.
+The maintained release notes are in `docs/releases/v1.6.1.md`. Earlier release notes, including `docs/releases/v1.5.0.md` and `docs/releases/v1.6.0.md`, and existing tags remain immutable. Historical implementation plans under `docs/superpowers/` are records and are not current installation instructions.
 
 ## Verify the current development tree
 
