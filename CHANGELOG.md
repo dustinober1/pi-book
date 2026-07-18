@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added
+
+- A first-class `historical-fiction` profile with balanced defaults, exact genre settings, planning questions, packet requirements, drafting rules, review lanes, and ending rules.
+- Guarded `historical-context.yaml` and `invention-ledger.yaml` artifacts with strict v1.5 schemas, conditional project creation, transaction validation, project hashing, and integrity checks.
+- Risk-based historical research, chronology and knowledge-boundary joins, exact invention approvals, and major-counterfactual policy enforcement.
+- A bounded Historical scene contract containing only chapter-referenced evidence, plus conditional Historical Note packaging and disclosure checks.
+- Historical selection across `/novel-start`, migration, repository organization, the next-book wizard, and per-installment profile changes.
+
+### Compatibility
+
+- Thriller and romantasy projects receive no historical artifacts or historical-only findings.
+- Historical fiction uses the existing `/novel`, research, review, revision, recovery, and package workflows; no dedicated browser, scraper, citation manager, or alternate-history system was added.
+
 ## 1.4.2 — Repository organization
 
 ### Added

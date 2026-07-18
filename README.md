@@ -1,6 +1,6 @@
 # Novel Forge for Pi
 
-Novel Forge is a guided, series-capable production workflow for high-quality **thriller** and **romantasy** novels. It protects author-specific voice, canon, story threads, causal architecture, memorable book identity, and evidence-backed revision without chasing AI-detector scores.
+Novel Forge is a guided, series-capable production workflow for high-quality **thriller**, **romantasy**, and **historical fiction** novels. It protects author-specific voice, canon, story threads, causal architecture, memorable book identity, research provenance, and evidence-backed revision without chasing AI-detector scores.
 
 ## Install
 
@@ -25,9 +25,33 @@ Pi packages execute with the user's system permissions. Review the source before
 /novel
 ```
 
+For a standalone historical novel:
+
+```text
+/novel-start A Republic of Smoke --profile historical-fiction --type standalone --target-words 100000
+/novel
+```
+
 Run `/novel` whenever the current action finishes. It reads project state and shows only the choices that matter now: continue, review a gate, request changes, inspect evidence, adopt an existing manuscript, use real-reader evidence, package the book, recover safely, or create the next installment.
 
 For an existing book, start in a copied or backed-up working directory and choose **Adopt an existing manuscript** from `/novel`, or run `/novel-adopt`. Novel Forge leaves the adoption source unchanged and writes the managed project separately with guarded Git checkpoints.
+
+## Historical fiction accuracy workflow
+
+Historical fiction uses the normal `/novel` workflow with a balanced default accuracy contract. It adds two guarded, book-local sources of truth:
+
+```text
+books/<book-id>/historical-context.yaml
+books/<book-id>/invention-ledger.yaml
+```
+
+`historical-context.yaml` records the time/place boundary, calendar convention, ordered `HIST-NNN` chronology, active `HC-NNN` period constraints, `KB-NNN` knowledge boundaries, language conventions, and declared uncertainty. `invention-ledger.yaml` separates documented, inferred, compressed, composite, invented, and counterfactual material. The settings copied into historical context must exactly match the authoritative `genre.yaml` settings.
+
+Ready chapter packets identify historical risk plus only the chronology, constraints, knowledge boundary, inventions, and ready research needed for that scene. High-risk packets require ready, non-low-confidence `RES-NNN` evidence. Medium-risk packets require ready research or a declared invention. Major counterfactuals are prohibited by default; when the profile explicitly permits them, the writer must record the exact active decision before drafting or packaging.
+
+Drafting receives a bounded **Historical scene contract**, not a whole research dump. Unreferenced chronology, unrelated research, raw source text, private influence names, and future-book evidence remain excluded. Historical review adds chronology, anachronism, impossible-knowledge, portrayal, material-culture, exposition, and invention-ledger lanes.
+
+When a ledger entry is marked `historical-note` or `prominent`, packaging derives `exports/historical-note.md`. The existing package preview and package-approval gate remain authoritative; Novel Forge adds no automatic sensitivity approval, citation discovery, web scraping, or alternate-history workflow.
 
 ## 1.4 author-journey throughput baseline
 

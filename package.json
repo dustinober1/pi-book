@@ -1,7 +1,7 @@
 {
   "name": "novel-forge-for-pi",
   "version": "1.4.2",
-  "description": "A guided, series-capable Pi workflow for high-quality thriller and romantasy novels.",
+  "description": "A guided, series-capable Pi workflow for high-quality thriller, romantasy, and historical-fiction novels.",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
@@ -14,6 +14,7 @@
     "novel-writing",
     "thriller",
     "romantasy",
+    "historical-fiction",
     "series-writing",
     "continuity"
   ],

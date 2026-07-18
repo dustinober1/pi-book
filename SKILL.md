@@ -1,11 +1,11 @@
 ---
 name: novel-forge-for-pi
-description: "Use for guided, series-capable thriller and romantasy planning, drafting, review, author-taste and research evidence, real-reader evidence, revision, canon control, recovery, high-fidelity manuscript adoption, publishing/marketing packaging, and next-book inheritance."
+description: "Use for guided, series-capable thriller, romantasy, and historical-fiction planning, drafting, review, author-taste and research evidence, real-reader evidence, revision, canon control, recovery, high-fidelity manuscript adoption, publishing/marketing packaging, and next-book inheritance."
 ---
 
 # Novel Forge for Pi
 
-Novel Forge uses durable voice, author-taste evidence, research ledgers, book strategy, canon, story threads, plot grid, remarkability, reader evidence, revision tickets, publishing metadata, and marketing metadata. Thriller and romantasy are typed profiles over one guarded workflow.
+Novel Forge uses durable voice, author-taste evidence, research ledgers, book strategy, canon, story threads, plot grid, remarkability, reader evidence, revision tickets, publishing metadata, and marketing metadata. Thriller, romantasy, and historical fiction are typed profiles over one guarded workflow.
 
 ## Normal author workflow
 
@@ -39,6 +39,8 @@ For model-authored voice, series plan, book plan, chapter queue, drafting, revie
 
 Use event type `research-update` only for its allowlisted taste, voice-guardrail, voice-experiment, research-ledger, book-strategy, voice-audit, and source-register evidence. It is state-neutral: it must not write manuscript prose, advance stage, alter gates or approvals, or change book status.
 
+For a `historical-fiction` book, `research-update` may also update that book's `historical-context.yaml`, `invention-ledger.yaml`, and the exact associated writer decision in `series/decision-ledger.yaml`. It remains state-neutral and must satisfy the complete cross-artifact historical integrity contract atomically.
+
 `novel_apply_event` remains UTF-8 text-only. It owns stage/hash checks, file allowlists, schema/reference validation, state transitions, rollback, status/handoff generation, and Git checkpoints.
 
 Trusted internal application services may use the same transaction engine for binary adopted assets and generated DOCX, EPUB, and XLSX files. Do not expose binary writes through the model-facing tool.
@@ -61,6 +63,29 @@ A rebuilt voice profile must submit `voice-profile.md`, `taste-profile.yaml`, `v
 Planned or researching claims may remain incomplete. A claim marked `ready` requires source provenance, verification, risk, knowledge scope, and at least one dramatic use. An experiment marked `accepted` requires three anonymous variants and a non-null baseline record.
 
 Do not scrape retailer or social platforms from this package. Do not store reviewer identity or full public-review bodies as project reader evidence. Existing 1.2 projects without these files remain readable and receive only an optional-backfill warning.
+
+## Historical fiction evidence and drafting
+
+Historical fiction owns two additional guarded files:
+
+```text
+books/<book-id>/historical-context.yaml
+books/<book-id>/invention-ledger.yaml
+```
+
+Require both in the same historical `book-plan` event as the existing architecture and research bundle. Never create them for thriller or romantasy books. Treat `genre.yaml.settings` as authoritative and reject any mismatch in the settings copied into historical context.
+
+Use stable `HIST-NNN` chronology, `HC-NNN` constraint, `KB-NNN` knowledge-boundary, and `INV-NNN` invention IDs. Preserve ordered chronology and explicit certainty. Documented chronology requires source and ready research provenance; approximate or disputed chronology requires evidence and a written uncertainty; fictional chronology requires an invention reference. Do not invent citations, quotations, archive holdings, titles, URLs, or conclusions.
+
+Classify inventions only as `documented`, `inferred`, `compressed`, `composite`, `invented`, or `counterfactual`. High-risk compression, composites, invention, and every counterfactual require an unreplaced writer decision when the validator requests one. Use subject `historical-invention:INV-NNN` and choice `accept:<classification>:<risk>:<disclosure>`. Major counterfactuals remain blocked under `prohibit-major`; `explicit-writer-approved` still requires the exact writer decision.
+
+Every ready historical packet must include historical risk, chronology refs, at least one constraint ref, invention refs, a knowledge boundary, active historical pressure, and material-world causality. High risk requires ready research with confidence above low. Medium risk requires ready research or a declared invention. Low-risk atmosphere may remain provisional but cannot be presented as verified specificity.
+
+Before drafting, validate the context, ledger, research, sources, decisions, plot, and active queue together. Render one bounded **Historical scene contract** containing only packet-referenced chronology, constraints, knowledge, inventions, linked ready research and source provenance, approved language conventions, and relevant uncertainty. Exclude whole ledgers, unrelated chronology, raw source text, and unrequired research.
+
+Historical review must inspect chronology and age consistency, anachronism and presentism, impossible knowledge, evidence and invention compliance, real-person and community portrayal, applicable institutional/material plausibility, decorative exposition, period-shaped readable voice, and narrative force. Review creates evidence-backed tickets; it never changes an invention classification or approves risk automatically.
+
+When any entry requests `historical-note` or `prominent` disclosure, packaging generates `exports/historical-note.md` and includes both historical source files in the package hash. The existing package preview and package-approval gate control the result. Do not expose undisclosed harmless scene invention or claim unsupported certainty.
 
 ## Influence palette and voice calibration
 
@@ -195,6 +220,8 @@ books/<book-id>/marketing.yaml
 The checklist must show status, blocking/advisory classification, evidence paths, and exact repair actions. Never fill missing metadata with invented values.
 
 Build all outputs before mutation and commit them atomically: manuscript Markdown, DOCX, EPUB, publishing CSV/XLSX, reader CSV/XLSX, retailer copy, launch copy, social posts, ads, audiobook metadata/promotion, series-page copy, manifest, and report. Use source hashes to prevent silent stale overwrite.
+
+For historical fiction, also build a Historical Note when the invention ledger requests disclosure. Never generate a historical note for other profiles.
 
 ## Next-book inheritance
 
