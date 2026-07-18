@@ -25,9 +25,18 @@ The historical genre configuration uses these settings:
 - `real_person_policy`: `background-only`, `evidence-and-restraint`, or `central-with-heightened-review`;
 - `counterfactual_policy`: `prohibit-major` or `explicit-writer-approved`.
 
-New projects default to `literary`, `fictional-characters-documented-setting`, `balanced`, `period-shaped-readable`, `evidence-and-restraint`, and `prohibit-major`. Story mode changes reader-promise guidance but does not silently import thriller or romance profile requirements.
+New projects default to `literary`, `fictional-characters-documented-setting`, `balanced`, `period-shaped-readable`, `evidence-and-restraint`, and `prohibit-major`. If `story_mode` is `other`, `book-bible.md` must name the mode and its reader promise. Story mode changes reader-promise guidance but does not silently import thriller or romance profile requirements.
 
-The profile requirements are typed as required contracts for risk-based research, chronology control, invention tracking, character knowledge boundaries, material and institutional causality, anachronism review, portrayal review, and conditional Historical Note disclosure.
+The profile requirements object is exact and closed:
+
+- `risk_based_research: true`;
+- `chronology_control: required`;
+- `invention_tracking: required`;
+- `knowledge_boundaries: required`;
+- `material_causality: required`;
+- `anachronism_review: required`;
+- `portrayal_review: required`;
+- `historical_note: conditional`.
 
 ## Durable historical artifacts
 
@@ -38,7 +47,14 @@ books/<book-id>/historical-context.yaml
 books/<book-id>/invention-ledger.yaml
 ```
 
-They are required outputs of a historical-fiction `book-plan` event, allowed through a historical-fiction `research-update`, included in the project hash, included in integrity checks, and conditionally loaded into bounded drafting and review context. They are not created for thriller or romantasy books.
+They are required outputs of a historical-fiction `book-plan` event, allowed through a historical-fiction `research-update`, included in the project hash, included in integrity checks, and conditionally loaded into bounded drafting and review context. They are not created for thriller or romantasy books. `genre.yaml` remains authoritative for profile settings; any settings repeated in historical context must match it exactly.
+
+Implementation boundaries remain narrow:
+
+- `src/profiles/historical-fiction.ts` owns profile defaults, profile-local schemas, planning questions, packet findings, drafting rules, review lanes, plot findings, and ending rules;
+- a focused historical domain-schema module owns the two artifact schemas and types;
+- a focused application validator owns cross-file IDs, research readiness, policy, decision, and affected-chapter checks;
+- the existing transaction, context builder, packaging service, profile registry, and project templates call those units without absorbing historical policy into generic branches beyond profile dispatch.
 
 ### Historical context
 
@@ -46,7 +62,7 @@ They are required outputs of a historical-fiction `book-plan` event, allowed thr
 
 - schema version and book ID;
 - human-readable temporal scope, geographic scope, and calendar/date conventions;
-- the selected accuracy, prose, real-person, and counterfactual contracts copied from `genre.yaml` for integrity comparison;
+- all six selected profile settings copied from `genre.yaml` for integrity comparison;
 - a chronology with stable `HIST-NNN` IDs, explicit sequence numbers, display dates, certainty, event descriptions, source IDs, research IDs, and story effects;
 - period constraints with stable `HC-NNN` IDs, category, statement, dramatic consequence, source IDs, research IDs, risk, and confidence;
 - character or group knowledge boundaries tied to chronology IDs;
@@ -55,7 +71,11 @@ They are required outputs of a historical-fiction `book-plan` event, allowed thr
 
 Chronology uses integer sequence plus a display label instead of assuming Gregorian or ISO dates. This supports BCE dates, regnal years, non-Gregorian calendars, disputed dates, and deliberately approximate chronology without fragile date parsing. Sequence values must be unique and ordered; references must resolve.
 
-Constraint categories include political, institutional, legal, social, economic, religious, medical, military, geographic, material, transport, communication, linguistic, and other. Each constraint must state how it changes available choices, costs, risks, relationships, or timing.
+Chronology certainty is exactly `documented`, `approximate`, `disputed`, or `fictional`. Source and research ID fields are arrays, even when empty. A `documented` chronology entry requires both supporting source IDs and ready research IDs; `approximate` and `disputed` entries require evidence plus a written uncertainty note; `fictional` entries require an invention-ledger reference.
+
+Constraint categories include political, institutional, legal, social, economic, religious, medical, military, geographic, material, transport, communication, linguistic, and other. Constraint risk and confidence use the existing `low`, `medium`, and `high` values. Each constraint must state how it changes available choices, costs, risks, relationships, or timing.
+
+Each knowledge-boundary entry contains a stable `KB-NNN` ID, the character or group, an `as_of` chronology ID, what is known, what is believed, what is mistaken, what cannot yet be known, and supporting research IDs. Packet prose may treat a character belief as true to that character without promoting it to historical fact.
 
 ### Invention ledger
 
@@ -71,7 +91,9 @@ Constraint categories include political, institutional, legal, social, economic,
 - disclosure level: `none`, `historical-note`, or `prominent`;
 - an optional writer-decision ID when explicit approval is required.
 
-`documented` entries require supporting evidence. `inferred` entries require evidence for the surrounding facts and must not be described as documented. High-risk compression, composites, invention involving a real person, and every counterfactual entry require an unreplaced writer decision. Major counterfactual changes are blocked when the profile policy is `prohibit-major`.
+`documented` entries require supporting evidence. `inferred` entries require evidence for the surrounding facts and must not be described as documented. High-risk compression, composites, invention involving a real person, and every counterfactual entry require an unreplaced writer decision. The decision subject must name the `INV-NNN` ID and its choice must explicitly accept the classification, risk, and disclosure level.
+
+A major counterfactual changes the occurrence, outcome, order, public meaning, or principal actors of a documented public event, or changes a documented person's survival, office, allegiance, or publicly consequential relationship. Major counterfactual changes are blocked when the profile policy is `prohibit-major`. Allowing one through `explicit-writer-approved` records an intentional departure; it does not add alternate-history worldbuilding or branching-history features to this release.
 
 The ledger is not a license to fill every unknown with invented certainty. Unknowns may remain unknown, characters may be wrong, and the narrative may preserve ambiguity.
 
@@ -162,9 +184,9 @@ The profile ending rules require the protagonist's choices to create the book's 
 
 ## Packaging
 
-When the invention ledger contains any `historical-note` or `prominent` disclosure, packaging derives a draft `historical-note.md`. It distinguishes documented events, contested interpretations, compression, composites, invented characters or scenes, and deliberate departures without claiming unsupported certainty.
+When the invention ledger contains any `historical-note` or `prominent` disclosure, packaging derives `books/<book-id>/exports/historical-note.md`. It distinguishes documented events, contested interpretations, compression, composites, invented characters or scenes, and deliberate departures without claiming unsupported certainty.
 
-The writer must approve the Historical Note as package copy. Packaging does not force disclosure of harmless scene-level invention or reveal avoidable spoilers when a concise category-level disclosure preserves reader trust.
+The writer approves the Historical Note through the existing package preview and package-approval flow; this release adds no separate gate. The historical context and invention ledger enter the package source hash, and the note enters the output manifest. Packaging does not force disclosure of harmless scene-level invention or reveal avoidable spoilers when a concise category-level disclosure preserves reader trust.
 
 ## Transactions and failure behavior
 
