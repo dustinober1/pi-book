@@ -4,6 +4,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { GenreConfigSchema, ProjectSchema, assertSchema, type GenreConfig, type ProjectState } from "../src/domain/schemas.js";
 import { parseYaml } from "../src/infrastructure/yaml.js";
+import {
+  HistoricalContextSchema,
+  InventionLedgerSchema,
+  type HistoricalContext,
+  type InventionLedger,
+} from "../src/domain/historical-fiction.js";
 
 const valid: ProjectState = { schema_version: "1.0.0", project_name: "Test", project_type: "standalone", active_book: "book-01", default_profile: "thriller", current_stage: "voice-intake", next_gate: "voice-approval", gates: { "voice-approval": "open" }, approvals: [], automation: { max_chapters_per_run: 3, require_first_chapter_approval: true, git_checkpoints: false }, migration_history: [] };
 
@@ -18,4 +24,13 @@ test("packaged project and genre templates match the current schemas", () => {
   assert.equal(project.gates["voice-approval"], "open");
   assert.equal(genre.profile, "thriller");
   assert.equal(genre.settings["thriller_type"], "techno");
+});
+
+test("packaged historical artifact templates match the v1.5 schemas", () => {
+  const contextText = readFileSync(resolve("references/templates/novel/historical-context.yaml"), "utf8");
+  const ledgerText = readFileSync(resolve("references/templates/novel/invention-ledger.yaml"), "utf8");
+  const context = parseYaml<HistoricalContext>(contextText, HistoricalContextSchema, "template historical-context.yaml");
+  const ledger = parseYaml<InventionLedger>(ledgerText, InventionLedgerSchema, "template invention-ledger.yaml");
+  assert.equal(context.book_id, "book-01");
+  assert.equal(ledger.book_id, "book-01");
 });

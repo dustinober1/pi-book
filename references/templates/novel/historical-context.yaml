@@ -1,0 +1,21 @@
+schema_version: 1.0.0
+book_id: book-01
+temporal_scope: ""
+geographic_scope: ""
+calendar: ""
+settings:
+  story_mode: literary
+  relationship_to_history: fictional-characters-documented-setting
+  accuracy_contract: balanced
+  prose_register: period-shaped-readable
+  real_person_policy: evidence-and-restraint
+  counterfactual_policy: prohibit-major
+chronology: []
+constraints: []
+knowledge_boundaries: []
+language_conventions:
+  dialogue_translation: ""
+  period_flavor: ""
+  prohibited_modern_idioms: []
+  prohibited_faux_archaism: []
+uncertainties: []
