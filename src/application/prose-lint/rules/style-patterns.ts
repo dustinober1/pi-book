@@ -40,7 +40,7 @@ function excerpt(text: string): string {
 }
 
 function metricText(document: ManuscriptDocument): string {
-  return document.sentences.map((sentence) => sentence.text).join("\n");
+  return document.sentences.map((sentence) => /[.!?]\s*$/.test(sentence.text) ? sentence.text : `${sentence.text}.`).join("\n");
 }
 
 function corpusMetricText(documents: readonly ManuscriptDocument[]): string {

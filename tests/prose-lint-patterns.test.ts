@@ -207,6 +207,17 @@ test("baseline fragment metrics preserve normalized hard-wrapped sentence bounda
   assert.equal(finding.excerpt, "Too late.");
 });
 
+test("baseline fragment metrics preserve unterminated normalized sentences before later prose", () => {
+  const result = lint([{ path: "unterminated.md", text: "Too soon\nThese are four words." }], stylePatternRules, {
+    fragment_ratio: 0,
+  });
+  const finding = result.findings.find((item) => item.ruleId === "style-pattern/fragment");
+
+  assert.ok(finding);
+  assert.equal(finding.location.line, 1);
+  assert.equal(finding.excerpt, "Too soon");
+});
+
 test("the default registry preserves mechanical, repetition, then style rule order", () => {
   assert.ok(defaultProseLintRules.length > repetitionRules.length + stylePatternRules.length);
   assert.equal(defaultProseLintRules.findIndex((rule) => rule.id === repetitionRules[0]?.id) > 0, true);
