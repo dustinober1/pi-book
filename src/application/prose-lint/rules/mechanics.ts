@@ -107,6 +107,38 @@ const draftingMarkerRule: LintRule = {
   },
 };
 
+const proseScaffoldingRule: LintRule = {
+  id: "mechanics/prose-scaffolding",
+  version: VERSION,
+  run(input: ProseLintInput): LintFinding[] {
+    const findings: LintFinding[] = [];
+    const patterns = [
+      { label: "chapter-reference", pattern: /\b(?:Chapter\s+\d+|the\s+chapter(?!\s+book\b))\b/i },
+      { label: "book-reference", pattern: /\b(?:this|that)\s+book(?:'s)?\b|\b(?:stretch|section)\s+of\s+the\s+book\b|\bthe\s+book(?:'s)?\s+(?:rules|kept|had|began|paid|last|honesties|making)\b/i },
+      { label: "story-reference", pattern: /\b(?:the|this|that)\s+story(?:'s)?\b/i },
+      { label: "craft-note", pattern: /\b(?:threat|relationship|character|plot|scene)\s+movement\b/i },
+      { label: "craft-subject", pattern: /\b(?:chapter|scene)'s\s+real\s+subject\b/i },
+      { label: "craft-requirement", pattern: /\b(?:chapter|scene|book)\s+(?:required|requires|demanded|demands|kept\s+insisting)\b/i },
+    ];
+    for (const document of input.documents) {
+      for (const { line, number } of eligibleLines(document)) {
+        const match = patterns.find(({ pattern }) => pattern.test(line));
+        if (match !== undefined) {
+          findings.push(finding(
+            this.id,
+            document,
+            line,
+            number,
+            "Narrative text appears to contain drafting or metafictional scaffolding.",
+            { marker: match.label },
+          ));
+        }
+      }
+    }
+    return findings;
+  },
+};
+
 const unbalancedPunctuationRule: LintRule = {
   id: "mechanics/unbalanced-punctuation",
   version: VERSION,
@@ -139,5 +171,6 @@ export const mechanicalRules: readonly LintRule[] = [
   punctuationSpacingRule,
   repeatedPunctuationRule,
   draftingMarkerRule,
+  proseScaffoldingRule,
   unbalancedPunctuationRule,
 ];

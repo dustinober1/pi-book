@@ -16,6 +16,10 @@ test("mechanical rules report deterministic, line-specific findings outside Mark
     "TKTK",
     "The label TKTK is mentioned.",
     "The thought remained (unfinished.",
+    "The chapter had been walking toward this choice.",
+    "The library book waited on the desk.",
+    "Adults in this book still trusted procedural witnesses.",
+    "Relationship movement should become visible here.",
     "```ts",
     "const duplicate duplicate = 'wait , no?!?! [[TODO: hidden]] TKTK (';",
     "```",
@@ -33,15 +37,18 @@ test("mechanical rules report deterministic, line-specific findings outside Mark
     "mechanics/drafting-marker",
     "mechanics/drafting-marker",
     "mechanics/drafting-marker",
+    "mechanics/prose-scaffolding",
+    "mechanics/prose-scaffolding",
+    "mechanics/prose-scaffolding",
     "mechanics/punctuation-spacing",
     "mechanics/repeated-punctuation",
     "mechanics/unbalanced-punctuation",
   ]);
-  assert.deepEqual(result.findings.map((finding) => finding.location.line), [2, 5, 6, 7, 3, 4, 9]);
+  assert.deepEqual(result.findings.map((finding) => finding.location.line), [2, 5, 6, 7, 10, 12, 13, 3, 4, 9]);
   assert.equal(result.findings[0]?.class, "mechanical");
   assert.equal(result.findings[0]?.confidence, "high");
   assert.ok(result.findings.every((finding) => finding.excerpt.length <= 160));
-  assert.equal(result.counts.mechanical, 7);
+  assert.equal(result.counts.mechanical, 10);
   assert.equal(result.failures.length, 0);
   assert.equal(source, original);
 });
