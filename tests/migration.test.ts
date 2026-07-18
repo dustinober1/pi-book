@@ -25,3 +25,14 @@ test("Genesis migration preserves legacy files and manuscript chapters", () => {
     assert.match(readFileSync(join(root, "series", "voice-profile.md"), "utf8"), /Compressed dialogue/);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+test("Genesis migration accepts historical fiction and creates its guarded artifacts", () => {
+  const root = temp();
+  try {
+    writeFileSync(join(root, "PROJECT_STATE.yaml"), 'project_name: "Legacy Republic"\ncurrent_phase: "Phase 1"\n', "utf8");
+    const result = migrateGenesisProject(root, "historical-fiction");
+    assert.equal(readProject(root).default_profile, "historical-fiction");
+    assert.equal(existsSync(join(result.root, "books/book-01/historical-context.yaml")), true);
+    assert.equal(existsSync(join(result.root, "books/book-01/invention-ledger.yaml")), true);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});

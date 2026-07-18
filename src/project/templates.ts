@@ -7,6 +7,7 @@ import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
 import { defaultMarketingMetadata, defaultPublishingMetadata } from "../domain/v1-2-schemas.js";
 import { defaultPhase4StressTest } from "../domain/v1-3-architecture-schemas.js";
 import { defaultDecisionLedger, defaultIntake, defaultPremiseLab } from "../domain/v1-4-schemas.js";
+import { defaultHistoricalContext, defaultInventionLedger } from "../domain/historical-fiction.js";
 import {
   defaultBookStrategy,
   defaultResearchLedger,
@@ -44,6 +45,10 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
     revision_learning_guardrails: [],
   };
   const base = `books/${bookId}`;
+  const historicalFiles = profileId === "historical-fiction" ? {
+    [`${base}/historical-context.yaml`]: stringifyYaml(defaultHistoricalContext(bookId)),
+    [`${base}/invention-ledger.yaml`]: stringifyYaml(defaultInventionLedger(bookId)),
+  } : {};
   return {
     [`${base}/BOOK.yaml`]: stringifyYaml(book),
     [`${base}/book-bible.md`]: `# Book ${bookNumber} Bible
@@ -96,6 +101,7 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
     [`${base}/book-strategy.yaml`]: stringifyYaml(strategy),
     [`${base}/voice-audits.yaml`]: stringifyYaml(defaultVoiceAudits()),
     [`${base}/premise-lab.yaml`]: stringifyYaml(defaultPremiseLab(bookId)),
+    ...historicalFiles,
   };
 }
 

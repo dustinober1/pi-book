@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { CanonSchema, SeriesArcSchema, StoryThreadsSchema, type CanonFact, type CanonState, type ProfileId, type SeriesArcState, type StoryThread, type StoryThreadsState } from "../domain/schemas.js";
+import { CanonSchema, SeriesArcSchema, StoryThreadsSchema, isProfileId, type CanonFact, type CanonState, type ProfileId, type SeriesArcState, type StoryThread, type StoryThreadsState } from "../domain/schemas.js";
 import type { InheritedContext } from "../domain/v1-2-schemas.js";
 import { readText } from "../infrastructure/files.js";
 import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
@@ -103,6 +103,7 @@ export function createNextBookFromDecision(root: string, input: NextBookDecision
   if (!input.title.trim()) throw new Error("The next book requires a title or working title.");
   if (!input.role.trim()) throw new Error("The next book requires a role in the series.");
   if (!input.protagonist.trim()) throw new Error("The next book requires a protagonist or primary viewpoint.");
+  if (!isProfileId(input.profile)) throw new Error(`Unknown novel profile: ${String(input.profile)}`);
   if (!Number.isInteger(input.targetWords) || input.targetWords < 1000) throw new Error("Target words must be an integer of at least 1000.");
 
   const canonState = readState<CanonState>(root, "series/canon.yaml", CanonSchema);

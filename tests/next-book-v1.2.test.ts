@@ -64,3 +64,28 @@ test("next-book creation records only author-approved inherited context", () => 
     assert.equal(existsSync(join(root, "books/book-02/inheritance-report.md")), true);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
+
+test("next-book creation may switch a series installment to historical fiction", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Series", projectType: "planned-series", profile: "thriller" });
+    lockBook(root);
+    const result = createNextBookFromDecision(root, {
+      title: "The Earlier Signal",
+      role: "reveal the institution's nineteenth-century origin",
+      relationship: "prequel",
+      profile: "historical-fiction",
+      targetWords: 100000,
+      protagonist: "Ada Finch",
+      continuingThreadIds: [],
+      deferredThreadIds: ["THREAD-001"],
+      inheritedCanonIds: ["FACT-001"],
+      immutableFacts: ["Argus does not become sentient."],
+      optionalContext: [],
+      excludedContext: [],
+    });
+    assert.equal(existsSync(join(root, `books/${result.bookId}/historical-context.yaml`)), true);
+    assert.equal(existsSync(join(root, `books/${result.bookId}/invention-ledger.yaml`)), true);
+    assert.equal(readProject(root).default_profile, "historical-fiction");
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});

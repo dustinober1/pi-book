@@ -7,6 +7,7 @@ import { readProject } from "../project/store.js";
 import { applyNovelEvent, type NovelEventResult } from "./events.js";
 import { inferAssumption, recordWriterDecision } from "./intake.js";
 import { projectStateHash } from "./project-hash.js";
+import type { ProfileId } from "../domain/schemas.js";
 
 export interface ParsedAuthorBrief {
   originalIdea: string;
@@ -19,7 +20,7 @@ export interface ParsedAuthorBrief {
 }
 
 export interface BriefBootstrapOptions {
-  profile: string;
+  profile: ProfileId;
   targetWords: number;
   decidedAt?: string;
 }

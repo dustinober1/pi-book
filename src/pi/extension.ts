@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import type { ProfileId, ProjectType, Stage } from "../domain/schemas.js";
+import { PROFILE_IDS, isProfileId, type ProfileId, type ProjectType, type Stage } from "../domain/schemas.js";
 import { parseRuntimeProfileId } from "../domain/runtime-profile.js";
 import { listProfiles } from "../profiles/index.js";
 import { initializeProject, requireProjectRoot, readProject } from "../project/store.js";
@@ -250,10 +250,10 @@ export function registerNovelForge(pi: ExtensionAPI): void {
       if (flagsWithValues.has(item)) { index += 1; continue; }
       if (!item.startsWith("--")) positional.push(item);
     }
-    const projectName = positional.filter((item) => !["thriller", "romantasy", "standalone", "planned-series", "open-ended-series"].includes(item)).join(" ") || await context.ui.input("Project name:", "my-novel");
+    const projectName = positional.filter((item) => !isProfileId(item) && !["standalone", "planned-series", "open-ended-series"].includes(item)).join(" ") || await context.ui.input("Project name:", "my-novel");
     if (!projectName) return;
-    const profileInput = (flagValue(supplied, "--profile") || supplied.find((item) => ["thriller", "romantasy"].includes(item)) || await context.ui.select("Novel profile:", listProfiles().map((profile) => profile.id))) as ProfileId | undefined;
-    if (!profileInput || !["thriller", "romantasy"].includes(profileInput)) return;
+    const profileInput = flagValue(supplied, "--profile") || supplied.find(isProfileId) || await context.ui.select("Novel profile:", listProfiles().map((profile) => profile.id));
+    if (!isProfileId(profileInput)) return;
     const typeInput = (flagValue(supplied, "--type") || supplied.find((item) => ["standalone", "planned-series", "open-ended-series"].includes(item)) || await context.ui.select("Project type:", ["standalone", "planned-series", "open-ended-series"])) as ProjectType | undefined;
     if (!typeInput) return;
     const targetInput = flagValue(supplied, "--target-words") || await context.ui.input("Book 1 target words:", profileInput === "romantasy" ? "110000" : "100000");
@@ -302,8 +302,8 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     }
     const projectName = positional.join(" ") || await context.ui.input("Project name:", basename(root));
     if (!projectName) return;
-    const profile = (flagValue(items, "--profile") || await context.ui.select("Novel profile:", listProfiles().map((item) => item.id))) as ProfileId | undefined;
-    if (!profile || !["thriller", "romantasy"].includes(profile)) return;
+    const profile = flagValue(items, "--profile") || await context.ui.select("Novel profile:", listProfiles().map((item) => item.id));
+    if (!isProfileId(profile)) return;
     const projectType = (flagValue(items, "--type") || await context.ui.select("Project type:", ["standalone", "planned-series", "open-ended-series"])) as ProjectType | undefined;
     if (!projectType || !["standalone", "planned-series", "open-ended-series"].includes(projectType)) return;
     const targetRaw = flagValue(items, "--target-words") || await context.ui.input("Book 1 target words:", profile === "romantasy" ? "110000" : "100000");
@@ -325,5 +325,5 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     });
     context.ui.notify(`Repository organized in place. ${result.organized} files copied, ${result.archived} originals moved to ${result.archiveRoot}, and ${result.chapters} chapter candidates preserved. Review ${result.reportPath}, then run /novel. ${result.gitMessage}`, "info");
   } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
-  pi.registerCommand("novel-migrate", { description: "Administrative: migrate a Genesis v0.4 project into Novel Forge without deleting manuscript files", handler: async (args, context) => { try { const items = tokens(args); const profile = (items.find((item) => ["thriller", "romantasy"].includes(item)) || await context.ui.select("Profile for migrated project:", ["thriller", "romantasy"])) as ProfileId | undefined; if (!profile) return; const result = migrateGenesisProject(context.cwd, profile, { dryRun: items.includes("--dry-run"), force: items.includes("--force") }); if (result.dryRun) context.ui.notify(result.report, "info"); else { refreshGuidance(result.root, { lastAction: "Migrated Genesis project" }); context.ui.notify(`Migration complete. Review ${result.reportPath} and run /novel.`, "info"); } } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-migrate", { description: "Administrative: migrate a Genesis v0.4 project into Novel Forge without deleting manuscript files", handler: async (args, context) => { try { const items = tokens(args); const profile = items.find(isProfileId) || await context.ui.select("Profile for migrated project:", [...PROFILE_IDS]); if (!isProfileId(profile)) return; const result = migrateGenesisProject(context.cwd, profile, { dryRun: items.includes("--dry-run"), force: items.includes("--force") }); if (result.dryRun) context.ui.notify(result.report, "info"); else { refreshGuidance(result.root, { lastAction: "Migrated Genesis project" }); context.ui.notify(`Migration complete. Review ${result.reportPath} and run /novel.`, "info"); } } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
 }
