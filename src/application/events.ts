@@ -51,6 +51,7 @@ import { researchEvidenceFindings } from "./research-evidence.js";
 import { compactPacketWindow, packetWindowDecision, packetWindowFindings } from "./packet-window.js";
 import { historicalIntegrityFindings } from "./historical-integrity.js";
 import { actBoundaryFindings, requiredMilestoneGate } from "./act-boundaries.js";
+import { buildActiveBookManuscript } from "./package.js";
 
 export { projectStateHash } from "./project-hash.js";
 
@@ -399,6 +400,8 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
       book.status = "review";
       if (openBlockingTickets(tickets).length) project.current_stage = "revision";
       else if (input.scope === "manuscript" || project.current_stage === "manuscript-review") {
+        const manuscript = buildActiveBookManuscript(root);
+        setChange(changes, "delivery/manuscript.md", manuscript.content);
         project.current_stage = "manuscript-review";
         project.gates["manuscript-approval"] = "pending";
         project.next_gate = "manuscript-approval";
