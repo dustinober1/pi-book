@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.2 — Complete Manuscript Approval Evidence
+
+### Fixed
+
+- Manuscript review now compiles every ordered chapter into `delivery/manuscript.md` before the manuscript approval gate becomes pending.
+- The compiled manuscript is included in the writer approval evidence hash, alongside the review report, revision tickets, and voice audits.
+- Manuscript-review scaffolding checks reject craft-process leakage before approval.
+
 ## 1.6.1 — Pi Extension Compatibility
 
 ### Fixed

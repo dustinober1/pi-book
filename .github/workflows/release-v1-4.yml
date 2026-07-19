@@ -1,15 +1,6 @@
 name: Release Novel Forge v1.4.2
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - package.json
-      - package-lock.json
-      - src/application/version-core.ts
-      - docs/releases/v1.4.2.md
-      - scripts/verify-v1-4-release.ts
-      - .github/workflows/release-v1-4.yml
   workflow_dispatch:
 
 permissions:

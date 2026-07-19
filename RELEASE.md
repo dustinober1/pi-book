@@ -1,31 +1,31 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v1.6.1
+## Current verified release: v1.6.2
 
-Novel Forge 1.6.1 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 1.6.2 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.6.1
+pi install git:github.com/dustinober1/pi-book@v1.6.2
 ```
 
 To test it for one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v1.6.1
+pi -e git:github.com/dustinober1/pi-book@v1.6.2
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.6.1 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.6.2 release commit.
 
-## 1.6.1 release record
+## 1.6.2 release record
 
-- [x] `package.json`, `package-lock.json`, installed-version metadata, and new-project metadata report `1.6.1`.
-- [x] A unified deterministic prose-lint command reports mechanical, consistency, repetition, and style-pattern findings without mutating manuscript text.
-- [x] Legacy `audit:*` scanners retain their compatible report families and flags.
-- [x] Act and manuscript reviews receive bounded lint evidence; unavailable lint is advisory and never represented as a pass.
-- [x] The lint does not detect authorship or AI use, set prose quotas, rewrite prose, or replace editorial and reader judgment.
+- [x] `package.json`, `package-lock.json`, installed-version metadata, and new-project metadata report `1.6.2`.
+- [x] Manuscript review generates `delivery/manuscript.md` from every ordered chapter before requesting writer approval.
+- [x] The compiled manuscript participates in the manuscript-approval evidence hash.
+- [x] Missing or duplicate numbered chapters block compilation instead of producing incomplete approval evidence.
+- [x] Manuscript-review scaffolding checks reject craft-process leakage before approval.
 - [x] Packed-extension install, import, registration, clean-start, type, unit, integration, end-to-end, evaluation, and release checks pass.
 
-The maintained release notes are in `docs/releases/v1.6.1.md`. Earlier release notes, including `docs/releases/v1.5.0.md` and `docs/releases/v1.6.0.md`, and existing tags remain immutable. Historical implementation plans under `docs/superpowers/` are records and are not current installation instructions.
+The maintained release notes are in `docs/releases/v1.6.2.md`. Earlier release notes, including `docs/releases/v1.5.0.md`, `docs/releases/v1.6.0.md`, and `docs/releases/v1.6.1.md`, and existing tags remain immutable. Historical implementation plans under `docs/superpowers/` are records and are not current installation instructions.
 
 ## Verify the current development tree
 

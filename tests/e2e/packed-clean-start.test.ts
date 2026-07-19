@@ -18,12 +18,12 @@ test("the packed 1.4 extension initializes a clean project and keeps research op
     const root = store.initializeProject(temp, { projectName: "Packed Start", projectType: "standalone", profile: "thriller" });
     const project = store.readProject(root);
     const screen = guide.buildGuideScreen(root);
-    assert.equal(project.novel_forge_version, "1.6.1");
+    assert.equal(project.novel_forge_version, "1.6.2");
     assert.notEqual(screen.actions[0]?.id, "research");
     assert.equal(screen.actions[0]?.kind, "primary");
     assert.equal(screen.actions.find((action: { id: string }) => action.id === "research")?.kind, "secondary");
     assert.equal(existsSync(resolve(packageRoot, "src", "evaluation", "v1-3-release.ts")), true);
-    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.6.1");
+    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.6.2");
   } finally {
     rmSync(temp, { recursive: true, force: true });
   }

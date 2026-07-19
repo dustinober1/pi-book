@@ -1,6 +1,6 @@
 {
   "name": "novel-forge-for-pi",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "A guided, series-capable Pi workflow for high-quality thriller, romantasy, and historical-fiction novels.",
   "private": true,
   "license": "UNLICENSED",
@@ -36,8 +36,8 @@
     "benchmark:constrained-runtime": "node --import tsx scripts/benchmark-constrained-runtime.ts",
     "benchmark:prompts": "node --import tsx scripts/benchmark-prompts.ts",
     "eval:journeys": "node --import tsx --test tests/author-journey.test.ts tests/e2e/author-velocity-baseline.test.ts",
-    "verify:release": "node --import tsx scripts/verify-v1-6-1-release.ts",
-    "test:release": "node --import tsx --test tests/v1-6-1-release-checklist.test.ts tests/v1-5-release-checklist.test.ts tests/e2e/v1-5-release-journey.test.ts tests/package-smoke.test.ts tests/e2e/packed-clean-start.test.ts"
+    "verify:release": "node --import tsx scripts/verify-v1-6-2-release.ts",
+    "test:release": "node --import tsx --test tests/v1-6-2-release-checklist.test.ts tests/v1-6-1-release-checklist.test.ts tests/v1-5-release-checklist.test.ts tests/e2e/v1-5-release-journey.test.ts tests/package-smoke.test.ts tests/e2e/packed-clean-start.test.ts"
   },
   "pi": {
     "skills": [
