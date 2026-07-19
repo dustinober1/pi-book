@@ -330,10 +330,10 @@ export function reviewStageSpec(input: ReviewStageInput): StageSpec {
       "Deterministic patterns do not establish authorship.",
       "Verify every deterministic finding in manuscript context against approved guardrails and protected exceptions before creating any ticket.",
       "No style-pattern finding creates a ticket by itself.",
-      "Prepare review-report.md and revision-tickets.yaml; the guarded event appends deterministic voice-audit evidence and scene-audit tickets atomically.",
+      "Prepare review-report.md and revision-tickets.yaml; for manuscript review, the guarded event also compiles every chapter into delivery/manuscript.md before opening approval, and appends deterministic voice-audit evidence and scene-audit tickets atomically.",
     ],
     avoid: ["Do not rewrite earlier prose or perform a retroactive sweep when a candidate is promoted.", "Do not treat public reviews as reader evidence for this manuscript.", "Do not convert metrics into mechanical prose quotas.", "Do not issue unsupported blockers."],
-    outputs: ["review-report.md", "revision-tickets.yaml", "deterministic voice-audit and scene-audit evidence appended by the guarded event"],
+    outputs: ["review-report.md", "revision-tickets.yaml", "delivery/manuscript.md for manuscript review", "deterministic voice-audit and scene-audit evidence appended by the guarded event"],
     validation: ["Every blocker cites manuscript evidence.", "Every ticket protects unaffected work and accepted tradeoffs.", "Every lint-derived ticket cites the exact manuscript location and confirmed problem.", "Reader claims derive only from recorded human responses to this manuscript.", "Recurrence eligibility never bypasses explicit writer approval."],
     toolRules: eventToolRules({ eventType: "review", expectedStage: input.expectedStage, projectHash: input.projectHash, extra: `Pass scope: ${input.scope}.` }),
   };
