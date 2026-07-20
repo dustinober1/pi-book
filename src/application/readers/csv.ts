@@ -55,6 +55,12 @@ function bool(value: string, field: string): boolean | null {
   if (["false", "no", "0"].includes(normalized)) return false;
   throw new Error(`${field} must be true, false, yes, no, 1, 0, or blank.`);
 }
+
+function scrubPII(text: string): string {
+  if (!text) return text;
+  return text.replace(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi, '[REDACTED EMAIL]');
+}
+
 function list(value: string): string[] { return value.split(";").map((item) => item.trim()).filter(Boolean); }
 
 function record(headers: string[], values: string[], mapping: ReaderColumnMapping): Record<string, string> {
@@ -91,16 +97,16 @@ function responseFrom(values: Record<string, string>, experimentId: string, ques
     accepted_at: "",
     continued_reading: bool(values.continued_reading ?? "", "continued_reading"),
     would_buy: bool(values.would_buy ?? "", "would_buy"),
-    confusions: list(values.confusions ?? ""),
-    trust_breaks: list(values.trust_breaks ?? ""),
-    lines_that_worked: list(values.lines_that_worked ?? ""),
-    remembered_hook: values.remembered_hook?.trim() ?? "",
-    remembered_moments: list(values.remembered_moments ?? ""),
-    friend_description: values.friend_description?.trim() ?? "",
-    disagreement_question: values.disagreement_question?.trim() ?? "",
-    lingering_question: values.lingering_question?.trim() ?? "",
-    recommendation_target: values.recommendation_target?.trim() ?? "",
-    recommendation_reason: values.recommendation_reason?.trim() ?? "",
+    confusions: list(scrubPII(values.confusions ?? "")),
+    trust_breaks: list(scrubPII(values.trust_breaks ?? "")),
+    lines_that_worked: list(scrubPII(values.lines_that_worked ?? "")),
+    remembered_hook: scrubPII(values.remembered_hook?.trim() ?? ""),
+    remembered_moments: list(scrubPII(values.remembered_moments ?? "")),
+    friend_description: scrubPII(values.friend_description?.trim() ?? ""),
+    disagreement_question: scrubPII(values.disagreement_question?.trim() ?? ""),
+    lingering_question: scrubPII(values.lingering_question?.trim() ?? ""),
+    recommendation_target: scrubPII(values.recommendation_target?.trim() ?? ""),
+    recommendation_reason: scrubPII(values.recommendation_reason?.trim() ?? ""),
     told_someone: bool(values.told_someone ?? "", "told_someone"),
   };
 }

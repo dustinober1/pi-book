@@ -13,6 +13,9 @@ export interface VoiceMetrics {
   filter_word_rate_per_1000: number;
   body_language_repeat_rate_per_1000: number;
   interiority_rate_per_1000: number;
+  sentence_length_variance: number;
+  telling_emotion_rate_per_1000: number;
+  ai_transition_rate_per_1000: number;
 }
 
 export interface VoiceAuditInput {
@@ -77,11 +80,15 @@ export function extractVoiceMetrics(text: string): VoiceMetrics {
     : sentenceLengths.length % 2 === 1
       ? sentenceLengths[middle] ?? 0
       : ((sentenceLengths[middle - 1] ?? 0) + (sentenceLengths[middle] ?? 0)) / 2;
+  const average_sentence_words = round4(sentenceLengths.length ? sentenceLengths.reduce((sum, value) => sum + value, 0) / sentenceLengths.length : 0);
+  const variance = sentenceLengths.length > 1
+    ? sentenceLengths.reduce((sum, length) => sum + Math.pow(length - average_sentence_words, 2), 0) / (sentenceLengths.length - 1)
+    : 0;
 
   return {
     word_count: tokens.length,
     sentence_count: sentenceLengths.length,
-    average_sentence_words: round4(sentenceLengths.length ? sentenceLengths.reduce((sum, value) => sum + value, 0) / sentenceLengths.length : 0),
+    average_sentence_words,
     median_sentence_words: round4(median),
     average_paragraph_sentences: round4(paragraphSentenceCounts.length ? paragraphSentenceCounts.reduce((sum, value) => sum + value, 0) / paragraphSentenceCounts.length : 0),
     dialogue_ratio: round4(tokens.length ? dialogueWords / tokens.length : 0),
@@ -90,8 +97,13 @@ export function extractVoiceMetrics(text: string): VoiceMetrics {
     filter_word_rate_per_1000: termRate(tokens, FILTER_WORDS),
     body_language_repeat_rate_per_1000: round4(tokens.length ? (bodyRepeats / tokens.length) * 1000 : 0),
     interiority_rate_per_1000: termRate(tokens, INTERIORITY),
+    sentence_length_variance: round4(variance),
+    telling_emotion_rate_per_1000: termRate(tokens, new Set(["angry", "sad", "happy", "afraid", "scared", "furious", "terrified", "joyful", "depressed", "nervous"])),
+    ai_transition_rate_per_1000: termRate(tokens, new Set(["delving", "furthermore", "tapestry", "symphony"])),
   };
 }
+
+
 
 export function compareVoiceMetrics(current: VoiceMetrics, baseline: Record<string, number>): Record<string, number> {
   const deltas: Record<string, number> = {};
