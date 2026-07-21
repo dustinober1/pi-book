@@ -1,0 +1,50 @@
+schema_version: 1.0.0
+id: QEF-HISTORICAL-001
+profile: historical-fiction
+chapter: 9
+project_hash: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+packet:
+  chapter: 9
+  title: The Telegraph Office at Dusk
+  status: ready
+  pov: Clara
+  purpose: Send a warning before the office closes without giving Clara knowledge or access unavailable in 1882.
+  scene_engine: procedural deadline
+  pressure_movement: The clerk begins closing the office while the train carrying the target approaches the junction.
+  character_movement: Clara risks public suspicion to transmit a carefully limited message.
+  relationship_movement: The clerk shifts from dismissive to wary cooperation.
+  story_thread_refs:
+    - ST-JUNCTION-WARNING
+  continuity_refs:
+    - HC-TELEGRAPH-ACCESS
+    - KB-CLARA-1882
+  character_refs:
+    - Clara
+    - Mr. Hale
+  required_research:
+    - RES-TELEGRAPH-001
+    - RES-TIMETABLE-001
+    - RES-CURRENCY-001
+  profile_fields:
+    historical_risk: high
+    material_world:
+      - paper telegram form
+      - clerk-operated key
+      - posted office hours
+    historical_pressure: class and gender restrict Clara's credibility and access
+  ending_hook: The clerk recognizes the destination code and quietly locks the door.
+  milestone_gate: null
+  target_words: 2200
+context: |-
+  HC-TELEGRAPH-ACCESS: customers write messages on office forms; trained clerks operate the key and calculate charges.
+  KB-CLARA-1882: Clara understands ordinary railway travel and commercial telegrams but has no technical telegraph training.
+  RES-TELEGRAPH-001: the local office closes at 6:00 p.m. and charges by word plus delivery distance.
+  RES-TIMETABLE-001: the evening train reaches the junction twenty-eight minutes after office closing.
+  RES-CURRENCY-001: Clara can plausibly pay the quoted charge with the coins already established in Chapter 8.
+  INV-001: the clerk Mr. Hale is a declared composite character.
+protected_constraints:
+  - Do not let Clara operate the telegraph key.
+  - Preserve 1882 material culture and payment practice.
+  - Treat Mr. Hale as the declared composite INV-001.
+  - Do not give Clara knowledge beyond KB-CLARA-1882.
+  - End when the clerk recognizes the destination code and locks the door.
