@@ -5,19 +5,8 @@
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/dustinober1/pi-book.git"
-  },
-  "keywords": [
-    "pi-package",
-    "novel-writing",
-    "thriller",
-    "romantasy",
-    "historical-fiction",
-    "series-writing",
-    "continuity"
-  ],
+  "repository": { "type": "git", "url": "https://github.com/dustinober1/pi-book.git" },
+  "keywords": ["pi-package", "novel-writing", "thriller", "romantasy", "historical-fiction", "series-writing", "continuity"],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts tests/e2e/*.test.ts",
@@ -40,29 +29,8 @@
     "verify:release": "node --import tsx scripts/verify-v1-7-release.ts",
     "test:release": "node --import tsx --test tests/v1-7-release-checklist.test.ts tests/v1-6-2-release-checklist.test.ts tests/v1-6-1-release-checklist.test.ts tests/v1-5-release-checklist.test.ts tests/e2e/v1-5-release-journey.test.ts tests/package-smoke.test.ts tests/e2e/packed-clean-start.test.ts"
   },
-  "pi": {
-    "skills": [
-      "."
-    ],
-    "extensions": [
-      "extensions/novel-forge.ts"
-    ]
-  },
-  "files": [
-    "SKILL.md",
-    "README.md",
-    "CHANGELOG.md",
-    "RELEASE.md",
-    "agents/",
-    "docs/",
-    "evals/quality/",
-    "extensions/",
-    "src/",
-    "profiles/",
-    "references/",
-    "scripts/",
-    "wizard/"
-  ],
+  "pi": { "skills": ["."], "extensions": ["extensions/novel-forge.ts"] },
+  "files": ["SKILL.md", "README.md", "CHANGELOG.md", "RELEASE.md", "agents/", "docs/", "evals/quality/", "extensions/", "src/", "profiles/", "references/", "scripts/", "wizard/"],
   "dependencies": {
     "@sinclair/typebox": "^0.34.52",
     "busboy": "^1.6.0",
@@ -83,10 +51,8 @@
     "@earendil-works/pi-coding-agent": "0.80.3",
     "@types/busboy": "^1.5.4",
     "@types/node": "^24.0.0",
-    "@types/turndown": "^7.1.8",
+    "@types/turndown": "^1.5.4",
     "typescript": "^5.9.3"
   },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.80.3"
-  }
+  "peerDependencies": { "@earendil-works/pi-coding-agent": "^0.80.3" }
 }
