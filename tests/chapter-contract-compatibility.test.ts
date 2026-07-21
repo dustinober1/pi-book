@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { parseYaml } from "../src/infrastructure/yaml.js";
 import { chapterContractPath, renderChapterContract } from "../src/application/contracts/chapter-contract-renderer.js";
 import { ChapterContractSchema, type ChapterContract } from "../src/domain/chapter-contract.js";
-import { schemaForPath } from "../src/domain/schemas.js";
+import { v15SchemaForPath } from "../src/domain/v1-5-schema-registry.js";
 
 function approvedContract(): ChapterContract {
   return {
@@ -49,7 +49,7 @@ test("approved contracts render to the canonical chapter contract path", () => {
   assert.equal(rendered.path, "books/book-01/contracts/chapters/CH-001.yaml");
   assert.equal(rendered.path, chapterContractPath("book-01", 1));
   assert.deepEqual(parseYaml(rendered.content, ChapterContractSchema, rendered.path), contract);
-  assert.equal(schemaForPath(rendered.path), ChapterContractSchema);
+  assert.equal(v15SchemaForPath(rendered.path), ChapterContractSchema);
 });
 
 test("contract rendering is deterministic", () => {
