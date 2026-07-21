@@ -72,7 +72,7 @@ test("context usage supplies a marked estimate when provider usage is incomplete
     const report = JSON.parse(readFileSync(join(root, ".pi-book", "runs", "ECO-ESTIMATE", "run-report.json"), "utf8")) as { modelCalls: Array<{ inputTokens: number; outputTokens: number; estimated: boolean }> };
     assert.equal(report.modelCalls[0]?.inputTokens, 600);
     assert.equal(report.modelCalls[0]?.outputTokens, 40);
-    assert.equal(report.modelCalls[0]?.estimated, false);
+    assert.equal(report.modelCalls[0]?.estimated, true);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
