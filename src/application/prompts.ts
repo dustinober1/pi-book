@@ -14,6 +14,7 @@ import { selectedPremiseContext } from "./premise-lab.js";
 import { intakePromptContext } from "./intake.js";
 import { projectStateHash } from "./events.js";
 import { compilePrompt } from "./prompt-compiler.js";
+import { preparePrompt } from "./prepared-prompt.js";
 import { loadProseLintInput, renderReviewLintEvidence, runProseLint } from "./prose-lint/index.js";
 import { resolveRuntimeProfile } from "./runtime-profile-resolver.js";
 import {
@@ -140,15 +141,16 @@ export function queuePrompt(root: string, runtimeProfile?: RuntimeProfile): stri
 
 export function draftPrompt(context: ChapterContext, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(context.root);
-  return renderPrompt(context.root, draftStageSpec({
+  const runtime = runtimeForPrompt(context.root, runtimeProfile);
+  const spec = draftStageSpec({
     root: context.root,
     bookId: book.book_id,
     chapter: context.packet.chapter,
-    contextText: context.text,
     estimatedTokens: context.report.estimatedTokens,
     excluded: context.report.excluded,
     projectHash: projectStateHash(context.root),
-  }), runtimeProfile);
+  });
+  return preparePrompt(spec, context.text, runtime).text;
 }
 
 export function automationDraftPrompt(root: string, maxChapters: number, until?: string, runtimeProfile?: RuntimeProfile): string {

@@ -22,6 +22,8 @@ export interface PromptCompilerBenchmarkReport {
   schemaVersion: "1.0.0";
   standardProfile: "full";
   compactProfile: "local";
+  standardInstructionLimit: number;
+  compactInstructionLimit: number;
   thresholdPercent: 30;
   compactFloorExceptionChars: 2_000;
   scenarios: PromptBenchmarkScenario[];
@@ -102,7 +104,7 @@ export function runPromptCompilerBenchmark(): PromptCompilerBenchmarkReport {
       standardChars: standard.characterCount,
       compactChars: compact.characterCount,
       reductionPercent,
-      withinLocalBudget: compact.characterCount <= RUNTIME_PROFILES.local.maxPromptChars,
+      withinLocalBudget: compact.characterCount <= RUNTIME_PROFILES.local.modelBudget.maxInstructionChars,
       thresholdMet,
     };
   });
@@ -110,6 +112,8 @@ export function runPromptCompilerBenchmark(): PromptCompilerBenchmarkReport {
     schemaVersion: "1.0.0",
     standardProfile: "full",
     compactProfile: "local",
+    standardInstructionLimit: RUNTIME_PROFILES.full.modelBudget.maxInstructionChars,
+    compactInstructionLimit: RUNTIME_PROFILES.local.modelBudget.maxInstructionChars,
     thresholdPercent: 30,
     compactFloorExceptionChars: 2_000,
     scenarios,

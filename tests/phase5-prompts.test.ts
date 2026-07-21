@@ -36,7 +36,13 @@ test("draft prompt does not turn audit metrics into prescriptive prose targets",
         continuity_refs: [], character_refs: ["Mara"], required_research: [], profile_fields: {}, ending_hook: "hook", milestone_gate: null, target_words: 1500,
       },
       text: "# Drafting Context",
-      report: { estimatedTokens: 10, included: [], excluded: [], graph: { maxDepth: 2, selections: [], blocked: [] } },
+      report: {
+        estimatedTokens: 10,
+        included: [],
+        excluded: [],
+        allocation: { characters: 0, includedRecordIds: [], omittedRecordIds: [], sections: [] },
+        graph: { maxDepth: 2, selections: [], blocked: [] },
+      },
     };
     const prompt = draftPrompt(context);
     assert.doesNotMatch(prompt, /hit (?:a )?dialogue ratio|target (?:a )?sentence average|must achieve (?:a )?dialogue ratio/i);
