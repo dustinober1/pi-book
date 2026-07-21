@@ -1,0 +1,13 @@
+schema_version: 1.0.0
+id: thriller-key-scene
+profile: thriller
+chapter: 7
+project_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+packet_hash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+context_hash: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+rubric:
+  - continuity
+  - causality
+  - reveal-order
+  - voice
+  - factual
