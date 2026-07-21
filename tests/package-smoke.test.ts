@@ -49,7 +49,8 @@ test("the packed extension imports, registers, and contains the 1.7 release surf
       "src/infrastructure/organization-transaction.ts", "src/evaluation/v1-3-release.ts", "src/evaluation/v1-3-journey.ts",
     ]) assert.equal(existsSync(resolve(packageRoot, asset)), true, asset);
     assert.equal(packedPaths.some((path) => path.startsWith("tests/")), false);
-    assert.equal(packedPaths.some((path) => path.startsWith("evals/quality/runs/")), false);
+    const packedPaidRuns = packedPaths.filter((path) => path.startsWith("evals/quality/runs/"));
+    assert.deepEqual(packedPaidRuns, [], `Paid evaluation run outputs were packaged: ${packedPaidRuns.join(", ")}`);
     assert.equal(packedPaths.some((path) => path.startsWith(".github/")), false);
     assert.equal(packedPaths.some((path) => /phase7|diagnostic|\.tgz$/i.test(path)), false);
   } finally {
