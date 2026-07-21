@@ -40,7 +40,7 @@ test("release docs and skill describe authority, budgets, privacy, and evaluatio
 });
 
 test("normal CI never runs paid quality evaluation", () => {
-  const workflow = readFileSync(join(root, ".github/workflows/novel-forge-tests.yml"), "utf8");
+  const workflow = readFileSync(join(root, ".github/workflows/test.yml"), "utf8");
   assert.doesNotMatch(workflow, /npm run eval:quality/);
   assert.doesNotMatch(workflow, /NOVEL_FORGE_RUN_PAID_EVAL:\s*["']?1/);
 });
