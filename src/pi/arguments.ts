@@ -1,4 +1,5 @@
 import type { RunOptions } from "../application/run.js";
+import { parseModelExecutionProfileId, type ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import {
   parseBudgetExhaustionPolicy,
   parseQualityTierId,
@@ -52,11 +53,12 @@ export function parseQualityOverride(items: string[]): QualityRunOverride | unde
 export interface DraftOptions {
   chapter?: number;
   quality?: QualityRunOverride;
+  modelExecutionProfile?: ModelExecutionProfileId;
 }
 
 export function parseDraftOptions(args: string): DraftOptions {
   const items = tokens(args);
-  const flags = new Set<string>(qualityValueFlags);
+  const flags = new Set<string>([...qualityValueFlags, "--model-profile"]);
   const positional: string[] = [];
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index]!;
@@ -70,14 +72,18 @@ export function parseDraftOptions(args: string): DraftOptions {
     if (!/^\d+$/.test(positional[0]) || !Number.isInteger(chapter) || chapter < 1) throw new Error("Chapter must be a positive integer.");
   }
   const quality = parseQualityOverride(items);
+  const rawModelProfile = requiredFlagValue(items, "--model-profile");
+  const modelExecutionProfile = rawModelProfile === undefined ? undefined : parseModelExecutionProfileId(rawModelProfile);
   return {
     ...(chapter !== undefined ? { chapter } : {}),
     ...(quality ? { quality } : {}),
+    ...(modelExecutionProfile ? { modelExecutionProfile } : {}),
   };
 }
 
 export interface ParsedRunOptions extends RunOptions {
   quality?: QualityRunOverride;
+  modelExecutionProfile?: ModelExecutionProfileId;
 }
 
 export function parseRunOptions(args: string): ParsedRunOptions {
@@ -88,13 +94,16 @@ export function parseRunOptions(args: string): ParsedRunOptions {
   const hasRuntimeProfile = items.includes("--runtime-profile");
   const rawRuntimeProfile = flagValue(items, "--runtime-profile");
   const runtimeProfile = hasRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
+  const hasModelProfile = items.includes("--model-profile");
+  const rawModelProfile = requiredFlagValue(items, "--model-profile");
+  const modelExecutionProfile = hasModelProfile ? parseModelExecutionProfileId(rawModelProfile) : undefined;
   const quality = parseQualityOverride(items);
   const resume = items.includes("--resume");
   const pause = items.includes("--pause");
   const cancel = items.includes("--cancel");
   if ([resume, pause, cancel].filter(Boolean).length > 1) throw new Error("Use only one of --resume, --pause, or --cancel; these controls are mutually exclusive.");
-  if ((resume || pause || cancel) && (approve || until || rawMax || hasRuntimeProfile || quality || items.includes("--no-prose") || items.includes("--review-only"))) {
-    throw new Error("Run-control flags cannot be combined with approval, target, chapter, runtime-profile, quality, budget, no-prose, or review-only options.");
+  if ((resume || pause || cancel) && (approve || until || rawMax || hasRuntimeProfile || hasModelProfile || quality || items.includes("--no-prose") || items.includes("--review-only"))) {
+    throw new Error("Run-control flags cannot be combined with approval, target, chapter, runtime-profile, model-profile, quality, budget, no-prose, or review-only options.");
   }
   if (until && !allowedUntilTargets.includes(until as never)) throw new Error(`Unknown --until target: ${until}. Allowed: ${allowedUntilTargets.join(", ")}.`);
   let maxChapters: number | undefined;
@@ -104,6 +113,7 @@ export function parseRunOptions(args: string): ParsedRunOptions {
     ...(until ? { until } : {}),
     ...(maxChapters ? { maxChapters } : {}),
     ...(runtimeProfile ? { runtimeProfile } : {}),
+    ...(modelExecutionProfile ? { modelExecutionProfile } : {}),
     ...(quality ? { quality } : {}),
     resume,
     pause,

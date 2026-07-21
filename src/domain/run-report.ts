@@ -1,4 +1,6 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { ModelExecutionProfileIdSchema } from "./model-execution-profile.js";
+import { ModelJobTypeSchema } from "./model-job.js";
 import { QualityTierIdSchema } from "./quality-profile.js";
 import { RuntimeProfileIdSchema } from "./runtime-profile.js";
 
@@ -27,11 +29,29 @@ export type QualityPassKind = Static<typeof QualityPassKindSchema>;
 
 const HashSchema = Type.String({ pattern: "^[a-f0-9]{64}$" });
 
+export const ModelCallOutcomeSchema = Type.Union([
+  Type.Literal("accepted"),
+  Type.Literal("rejected"),
+  Type.Literal("repair-succeeded"),
+  Type.Literal("escalated"),
+]);
+export type ModelCallOutcome = Static<typeof ModelCallOutcomeSchema>;
+
 export const ModelCallReportSchema = Type.Object({
   callId: Type.String({ minLength: 1 }),
   stage: Type.String({ minLength: 1 }),
   chapter: Type.Optional(Type.Integer({ minimum: 1 })),
   pass: QualityPassKindSchema,
+  jobType: Type.Optional(ModelJobTypeSchema),
+  sceneId: Type.Optional(Type.String({ minLength: 1 })),
+  attempt: Type.Optional(Type.Integer({ minimum: 1 })),
+  contractHash: Type.Optional(HashSchema),
+  capsuleHash: Type.Optional(HashSchema),
+  includedRecordCount: Type.Optional(Type.Integer({ minimum: 0 })),
+  validationCategoryCounts: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.Integer({ minimum: 0 }))),
+  patchOperationCount: Type.Optional(Type.Integer({ minimum: 0 })),
+  outcome: Type.Optional(ModelCallOutcomeSchema),
+  acceptedProseWords: Type.Optional(Type.Integer({ minimum: 0 })),
   provider: Type.Optional(Type.String({ minLength: 1 })),
   model: Type.Optional(Type.String({ minLength: 1 })),
   inputTokens: Type.Optional(Type.Integer({ minimum: 0 })),
@@ -58,6 +78,32 @@ export const RunTokenTotalsSchema = Type.Object({
   estimatedCalls: Type.Integer({ minimum: 0 }),
 }, { additionalProperties: false });
 export type RunTokenTotals = Static<typeof RunTokenTotalsSchema>;
+
+export const WorkflowTelemetrySchema = Type.Object({
+  jobs: Type.Integer({ minimum: 0 }),
+  firstPassAccepted: Type.Integer({ minimum: 0 }),
+  repairsAttempted: Type.Integer({ minimum: 0 }),
+  repairsSucceeded: Type.Integer({ minimum: 0 }),
+  acceptedProseWords: Type.Integer({ minimum: 0 }),
+  acceptedWordsPerGeneratedToken: Type.Number({ minimum: 0 }),
+}, { additionalProperties: false });
+export type WorkflowTelemetry = Static<typeof WorkflowTelemetrySchema>;
+
+export function summarizeWorkflowTelemetry(calls: readonly ModelCallReport[]): WorkflowTelemetry {
+  const jobs = calls.filter((call) => call.jobType !== undefined);
+  const acceptedProseWords = jobs.reduce((sum, call) => sum + (call.acceptedProseWords ?? 0), 0);
+  const generatedTokens = jobs.reduce((sum, call) => sum + (call.outputTokens ?? 0), 0);
+  return {
+    jobs: jobs.length,
+    firstPassAccepted: jobs.filter((call) => call.outcome === "accepted" && (call.attempt ?? 1) === 1).length,
+    repairsAttempted: jobs.filter((call) => call.jobType === "patch-spans" || (call.attempt ?? 1) > 1).length,
+    repairsSucceeded: jobs.filter((call) => call.outcome === "repair-succeeded").length,
+    acceptedProseWords,
+    acceptedWordsPerGeneratedToken: generatedTokens > 0
+      ? Number((acceptedProseWords / generatedTokens).toFixed(6))
+      : 0,
+  };
+}
 
 export const RunBudgetEventSchema = Type.Object({
   type: Type.Union([Type.Literal("stop"), Type.Literal("downgrade")]),
@@ -98,5 +144,20 @@ export const RunReportV2Schema = Type.Object({
 }, { additionalProperties: false });
 export type RunReportV2 = Static<typeof RunReportV2Schema>;
 
-export const RunReportSchema = Type.Union([RunReportV1Schema, RunReportV2Schema]);
+export const RunReportV3Schema = Type.Object({
+  schemaVersion: Type.Literal("3.0.0"),
+  runId: Type.String({ minLength: 1 }),
+  runtimeProfile: RuntimeProfileIdSchema,
+  qualityTier: QualityTierIdSchema,
+  modelExecutionProfile: ModelExecutionProfileIdSchema,
+  modelCalls: Type.Array(ModelCallReportSchema),
+  totals: RunTokenTotalsSchema,
+  workflow: WorkflowTelemetrySchema,
+  budgetEvents: Type.Array(RunBudgetEventSchema),
+  projectHashBefore: Type.String({ minLength: 1 }),
+  projectHashAfter: Type.Optional(Type.String({ minLength: 1 })),
+}, { additionalProperties: false });
+export type RunReportV3 = Static<typeof RunReportV3Schema>;
+
+export const RunReportSchema = Type.Union([RunReportV1Schema, RunReportV2Schema, RunReportV3Schema]);
 export type RunReport = Static<typeof RunReportSchema>;

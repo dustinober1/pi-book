@@ -1,5 +1,6 @@
 import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
 import { defaultHistoricalContext, defaultInventionLedger } from "../domain/historical-fiction.js";
+import type { ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import { defaultQualityProjectState, type QualityProjectState } from "../domain/quality-profile.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProfileId, ProjectType, BookState } from "../domain/schemas.js";
@@ -25,6 +26,7 @@ export interface ProjectTemplateOptions {
   profile: ProfileId;
   targetWords?: number;
   runtimeProfile?: RuntimeProfileId;
+  modelExecutionProfile?: ModelExecutionProfileId;
   quality?: QualityProjectState;
 }
 
@@ -138,6 +140,7 @@ export function projectTemplateFiles(options: ProjectTemplateOptions): Record<st
     },
     runtime: {
       profile: options.runtimeProfile ?? "full",
+      ...(options.modelExecutionProfile ? { model_execution_profile: options.modelExecutionProfile } : {}),
       telemetry: true,
     },
     quality: structuredClone(options.quality ?? defaultQualityProjectState()),

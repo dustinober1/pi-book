@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import { ModelExecutionProfileIdSchema, type ModelExecutionProfileId } from "./model-execution-profile.js";
 import { QualityProjectStateSchema, type QualityProjectState } from "./quality-profile.js";
 import { ProjectSchema, type ProjectState } from "./schemas.js";
 import { RuntimeProfileIdSchema, type RuntimeProfileId } from "./runtime-profile.js";
@@ -6,6 +7,7 @@ import { AutomationRunStateSchema, type AutomationRunState } from "./v1-4-schema
 
 export const RuntimeProjectConfigSchema = Type.Object({
   profile: Type.Optional(RuntimeProfileIdSchema),
+  model_execution_profile: Type.Optional(ModelExecutionProfileIdSchema),
   telemetry: Type.Optional(Type.Boolean()),
 }, { additionalProperties: false });
 
@@ -31,6 +33,7 @@ export const ProjectV14Schema = Type.Object({
 export type ProjectStateV14 = Omit<ProjectState, "automation"> & {
   runtime?: {
     profile?: RuntimeProfileId;
+    model_execution_profile?: ModelExecutionProfileId;
     telemetry?: boolean;
   };
   quality?: QualityProjectState;
