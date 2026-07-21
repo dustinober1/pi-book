@@ -4,6 +4,7 @@ import {
   settleBudgetReservation,
   type BudgetBoundaryReason,
   type BudgetLimits,
+  type BudgetReservationResult,
 } from "./budget-ledger.js";
 import type { QualityTierId } from "../domain/quality-profile.js";
 import type {
@@ -72,16 +73,19 @@ export class BudgetedQualityWorker implements QualityWorker {
   async run(request: QualityWorkerRequest, signal?: AbortSignal): Promise<QualityWorkerResult> {
     const reservationId = `RSV-${request.callId}`;
     const at = this.#options.now?.() ?? new Date().toISOString();
-    const reserved = transactBudgetLedger(this.#options.root, (ledger) => reserveBudget(ledger, {
-      reservationId,
-      runId: this.#options.runId,
-      callId: request.callId,
-      chapter: this.#options.chapter,
-      tier: this.#options.tier,
-      minimumTokens: minimumCallReservationTokens(request),
-      limits: this.#options.limits,
-      createdAt: at,
-    }));
+    const reserved = transactBudgetLedger<BudgetReservationResult>(this.#options.root, (ledger) => {
+      const result = reserveBudget(ledger, {
+        reservationId,
+        runId: this.#options.runId,
+        callId: request.callId,
+        chapter: this.#options.chapter,
+        tier: this.#options.tier,
+        minimumTokens: minimumCallReservationTokens(request),
+        limits: this.#options.limits,
+        createdAt: at,
+      });
+      return { ledger: result.ledger, value: result.result };
+    });
     if (!reserved.ok) throw new Error(reserved.message);
     if (reserved.value.action !== "reserved") {
       if (this.#options.telemetryEnabled !== false) {
