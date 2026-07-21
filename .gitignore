@@ -6,4 +6,5 @@ coverage/
 scripts/.novel-forge-test-*
 .pi-book/runs/
 .pi-book/cache/
+evals/quality/runs/
 .worktrees/
