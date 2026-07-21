@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildChapterContext } from "../src/context/context-builder.js";
 import { ContextBudgetError } from "../src/context/context-budget.js";
+import { buildChapterContext } from "../src/context/context-builder.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject } from "../src/project/store.js";
 
@@ -81,7 +81,9 @@ function setup(): { parent: string; root: string } {
 test("chapter context preserves complete structured records and reports exact allocation", () => {
   const { parent, root } = setup();
   try {
-    const context = buildChapterContext(root, 2, 5_000);
+    const limit = 5_000;
+    const context = buildChapterContext(root, 2, limit);
+    assert.ok(context.text.length <= limit);
     assert.match(context.text, /CAN-001/);
     assert.match(context.text, /CANON-END-MARKER/);
     assert.match(context.text, /ST-001/);
