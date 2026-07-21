@@ -68,11 +68,15 @@ export interface QualityTierPolicy {
   claimAudit: boolean;
 }
 
+function lanes(...items: QualityCriticLane[]): readonly QualityCriticLane[] {
+  return Object.freeze(items);
+}
+
 export const QUALITY_TIER_POLICIES: Readonly<Record<QualityTierId, QualityTierPolicy>> = Object.freeze({
-  economy: Object.freeze({ scenePlan: false, candidates: 1, criticLanes: Object.freeze([]), finalReviewer: false, claimAudit: false }),
-  balanced: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: Object.freeze(["combined"]), finalReviewer: false, claimAudit: false }),
-  premium: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: Object.freeze(["continuity", "voice", "causality", "research"]), finalReviewer: false, claimAudit: false }),
-  editorial: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: Object.freeze(["continuity", "voice", "causality", "research"]), finalReviewer: true, claimAudit: true }),
+  economy: Object.freeze({ scenePlan: false, candidates: 1, criticLanes: lanes(), finalReviewer: false, claimAudit: false }),
+  balanced: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: lanes("combined"), finalReviewer: false, claimAudit: false }),
+  premium: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: lanes("continuity", "voice", "causality", "research"), finalReviewer: false, claimAudit: false }),
+  editorial: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: lanes("continuity", "voice", "causality", "research"), finalReviewer: true, claimAudit: true }),
 });
 
 export function defaultQualityProjectState(): QualityProjectState {
