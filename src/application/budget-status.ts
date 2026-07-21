@@ -17,11 +17,8 @@ function reportUsage(value: unknown): RecordedUsage {
   if (!value || typeof value !== "object") return { tokens: 0, calls: 0, costUsd: 0 };
   const report = value as Record<string, unknown>;
   if (report.schemaVersion === "1.0.0") {
-    return {
-      tokens: finiteNonnegative(report.estimatedInputTokens),
-      calls: 0,
-      costUsd: 0,
-    };
+    // Version 1 reports were prepared-run headers, not proof that a model call occurred.
+    return { tokens: 0, calls: 0, costUsd: 0 };
   }
   const totals = report.totals && typeof report.totals === "object" ? report.totals as Record<string, unknown> : {};
   const calls = Array.isArray(report.modelCalls) ? report.modelCalls.length : 0;
@@ -78,6 +75,6 @@ export function renderBudgetStatus(root: string): string {
     `Recorded cost: $${usage.costUsd.toFixed(4)}`,
     `Remaining known tokens: ${remaining}`,
     "",
-    "Only locally retained run reports are counted. Missing provider usage remains unknown rather than being invented.",
+    "Only completed schema-2 model calls in locally retained run reports are counted. Missing usage remains unknown rather than being invented.",
   ].join("\n");
 }
