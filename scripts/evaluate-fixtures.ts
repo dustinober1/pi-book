@@ -20,8 +20,9 @@ interface Fixture {
 }
 
 const root = resolve(process.cwd(), "evals");
+const reservedDirectories = new Set(["rubrics", "v1-3-release", "journeys", "quality"]);
 const names = readdirSync(root, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory() && entry.name !== "rubrics" && entry.name !== "v1-3-release" && entry.name !== "journeys")
+  .filter((entry) => entry.isDirectory() && !reservedDirectories.has(entry.name))
   .map((entry) => entry.name)
   .sort();
 let failures = 0;

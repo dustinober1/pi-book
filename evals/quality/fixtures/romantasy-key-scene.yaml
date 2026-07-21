@@ -1,0 +1,13 @@
+schema_version: 1.0.0
+id: romantasy-key-scene
+profile: romantasy
+chapter: 12
+project_hash: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+packet_hash: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+context_hash: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+rubric:
+  - continuity
+  - consent
+  - relationship-causality
+  - reveal-order
+  - voice

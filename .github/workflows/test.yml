@@ -55,6 +55,7 @@ jobs:
       - name: Run prompt compiler benchmark
         run: npm run --silent benchmark:prompts > prompt-compiler-benchmark.json
       - run: npm run verify:release
+      - run: npm run test:release
       - run: npm pack --dry-run
       - name: Upload diagnostics
         if: always()

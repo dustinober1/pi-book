@@ -6,14 +6,14 @@ import { join } from "node:path";
 import { NOVEL_FORGE_VERSION, versionFindings } from "../src/application/version.js";
 import { initializeProject, readProject } from "../src/project/store.js";
 
-function temp(): string { return mkdtempSync(join(tmpdir(), "novel-forge-v14-version-")); }
+function temp(): string { return mkdtempSync(join(tmpdir(), "novel-forge-v17-version-")); }
 
-test("new projects use the 1.6 contract and retain canonical 1.2 metadata files", () => {
+test("new projects use the 1.7 contract and retain canonical 1.2 metadata files", () => {
   const parent = temp();
   try {
-    const root = initializeProject(parent, { projectName: "V14", projectType: "standalone", profile: "thriller" });
-    assert.equal(NOVEL_FORGE_VERSION, "1.6.2");
-    assert.equal(readProject(root).novel_forge_version, "1.6.2");
+    const root = initializeProject(parent, { projectName: "V17", projectType: "standalone", profile: "thriller" });
+    assert.equal(NOVEL_FORGE_VERSION, "1.7.0");
+    assert.equal(readProject(root).novel_forge_version, "1.7.0");
     assert.equal(existsSync(join(root, "books/book-01/publishing.yaml")), true);
     assert.equal(existsSync(join(root, "books/book-01/marketing.yaml")), true);
     assert.equal(existsSync(join(root, "books/book-01/reader-kits/index.yaml")), true);
@@ -27,7 +27,7 @@ test("1.2 projects warn while newer projects block", () => {
     const project = readProject(root);
     const project12 = { ...project, novel_forge_version: "1.2.0" };
     assert.ok(versionFindings(project12).some((finding) => finding.severity === "warning" && /older/i.test(finding.message)));
-    const project17 = { ...project, novel_forge_version: "1.7.0" };
-    assert.ok(versionFindings(project17).some((finding) => finding.severity === "blocker" && /newer/i.test(finding.message)));
+    const project18 = { ...project, novel_forge_version: "1.8.0" };
+    assert.ok(versionFindings(project18).some((finding) => finding.severity === "blocker" && /newer/i.test(finding.message)));
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
