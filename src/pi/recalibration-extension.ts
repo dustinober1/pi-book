@@ -5,10 +5,12 @@ import {
   QualityBudgetStopError,
   runBudgetedQualityDraft,
 } from "../application/budgeted-quality-draft.js";
+import { minimumCallReservationTokens } from "../application/budgeted-quality-worker.js";
 import { ForegroundEconomyTelemetry } from "../application/foreground-economy-telemetry.js";
 import { runPersistentQualityDraft } from "../application/quality-persistent-run.js";
 import { beginQualityPersistentRun, resumeQualityPersistentRun } from "../application/quality-run.js";
 import { runExplicitVoiceRecalibration } from "../application/recalibration.js";
+import { directDraftDecision } from "../application/run.js";
 import { qualityStateWithOverride, resolveQualityConfig } from "../domain/quality-profile.js";
 import type { QualityWorker } from "../domain/quality-worker.js";
 import { readProject, requireProjectRoot } from "../project/store.js";
@@ -91,13 +93,36 @@ function withQualityDraft(
         while (true) {
           const quality = resolveQualityConfig(qualityState);
           if (quality.tier === "economy") {
-            const chapter = buildChapterContext(root, draft.chapter, runtime.maxContextChars, runtime.graphDepth).packet.chapter;
-            foreground.begin({
-              root,
-              chapter,
-              runtimeProfile: runtime.id,
-              ...(project.runtime?.telemetry !== undefined ? { telemetryEnabled: project.runtime.telemetry } : {}),
-            });
+            const decision = directDraftDecision(root, draft.chapter);
+            if (!decision.prompt) {
+              await original.handler(args, context);
+              return;
+            }
+            const chapterContext = buildChapterContext(root, draft.chapter, runtime.maxContextChars, runtime.graphDepth);
+            try {
+              foreground.begin({
+                root,
+                chapter: chapterContext.packet.chapter,
+                runtimeProfile: runtime.id,
+                minimumTokens: minimumCallReservationTokens({
+                  callId: "economy-preflight",
+                  stage: "drafting",
+                  chapter: chapterContext.packet.chapter,
+                  pass: "candidate",
+                  prompt: decision.prompt,
+                  context: chapterContext.text,
+                  timeoutMs: 1,
+                }),
+                limits: quality.budget,
+                ...(project.runtime?.telemetry !== undefined ? { telemetryEnabled: project.runtime.telemetry } : {}),
+              });
+            } catch (error) {
+              if (error instanceof QualityBudgetStopError) {
+                context.ui.notify(`Quality budget stopped economy drafting at ${error.reason}. No model call or canonical manuscript change occurred.`, "warning");
+                return;
+              }
+              throw error;
+            }
             try {
               await original.handler(args, context);
             } catch (error) {
