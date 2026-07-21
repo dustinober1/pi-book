@@ -19,6 +19,18 @@ Treat `/novel` as the primary interface. Show the current decision and only the 
 
 The primary author-facing files are `STATUS.md`, `HANDOFF.md`, and the active book's manuscript chapters.
 
+## Quality, budget, and authority
+
+- Existing projects without quality configuration resolve to **economy** and keep the original single host-prompt path. Never silently increase spend.
+- Treat genre profile, runtime profile, and quality tier as separate controls. Show them separately in status and handoff.
+- Higher tiers use isolated Pi print-mode workers with tools, skills, extensions, sessions, and context files disabled. Pass prompts and bounded evidence through stdin, not process arguments.
+- Reserve token and call capacity before every inference and settle reservations afterward. Stop or downgrade exactly as the project budget specifies.
+- Scene plans, candidates, critiques, claim maps, rejected outputs, and evaluation artifacts are cache-only and have no canonical authority.
+- Every accepted creative change ends in one existing guarded event transaction. Never apply candidate prose or control-file changes directly.
+- Telemetry may store hashes, usage, cost, tier, pass, and safe finish categories. Never store prompts, manuscript prose, source excerpts, model outputs, private reasoning, or credentials.
+- High-risk research requires bounded evidence anchors. Unsupported high-risk chapter claims block; eligible lower-risk findings receive at most one targeted repair followed by re-audit.
+- Automated diagnostics and paid quality evaluations are not human reader evidence and never update reader experiments. Paid evaluation is explicit opt-in and never normal CI.
+
 ## Core rules
 
 - Optimize for reader trust and author-specific voice, not AI-detector evasion.
