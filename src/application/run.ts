@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { ModelExecutionProfile, ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import { buildChapterContext } from "../context/context-builder.js";
 import { resolveQualityConfig, type QualityProjectState } from "../domain/quality-profile.js";
 import type { RuntimeProfile, RuntimeProfileId } from "../domain/runtime-profile.js";
@@ -13,6 +14,7 @@ import { cancelAutomationRun, pauseAutomationRun, resumeAutomationRun, startAuto
 import { canRetryEvent, rejectionInstruction, type EventRejectionDetail } from "./event-rejection.js";
 import { approveGate } from "./gates.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
+import { resolveModelExecutionProfile } from "./model-execution-profile-resolver.js";
 import { compileActiveBook } from "./package.js";
 import { recordPreparedPersistentRun } from "./persistent-run-telemetry.js";
 import { creativeProjectStateHash } from "./project-hash.js";
@@ -25,6 +27,7 @@ export interface RunOptions {
   until?: string;
   maxChapters?: number;
   runtimeProfile?: RuntimeProfileId;
+  modelExecutionProfile?: ModelExecutionProfileId;
   noProse?: boolean;
   reviewOnly?: boolean;
   stopOnWarning?: boolean;
@@ -38,12 +41,14 @@ export interface RunDecision {
   prompt: string | null;
   message: string;
   runtimeProfile?: RuntimeProfileId;
+  modelExecutionProfile?: ModelExecutionProfileId;
 }
 
 export interface BeginPersistentRunOptions {
   target: string;
   maxChapters: number;
   runtimeProfile?: RuntimeProfileId;
+  modelExecutionProfile?: ModelExecutionProfileId;
   qualitySnapshot?: QualityProjectState;
   now?: string;
 }
@@ -56,15 +61,24 @@ function runtimeFor(project: ProjectStateV14, explicit?: RuntimeProfileId): Runt
   return resolveRuntimeProfile({ explicit, project: project.runtime?.profile });
 }
 
+function modelFor(project: ProjectStateV14, explicit?: ModelExecutionProfileId): ModelExecutionProfile {
+  return resolveModelExecutionProfile({ explicit, project: project.runtime?.model_execution_profile });
+}
+
 function runtimeForActiveRun(project: ProjectStateV14): RuntimeProfile {
   return resolveRuntimeProfile({ explicit: project.automation.active_run?.runtimeProfile ?? "full" });
 }
 
-function runtimeDecision(profile: RuntimeProfile, decision: Omit<RunDecision, "runtimeProfile">): RunDecision {
+function runtimeDecision(
+  profile: RuntimeProfile,
+  decision: Omit<RunDecision, "runtimeProfile" | "modelExecutionProfile">,
+  modelProfile?: ModelExecutionProfile,
+): RunDecision {
   return {
     ...decision,
     runtimeProfile: profile.id,
-    message: `${decision.message} Runtime profile: ${profile.id}.`,
+    ...(modelProfile ? { modelExecutionProfile: modelProfile.id } : {}),
+    message: `${decision.message} Runtime profile: ${profile.id}.${modelProfile ? ` Model execution profile: ${modelProfile.id}.` : ""}`,
   };
 }
 
@@ -83,14 +97,18 @@ function persistRunProject(root: string, project: ProjectStateV14, subject: stri
 }
 
 export function approveProjectGate(root: string, gate: string, note = ""): RunDecision {
-  const runtimeProfile = runtimeFor(projectV14(root));
+  const projectState = projectV14(root);
+  const runtimeProfile = runtimeFor(projectState);
+  const modelProfile = modelFor(projectState);
   const project = approveGate(root, structuredClone(readProject(root)), gate, note);
   applyGuidedProjectEvent(root, [{ path: "PROJECT.yaml", content: stringifyYaml(project) }], `Novel Forge: approve ${gate}`, { lastAction: `Approved ${gate}` });
-  return runtimeDecision(runtimeProfile, { action: "approved", prompt: null, message: `Approved ${gate}. Current stage: ${project.current_stage}.` });
+  return runtimeDecision(runtimeProfile, { action: "approved", prompt: null, message: `Approved ${gate}. Current stage: ${project.current_stage}.` }, modelProfile);
 }
 
 export function rejectProjectGate(root: string, gate: string, note: string): RunDecision {
-  const runtimeProfile = runtimeFor(projectV14(root));
+  const projectState = projectV14(root);
+  const runtimeProfile = runtimeFor(projectState);
+  const modelProfile = modelFor(projectState);
   const project = structuredClone(readProject(root));
   if (project.next_gate !== gate) throw new Error(`Gate ${gate} is not active.`);
   if (project.gates[gate] !== "pending") throw new Error(`Gate ${gate} must be pending before changes can be requested.`);
@@ -105,16 +123,22 @@ export function rejectProjectGate(root: string, gate: string, note: string): Run
     { path: "PROJECT.yaml", content: stringifyYaml(project) },
     { path, content: entry },
   ], `Novel Forge: reject ${gate}`, { lastAction: `Requested changes to ${gate}` });
-  return runtimeDecision(runtimeProfile, { action: "rejected", prompt: null, message: `Changes requested for ${gate}. The gate remains active until repaired and approved.` });
+  return runtimeDecision(runtimeProfile, { action: "rejected", prompt: null, message: `Changes requested for ${gate}. The gate remains active until repaired and approved.` }, modelProfile);
 }
 
 export function decideNextRun(root: string, options: RunOptions = {}): RunDecision {
   const project = projectV14(root);
   const runtimeProfile = runtimeFor(project, options.runtimeProfile);
-  const finish = (decision: Omit<RunDecision, "runtimeProfile">): RunDecision => runtimeDecision(runtimeProfile, decision);
+  const modelProfile = modelFor(project, options.modelExecutionProfile);
+  const finish = (decision: Omit<RunDecision, "runtimeProfile" | "modelExecutionProfile">): RunDecision => runtimeDecision(runtimeProfile, decision, modelProfile);
   if (options.approve) {
     const approved = approveProjectGate(root, options.approve);
-    return { ...approved, runtimeProfile: runtimeProfile.id, message: approved.message.replace(/ Runtime profile: [^.]+\.$/, ` Runtime profile: ${runtimeProfile.id}.`) };
+    return {
+      ...approved,
+      runtimeProfile: runtimeProfile.id,
+      modelExecutionProfile: modelProfile.id,
+      message: approved.message.replace(/ Runtime profile: [^.]+\. Model execution profile: [^.]+\.$/, ` Runtime profile: ${runtimeProfile.id}. Model execution profile: ${modelProfile.id}.`),
+    };
   }
   const status = getProjectStatus(root);
   if (status.blockers.length) return finish({ action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." });
@@ -157,12 +181,18 @@ export function decideNextRun(root: string, options: RunOptions = {}): RunDecisi
 export function beginPersistentRun(root: string, options: BeginPersistentRunOptions): RunDecision {
   const project = projectV14(root);
   const runtimeProfile = runtimeFor(project, options.runtimeProfile);
+  const modelProfile = modelFor(project, options.modelExecutionProfile);
   const limits = applyRuntimeLimits({
     profile: runtimeProfile,
     projectMaxChapters: project.automation.max_chapters_per_run,
     requestedMaxChapters: options.maxChapters,
   });
-  const initial = decideNextRun(root, { until: options.target, maxChapters: limits.maxChapters, runtimeProfile: runtimeProfile.id });
+  const initial = decideNextRun(root, {
+    until: options.target,
+    maxChapters: limits.maxChapters,
+    runtimeProfile: runtimeProfile.id,
+    modelExecutionProfile: modelProfile.id,
+  });
   if (!initial.prompt) return initial;
   const now = options.now ?? new Date().toISOString();
   const updated = startAutomationRun(project, {
@@ -195,7 +225,7 @@ export function pausePersistentRun(root: string, now = new Date().toISOString())
   const runtimeProfile = runtimeForActiveRun(project);
   const updated = pauseAutomationRun(project, now);
   if (updated !== project) persistRunProject(root, updated, `pause automation ${updated.automation.active_run!.id}`, `Paused automation run ${updated.automation.active_run!.id}`);
-  return runtimeDecision(runtimeProfile, { action: "paused-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is paused.` });
+  return runtimeDecision(runtimeProfile, { action: "paused-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is paused.` }, modelFor(project));
 }
 
 export function cancelPersistentRun(root: string, now = new Date().toISOString()): RunDecision {
@@ -203,16 +233,17 @@ export function cancelPersistentRun(root: string, now = new Date().toISOString()
   const runtimeProfile = runtimeForActiveRun(project);
   const updated = cancelAutomationRun(project, now);
   if (updated !== project) persistRunProject(root, updated, `cancel automation ${updated.automation.active_run!.id}`, `Cancelled automation run ${updated.automation.active_run!.id}`);
-  return runtimeDecision(runtimeProfile, { action: "cancelled-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is cancelled.` });
+  return runtimeDecision(runtimeProfile, { action: "cancelled-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is cancelled.` }, modelFor(project));
 }
 
 export function resumePersistentRun(root: string, now = new Date().toISOString()): RunDecision {
   const project = projectV14(root);
   const runtimeProfile = runtimeForActiveRun(project);
+  const modelProfile = modelFor(project);
   const updated = resumeAutomationRun(project, project.current_stage, creativeProjectStateHash(root), now);
   if (updated.automation.active_run?.status === "stopped") {
     persistRunProject(root, updated, `stop automation ${updated.automation.active_run.id}`, `Stopped automation run ${updated.automation.active_run.id}`);
-    return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: `Automation run ${updated.automation.active_run.id} stopped because creative state changed. Reload and start a new run.` });
+    return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: `Automation run ${updated.automation.active_run.id} stopped because creative state changed. Reload and start a new run.` }, modelProfile);
   }
   if (updated !== project) persistRunProject(root, updated, `resume automation ${updated.automation.active_run!.id}`, `Resumed automation run ${updated.automation.active_run!.id}`);
   const activeRun = updated.automation.active_run!;
@@ -222,32 +253,34 @@ export function resumePersistentRun(root: string, now = new Date().toISOString()
     const path = join(root, "books", book.book_id, "premise-lab.yaml");
     const text = readText(path);
     const lab = text ? parseYaml<PremiseLab>(text, PremiseLabSchema, path) : null;
-    if (lab && lab.variants.length === 0) decision = runtimeDecision(runtimeProfile, { action: "premise-plan", prompt: premisePlanPrompt(root, runtimeProfile), message: "Queued premise comparison before book architecture." });
-    else if (lab && (!lab.selected_variant_id || !lab.selection_decision_id)) decision = runtimeDecision(runtimeProfile, { action: "premise-selection", prompt: null, message: "Automation stopped so the writer can select a premise variant." });
-    else decision = decideNextRun(root, { until: activeRun.target, maxChapters: activeRun.requestedMaxChapters, runtimeProfile: runtimeProfile.id });
-  } else decision = decideNextRun(root, { until: activeRun.target, maxChapters: activeRun.requestedMaxChapters, runtimeProfile: runtimeProfile.id });
+    if (lab && lab.variants.length === 0) decision = runtimeDecision(runtimeProfile, { action: "premise-plan", prompt: premisePlanPrompt(root, runtimeProfile), message: "Queued premise comparison before book architecture." }, modelProfile);
+    else if (lab && (!lab.selected_variant_id || !lab.selection_decision_id)) decision = runtimeDecision(runtimeProfile, { action: "premise-selection", prompt: null, message: "Automation stopped so the writer can select a premise variant." }, modelProfile);
+    else decision = decideNextRun(root, { until: activeRun.target, maxChapters: activeRun.requestedMaxChapters, runtimeProfile: runtimeProfile.id, modelExecutionProfile: modelProfile.id });
+  } else decision = decideNextRun(root, { until: activeRun.target, maxChapters: activeRun.requestedMaxChapters, runtimeProfile: runtimeProfile.id, modelExecutionProfile: modelProfile.id });
   return { ...decision, message: `${decision.message} Resumed ${activeRun.id}.` };
 }
 
 export function directDraftDecision(root: string, chapter?: number): RunDecision {
   const project = projectV14(root);
   const runtimeProfile = runtimeFor(project);
-  try { assertOperationAllowed(project, "draft"); } catch (error) { return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: error instanceof Error ? error.message : String(error) }); }
+  const modelProfile = modelFor(project);
+  try { assertOperationAllowed(project, "draft"); } catch (error) { return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: error instanceof Error ? error.message : String(error) }, modelProfile); }
   const status = getProjectStatus(root);
-  if (status.blockers.length) return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." });
+  if (status.blockers.length) return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." }, modelProfile);
   const context = buildChapterContext(root, chapter, runtimeProfile.maxContextChars, runtimeProfile.graphDepth);
-  return runtimeDecision(runtimeProfile, { action: "draft", prompt: draftPrompt(context, runtimeProfile), message: `Queued Chapter ${context.packet.chapter}.` });
+  return runtimeDecision(runtimeProfile, { action: "draft", prompt: draftPrompt(context, runtimeProfile), message: `Queued Chapter ${context.packet.chapter}.` }, modelProfile);
 }
 
 export function directRevisionDecision(root: string, ticketIds: string[] = []): RunDecision {
   const project = projectV14(root);
   const runtimeProfile = runtimeFor(project);
-  try { assertOperationAllowed(project, "revise"); } catch (error) { return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: error instanceof Error ? error.message : String(error) }); }
+  const modelProfile = modelFor(project);
+  try { assertOperationAllowed(project, "revise"); } catch (error) { return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: error instanceof Error ? error.message : String(error) }, modelProfile); }
   const tickets = readTickets(root).tickets.filter((ticket) => ["open", "in-progress"].includes(ticket.status));
   const ticketLimit = runtimeProfile.maxRevisionTickets ?? 3;
   const selected = (ticketIds.length ? tickets.filter((ticket) => ticketIds.includes(ticket.id)) : tickets).slice(0, ticketLimit);
-  if (!selected.length) return runtimeDecision(runtimeProfile, { action: "no-tickets", prompt: null, message: "No open tickets matched the request." });
-  return runtimeDecision(runtimeProfile, { action: "revise", prompt: revisionPrompt(root, selected, runtimeProfile), message: `Queued revision for ${selected.map((ticket) => ticket.id).join(", ")}.` });
+  if (!selected.length) return runtimeDecision(runtimeProfile, { action: "no-tickets", prompt: null, message: "No open tickets matched the request." }, modelProfile);
+  return runtimeDecision(runtimeProfile, { action: "revise", prompt: revisionPrompt(root, selected, runtimeProfile), message: `Queued revision for ${selected.map((ticket) => ticket.id).join(", ")}.` }, modelProfile);
 }
 
 export function bookPath(root: string): string {
