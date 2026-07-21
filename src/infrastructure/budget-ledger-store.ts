@@ -9,6 +9,10 @@ export type BudgetLedgerStoreResult =
   | { ok: true; path: string }
   | { ok: false; message: string };
 
+export type BudgetLedgerTransactionResult<T> =
+  | { ok: true; path: string; value: T }
+  | { ok: false; message: string };
+
 function runsDirectory(root: string): string {
   return join(root, ".pi-book", "runs");
 }
@@ -42,7 +46,7 @@ function reconstructBudgetLedger(root: string): BudgetLedger {
         });
       }
       for (const event of report.budgetEvents) {
-        if (!event.atCallId) continue;
+        if (!event.atCallId || !["total-token-limit", "chapter-token-limit", "chapter-call-limit"].includes(event.reason)) continue;
         const call = report.modelCalls.find((item) => item.callId === event.atCallId);
         if (call?.chapter === undefined) continue;
         ledger.events.push({
@@ -50,7 +54,7 @@ function reconstructBudgetLedger(root: string): BudgetLedger {
           runId: report.runId,
           callId: event.atCallId,
           chapter: call.chapter,
-          reason: event.reason as never,
+          reason: event.reason as "total-token-limit" | "chapter-token-limit" | "chapter-call-limit",
           fromTier: report.qualityTier,
           at: "reconstructed",
         });
@@ -86,7 +90,10 @@ function writeBudgetLedger(root: string, ledger: BudgetLedger): BudgetLedgerStor
   }
 }
 
-export function updateBudgetLedger(root: string, update: (ledger: BudgetLedger) => BudgetLedger): BudgetLedgerStoreResult {
+export function transactBudgetLedger<T>(
+  root: string,
+  update: (ledger: BudgetLedger) => { ledger: BudgetLedger; value: T },
+): BudgetLedgerTransactionResult<T> {
   const directory = runsDirectory(root);
   const lock = join(directory, ".budget-ledger.lock");
   try {
@@ -96,11 +103,17 @@ export function updateBudgetLedger(root: string, update: (ledger: BudgetLedger) 
     return { ok: false, message: "Unable to update the local budget ledger." };
   }
   try {
-    const current = readBudgetLedger(root);
-    return writeBudgetLedger(root, update(current));
+    const transaction = update(readBudgetLedger(root));
+    const stored = writeBudgetLedger(root, transaction.ledger);
+    return stored.ok ? { ok: true, path: stored.path, value: transaction.value } : stored;
   } catch {
     return { ok: false, message: "Unable to update the local budget ledger." };
   } finally {
     rmSync(lock, { recursive: true, force: true });
   }
+}
+
+export function updateBudgetLedger(root: string, update: (ledger: BudgetLedger) => BudgetLedger): BudgetLedgerStoreResult {
+  const result = transactBudgetLedger(root, (ledger) => ({ ledger: update(ledger), value: undefined }));
+  return result.ok ? { ok: true, path: result.path } : result;
 }
