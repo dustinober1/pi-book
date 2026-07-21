@@ -80,9 +80,10 @@ export function extractVoiceMetrics(text: string): VoiceMetrics {
     : sentenceLengths.length % 2 === 1
       ? sentenceLengths[middle] ?? 0
       : ((sentenceLengths[middle - 1] ?? 0) + (sentenceLengths[middle] ?? 0)) / 2;
-  const average_sentence_words = round4(sentenceLengths.length ? sentenceLengths.reduce((sum, value) => sum + value, 0) / sentenceLengths.length : 0);
+  const raw_average = sentenceLengths.length ? sentenceLengths.reduce((sum, value) => sum + value, 0) / sentenceLengths.length : 0;
+  const average_sentence_words = round4(raw_average);
   const variance = sentenceLengths.length > 1
-    ? sentenceLengths.reduce((sum, length) => sum + Math.pow(length - average_sentence_words, 2), 0) / (sentenceLengths.length - 1)
+    ? sentenceLengths.reduce((sum, length) => sum + Math.pow(length - raw_average, 2), 0) / (sentenceLengths.length - 1)
     : 0;
 
   return {
