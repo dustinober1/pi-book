@@ -5,6 +5,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
+import type { ChapterPacket } from "../src/domain/schemas.js";
 import type { ModelCallReport } from "../src/domain/run-report.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import {
@@ -12,6 +13,7 @@ import {
   assertQualityFixtureTreeClean,
   loadQualityEvalFixtures,
   runQualityEvaluation,
+  type QualityEvalFixture,
 } from "../src/evaluation/quality-eval.js";
 import {
   buildQualityEvalReport,
@@ -23,7 +25,7 @@ function hash(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function packet(chapter: number) {
+function packet(chapter: number): ChapterPacket {
   return {
     chapter,
     title: `Chapter ${chapter}`,
@@ -45,7 +47,7 @@ function packet(chapter: number) {
   };
 }
 
-function fixture(id: string, profile: "thriller" | "romantasy" | "historical-fiction", chapter: number) {
+function fixture(id: string, profile: "thriller" | "romantasy" | "historical-fiction", chapter: number): QualityEvalFixture {
   return {
     schema_version: "1.0.0",
     id,
@@ -104,16 +106,18 @@ class FakeEvalWorker implements QualityWorker {
     } else {
       throw new Error(`unexpected output type ${outputType}`);
     }
+    const tier = String(meta.tier ?? "");
+    const generationCost = tier === "premium" ? 0.08 : tier === "editorial" ? 0.1 : 0.02;
     const usage: ModelCallReport = {
       callId: request.callId,
       stage: request.stage,
       pass: request.pass,
-      provider: request.provider,
-      model: request.model,
+      ...(request.provider ? { provider: request.provider } : {}),
+      ...(request.model ? { model: request.model } : {}),
       inputTokens: outputType === "quality-eval-sample" ? 800 : 400,
       outputTokens: outputType === "quality-eval-sample" ? 300 : 120,
       estimated: false,
-      costUsd: outputType === "quality-eval-sample" ? 0.02 : 0.01,
+      costUsd: outputType === "quality-eval-sample" ? generationCost : 0.01,
       elapsedMs: 1,
       finishReason: "stop",
       promptHash: hash(request.prompt),
@@ -195,17 +199,16 @@ test("human review kit is blinded and reports cost and pairwise outcomes without
   assert.match(kit, /SMP-[A-F0-9]{12}/);
   assert.match(csv, /comparison_id,sample_a,sample_b,winner,severe_failure_sample_ids,notes/);
 
-  const groups = bundle.comparisons;
-  const responses = groups.map((group) => ({
+  const responses = bundle.comparisons.map((group) => ({
     comparison_id: group.comparisonId,
-    winner_sample_id: group.sampleIds[1]!,
+    winner_sample_id: group.sampleIds.find((sampleId) => bundle.sealedLabels[sampleId]?.tier === "premium")!,
     severe_failure_sample_ids: [],
     notes: "",
   }));
   const report = buildQualityEvalReport(bundle, responses, 3);
-  assert.equal(report.tiers.economy.sampleCount, 2);
-  assert.equal(report.tiers.premium.sampleCount, 2);
-  assert.equal(report.tiers.economy.medianCostUsd, 0.03);
+  assert.equal(report.tiers.economy!.sampleCount, 2);
+  assert.equal(report.tiers.premium!.sampleCount, 2);
+  assert.equal(report.tiers.economy!.medianCostUsd, 0.03);
   assert.equal(report.pairwise[0]?.comparisons, 2);
   assert.equal(report.pairwise[0]?.humanMinimumMet, false);
   assert.equal(report.conclusions.some((value) => /superior/i.test(value)), false);
