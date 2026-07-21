@@ -9,11 +9,20 @@ export const RuntimeProjectConfigSchema = Type.Object({
   telemetry: Type.Optional(Type.Boolean()),
 }, { additionalProperties: false });
 
+const AutomationRunWithQualitySchema = Type.Object({
+  ...AutomationRunStateSchema.properties,
+  quality_snapshot: Type.Optional(QualityProjectStateSchema),
+}, { additionalProperties: false });
+
+type AutomationRunWithQuality = AutomationRunState & {
+  quality_snapshot?: QualityProjectState;
+};
+
 export const ProjectV14Schema = Type.Object({
   ...ProjectSchema.properties,
   automation: Type.Object({
     ...ProjectSchema.properties.automation.properties,
-    active_run: Type.Optional(Type.Union([AutomationRunStateSchema, Type.Null()])),
+    active_run: Type.Optional(Type.Union([AutomationRunWithQualitySchema, Type.Null()])),
   }, { additionalProperties: false }),
   runtime: Type.Optional(RuntimeProjectConfigSchema),
   quality: Type.Optional(QualityProjectStateSchema),
@@ -26,6 +35,6 @@ export type ProjectStateV14 = Omit<ProjectState, "automation"> & {
   };
   quality?: QualityProjectState;
   automation: ProjectState["automation"] & {
-    active_run?: AutomationRunState | null;
+    active_run?: AutomationRunWithQuality | null;
   };
 };
