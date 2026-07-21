@@ -4,6 +4,7 @@ import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import { stringifyYaml } from "../infrastructure/yaml.js";
 import { readProject } from "../project/store.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
+import { recordPreparedPersistentRun } from "./persistent-run-telemetry.js";
 import {
   beginPersistentRun,
   cancelPersistentRun,
@@ -69,6 +70,18 @@ export function beginQualityPersistentRun(root: string, options: BeginQualityPer
         `Novel Forge: snapshot quality for ${project.automation.active_run.id}`,
         { lastAction: `Snapshotted quality policy for ${project.automation.active_run.id}` },
       );
+      const stored = readProject(root);
+      const run = stored.automation.active_run;
+      if (run) {
+        recordPreparedPersistentRun(root, {
+          telemetryEnabled: stored.runtime?.telemetry,
+          runId: run.id,
+          runtimeProfile: run.runtimeProfile ?? "full",
+          qualityTier: resolveQualityConfig(quality).tier,
+          promptChars: decision.prompt.length,
+          projectHashBefore: run.lastProjectHash,
+        });
+      }
     }
   }
   return decisionWithQuality(decision, quality);
