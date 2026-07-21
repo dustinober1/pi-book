@@ -235,6 +235,7 @@ export function renderHandoff(project: ProjectState, book: BookState, status: Pr
     `- Status: ${run.status}`,
     `- Target: ${run.target}`,
     `- Current action: ${run.currentAction}`,
+    `- Quality snapshot: ${run.quality_snapshot?.tier ?? status.qualityTier}`,
     `- Progress: ${run.completedEventKeys.length} completed event${run.completedEventKeys.length === 1 ? "" : "s"}`,
     `- Stop reason: ${run.stopReason ?? "none"}`,
     ...(run.status === "paused" ? ["- Exact resume command: `/novel-run --resume`"] : []),
@@ -243,6 +244,7 @@ export function renderHandoff(project: ProjectState, book: BookState, status: Pr
   const continuation = [
     `Continue the Novel Forge project ${project.project_name}.`,
     `The active book is ${book.book_id} (${book.profile}) at stage ${project.current_stage}.`,
+    `Runtime profile is ${status.runtimeProfile}; quality tier is ${status.qualityTier}.`,
     "Read STATUS.md and HANDOFF.md first, then follow the exact recommended action through /novel.",
     `Do not edit PROJECT.yaml, BOOK.yaml, STATUS.md, or HANDOFF.md directly and do not bypass the active human gate ${gate}.`,
   ].join(" ");
@@ -252,7 +254,9 @@ export function renderHandoff(project: ProjectState, book: BookState, status: Pr
     "",
     `- Project: ${project.project_name}`,
     `- Active book: ${book.book_id}`,
-    `- Profile: ${book.profile}`,
+    `- Genre profile: ${book.profile}`,
+    `- Runtime profile: ${status.runtimeProfile}`,
+    `- Quality tier: ${status.qualityTier}`,
     `- Stage: ${project.current_stage}`,
     `- Git reference: ${branch} @ HEAD`,
     `- Project state hash: ${stateHash}`,

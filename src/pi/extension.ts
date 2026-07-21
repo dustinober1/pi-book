@@ -1,30 +1,40 @@
+import { basename, resolve } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { PROFILE_IDS, isProfileId, type ProfileId, type ProjectType, type Stage } from "../domain/schemas.js";
-import { parseRuntimeProfileId } from "../domain/runtime-profile.js";
-import { listProfiles } from "../profiles/index.js";
-import { initializeProject, requireProjectRoot, readProject } from "../project/store.js";
-import { addBook } from "../project/add-book.js";
-import { bookPlanPrompt, packagePrompt, readerTestPrompt, reviewPrompt, seriesPlanPrompt, voicePlanPrompt } from "../application/prompts.js";
-import { approveProjectGate, beginPersistentRun, cancelPersistentRun, decideNextRun, directDraftDecision, directRevisionDecision, pausePersistentRun, rejectProjectGate, resumePersistentRun, type RunDecision } from "../application/run.js";
-import { migrateGenesisProject } from "../migration/genesis-v0.4.js";
 import { assertOperationAllowed, assertReviewAllowed } from "../application/authorization.js";
-import { applyNovelEvent, projectStateHash, type NovelEventType } from "../application/events.js";
-import { flagValue, parseRunOptions, tokens } from "./arguments.js";
-import { buildGuideScreen, type GuideActionId } from "../application/guide.js";
-import { gateDetail } from "../application/gate-metadata.js";
-import { refreshGuidance } from "../application/handoff.js";
-import { buildPackagingChecklist } from "../application/package-checklist.js";
-import { explainFirstBlocker, inspectUndo, runIntegritySummary, undoLastNovelEvent } from "../application/recovery.js";
-import { upgradeProjectVersion } from "../application/version.js";
-import { launchNovelWizard } from "../application/wizard-launch.js";
-import type { WizardWorkflow } from "../wizard/types.js";
-import { normalizeEventRejection, rejectionInstruction } from "../application/event-rejection.js";
 import { bootstrapProjectFromBrief } from "../application/brief-bootstrap.js";
-import { beginAutopilotRun } from "../application/autopilot.js";
+import { renderBudgetStatus } from "../application/budget-status.js";
+import { normalizeEventRejection, rejectionInstruction } from "../application/event-rejection.js";
+import { applyNovelEvent, projectStateHash, type NovelEventType } from "../application/events.js";
+import { gateDetail } from "../application/gate-metadata.js";
+import { buildGuideScreen, type GuideActionId } from "../application/guide.js";
+import { refreshGuidance } from "../application/handoff.js";
 import { applyRepositoryOrganization, summarizeArchiveList } from "../application/organizer/apply.js";
 import { renderOrganizationPreview, scanWritingRepository } from "../application/organizer/scan.js";
-import { basename, resolve } from "node:path";
+import { buildPackagingChecklist } from "../application/package-checklist.js";
+import { bookPlanPrompt, packagePrompt, readerTestPrompt, reviewPrompt, seriesPlanPrompt, voicePlanPrompt } from "../application/prompts.js";
+import {
+  beginQualityAutopilotRun,
+  beginQualityPersistentRun,
+  cancelQualityPersistentRun,
+  decideQualityNextRun,
+  directQualityDraftDecision,
+  pauseQualityPersistentRun,
+  resumeQualityPersistentRun,
+} from "../application/quality-run.js";
+import { explainFirstBlocker, inspectUndo, runIntegritySummary, undoLastNovelEvent } from "../application/recovery.js";
+import { approveProjectGate, directRevisionDecision, rejectProjectGate, type RunDecision } from "../application/run.js";
+import { upgradeProjectVersion } from "../application/version.js";
+import { launchNovelWizard } from "../application/wizard-launch.js";
+import { defaultQualityProjectState, qualityStateWithOverride } from "../domain/quality-profile.js";
+import { parseRuntimeProfileId } from "../domain/runtime-profile.js";
+import { PROFILE_IDS, isProfileId, type ProjectType, type Stage } from "../domain/schemas.js";
+import { migrateGenesisProject } from "../migration/genesis-v0.4.js";
+import { listProfiles } from "../profiles/index.js";
+import { addBook } from "../project/add-book.js";
+import { initializeProject, requireProjectRoot, readProject } from "../project/store.js";
+import type { WizardWorkflow } from "../wizard/types.js";
+import { flagValue, parseDraftOptions, parseQualityOverride, parseRunOptions, qualityValueFlags, tokens } from "./arguments.js";
 
 function errorText(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 
@@ -151,13 +161,14 @@ async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): 
   if (!action) return;
   const id: GuideActionId = action.id;
   if (id === "status") context.ui.notify(refreshGuidance(root).markdown, "info");
+  else if (id === "budget") context.ui.notify(renderBudgetStatus(root), "info");
   else if (id === "view-evidence") context.ui.notify(["Evidence files:", ...screen.evidencePaths.map((path) => `- ${path}`)].join("\n"), "info");
   else if (id === "advanced") await guidedAdvanced(root, context);
   else if (id === "readers") await guidedReaders(root, context);
   else if (id === "research") await openWizard(root, context, "research");
-  else if (id === "resume-run") sendDecision(pi, context, resumePersistentRun(root));
-  else if (id === "pause-run") sendDecision(pi, context, pausePersistentRun(root));
-  else if (id === "cancel-run") sendDecision(pi, context, cancelPersistentRun(root));
+  else if (id === "resume-run") sendDecision(pi, context, resumeQualityPersistentRun(root));
+  else if (id === "pause-run") sendDecision(pi, context, pauseQualityPersistentRun(root));
+  else if (id === "cancel-run") sendDecision(pi, context, cancelQualityPersistentRun(root));
   else if (id === "premise") await openWizard(root, context, "premise");
   else if (id === "add-book") await guidedAddBook(root, context);
   else if (id === "adopt") await guidedAdoption(root, context);
@@ -181,7 +192,7 @@ async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): 
       await openWizard(root, context, "packaging");
       return;
     }
-    sendDecision(pi, context, decideNextRun(root));
+    sendDecision(pi, context, decideQualityNextRun(root));
   }
 }
 
@@ -243,7 +254,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
   pi.registerCommand("novel-wizard", { description: "Open the temporary local browser wizard for adoption, readers, packaging, next-book, research, or premise work", getArgumentCompletions: (prefix) => { const filtered = ["adoption", "readers", "packaging", "next-book", "research", "premise"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const requested = tokens(args)[0] as WizardWorkflow | undefined; if (requested && !["adoption", "readers", "packaging", "next-book", "research", "premise"].includes(requested)) throw new Error("Wizard workflow must be adoption, readers, packaging, next-book, research, or premise."); await openWizard(root, context, requested); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-start", { description: "Create a project from an idea or authorized brief and optionally auto-advance to the next writer gate", handler: async (args, context) => {
     const supplied = tokens(args);
-    const flagsWithValues = new Set(["--profile", "--type", "--target-words", "--brief", "--auto-to", "--runtime-profile"]);
+    const flagsWithValues = new Set<string>(["--profile", "--type", "--target-words", "--brief", "--auto-to", "--runtime-profile", ...qualityValueFlags]);
     const positional: string[] = [];
     for (let index = 0; index < supplied.length; index += 1) {
       const item = supplied[index]!;
@@ -260,11 +271,13 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     const targetWords = Number.parseInt(targetInput ?? "100000", 10) || 100000;
     const rawRuntimeProfile = flagValue(supplied, "--runtime-profile");
     const runtimeProfile = rawRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
+    const quality = qualityStateWithOverride(defaultQualityProjectState(), parseQualityOverride(supplied));
     const root = initializeProject(context.cwd, {
       projectName,
       projectType: typeInput,
       profile: profileInput,
       targetWords,
+      quality,
       ...(runtimeProfile ? { runtimeProfile } : {}),
     });
     const briefPath = flagValue(supplied, "--brief");
@@ -272,14 +285,15 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     refreshGuidance(root, { lastAction: briefPath ? "Initialized project from authorized brief" : "Initialized project" });
     const autoTo = flagValue(supplied, "--auto-to");
     if (autoTo) {
-      sendDecision(pi, context, beginAutopilotRun(root, { target: autoTo, maxChapters: readProject(root).automation.max_chapters_per_run }));
+      sendDecision(pi, context, beginQualityAutopilotRun(root, { target: autoTo, maxChapters: readProject(root).automation.max_chapters_per_run }));
       context.ui.notify(`Novel Forge project created at ${root}. Autopilot stops at ${autoTo} or the next required writer decision.`, "info");
     } else context.ui.notify(`Novel Forge project created at ${root}. Run /novel.`, "info");
   } });
   pi.registerCommand("novel-status", { description: "Show Novel Forge decisions, blockers, warnings, progress, and next action", handler: async (_args, context) => { try { const root = requireProjectRoot(context.cwd); context.ui.notify(refreshGuidance(root).markdown, "info"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-budget", { description: "Show the quality tier, token and call ceilings, and locally recorded usage", handler: async (_args, context) => { try { context.ui.notify(renderBudgetStatus(requireProjectRoot(context.cwd)), "info"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-plan", { description: "Build or repair voice, series, or active-book architecture", getArgumentCompletions: (prefix) => { const filtered = ["voice", "series", "book"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const items = tokens(args); if (items.includes("--add-book")) { if (items.includes("--force")) { const target = Number.parseInt(flagValue(items, "--target-words") ?? "100000", 10) || 100000; const bookId = addBook(root, target, { force: true }); context.ui.notify(`Force-created ${bookId} and made it active. Run /novel.`, "info"); } else await openWizard(root, context, "next-book"); return; } const prompt = planPromptFor(root, items[0] ?? ""); if (!context.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" }); else pi.sendUserMessage(prompt); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
-  pi.registerCommand("novel-run", { description: "Start, resume, pause, or cancel persistent safe work until a gate, blocker, or requested limit", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const options = parseRunOptions(args); const decision = options.resume ? resumePersistentRun(root) : options.pause ? pausePersistentRun(root) : options.cancel ? cancelPersistentRun(root) : (options.until || options.maxChapters) ? beginPersistentRun(root, { target: options.until ?? "next-milestone", maxChapters: options.maxChapters ?? readProject(root).automation.max_chapters_per_run, ...(options.runtimeProfile ? { runtimeProfile: options.runtimeProfile } : {}) }) : decideNextRun(root, options); sendDecision(pi, context, decision); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
-  pi.registerCommand("novel-draft", { description: "Draft the next approved chapter packet with bounded context", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const chapter = Number.parseInt(tokens(args)[0] ?? "", 10); sendDecision(pi, context, directDraftDecision(root, Number.isFinite(chapter) ? chapter : undefined)); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-run", { description: "Start, resume, pause, or cancel persistent safe work until a gate, blocker, or requested limit", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const options = parseRunOptions(args); const decision = options.resume ? resumeQualityPersistentRun(root) : options.pause ? pauseQualityPersistentRun(root) : options.cancel ? cancelQualityPersistentRun(root) : (options.until || options.maxChapters) ? beginQualityPersistentRun(root, { target: options.until ?? "next-milestone", maxChapters: options.maxChapters ?? readProject(root).automation.max_chapters_per_run, ...(options.runtimeProfile ? { runtimeProfile: options.runtimeProfile } : {}), ...(options.quality ? { quality: options.quality } : {}) }) : decideQualityNextRun(root, options); sendDecision(pi, context, decision); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-draft", { description: "Draft the next approved chapter packet with bounded context", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const options = parseDraftOptions(args); sendDecision(pi, context, directQualityDraftDecision(root, options.chapter, options.quality)); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-review", { description: "Review a chapter, act, manuscript, or series through profile-specific lanes", getArgumentCompletions: (prefix) => { const filtered = ["chapter", "act", "manuscript", "series"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const scope = tokens(args)[0] ?? "act"; assertReviewAllowed(readProject(root), scope); sendDecision(pi, context, { action: "review", prompt: reviewPrompt(root, scope), message: `Queued ${scope} review.` }); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-readers", { description: "Open the guided reader-kit and CSV evidence wizard", handler: async (_args, context) => { try { await guidedReaders(requireProjectRoot(context.cwd), context); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-revise", { description: "Apply open revision tickets with acceptance and regression checks", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); sendDecision(pi, context, directRevisionDecision(root, tokens(args).filter((item) => /^B\d+-T\d+$/i.test(item)))); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });

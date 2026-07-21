@@ -23,7 +23,7 @@ function withProject(callback: (root: string) => void): void {
   }
 }
 
-test("starting a persistent run records a privacy-safe local run report", () => {
+test("starting a persistent run records a privacy-safe empty schema-two header", () => {
   withProject((root) => {
     const decision = beginPersistentRun(root, {
       target: "next-milestone",
@@ -36,12 +36,14 @@ test("starting a persistent run records a privacy-safe local run report", () => 
     const report = JSON.parse(readFileSync(path, "utf8")) as RunReport;
     assert.equal(report.runId, "RUN-001");
     assert.equal(report.runtimeProfile, "tiny-local");
-    assert.equal(report.promptChars, decision.prompt?.length);
-    assert.equal(report.contextChars, 0);
-    assert.equal(report.changedFileCount, 0);
-    assert.equal(report.changedBytes, 0);
-    assert.equal(report.repairAttempts, 0);
-    assert.deepEqual(report.validationFailures, []);
+    assert.equal(report.schemaVersion, "2.0.0");
+    if (report.schemaVersion !== "2.0.0") return;
+    assert.equal(report.qualityTier, "economy");
+    assert.deepEqual(report.modelCalls, []);
+    assert.equal(report.totals.totalTokens, 0);
+    assert.equal(report.totals.costUsd, 0);
+    assert.equal("promptChars" in report, false);
+    assert.equal("contextChars" in report, false);
     assert.equal(JSON.stringify(report).includes(decision.prompt ?? "unreachable"), false);
   });
 });

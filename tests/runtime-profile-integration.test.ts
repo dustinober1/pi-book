@@ -116,8 +116,10 @@ test("status and run decisions expose the resolved runtime profile separately fr
   try {
     const status = getProjectStatus(root);
     assert.equal(status.runtimeProfile, "local");
-    assert.match(status.markdown, /- Profile: thriller/);
+    assert.equal(status.qualityTier, "economy");
+    assert.match(status.markdown, /- Genre profile: thriller/);
     assert.match(status.markdown, /- Runtime profile: local/);
+    assert.match(status.markdown, /- Quality tier: economy/);
 
     const decision = decideNextRun(root, { runtimeProfile: "tiny-local", maxChapters: 8 });
     assert.equal(decision.runtimeProfile, "tiny-local");

@@ -1,20 +1,21 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { manuscriptWordCount } from "../context/context-builder.js";
+import { resolveQualityConfig, type QualityTierId } from "../domain/quality-profile.js";
 import { ContinuityDeltaSchema, GenreConfigSchema, PlotGridSchema, ReaderExperimentsSchema, RemarkabilitySchema, type ContinuityDeltaState, type GenreConfig, type PlotGridState, type ReaderExperimentsState, type RemarkabilityState } from "../domain/schemas.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import { listChapterFiles, newestFiles, readText } from "../infrastructure/files.js";
 import { gitState } from "../infrastructure/git.js";
 import { parseYaml } from "../infrastructure/yaml.js";
-import { manuscriptWordCount } from "../context/context-builder.js";
-import { openBlockingTickets } from "../review/review.js";
+import { getProfile } from "../profiles/index.js";
 import { readBook, readProject, readTickets } from "../project/store.js";
+import { openBlockingTickets } from "../review/review.js";
+import { actBoundaryFindings, overdueMilestone } from "./act-boundaries.js";
+import { gateDetail } from "./gate-metadata.js";
 import { collectProjectIntegrityFindings } from "./integrity.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
-import { getProfile } from "../profiles/index.js";
-import { gateDetail } from "./gate-metadata.js";
 import { resolveRuntimeProfile } from "./runtime-profile-resolver.js";
 import { versionFindings } from "./version-core.js";
-import { actBoundaryFindings, overdueMilestone } from "./act-boundaries.js";
 
 export interface ProjectStatus {
   blockers: string[];
@@ -25,6 +26,7 @@ export interface ProjectStatus {
   recommendedCommand: string;
   primaryBlocker: string | null;
   runtimeProfile: RuntimeProfileId;
+  qualityTier: QualityTierId;
   markdown: string;
 }
 
@@ -108,6 +110,7 @@ function optionalV13ArtifactPaths(bookId: string): string[] {
 export function getProjectStatus(root: string, options: ProjectStatusOptions = {}): ProjectStatus {
   const project = readProject(root);
   const runtimeProfile = resolveRuntimeProfile({ project: project.runtime?.profile });
+  const quality = resolveQualityConfig(project.quality);
   const book = readBook(root);
   const tickets = readTickets(root);
   const blockers: string[] = [];
@@ -211,8 +214,9 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     "",
     `- Project: ${project.project_name}`,
     `- Type: ${project.project_type}`,
-    `- Profile: ${book.profile}`,
+    `- Genre profile: ${book.profile}`,
     `- Runtime profile: ${runtimeProfile.id}`,
+    `- Quality tier: ${quality.tier}`,
     `- Active book: ${book.book_id}`,
     `- Stage: ${project.current_stage}`,
     `- Next gate: ${project.next_gate ?? "none"}${project.next_gate ? ` (${project.gates[project.next_gate] ?? "unknown"})` : ""}`,
@@ -242,6 +246,7 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     recommendedCommand: decision.command,
     primaryBlocker: blockers[0] ?? null,
     runtimeProfile: runtimeProfile.id,
+    qualityTier: quality.tier,
     markdown,
   };
 }
