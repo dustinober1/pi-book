@@ -29,7 +29,7 @@ For one compatibility release:
 - `maxPromptChars` mirrors `modelBudget.maxInstructionChars`.
 - `maxContextChars` mirrors `modelBudget.maxEvidenceChars`.
 
-Neither legacy field is a complete request-window limit. Before inference, Novel Forge compiles normative instructions independently, reserves output and safety capacity, and then attaches only evidence that fits the remaining evidence/model budget.
+Neither legacy field is a complete request-window limit. Novel Forge compiles normative instructions and evidence independently. When a selected model's context capacity is available, `resolveModelBudget` subtracts instruction, reserved-output, and safety tokens before bounding evidence; otherwise the profile's configured evidence ceiling remains the authoritative pre-inference limit.
 
 ## Context-allocation contract
 
