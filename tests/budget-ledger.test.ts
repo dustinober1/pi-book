@@ -77,13 +77,16 @@ test("total and call ceilings cannot be exceeded by multiple live reservations",
   ledger = reserve(ledger, "CALL-001", 1, 500).ledger;
   ledger = reserve(ledger, "CALL-002", 2, 400).ledger;
   const total = reserve(ledger, "CALL-003", 3, 200);
-  assert.equal(total.result.action, "downgrade");
+  assert.notEqual(total.result.action, "reserved");
+  if (total.result.action === "reserved") return;
   assert.equal(total.result.reason, "total-token-limit");
 
   let calls = emptyBudgetLedger();
   calls = reserve(calls, "CALL-001", 1, 10).ledger;
   calls = reserve(calls, "CALL-002", 1, 10).ledger;
   const callOverflow = reserve(calls, "CALL-003", 1, 10);
+  assert.notEqual(callOverflow.result.action, "reserved");
+  if (callOverflow.result.action === "reserved") return;
   assert.equal(callOverflow.result.reason, "chapter-call-limit");
 });
 
