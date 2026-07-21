@@ -2,6 +2,15 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import YAML from "yaml";
+import { preparePrompt } from "../application/prepared-prompt.js";
+import { compilePrompt } from "../application/prompt-compiler.js";
+import { projectStateHash } from "../application/events.js";
+import { bookPlanPrompt, revisionPrompt } from "../application/prompts.js";
+import { estimateInputTokens } from "../application/run-telemetry.js";
+import { draftStageSpec } from "../application/stage-specs/index.js";
+import type { StageSpec } from "../application/stage-specs/types.js";
+import { allocateContext, type ContextRecord } from "../context/context-budget.js";
+import { buildChapterContext } from "../context/context-builder.js";
 import {
   ChapterPacketSchema,
   GenreConfigSchema,
@@ -13,10 +22,7 @@ import {
   type PlotGridState,
   type ProfileId,
 } from "../domain/schemas.js";
-import type { RuntimeProfileId } from "../domain/runtime-profile.js";
-import { buildChapterContext } from "../context/context-builder.js";
-import { bookPlanPrompt, draftPrompt, revisionPrompt } from "../application/prompts.js";
-import { estimateInputTokens } from "../application/run-telemetry.js";
+import { RUNTIME_PROFILES, type RuntimeProfile, type RuntimeProfileId } from "../domain/runtime-profile.js";
 import { countWords } from "../infrastructure/files.js";
 import { stringifyYaml } from "../infrastructure/yaml.js";
 import { initializeProject, readProject } from "../project/store.js";
@@ -46,6 +52,16 @@ export interface ConstrainedRuntimeBenchmarkResult {
   changedBytes: number;
   elapsedMs: number;
   rssBytes: number;
+}
+
+export interface BoundaryScenarioResult {
+  profile: RuntimeProfileId;
+  instructionChars: number;
+  evidenceChars: number;
+  requiredRecords: number;
+  includedRecords: number;
+  omittedOptionalRecords: number;
+  passed: boolean;
 }
 
 export type DeterministicBenchmarkResult = Omit<ConstrainedRuntimeBenchmarkResult, "elapsedMs" | "rssBytes">;
@@ -169,15 +185,21 @@ function draftingResult(evalRoot: string): ConstrainedRuntimeBenchmarkResult {
         last_advanced_in: null,
       })),
     }), "utf8");
-    const context = buildChapterContext(root, fixture.packet.chapter, 72_000, 2);
-    const fullPrompt = normalizedPrompt(draftPrompt(context), root);
-    const promptChars = Math.max(1, fullPrompt.length - context.text.length);
+    const context = buildChapterContext(root, fixture.packet.chapter, RUNTIME_PROFILES.full.modelBudget.maxEvidenceChars, 2);
+    const prepared = preparePrompt(draftStageSpec({
+      root,
+      bookId: "book-01",
+      chapter: fixture.packet.chapter,
+      estimatedTokens: context.report.estimatedTokens,
+      excluded: context.report.excluded,
+      projectHash: projectStateHash(root),
+    }), context.text, RUNTIME_PROFILES.full);
     return {
       scenario: "drafting-context",
       runtimeProfile: "full",
-      promptChars,
-      contextChars: context.text.length,
-      estimatedInputTokens: estimateInputTokens(promptChars, context.text.length),
+      promptChars: prepared.instructionChars,
+      contextChars: prepared.evidenceChars,
+      estimatedInputTokens: prepared.estimatedInputTokens,
       stageSuccess: failures.length === 0,
       validationResult: failures.length === 0 ? "pass" : "fail",
       changedFileCount: 1,
@@ -217,6 +239,103 @@ function revisionResult(evalRoot: string): ConstrainedRuntimeBenchmarkResult {
   });
 }
 
+function boundaryStageSpec(fillerLength: number): StageSpec {
+  return {
+    id: "context-boundary",
+    role: "a deterministic runtime-boundary verifier",
+    objective: "Verify that normative instructions remain complete near the configured limit.",
+    inputs: ["canonical project state"],
+    must: [`Preserve this boundary instruction exactly: ${"I".repeat(fillerLength)}`],
+    avoid: ["Truncate normative instructions."],
+    outputs: ["one complete boundary result"],
+    validation: ["Every instruction remains present."],
+    toolRules: ["Do not mutate project state."],
+  };
+}
+
+function nearInstructionSpec(profile: RuntimeProfile): StageSpec {
+  const target = profile.modelBudget.maxInstructionChars - 50;
+  let low = 0;
+  let high = target;
+  let best = boundaryStageSpec(0);
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    const candidate = boundaryStageSpec(middle);
+    try {
+      const compiled = compilePrompt(candidate, profile);
+      if (compiled.characterCount <= target) {
+        best = candidate;
+        low = middle + 1;
+      } else {
+        high = middle - 1;
+      }
+    } catch {
+      high = middle - 1;
+    }
+  }
+  return best;
+}
+
+function boundaryEvidence(profile: RuntimeProfile): ReturnType<typeof allocateContext> & { requiredRecords: number } {
+  const target = profile.modelBudget.maxEvidenceChars - 50;
+  const fixed: ContextRecord[] = [
+    { id: "BOUNDARY-REQ-001", body: "A".repeat(113), required: true, priority: 100 },
+    { id: "BOUNDARY-REQ-002", body: "B".repeat(251), required: true, priority: 99 },
+    { id: "BOUNDARY-REQ-003", body: "C".repeat(389), required: true, priority: 98 },
+    { id: "BOUNDARY-REQ-004", body: "D".repeat(521), required: true, priority: 97 },
+  ];
+  let low = 1;
+  let high = target;
+  let bestLength = 1;
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    try {
+      allocateContext([{
+        id: "boundary",
+        title: "Boundary evidence",
+        maxChars: profile.modelBudget.maxEvidenceChars,
+        records: [...fixed, { id: "BOUNDARY-REQ-005", body: "E".repeat(middle), required: true, priority: 96 }],
+      }], target);
+      bestLength = middle;
+      low = middle + 1;
+    } catch {
+      high = middle - 1;
+    }
+  }
+  const required = [...fixed, { id: "BOUNDARY-REQ-005", body: "E".repeat(bestLength), required: true, priority: 96 }];
+  const allocation = allocateContext([{
+    id: "boundary",
+    title: "Boundary evidence",
+    maxChars: profile.modelBudget.maxEvidenceChars,
+    records: [
+      ...required,
+      { id: "BOUNDARY-OPTIONAL-001", body: "O".repeat(600), required: false, priority: 1 },
+    ],
+  }], profile.modelBudget.maxEvidenceChars);
+  return { ...allocation, requiredRecords: required.length };
+}
+
+export function runContextBoundaryBenchmark(): BoundaryScenarioResult[] {
+  return (Object.values(RUNTIME_PROFILES) as RuntimeProfile[]).map((profile) => {
+    const spec = nearInstructionSpec(profile);
+    const evidence = boundaryEvidence(profile);
+    const prepared = preparePrompt(spec, evidence.text, profile);
+    const includedRequired = evidence.report.includedRecordIds.filter((id) => id.startsWith("BOUNDARY-REQ-")).length;
+    const omittedOptionalRecords = evidence.report.omittedRecordIds.filter((id) => id.startsWith("BOUNDARY-OPTIONAL-")).length;
+    return {
+      profile: profile.id,
+      instructionChars: prepared.instructionChars,
+      evidenceChars: prepared.evidenceChars,
+      requiredRecords: evidence.requiredRecords,
+      includedRecords: includedRequired,
+      omittedOptionalRecords,
+      passed: prepared.instructionChars <= profile.modelBudget.maxInstructionChars
+        && prepared.evidenceChars <= profile.modelBudget.maxEvidenceChars
+        && evidence.requiredRecords === includedRequired,
+    };
+  });
+}
+
 export function runConstrainedRuntimeBenchmark(evalRoot: string): ConstrainedRuntimeBenchmarkResult[] {
   return [
     ...fixtureScenarios.map(({ scenario, directory }) => planningResult(evalRoot, scenario, directory)),
@@ -229,6 +348,9 @@ export function deterministicBenchmarkView(results: ConstrainedRuntimeBenchmarkR
   return results.map(({ elapsedMs: _elapsedMs, rssBytes: _rssBytes, ...result }) => result);
 }
 
-export function benchmarkReportJson(results: ConstrainedRuntimeBenchmarkResult[]): string {
-  return `${JSON.stringify({ schemaVersion: "1.0.0", results }, null, 2)}\n`;
+export function benchmarkReportJson(
+  results: ConstrainedRuntimeBenchmarkResult[],
+  boundaries: BoundaryScenarioResult[] = runContextBoundaryBenchmark(),
+): string {
+  return `${JSON.stringify({ schemaVersion: "1.0.0", results, boundaries }, null, 2)}\n`;
 }
