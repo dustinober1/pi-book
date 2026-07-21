@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import type { ModelCallReport } from "../src/domain/run-report.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
-import { runQualityEvaluation } from "../src/evaluation/quality-eval.js";
+import { runQualityEvaluation, type QualityEvalFixture } from "../src/evaluation/quality-eval.js";
 import { buildQualityEvalReport, renderHumanAnswerCsv, renderHumanReviewKit } from "../src/evaluation/quality-eval-report.js";
 
 function hash(value: string): string { return createHash("sha256").update(value).digest("hex"); }
@@ -44,14 +44,14 @@ class PrivacyWorker implements QualityWorker {
   }
 }
 
-const fixture = {
-  schema_version: "1.0.0" as const,
+const fixture: QualityEvalFixture = {
+  schema_version: "1.0.0",
   id: "QEF-PRIV-001",
-  profile: "thriller" as const,
+  profile: "thriller",
   chapter: 1,
   project_hash: "f".repeat(64),
   packet: {
-    chapter: 1, title: "Private", status: "ready" as const, pov: "Mara", purpose: "Choose.", scene_engine: "infiltration",
+    chapter: 1, title: "Private", status: "ready", pov: "Mara", purpose: "Choose.", scene_engine: "infiltration",
     pressure_movement: "Pressure.", character_movement: "Choice.", relationship_movement: "Trust.", story_thread_refs: [],
     continuity_refs: [], character_refs: ["Mara"], required_research: [], profile_fields: {}, ending_hook: "End.", milestone_gate: null, target_words: 1000,
   },
@@ -59,7 +59,7 @@ const fixture = {
   protected_constraints: ["PRIVATE-CONSTRAINT-SENTINEL"],
 };
 
-test("serialized reports and blinded forms contain no prompts, context, credentials, tier labels, or sealed mapping", async () => {
+test("reports omit raw content and blinded forms also omit tier and sealed labels", async () => {
   const bundle = await runQualityEvaluation({
     fixtures: [fixture], worker: new PrivacyWorker(), provider: "PRIVATE-PROVIDER", model: "PRIVATE-MODEL",
     tiers: ["economy", "editorial"], seed: "privacy-seed",
@@ -70,13 +70,18 @@ test("serialized reports and blinded forms contain no prompts, context, credenti
 
   for (const forbidden of [
     "PRIVATE-CONTEXT-SENTINEL", "PRIVATE-CREDENTIAL-SENTINEL", "PRIVATE-CONSTRAINT-SENTINEL",
-    "PRIVATE-PROVIDER", "PRIVATE-MODEL", "economy", "editorial", "QEF-PRIV-001",
+    "PRIVATE-PROVIDER", "PRIVATE-MODEL", "QEF-PRIV-001", "PRIVATE-GENERATED-PROSE-SENTINEL",
   ]) {
     assert.equal(reportText.includes(forbidden), false);
+  }
+  for (const forbidden of [
+    "PRIVATE-CONTEXT-SENTINEL", "PRIVATE-CREDENTIAL-SENTINEL", "PRIVATE-CONSTRAINT-SENTINEL",
+    "PRIVATE-PROVIDER", "PRIVATE-MODEL", "economy", "editorial", "QEF-PRIV-001",
+  ]) {
     assert.equal(kit.includes(forbidden), false);
     assert.equal(csv.includes(forbidden), false);
   }
-  assert.equal(reportText.includes("PRIVATE-GENERATED-PROSE-SENTINEL"), false);
   assert.equal(kit.includes("PRIVATE-GENERATED-PROSE-SENTINEL"), true);
+  assert.equal(reportText.includes("economy"), true);
   assert.equal(JSON.stringify(bundle.sealedLabels).includes("editorial"), true);
 });
