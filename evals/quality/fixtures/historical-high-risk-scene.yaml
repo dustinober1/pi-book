@@ -1,0 +1,13 @@
+schema_version: 1.0.0
+id: historical-high-risk-scene
+profile: historical-fiction
+chapter: 5
+project_hash: 1111111111111111111111111111111111111111111111111111111111111111
+packet_hash: 2222222222222222222222222222222222222222222222222222222222222222
+context_hash: 3333333333333333333333333333333333333333333333333333333333333333
+rubric:
+  - chronology
+  - material-culture
+  - impossible-knowledge
+  - factual
+  - voice
