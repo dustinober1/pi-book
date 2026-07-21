@@ -198,7 +198,7 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     ...historicalInventions.map((item) => jsonRecord(item.id, item, true, 90)),
     ...historicalUncertainties.map((item, index) => jsonRecord(`historical-uncertainty:${String(index + 1).padStart(3, "0")}`, item, true, 90)),
   ] : [];
-  const previousRecords = paragraphContextRecords("previous", previous, 50);
+  const previousRecords = paragraphContextRecords("previous", previous, 50, "end");
   const profileRuleRecords = profile.draftingRules.map((rule, index) => ({ id: `profile-rule:${String(index + 1).padStart(3, "0")}`, body: rule, required: false, priority: 30 }));
   const voiceProfileRecords = paragraphContextRecords("voice-profile", voiceProfileText, 30);
   const bookBibleRecords = paragraphContextRecords("book-bible", readText(join(bookRoot, "book-bible.md")) ?? "", 30);
