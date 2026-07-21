@@ -6,12 +6,14 @@ import {
   runBudgetedQualityDraft,
 } from "../application/budgeted-quality-draft.js";
 import { ForegroundEconomyTelemetry } from "../application/foreground-economy-telemetry.js";
+import { runPersistentQualityDraft } from "../application/quality-persistent-run.js";
+import { beginQualityPersistentRun, resumeQualityPersistentRun } from "../application/quality-run.js";
 import { runExplicitVoiceRecalibration } from "../application/recalibration.js";
 import { qualityStateWithOverride, resolveQualityConfig } from "../domain/quality-profile.js";
 import type { QualityWorker } from "../domain/quality-worker.js";
 import { readProject, requireProjectRoot } from "../project/store.js";
 import { resolveRuntimeProfile } from "../application/runtime-profile-resolver.js";
-import { parseDraftOptions } from "./arguments.js";
+import { parseDraftOptions, parseRunOptions } from "./arguments.js";
 import { registerNovelForge } from "./extension.js";
 import { PiPrintWorker } from "./pi-print-worker.js";
 
@@ -139,6 +141,79 @@ function withQualityDraft(
   return decorated as unknown as CommandDefinition;
 }
 
+function withQualityRun(definition: CommandDefinition, options: NovelForgeExtensionOptions): CommandDefinition {
+  const original = definition as unknown as ReviewCommandDefinition;
+  const decorated: ReviewCommandDefinition = {
+    ...original,
+    description: "Run persistent guarded work with isolated higher-quality drafting when configured",
+    async handler(args: string, context: ExtensionCommandContext): Promise<void> {
+      try {
+        const parsed = parseRunOptions(args);
+        if (parsed.pause || parsed.cancel) {
+          await original.handler(args, context);
+          return;
+        }
+        const root = requireProjectRoot(context.cwd);
+        let project = readProject(root);
+        const provider = process.env.NOVEL_FORGE_QUALITY_PROVIDER?.trim();
+        const model = process.env.NOVEL_FORGE_QUALITY_MODEL?.trim();
+
+        if (parsed.resume) {
+          const snapshot = project.automation.active_run?.quality_snapshot;
+          if (!snapshot || resolveQualityConfig(snapshot).tier === "economy") {
+            await original.handler(args, context);
+            return;
+          }
+          const resumed = resumeQualityPersistentRun(root);
+          if (!resumed.prompt) {
+            context.ui.notify(resumed.message, resumed.action === "blocked" ? "warning" : "info");
+            return;
+          }
+          project = readProject(root);
+        } else {
+          if (project.current_stage !== "drafting" || (!parsed.until && !parsed.maxChapters)) {
+            await original.handler(args, context);
+            return;
+          }
+          const state = qualityStateWithOverride(project.quality, parsed.quality);
+          if (resolveQualityConfig(state).tier === "economy") {
+            await original.handler(args, context);
+            return;
+          }
+          const started = beginQualityPersistentRun(root, {
+            target: parsed.until ?? "next-milestone",
+            maxChapters: parsed.maxChapters ?? project.automation.max_chapters_per_run,
+            ...(parsed.runtimeProfile ? { runtimeProfile: parsed.runtimeProfile } : {}),
+            ...(parsed.quality ? { quality: parsed.quality } : {}),
+          });
+          if (!started.prompt) {
+            context.ui.notify(started.message, started.action === "blocked" ? "warning" : "info");
+            return;
+          }
+          project = readProject(root);
+        }
+
+        const worker = options.createQualityWorker?.(root) ?? new PiPrintWorker({ cwd: root });
+        const active = project.automation.active_run;
+        if (!active) throw new Error("Persistent quality run did not create an active checkpoint.");
+        const result = await runPersistentQualityDraft({
+          root,
+          worker,
+          maxChapters: active.requestedMaxChapters,
+          ...(provider ? { provider } : {}),
+          ...(model ? { model } : {}),
+          onProgress(name) { context.ui.notify(`Quality run: ${name}`, "info"); },
+        });
+        const downgrade = result.downgradedTo ? ` Downgraded to ${result.downgradedTo}.` : "";
+        context.ui.notify(`Persistent quality run ${result.runId} ${result.status} at ${result.stopReason} after ${result.chapters.length} chapter(s).${downgrade}`, result.status === "stopped" ? "warning" : "info");
+      } catch (error) {
+        context.ui.notify(errorText(error), "warning");
+      }
+    },
+  };
+  return decorated as unknown as CommandDefinition;
+}
+
 function registerForegroundTelemetryHooks(pi: ExtensionAPI, foreground: ForegroundEconomyTelemetry): void {
   const eventApi = pi as ExtensionAPI & { on?: ExtensionAPI["on"] };
   if (typeof eventApi.on !== "function") return;
@@ -165,7 +240,9 @@ export function registerNovelForgeWithRecalibration(pi: ExtensionAPI, options: N
             ? withRecalibration(definition)
             : name === "novel-draft"
               ? withQualityDraft(definition, options, foreground)
-              : definition;
+              : name === "novel-run"
+                ? withQualityRun(definition, options)
+                : definition;
           registerCommand(name, decorated);
         };
       }
