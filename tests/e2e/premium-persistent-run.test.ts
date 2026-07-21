@@ -83,7 +83,10 @@ test("persistent premium drafting reloads after each chapter and respects pause 
     assert.equal(first.status, "paused");
     assert.equal(first.stopReason, "chapter-limit");
     assert.equal(readProject(project.root).automation.active_run?.status, "paused");
-    assert.deepEqual(queue(project.root).packets.slice(0, 2).map((item) => item.status), ["drafted", "drafted"]);
+    assert.deepEqual(queue(project.root).packets.map((item) => ({ chapter: item.chapter, status: item.status })), [
+      { chapter: 3, status: "ready" },
+      { chapter: 4, status: "ready" },
+    ]);
     assert.equal(existsSync(join(project.root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), true);
     assert.equal(existsSync(join(project.root, "books", "book-01", "manuscript", "chapters", "02-chapter-2.md")), true);
 
@@ -102,7 +105,7 @@ test("persistent premium drafting reloads after each chapter and respects pause 
     assert.equal(finalProject.current_stage, "manuscript-review");
     assert.equal(finalProject.automation.active_run?.status, "stopped");
     assert.equal(finalProject.automation.active_run?.completedEventKeys.length, 4);
-    assert.deepEqual(queue(project.root).packets.map((item) => item.status), ["drafted", "drafted", "drafted", "drafted"]);
+    assert.deepEqual(queue(project.root).packets, []);
     const ledger = readBudgetLedger(project.root);
     assert.equal(ledger.reservations.length, 0);
     assert.ok(ledger.settledCalls.length >= 20);
