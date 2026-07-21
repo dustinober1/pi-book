@@ -11,22 +11,26 @@ export interface PreparedPrompt {
   sectionCharacters: Readonly<Record<PromptSectionName, number>>;
 }
 
+const EVIDENCE_FRAME = "\n\n## Evidence and bounded project context\n\n";
+
 export function preparePrompt(spec: StageSpec, evidence: string, profile: RuntimeProfile): PreparedPrompt {
   const instructions = compilePrompt(spec, profile);
-  resolveModelBudget(profile.modelBudget, instructions.characterCount);
   const normalizedEvidence = evidence.trim();
+  const evidenceFrame = normalizedEvidence ? EVIDENCE_FRAME : "";
+  const instructionChars = instructions.characterCount + evidenceFrame.length;
+  resolveModelBudget(profile.modelBudget, instructionChars);
   const evidenceChars = normalizedEvidence.length;
   if (evidenceChars > profile.modelBudget.maxEvidenceChars) {
     throw new Error(`Evidence budget exceeded for stage ${spec.id} under profile ${profile.id}: actual=${evidenceChars}, maximum=${profile.modelBudget.maxEvidenceChars}.`);
   }
   const text = normalizedEvidence
-    ? `${instructions.text}\n\n## Evidence and bounded project context\n\n${normalizedEvidence}`
+    ? `${instructions.text}${evidenceFrame}${normalizedEvidence}`
     : instructions.text;
   return {
     text,
-    instructionChars: instructions.characterCount,
+    instructionChars,
     evidenceChars,
-    estimatedInputTokens: Math.ceil(text.length / 4),
+    estimatedInputTokens: Math.ceil((instructionChars + evidenceChars) / 4),
     sectionCharacters: instructions.sectionCharacters,
   };
 }
