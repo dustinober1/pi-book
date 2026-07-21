@@ -9,6 +9,32 @@ permissions:
   contents: read
 
 jobs:
+  sync-v1-7-release-tree:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/quality-evaluation-release-1-7'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/quality-evaluation-release-1-7
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node scripts/.tmp-apply-v1-7-release.mjs
+      - shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Release tree is already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json src/application/version-core.ts .gitignore README.md SKILL.md CHANGELOG.md RELEASE.md docs/quality-and-cost.md docs/releases/v1.7.0.md .github/workflows/test.yml .github/workflows/release-v1-7.yml
+          git commit -m "release: qualify Novel Forge 1.7.0 quality orchestration"
+          git push origin HEAD:feature/quality-evaluation-release-1-7
+
   test:
     runs-on: ubuntu-latest
     strategy:
