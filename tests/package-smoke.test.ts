@@ -20,9 +20,10 @@ test("the packed extension imports, registers, and contains the 1.4 release surf
     const commands: string[] = [];
     const tools: string[] = [];
     module.default({ registerCommand(name: string) { commands.push(name); }, registerTool(tool: { name: string }) { tools.push(tool.name); }, sendUserMessage() {} });
-    assert.equal(commands.length, 14);
+    assert.equal(commands.length, 15);
     assert.ok(commands.includes("novel"));
     assert.ok(commands.includes("novel-wizard"));
+    assert.ok(commands.includes("novel-budget"));
     assert.ok(commands.includes("novel-readers"));
     assert.ok(commands.includes("novel-adopt"));
     assert.ok(commands.includes("novel-organize"));
@@ -38,6 +39,7 @@ test("the packed extension imports, registers, and contains the 1.4 release surf
     for (const asset of [
       "README.md", "SKILL.md", "CHANGELOG.md", "RELEASE.md",
       "wizard/index.html", "wizard/app.js", "wizard/styles.css",
+      "src/domain/quality-profile.ts", "src/application/budget-status.ts", "src/application/quality-run.ts",
       "src/domain/v1-3-schemas.ts", "src/domain/v1-3-research-schemas.ts",
       "src/domain/v1-3-architecture-schemas.ts", "src/domain/v1-3-audit-schemas.ts",
       "src/application/research/wizard.ts", "src/application/organizer/scan.ts", "src/application/organizer/apply.ts",
