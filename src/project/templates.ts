@@ -1,5 +1,6 @@
 import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
 import { defaultHistoricalContext, defaultInventionLedger } from "../domain/historical-fiction.js";
+import type { ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import { defaultQualityProjectState, type QualityProjectState } from "../domain/quality-profile.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProfileId, ProjectType, BookState } from "../domain/schemas.js";
@@ -25,6 +26,7 @@ export interface ProjectTemplateOptions {
   profile: ProfileId;
   targetWords?: number;
   runtimeProfile?: RuntimeProfileId;
+  modelExecutionProfile?: ModelExecutionProfileId;
   quality?: QualityProjectState;
 }
 
@@ -84,17 +86,9 @@ export function bookTemplateFiles(bookId: string, bookNumber: number, profileId:
     [`${base}/continuity-delta.yaml`]: stringifyYaml({ schema_version: "1.0.0", proposed_facts: [], conflicts: [] }),
     [`${base}/revision-tickets.yaml`]: stringifyYaml({ schema_version: "1.0.0", tickets: [] }),
     [`${base}/remarkability.yaml`]: stringifyYaml({
-      schema_version: "1.0.0",
-      safe_obvious_version: "",
-      author_only_advantage: "",
-      productive_discomfort: "",
-      retellable_hook: "",
-      signature_moments: [],
-      productive_disagreements: [],
-      recurring_motifs: [],
-      lingering_question: "",
-      hand_sell_reason: "",
-      accepted_reader_costs: [],
+      schema_version: "1.0.0", safe_obvious_version: "", author_only_advantage: "", productive_discomfort: "",
+      retellable_hook: "", signature_moments: [], productive_disagreements: [], recurring_motifs: [],
+      lingering_question: "", hand_sell_reason: "", accepted_reader_costs: [],
     }),
     [`${base}/reader-experiments.yaml`]: stringifyYaml({ schema_version: "1.0.0", experiments: [] }),
     [`${base}/publishing.yaml`]: stringifyYaml(defaultPublishingMetadata(book, bookNumber)),
@@ -120,24 +114,15 @@ export function projectTemplateFiles(options: ProjectTemplateOptions): Record<st
     current_stage: "voice-intake",
     next_gate: "voice-approval",
     gates: {
-      "voice-approval": "open",
-      "book-plan-approval": "open",
-      "first-chapter-approval": "open",
-      "act-1-review": "open",
-      "midpoint-review": "open",
-      "pre-final-act-review": "open",
-      "manuscript-approval": "open",
-      "package-approval": "open",
+      "voice-approval": "open", "book-plan-approval": "open", "first-chapter-approval": "open",
+      "act-1-review": "open", "midpoint-review": "open", "pre-final-act-review": "open",
+      "manuscript-approval": "open", "package-approval": "open",
     },
     approvals: [],
-    automation: {
-      max_chapters_per_run: 3,
-      require_first_chapter_approval: true,
-      git_checkpoints: true,
-      active_run: null,
-    },
+    automation: { max_chapters_per_run: 3, require_first_chapter_approval: true, git_checkpoints: true, active_run: null },
     runtime: {
       profile: options.runtimeProfile ?? "full",
+      model_execution_profile: options.modelExecutionProfile ?? "host-default",
       telemetry: true,
     },
     quality: structuredClone(options.quality ?? defaultQualityProjectState()),
@@ -178,31 +163,32 @@ Each installment closes its immediate conflict while preserving only earned long
 
 ## Positive voice evidence
 
-## Sentence and paragraph behavior
+## Sentence movement
 
 ## Dialogue behavior
 
-## Emotional restraint and intensity
+## Interior thought
 
-## Productive imperfections to preserve
+## Description
 
-## Not-this-author evidence
+## Humor
 
-## Permissioned lived material
+## Violence
 
-## Approval
+## Romance
 
-status: pending
+## Avoid
 `,
-    "series/intake.yaml": stringifyYaml(defaultIntake()),
-    "series/decision-ledger.yaml": stringifyYaml(defaultDecisionLedger()),
     "series/taste-profile.yaml": stringifyYaml(defaultTasteProfile()),
     "series/voice-guardrails.yaml": stringifyYaml(defaultVoiceGuardrails()),
     "series/voice-experiments/index.yaml": stringifyYaml(defaultVoiceExperimentIndex()),
-    "series/series-arc.yaml": stringifyYaml({ schema_version: "1.0.0", books: [{ id: "book-01", status: "active", role: "establish the series promise", closes: [], carries: [] }], long_arcs: [] }),
+    "series/series-arc.yaml": stringifyYaml({ schema_version: "1.0.0", books: [], long_arcs: [] }),
     "series/canon.yaml": stringifyYaml({ schema_version: "1.0.0", facts: [], relationships: [] }),
     "series/story-threads.yaml": stringifyYaml({ schema_version: "1.0.0", threads: [] }),
-    ...bookTemplateFiles("book-01", 1, options.profile, options.targetWords ?? 100000),
+    "series/intake.yaml": stringifyYaml(defaultIntake()),
+    "series/decision-ledger.yaml": stringifyYaml(defaultDecisionLedger()),
     "research/source-register.yaml": stringifyYaml({ schema_version: "1.0.0", sources: [] }),
+    "delivery/.gitkeep": "",
+    ...bookTemplateFiles("book-01", 1, options.profile, options.targetWords),
   };
 }
