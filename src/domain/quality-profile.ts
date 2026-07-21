@@ -70,6 +70,7 @@ export type QualityCriticLane = "combined" | "continuity" | "voice" | "causality
 
 export interface QualityTierPolicy {
   scenePlan: boolean;
+  /** Routine chapter candidate count. PR C may raise key scenes to `keySceneCandidates`. */
   candidates: number;
   criticLanes: readonly QualityCriticLane[];
   finalReviewer: boolean;
