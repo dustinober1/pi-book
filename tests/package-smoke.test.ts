@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-test("the packed extension imports, registers, and contains the 1.4 release surface", async () => {
+test("the packed extension imports, registers, and contains the 1.7 release surface", async () => {
   const temp = mkdtempSync(join(tmpdir(), "novel-forge-pack-"));
   try {
     const json = execFileSync("npm", ["pack", "--json", "--pack-destination", temp], { cwd: process.cwd() }).toString();
@@ -35,18 +35,21 @@ test("the packed extension imports, registers, and contains the 1.4 release surf
     assert.match(proseOutput, /mechanics\/doubled-word/);
     assert.match(legacyOutput, /^# Novel Forge copy-mechanics audit$/m);
     assert.match(legacyOutput, /mechanics\/doubled-word/);
-    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.6.2");
+    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.7.0");
     for (const asset of [
       "README.md", "SKILL.md", "CHANGELOG.md", "RELEASE.md",
+      "docs/quality-and-cost.md", "docs/grounded-accuracy.md", "docs/releases/v1.7.0.md",
+      "evals/quality/fixtures/thriller-key-scene.yaml", "evals/quality/rubrics/automated-diagnostic.md",
       "wizard/index.html", "wizard/app.js", "wizard/styles.css",
       "src/domain/quality-profile.ts", "src/application/budget-status.ts", "src/application/quality-run.ts",
+      "src/evaluation/quality-eval.ts", "src/evaluation/quality-eval-report.ts", "scripts/evaluate-quality.ts",
       "src/domain/v1-3-schemas.ts", "src/domain/v1-3-research-schemas.ts",
       "src/domain/v1-3-architecture-schemas.ts", "src/domain/v1-3-audit-schemas.ts",
       "src/application/research/wizard.ts", "src/application/organizer/scan.ts", "src/application/organizer/apply.ts",
       "src/infrastructure/organization-transaction.ts", "src/evaluation/v1-3-release.ts", "src/evaluation/v1-3-journey.ts",
     ]) assert.equal(existsSync(resolve(packageRoot, asset)), true, asset);
     assert.equal(packedPaths.some((path) => path.startsWith("tests/")), false);
-    assert.equal(packedPaths.some((path) => path.startsWith("evals/")), false);
+    assert.equal(packedPaths.some((path) => path.startsWith("evals/quality/runs/")), false);
     assert.equal(packedPaths.some((path) => path.startsWith(".github/")), false);
     assert.equal(packedPaths.some((path) => /phase7|diagnostic|\.tgz$/i.test(path)), false);
   } finally {
