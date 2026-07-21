@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { ForegroundEconomyTelemetry } from "../src/application/foreground-economy-telemetry.js";
 import { readBudgetLedger } from "../src/infrastructure/budget-ledger-store.js";
@@ -78,13 +78,31 @@ test("context usage supplies a marked estimate when provider usage is incomplete
   }
 });
 
-test("telemetry opt-out and cancellation do not record model calls", () => {
+test("telemetry opt-out still settles the budget ledger without creating a run report", () => {
   const project = createDraftableQualityProject("economy");
   try {
     const tracker = new ForegroundEconomyTelemetry({ runId: () => "ECO-OFF" });
-    assert.equal(tracker.begin({ root: project.root, chapter: 1, runtimeProfile: "full", telemetryEnabled: false }), null);
+    assert.equal(tracker.begin({ root: project.root, chapter: 1, runtimeProfile: "full", telemetryEnabled: false }), "ECO-OFF");
     tracker.complete(assistant(), { tokens: 100, contextWindow: 1_000, percent: 10 });
     assert.equal(tracker.active, false);
+    assert.equal(existsSync(join(project.root, ".pi-book", "runs", "ECO-OFF", "run-report.json")), false);
+    const ledger = readBudgetLedger(project.root);
+    assert.equal(ledger.reservations.length, 0);
+    assert.equal(ledger.settledCalls.length, 1);
+  } finally {
+    rmSync(project.parent, { recursive: true, force: true });
+  }
+});
+
+test("cancelling a foreground turn releases its economy reservation", () => {
+  const project = createDraftableQualityProject("economy");
+  try {
+    const tracker = new ForegroundEconomyTelemetry({ runId: () => "ECO-CANCEL" });
+    tracker.begin({ root: project.root, chapter: 1, runtimeProfile: "full" });
+    assert.equal(readBudgetLedger(project.root).reservations.length, 1);
+    tracker.cancel();
+    assert.equal(tracker.active, false);
+    assert.equal(readBudgetLedger(project.root).reservations.length, 0);
   } finally {
     rmSync(project.parent, { recursive: true, force: true });
   }
