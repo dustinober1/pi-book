@@ -51,7 +51,7 @@ function piUsage(message: UnknownRecord): UnknownRecord {
     ...(totalInput !== undefined ? { inputTokens: totalInput } : {}),
     ...(cacheRead !== undefined ? { cachedInputTokens: cacheRead } : {}),
     ...(output !== undefined ? { outputTokens: output } : {}),
-    ...(reasoning !== undefined ? { reasoningTokens } : {}),
+    ...(reasoning !== undefined ? { reasoningTokens: reasoning } : {}),
     ...(finiteNonnegative(cost.total) !== undefined ? { costUsd: finiteNonnegative(cost.total) } : {}),
     ...(typeof message.provider === "string" ? { provider: message.provider } : {}),
     ...(typeof message.model === "string" ? { model: message.model } : {}),
