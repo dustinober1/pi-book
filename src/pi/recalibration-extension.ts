@@ -1,7 +1,13 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { requireProjectRoot } from "../project/store.js";
+import { runQualityDraft } from "../application/quality-orchestrator.js";
 import { runExplicitVoiceRecalibration } from "../application/recalibration.js";
+import { qualityStateWithOverride, resolveQualityConfig } from "../domain/quality-profile.js";
+import type { QualityWorker } from "../domain/quality-worker.js";
+import { readProject, requireProjectRoot } from "../project/store.js";
+import { resolveRuntimeProfile } from "../application/runtime-profile-resolver.js";
+import { parseDraftOptions } from "./arguments.js";
 import { registerNovelForge } from "./extension.js";
+import { PiPrintWorker } from "./pi-print-worker.js";
 
 type CommandDefinition = Parameters<ExtensionAPI["registerCommand"]>[1];
 
@@ -12,6 +18,10 @@ interface ReviewCommandDefinition {
   getArgumentCompletions?: (prefix: string) => Completion[] | null;
   handler: (args: string, context: ExtensionCommandContext) => Promise<void> | void;
   [key: string]: unknown;
+}
+
+export interface NovelForgeExtensionOptions {
+  createQualityWorker?: (root: string) => QualityWorker;
 }
 
 function errorText(error: unknown): string {
@@ -49,13 +59,57 @@ function withRecalibration(definition: CommandDefinition): CommandDefinition {
   return decorated as unknown as CommandDefinition;
 }
 
-export function registerNovelForgeWithRecalibration(pi: ExtensionAPI): void {
+function withQualityDraft(definition: CommandDefinition, options: NovelForgeExtensionOptions): CommandDefinition {
+  const original = definition as unknown as ReviewCommandDefinition;
+  const decorated: ReviewCommandDefinition = {
+    ...original,
+    description: "Draft the next approved chapter with economy or isolated higher-quality passes",
+    async handler(args: string, context: ExtensionCommandContext): Promise<void> {
+      try {
+        const root = requireProjectRoot(context.cwd);
+        const draft = parseDraftOptions(args);
+        const project = readProject(root);
+        const qualityState = qualityStateWithOverride(project.quality, draft.quality);
+        const quality = resolveQualityConfig(qualityState);
+        if (quality.tier === "economy") {
+          await original.handler(args, context);
+          return;
+        }
+        const runtime = resolveRuntimeProfile({ project: project.runtime?.profile });
+        const worker = options.createQualityWorker?.(root) ?? new PiPrintWorker({ cwd: root });
+        const provider = process.env.NOVEL_FORGE_QUALITY_PROVIDER?.trim();
+        const model = process.env.NOVEL_FORGE_QUALITY_MODEL?.trim();
+        const result = await runQualityDraft({
+          root,
+          ...(draft.chapter !== undefined ? { chapter: draft.chapter } : {}),
+          runtimeProfile: runtime,
+          qualityConfig: quality,
+          worker,
+          ...(provider ? { provider } : {}),
+          ...(model ? { model } : {}),
+          onProgress(name) { context.ui.notify(`Quality pass: ${name}`, "info"); },
+        });
+        context.ui.notify(`${result.tier} quality draft complete for Chapter ${result.chapter}. ${result.calls.length} isolated model call(s); ${result.changed.length} canonical file(s) changed.`, "info");
+      } catch (error) {
+        context.ui.notify(errorText(error), "warning");
+      }
+    },
+  };
+  return decorated as unknown as CommandDefinition;
+}
+
+export function registerNovelForgeWithRecalibration(pi: ExtensionAPI, options: NovelForgeExtensionOptions = {}): void {
   const registerCommand = pi.registerCommand.bind(pi);
   const proxy = new Proxy(pi as object, {
     get(target, property, receiver) {
       if (property === "registerCommand") {
         return (name: string, definition: CommandDefinition): void => {
-          registerCommand(name, name === "novel-review" ? withRecalibration(definition) : definition);
+          const decorated = name === "novel-review"
+            ? withRecalibration(definition)
+            : name === "novel-draft"
+              ? withQualityDraft(definition, options)
+              : definition;
+          registerCommand(name, decorated);
         };
       }
       const value = Reflect.get(target, property, receiver);
