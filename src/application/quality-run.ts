@@ -1,10 +1,7 @@
 import type { QualityProjectState, QualityRunOverride, QualityTierId } from "../domain/quality-profile.js";
 import { qualityStateWithOverride, resolveQualityConfig } from "../domain/quality-profile.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
-import { stringifyYaml } from "../infrastructure/yaml.js";
 import { readProject } from "../project/store.js";
-import { applyGuidedProjectEvent } from "./handoff.js";
-import { recordPreparedPersistentRun } from "./persistent-run-telemetry.js";
 import {
   beginPersistentRun,
   cancelPersistentRun,
@@ -57,33 +54,10 @@ export function beginQualityPersistentRun(root: string, options: BeginQualityPer
   const decision = beginPersistentRun(root, {
     target: options.target,
     maxChapters: options.maxChapters,
+    qualitySnapshot: quality,
     ...(options.runtimeProfile ? { runtimeProfile: options.runtimeProfile } : {}),
     ...(options.now ? { now: options.now } : {}),
   });
-  if (decision.prompt) {
-    const project = structuredClone(readProject(root));
-    if (project.automation.active_run) {
-      project.automation.active_run.quality_snapshot = structuredClone(quality);
-      applyGuidedProjectEvent(
-        root,
-        [{ path: "PROJECT.yaml", content: stringifyYaml(project) }],
-        `Novel Forge: snapshot quality for ${project.automation.active_run.id}`,
-        { lastAction: `Snapshotted quality policy for ${project.automation.active_run.id}` },
-      );
-      const stored = readProject(root);
-      const run = stored.automation.active_run;
-      if (run) {
-        recordPreparedPersistentRun(root, {
-          telemetryEnabled: stored.runtime?.telemetry,
-          runId: run.id,
-          runtimeProfile: run.runtimeProfile ?? "full",
-          qualityTier: resolveQualityConfig(quality).tier,
-          promptChars: decision.prompt.length,
-          projectHashBefore: run.lastProjectHash,
-        });
-      }
-    }
-  }
   return decisionWithQuality(decision, quality);
 }
 
