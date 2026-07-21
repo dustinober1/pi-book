@@ -11,9 +11,9 @@ test("Pi adapter exposes the guided shell, browser wizard, power-user commands, 
     sendUserMessage() {},
   };
   registerNovelForge(pi as never);
-  const normal = ["novel", "novel-wizard", "novel-start", "novel-status", "novel-plan", "novel-run", "novel-draft", "novel-review", "novel-readers", "novel-revise", "novel-package", "novel-adopt", "novel-organize"];
+  const normal = ["novel", "novel-wizard", "novel-start", "novel-status", "novel-budget", "novel-plan", "novel-run", "novel-draft", "novel-review", "novel-readers", "novel-revise", "novel-package", "novel-adopt", "novel-organize"];
   assert.deepEqual([...commands.keys()].filter((name) => name !== "novel-migrate"), normal);
   assert.ok(commands.has("novel-migrate"));
   assert.ok(tools.has("novel_apply_event"));
-  assert.equal(commands.size, 14);
+  assert.equal(commands.size, 15);
 });
