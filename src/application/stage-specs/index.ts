@@ -247,7 +247,6 @@ export interface DraftStageInput {
   root: string;
   bookId: string;
   chapter: number;
-  contextText: string;
   estimatedTokens: number;
   excluded: readonly string[];
   projectHash: string;
@@ -258,7 +257,7 @@ export function draftStageSpec(input: DraftStageInput): StageSpec {
     id: "draft-chapter",
     role: "the approved novel's chapter drafter",
     objective: `Draft exactly Chapter ${input.chapter} for ${input.bookId}.`,
-    inputs: [input.contextText, `Context: ~${input.estimatedTokens} tokens; excluded: ${input.excluded.join(", ")}.`],
+    inputs: [`Context: ~${input.estimatedTokens} tokens; excluded: ${input.excluded.join(", ")}.`],
     must: ["Make prose specific to the approved voice, characters, pressure, omissions, scene, and compact remarkability contract.", "Include the complete chapter Markdown plus any justified continuity, story-thread, or ticket deltas."],
     avoid: ["Do not chase AI-detector patterns.", "Do not mechanically restate the hook.", "Do not manufacture quotable lines.", "Do not pad to target length.", "Do not turn audit metrics into prose quotas.", "Do not submit PROJECT.yaml, BOOK.yaml, STATUS.md, or HANDOFF.md; they are derived."],
     outputs: [`Chapter ${input.chapter} Markdown`, "only justified continuity, story-thread, or ticket deltas"],
