@@ -1,5 +1,6 @@
+import type { QualityTierId } from "../domain/quality-profile.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
-import type { RunMetric, RunReport, RunValidationFailure } from "../domain/run-report.js";
+import type { RunMetric, RunReportV1, RunReportV2, RunValidationFailure } from "../domain/run-report.js";
 
 export interface CreateRunReportInput {
   runId: string;
@@ -13,6 +14,14 @@ export interface CreateRunReportInput {
   repairAttempts: number;
   validationFailures: RunValidationFailure[];
   metrics: RunMetric[];
+  projectHashBefore: string;
+  projectHashAfter?: string;
+}
+
+export interface CreateRunReportHeaderInput {
+  runId: string;
+  runtimeProfile: RuntimeProfileId;
+  qualityTier: QualityTierId;
   projectHashBefore: string;
   projectHashAfter?: string;
 }
@@ -41,11 +50,11 @@ export function resolveTelemetryEnabled(input: TelemetryPreferenceInput): boolea
   return input.explicit ?? input.project ?? true;
 }
 
-export function createRunReport(input: CreateRunReportInput): RunReport {
+export function createRunReport(input: CreateRunReportInput): RunReportV1 {
   const runId = nonblank(input.runId, "Run ID");
   const promptChars = nonnegativeInteger(input.promptChars, "Prompt characters");
   const contextChars = nonnegativeInteger(input.contextChars, "Context characters");
-  const report: RunReport = {
+  return {
     schemaVersion: "1.0.0",
     runId,
     runtimeProfile: input.runtimeProfile,
@@ -70,5 +79,26 @@ export function createRunReport(input: CreateRunReportInput): RunReport {
     projectHashBefore: nonblank(input.projectHashBefore, "Project hash before"),
     ...(input.projectHashAfter ? { projectHashAfter: nonblank(input.projectHashAfter, "Project hash after") } : {}),
   };
-  return report;
+}
+
+export function createRunReportHeader(input: CreateRunReportHeaderInput): RunReportV2 {
+  return {
+    schemaVersion: "2.0.0",
+    runId: nonblank(input.runId, "Run ID"),
+    runtimeProfile: input.runtimeProfile,
+    qualityTier: input.qualityTier,
+    modelCalls: [],
+    totals: {
+      inputTokens: 0,
+      cachedInputTokens: 0,
+      outputTokens: 0,
+      reasoningTokens: 0,
+      totalTokens: 0,
+      costUsd: 0,
+      estimatedCalls: 0,
+    },
+    budgetEvents: [],
+    projectHashBefore: nonblank(input.projectHashBefore, "Project hash before"),
+    ...(input.projectHashAfter ? { projectHashAfter: nonblank(input.projectHashAfter, "Project hash after") } : {}),
+  };
 }
