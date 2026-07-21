@@ -8,7 +8,7 @@ import { getProjectStatus } from "./status.js";
 
 export type GuideActionId =
   | "continue" | "approve" | "request-changes" | "view-evidence" | "repair"
-  | "status" | "readers" | "research" | "premise" | "resume-run" | "pause-run" | "cancel-run"
+  | "status" | "budget" | "readers" | "research" | "premise" | "resume-run" | "pause-run" | "cancel-run"
   | "adopt" | "add-book" | "advanced";
 
 export interface GuideAction {
@@ -48,6 +48,14 @@ function readerStage(stage: Stage): boolean {
   return ["drafting", "act-review", "revision", "manuscript-review", "packaging"].includes(stage);
 }
 
+function sharedUtilityActions(): GuideAction[] {
+  return [
+    action("budget", "View quality budget", "Show the configured quality tier, spending ceilings, and locally recorded usage."),
+    action("status", "View full status", "Show blockers, warnings, and progress."),
+    action("advanced", "Advanced options", "Recovery, browser workflows, metadata, and integrity tools."),
+  ];
+}
+
 export function buildGuideScreen(root: string): GuideScreen {
   const project = readProject(root) as ProjectStateV14;
   const book = readBook(root);
@@ -67,8 +75,7 @@ export function buildGuideScreen(root: string): GuideScreen {
         approve,
         action("request-changes", "Request changes", `Reject the current ${detail.title.toLowerCase()} evidence and record a repair note.`, "danger"),
         action("view-evidence", "View evidence files", "Show the exact files covered by this gate."),
-        action("status", "View full status", "Show blockers, warnings, and progress."),
-        action("advanced", "Advanced options", "Recovery, browser workflows, metadata, and integrity tools."),
+        ...sharedUtilityActions(),
       ],
     };
   }
@@ -84,8 +91,7 @@ export function buildGuideScreen(root: string): GuideScreen {
       actions: [
         repair,
         action("view-evidence", "View evidence files", "Show the files that must be repaired."),
-        action("status", "View full status", "Show blockers, warnings, and progress."),
-        action("advanced", "Advanced options", "Recovery, browser workflows, metadata, and integrity tools."),
+        ...sharedUtilityActions(),
       ],
     };
   }
@@ -107,15 +113,14 @@ export function buildGuideScreen(root: string): GuideScreen {
 
   const run = project.automation.active_run;
   if (run?.status === "active") {
-    actions.push(action("pause-run", `Pause ${run.id}`, `Pause the persistent run before its next guarded event.`));
+    actions.push(action("pause-run", `Pause ${run.id}`, "Pause the persistent run before its next guarded event."));
     actions.push(action("cancel-run", `Cancel ${run.id}`, "Cancel the persistent run without changing completed creative work.", "danger"));
   } else if (run?.status === "paused") {
     actions.push(action("resume-run", `Resume ${run.id}`, `Resume from ${run.currentAction} after checking stage and creative-state hash.`));
     actions.push(action("cancel-run", `Cancel ${run.id}`, "Cancel the paused run without changing completed creative work.", "danger"));
   }
 
-  actions.push(action("status", "View full status", "Show blockers, warnings, and progress."));
-  actions.push(action("advanced", "Advanced options", "Recovery, browser workflows, metadata, and integrity tools."));
+  actions.push(...sharedUtilityActions());
 
   return {
     title: `${book.title || project.project_name} — ${stageTitles[project.current_stage]}`,
