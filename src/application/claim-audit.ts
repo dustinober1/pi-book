@@ -1,4 +1,4 @@
-import type { FactCheckingPolicy } from "../domain/quality-profile.js";
+import type { FactCheckingPolicy, QualityTierId } from "../domain/quality-profile.js";
 import type { ClaimAuditFinding, ProposedClaim } from "../domain/claim-audit.js";
 import type { InventionLedger } from "../domain/historical-fiction.js";
 import type { ResearchLedgerWithAnchors } from "../domain/research-evidence-anchors.js";
@@ -23,6 +23,18 @@ export interface ClaimAuditDecision {
   blockers: ClaimAuditFinding[];
   repairs: ClaimAuditFinding[];
   accepted: ClaimAuditFinding[];
+}
+
+export function shouldRunClaimAudit(input: {
+  tier: QualityTierId;
+  factChecking: FactCheckingPolicy;
+  riskLevel: "low" | "medium" | "high";
+  historical: boolean;
+}): boolean {
+  if (input.factChecking === "off" || input.tier === "economy") return false;
+  if (input.factChecking === "always" || input.tier === "editorial") return true;
+  if (input.tier === "balanced") return input.historical || input.riskLevel === "high";
+  return input.riskLevel === "medium" || input.riskLevel === "high";
 }
 
 export function claimTextHash(chapterText: string, lineStart: number, lineEnd: number): string {
