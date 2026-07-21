@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import type { ModelBudgetEnvelope } from "./model-budget.js";
 
 export const RuntimeProfileIdSchema = Type.Union([
   Type.Literal("tiny-local"),
@@ -13,6 +14,7 @@ export interface RuntimeProfile {
   id: RuntimeProfileId;
   maxContextChars: number;
   maxPromptChars: number;
+  modelBudget: ModelBudgetEnvelope;
   graphDepth: 1 | 2;
   promptStyle: PromptStyle;
   maxArtifactsPerStage: number | null;
@@ -30,6 +32,12 @@ export const RUNTIME_PROFILES: Readonly<Record<RuntimeProfileId, RuntimeProfile>
     id: "tiny-local",
     maxContextChars: 12_000,
     maxPromptChars: 6_000,
+    modelBudget: Object.freeze({
+      maxInstructionChars: 6_000,
+      maxEvidenceChars: 12_000,
+      reservedOutputTokens: 2_000,
+      safetyMarginTokens: 500,
+    }),
     graphDepth: 1,
     promptStyle: "compact",
     maxArtifactsPerStage: 1,
@@ -43,6 +51,12 @@ export const RUNTIME_PROFILES: Readonly<Record<RuntimeProfileId, RuntimeProfile>
     id: "local",
     maxContextChars: 24_000,
     maxPromptChars: 10_000,
+    modelBudget: Object.freeze({
+      maxInstructionChars: 10_000,
+      maxEvidenceChars: 24_000,
+      reservedOutputTokens: 4_000,
+      safetyMarginTokens: 1_000,
+    }),
     graphDepth: 2,
     promptStyle: "compact",
     maxArtifactsPerStage: 2,
@@ -56,6 +70,12 @@ export const RUNTIME_PROFILES: Readonly<Record<RuntimeProfileId, RuntimeProfile>
     id: "full",
     maxContextChars: 72_000,
     maxPromptChars: 24_000,
+    modelBudget: Object.freeze({
+      maxInstructionChars: 24_000,
+      maxEvidenceChars: 72_000,
+      reservedOutputTokens: 8_000,
+      safetyMarginTokens: 2_000,
+    }),
     graphDepth: 2,
     promptStyle: "standard",
     maxArtifactsPerStage: null,
