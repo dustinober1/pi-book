@@ -27,6 +27,7 @@ if (stdin.includes("NONZERO_EXIT")) {
   process.exit(7);
 }
 if (stdin.includes("WAIT_FOREVER")) {
+  setInterval(() => {}, 1_000);
   await new Promise(() => {});
 }
 if (stdin.includes("MISSING_FINAL")) {
