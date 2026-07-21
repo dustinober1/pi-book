@@ -3,6 +3,7 @@ import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import { transactBudgetLedger } from "../infrastructure/budget-ledger-store.js";
 import { appendModelCallReport, storeRunReport } from "../infrastructure/run-report-store.js";
 import { recordSettledBudgetCall } from "./budget-ledger.js";
+import { projectStateHash } from "./events.js";
 import { normalizeModelUsage } from "./model-usage.js";
 import { createRunReportHeader } from "./run-telemetry.js";
 
@@ -42,7 +43,10 @@ function assistantText(messageValue: unknown): string {
     .join("");
 }
 
-function usagePayload(messageValue: unknown, contextTokens: number | null | undefined): Record<string, unknown> {
+function usagePayload(messageValue: unknown, contextTokens: number | null | undefined): {
+  payload: Record<string, unknown>;
+  usedContextEstimate: boolean;
+} {
   const message = record(messageValue);
   const usage = record(message.usage);
   const input = finite(usage.input);
@@ -54,15 +58,19 @@ function usagePayload(messageValue: unknown, contextTokens: number | null | unde
   const knownInput = input === undefined && cacheRead === undefined && cacheWrite === undefined
     ? undefined
     : (input ?? 0) + (cacheRead ?? 0) + (cacheWrite ?? 0);
+  const contextEstimate = knownInput === undefined && contextTokens !== null && contextTokens !== undefined ? contextTokens : undefined;
   return {
-    ...(knownInput !== undefined ? { inputTokens: knownInput } : contextTokens !== null && contextTokens !== undefined ? { inputTokens: contextTokens } : {}),
-    ...(cacheRead !== undefined ? { cachedInputTokens: cacheRead } : {}),
-    ...(output !== undefined ? { outputTokens: output } : {}),
-    ...(reasoning !== undefined ? { reasoningTokens: reasoning } : {}),
-    ...(finite(cost.total) !== undefined ? { costUsd: finite(cost.total) } : {}),
-    ...(typeof message.provider === "string" ? { provider: message.provider } : {}),
-    ...(typeof message.model === "string" ? { model: message.model } : {}),
-    ...(typeof message.stopReason === "string" ? { finishReason: message.stopReason } : {}),
+    payload: {
+      ...(knownInput !== undefined ? { inputTokens: knownInput } : contextEstimate !== undefined ? { inputTokens: contextEstimate } : {}),
+      ...(cacheRead !== undefined ? { cachedInputTokens: cacheRead } : {}),
+      ...(output !== undefined ? { outputTokens: output } : {}),
+      ...(reasoning !== undefined ? { reasoningTokens: reasoning } : {}),
+      ...(finite(cost.total) !== undefined ? { costUsd: finite(cost.total) } : {}),
+      ...(typeof message.provider === "string" ? { provider: message.provider } : {}),
+      ...(typeof message.model === "string" ? { model: message.model } : {}),
+      ...(typeof message.stopReason === "string" ? { finishReason: message.stopReason } : {}),
+    },
+    usedContextEstimate: contextEstimate !== undefined,
   };
 }
 
@@ -97,7 +105,7 @@ export class ForegroundEconomyTelemetry {
       runId,
       runtimeProfile: input.runtimeProfile,
       qualityTier: "economy",
-      projectHashBefore: "foreground-economy",
+      projectHashBefore: projectStateHash(input.root),
     }));
     if (!stored.ok) throw new Error(stored.message);
     this.#pending = {
@@ -136,7 +144,8 @@ export class ForegroundEconomyTelemetry {
     const output = assistantText(message);
     if (!output) return;
     const messageRecord = record(message);
-    const usage = normalizeModelUsage(usagePayload(message, contextUsage?.tokens), {
+    const raw = usagePayload(message, contextUsage?.tokens);
+    const normalized = normalizeModelUsage(raw.payload, {
       callId: pending.callId,
       stage: "drafting",
       chapter: pending.chapter,
@@ -149,6 +158,7 @@ export class ForegroundEconomyTelemetry {
       ...(pending.model ? { model: pending.model } : {}),
       ...(typeof messageRecord.stopReason === "string" ? { finishReason: messageRecord.stopReason } : {}),
     });
+    const usage = raw.usedContextEstimate ? { ...normalized, estimated: true } : normalized;
     const appended = appendModelCallReport(pending.root, pending.runId, usage);
     if (!appended.ok) return;
     transactBudgetLedger(pending.root, (ledger) => ({
