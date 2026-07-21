@@ -1,16 +1,17 @@
-import type { QualityWorker } from "../domain/quality-worker.js";
+import type { QualityTierId } from "../domain/quality-profile.js";
 import { resolveQualityConfig } from "../domain/quality-profile.js";
+import type { QualityWorker } from "../domain/quality-worker.js";
 import { stringifyYaml } from "../infrastructure/yaml.js";
 import { readProject } from "../project/store.js";
-import { applyGuidedProjectEvent } from "./handoff.js";
 import { completeAutomationEvent } from "./automation-run.js";
-import { creativeProjectStateHash } from "./project-hash.js";
 import {
   QualityBudgetDowngradeError,
   QualityBudgetStopError,
   runBudgetedQualityDraft,
 } from "./budgeted-quality-draft.js";
+import { applyGuidedProjectEvent } from "./handoff.js";
 import type { RunQualityDraftResult } from "./quality-orchestrator.js";
+import { creativeProjectStateHash } from "./project-hash.js";
 
 export interface RunPersistentQualityDraftInput {
   root: string;
@@ -28,7 +29,7 @@ export interface PersistentQualityDraftResult {
   chapters: RunQualityDraftResult[];
   status: "paused" | "stopped" | "completed";
   stopReason: string;
-  downgradedTo?: "economy" | "balanced" | "premium";
+  downgradedTo?: QualityTierId;
 }
 
 function timestamp(input: RunPersistentQualityDraftInput): string {
@@ -52,7 +53,7 @@ function stopForCurrentState(project: ReturnType<typeof readProject>): string | 
 
 function updateAfterChapter(root: string, runId: string, result: RunQualityDraftResult, finalIteration: boolean, now: string): ReturnType<typeof readProject> {
   const current = readProject(root);
-  let updated = completeAutomationEvent(
+  const updated = completeAutomationEvent(
     current,
     `draft-chapter:${result.chapter}`,
     current.current_stage,
@@ -103,10 +104,7 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
   if (!initialRun.quality_snapshot) throw new Error(`Automation run ${initialRun.id} has no quality snapshot.`);
   const quality = resolveQualityConfig(initialRun.quality_snapshot);
   if (quality.tier === "economy") throw new Error("Economy persistent drafting must use the existing host prompt workflow.");
-  const limit = Math.min(
-    initialRun.requestedMaxChapters,
-    input.maxChapters ?? initialRun.requestedMaxChapters,
-  );
+  const limit = Math.min(initialRun.requestedMaxChapters, input.maxChapters ?? initialRun.requestedMaxChapters);
   if (!Number.isInteger(limit) || limit < 1) throw new Error("Persistent quality chapter limit must be positive.");
 
   const chapters: RunQualityDraftResult[] = [];
@@ -120,6 +118,8 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
       status: run.status === "completed" ? "completed" : "stopped",
       stopReason: run.stopReason ?? run.status,
     };
+    const snapshot = run.quality_snapshot;
+    if (!snapshot) throw new Error(`Automation run ${run.id} has no quality snapshot after reload.`);
     const stateStop = stopForCurrentState(current);
     if (stateStop) {
       const updated = structuredClone(current);
@@ -131,12 +131,12 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
     }
 
     input.onProgress?.(`persistent chapter ${index + 1}`);
-    const childRunId = `${run.id}-CH-${String(index + run.completedEventKeys.length + 1).padStart(3, "0")}`;
+    const childRunId = `${run.id}-CH-${String(run.completedEventKeys.length + 1).padStart(3, "0")}`;
     try {
       const result = await runBudgetedQualityDraft({
         root: input.root,
         runtimeProfile: run.runtimeProfile ?? current.runtime?.profile ?? "full",
-        qualityConfig: run.quality_snapshot,
+        qualityConfig: snapshot,
         worker: input.worker,
         runId: childRunId,
         cacheRetention: "delete-on-success",
