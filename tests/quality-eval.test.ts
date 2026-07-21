@@ -56,12 +56,15 @@ test("evaluation produces sealed matched samples and cost aggregates", async () 
       generator: new FakeGenerator(),
       outputRoot: parent,
     });
+    const economy = result.report.totals.economy;
+    const premium = result.report.totals.premium;
+    assert.ok(economy && premium);
     assert.equal(result.report.samples.length, 3);
     assert.equal(new Set(result.report.samples.map((sample) => sample.model)).size, 1);
-    assert.equal(result.report.totals.economy.totalTokens, 150);
-    assert.equal(result.report.totals.premium.totalTokens, 450);
-    assert.equal(result.report.totals.premium.severeFailureRate, 0);
-    assert.equal(result.report.totals.economy.severeFailureRate, 1);
+    assert.equal(economy.totalTokens, 150);
+    assert.equal(premium.totalTokens, 450);
+    assert.equal(premium.severeFailureRate, 0);
+    assert.equal(economy.severeFailureRate, 1);
     assert.equal(result.reviewKit.samples.length, 3);
     assert.equal(result.reviewKit.samples.some((sample) => /economy|balanced|premium|same-model/i.test(sample.markdown)), false);
     assert.deepEqual(result.reviewKit.samples.map((sample) => sample.sampleId), result.reviewKit.answerSheet.map((row) => row.sample_id));
