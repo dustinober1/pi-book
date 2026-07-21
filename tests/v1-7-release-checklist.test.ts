@@ -19,6 +19,12 @@ const required = [
   "docs/releases/v1.7.0.md",
 ];
 
+const packagedQualityAssets = [
+  "evals/quality/README.md",
+  "evals/quality/fixtures/",
+  "evals/quality/rubrics/",
+];
+
 test("Novel Forge 1.7 release assets exist and package metadata is aligned", () => {
   for (const path of required) assert.equal(existsSync(join(root, path)), true, `missing ${path}`);
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { version: string; scripts: Record<string, string>; files: string[] };
@@ -26,7 +32,8 @@ test("Novel Forge 1.7 release assets exist and package metadata is aligned", () 
   assert.match(pkg.scripts["eval:quality"] ?? "", /evaluate-quality/);
   assert.match(pkg.scripts["verify:release"] ?? "", /verify-v1-7-release/);
   assert.match(pkg.scripts["test:release"] ?? "", /v1-7-release-checklist/);
-  assert.ok(pkg.files.includes("evals/quality/"));
+  for (const path of packagedQualityAssets) assert.ok(pkg.files.includes(path), path);
+  assert.equal(pkg.files.includes("evals/quality/"), false);
   assert.ok(pkg.files.includes("docs/"));
 });
 
