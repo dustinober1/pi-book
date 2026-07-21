@@ -47,6 +47,22 @@ function nonnegativeInteger(value: number, label: string): number {
   return value;
 }
 
+export function paragraphContextRecords(prefix: string, text: string, priorityBase: number): ContextRecord[] {
+  const normalizedPrefix = prefix.trim();
+  if (!normalizedPrefix) throw new Error("Paragraph context prefix must be nonblank.");
+  if (!Number.isFinite(priorityBase)) throw new Error("Paragraph context priority base must be finite.");
+  return text
+    .split(/\n\s*\n/u)
+    .map((body) => body.trim())
+    .filter(Boolean)
+    .map((body, index) => ({
+      id: `${normalizedPrefix}:paragraph:${String(index + 1).padStart(4, "0")}`,
+      body,
+      required: false,
+      priority: priorityBase + index + 1,
+    }));
+}
+
 function recordText(record: ContextRecord): string {
   return `### ${record.id}\n\n${record.body}\n`;
 }
