@@ -56,18 +56,22 @@ export function readStoredStoryRecordIndex(root: string): {
   const paths = storyRecordIndexPaths(root);
   if (!existsSync(paths.indexPath) || !existsSync(paths.manifestPath)) return null;
   let manifestValue: unknown;
-  let records: StoryRecordIndexRecord[];
+  let recordValues: unknown[];
   let indexText: string;
   try {
     indexText = readFileSync(paths.indexPath, "utf8");
     manifestValue = JSON.parse(readFileSync(paths.manifestPath, "utf8")) as unknown;
-    records = indexText.trim()
-      ? indexText.trimEnd().split("\n").map((line) => JSON.parse(line) as StoryRecordIndexRecord)
+    recordValues = indexText.trim()
+      ? indexText.trimEnd().split("\n").map((line) => JSON.parse(line) as unknown)
       : [];
   } catch (error) {
     throw new Error("Unable to read story record index.", { cause: error });
   }
   if (!Value.Check(StoryRecordIndexManifestSchema, manifestValue)) throw new Error("Stored story record index manifest is invalid.");
-  for (const record of records) if (!Value.Check(StoryRecordIndexRecordSchema, record)) throw new Error(`Stored story record ${record.id ?? "unknown"} is invalid.`);
-  return { indexText, manifest: manifestValue as StoryRecordIndexManifest, records };
+  for (const value of recordValues) if (!Value.Check(StoryRecordIndexRecordSchema, value)) throw new Error("Stored story record index contains an invalid record.");
+  return {
+    indexText,
+    manifest: manifestValue as StoryRecordIndexManifest,
+    records: recordValues as StoryRecordIndexRecord[],
+  };
 }
