@@ -1,14 +1,10 @@
-import type { ProfileId, ProjectType, BookState } from "../domain/schemas.js";
-import type { RuntimeProfileId } from "../domain/runtime-profile.js";
-import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
-import { stringifyYaml } from "../infrastructure/yaml.js";
-import { thrillerEvidenceTemplate } from "../domain/thriller-evidence.js";
-import { getProfile } from "../profiles/index.js";
 import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
+import { defaultHistoricalContext, defaultInventionLedger } from "../domain/historical-fiction.js";
+import { defaultQualityProjectState, type QualityProjectState } from "../domain/quality-profile.js";
+import type { RuntimeProfileId } from "../domain/runtime-profile.js";
+import type { ProfileId, ProjectType, BookState } from "../domain/schemas.js";
 import { defaultMarketingMetadata, defaultPublishingMetadata } from "../domain/v1-2-schemas.js";
 import { defaultPhase4StressTest } from "../domain/v1-3-architecture-schemas.js";
-import { defaultDecisionLedger, defaultIntake, defaultPremiseLab } from "../domain/v1-4-schemas.js";
-import { defaultHistoricalContext, defaultInventionLedger } from "../domain/historical-fiction.js";
 import {
   defaultBookStrategy,
   defaultResearchLedger,
@@ -17,6 +13,11 @@ import {
   defaultVoiceExperimentIndex,
   defaultVoiceGuardrails,
 } from "../domain/v1-3-schemas.js";
+import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
+import { defaultDecisionLedger, defaultIntake, defaultPremiseLab } from "../domain/v1-4-schemas.js";
+import { thrillerEvidenceTemplate } from "../domain/thriller-evidence.js";
+import { stringifyYaml } from "../infrastructure/yaml.js";
+import { getProfile } from "../profiles/index.js";
 
 export interface ProjectTemplateOptions {
   projectName: string;
@@ -24,6 +25,7 @@ export interface ProjectTemplateOptions {
   profile: ProfileId;
   targetWords?: number;
   runtimeProfile?: RuntimeProfileId;
+  quality?: QualityProjectState;
 }
 
 export function bookTemplateFiles(bookId: string, bookNumber: number, profileId: ProfileId, targetWords = 100000): Record<string, string> {
@@ -138,6 +140,7 @@ export function projectTemplateFiles(options: ProjectTemplateOptions): Record<st
       profile: options.runtimeProfile ?? "full",
       telemetry: true,
     },
+    quality: structuredClone(options.quality ?? defaultQualityProjectState()),
     migration_history: [],
   };
   return {
