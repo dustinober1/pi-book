@@ -99,7 +99,7 @@ export function extractVoiceMetrics(text: string): VoiceMetrics {
     interiority_rate_per_1000: termRate(tokens, INTERIORITY),
     sentence_length_variance: round4(variance),
     telling_emotion_rate_per_1000: termRate(tokens, new Set(["angry", "sad", "happy", "afraid", "scared", "furious", "terrified", "joyful", "depressed", "nervous"])),
-    ai_transition_rate_per_1000: termRate(tokens, new Set(["delving", "furthermore", "tapestry", "symphony"])),
+    ai_transition_rate_per_1000: round4(tokens.length ? ((normalized.match(/\b(?:it(?:'s| is) important to note|in conclusion|as a reminder|delving into|furthermore|testament to|symphony of|tapestry of)\b/gi)?.length ?? 0) / tokens.length) * 1000 : 0),
   };
 }
 
