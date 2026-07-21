@@ -1,11 +1,23 @@
 import { createHash } from "node:crypto";
-import type { ModelCallReport, QualityPassKind } from "../domain/run-report.js";
+import type { ModelJobType } from "../domain/model-job.js";
+import type { ModelCallOutcome, ModelCallReport, QualityPassKind } from "../domain/run-report.js";
 
 export interface ModelUsageFallback {
   callId: string;
   stage: string;
   chapter?: number;
   pass: QualityPassKind;
+  jobType?: ModelJobType;
+  sceneId?: string;
+  attempt?: number;
+  contractHash?: string;
+  capsuleHash?: string;
+  includedRecordCount?: number;
+  validationCategoryCounts?: Record<string, number>;
+  patchOperationCount?: number;
+  outcome?: ModelCallOutcome;
+  acceptedProseWords?: number;
+  escalationCode?: string;
   prompt: string;
   context: string;
   output: string;
@@ -158,6 +170,17 @@ export function normalizeModelUsage(rawValue: unknown, fallback: ModelUsageFallb
     stage: fallback.stage.trim(),
     ...(fallback.chapter !== undefined ? { chapter: fallback.chapter } : {}),
     pass: fallback.pass,
+    ...(fallback.jobType ? { jobType: fallback.jobType } : {}),
+    ...(fallback.sceneId ? { sceneId: fallback.sceneId.trim() } : {}),
+    ...(fallback.attempt !== undefined ? { attempt: fallback.attempt } : {}),
+    ...(fallback.contractHash ? { contractHash: fallback.contractHash } : {}),
+    ...(fallback.capsuleHash ? { capsuleHash: fallback.capsuleHash } : {}),
+    ...(fallback.includedRecordCount !== undefined ? { includedRecordCount: fallback.includedRecordCount } : {}),
+    ...(fallback.validationCategoryCounts ? { validationCategoryCounts: { ...fallback.validationCategoryCounts } } : {}),
+    ...(fallback.patchOperationCount !== undefined ? { patchOperationCount: fallback.patchOperationCount } : {}),
+    ...(fallback.outcome ? { outcome: fallback.outcome } : {}),
+    ...(fallback.acceptedProseWords !== undefined ? { acceptedProseWords: fallback.acceptedProseWords } : {}),
+    ...(fallback.escalationCode ? { escalationCode: fallback.escalationCode.trim() } : {}),
     ...(provider ? { provider } : {}),
     ...(model ? { model } : {}),
     inputTokens: actualInputTokens ?? estimatedInputTokens,
