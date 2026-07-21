@@ -77,9 +77,9 @@ test("reports omit raw content and blinded forms also omit tier and sealed label
   for (const forbidden of [
     "PRIVATE-CONTEXT-SENTINEL", "PRIVATE-CREDENTIAL-SENTINEL", "PRIVATE-CONSTRAINT-SENTINEL",
     "PRIVATE-PROVIDER", "PRIVATE-MODEL", "economy", "editorial", "QEF-PRIV-001",
-  ]) {
-    assert.equal(kit.includes(forbidden), false);
-    assert.equal(csv.includes(forbidden), false);
+    assert.equal(reportText.includes(forbidden), false, "reportText should not contain " + forbidden);
+    assert.equal(kit.includes(forbidden), false, "kit should not contain " + forbidden);
+    assert.equal(csv.includes(forbidden), false, "csv should not contain " + forbidden);
   }
   assert.equal(kit.includes("PRIVATE-GENERATED-PROSE-SENTINEL"), true);
   assert.equal(reportText.includes("economy"), true);
