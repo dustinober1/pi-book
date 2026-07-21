@@ -84,7 +84,7 @@ test("malformed streams, missing messages, and failed stops are rejected generic
 test("model-list parsing requires an exact provider and model match", () => {
   const output = [
     "provider  model                  context  max-out  thinking  images",
-    "openai    quality-model          128K     32K      yes       no",
+    "* openai quality-model 128K 32K yes no",
     "openai    quality-model-preview  1.0M     64K      yes       no",
     "anthropic quality-model          200K     64K      yes       no",
   ].join("\n");
