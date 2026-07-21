@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
+import type { BudgetLimits } from "./budget-ledger.js";
+import { releaseBudgetReservation, reserveBudget, settleBudgetReservation, type BudgetReservationResult } from "./budget-ledger.js";
+import { QualityBudgetDowngradeError, QualityBudgetStopError } from "./budgeted-quality-worker.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import { transactBudgetLedger } from "../infrastructure/budget-ledger-store.js";
-import { appendModelCallReport, storeRunReport } from "../infrastructure/run-report-store.js";
-import { recordSettledBudgetCall } from "./budget-ledger.js";
+import { appendModelCallReport, appendRunBudgetEvent, storeRunReport } from "../infrastructure/run-report-store.js";
 import { projectStateHash } from "./events.js";
 import { normalizeModelUsage } from "./model-usage.js";
 import { createRunReportHeader } from "./run-telemetry.js";
@@ -11,8 +13,10 @@ interface EconomyPendingTurn {
   root: string;
   runId: string;
   callId: string;
+  reservationId: string;
   chapter: number;
   runtimeProfile: RuntimeProfileId;
+  telemetryEnabled: boolean;
   startedMs: number;
   prompt: string;
   provider?: string;
@@ -23,6 +27,13 @@ export interface ForegroundEconomyTelemetryOptions {
   now?: () => number;
   runId?: () => string;
 }
+
+const UNLIMITED_BUDGET: BudgetLimits = {
+  maximumTotalTokens: null,
+  maximumTokensPerChapter: null,
+  maximumCallsPerChapter: null,
+  onExhaustion: "stop",
+};
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -93,27 +104,59 @@ export class ForegroundEconomyTelemetry {
     chapter: number;
     runtimeProfile: RuntimeProfileId;
     telemetryEnabled?: boolean;
-  }): string | null {
-    if (input.telemetryEnabled === false) {
-      this.#pending = null;
-      return null;
-    }
+    minimumTokens?: number;
+    limits?: BudgetLimits;
+  }): string {
     if (!Number.isInteger(input.chapter) || input.chapter < 1) throw new Error("Economy telemetry chapter must be positive.");
+    const minimumTokens = input.minimumTokens ?? 1;
+    if (!Number.isInteger(minimumTokens) || minimumTokens < 1) throw new Error("Economy minimum reservation tokens must be positive.");
     const runId = this.#runId();
     const callId = `${runId}-CALL-001`;
-    const stored = storeRunReport(input.root, createRunReportHeader({
-      runId,
-      runtimeProfile: input.runtimeProfile,
-      qualityTier: "economy",
-      projectHashBefore: projectStateHash(input.root),
-    }));
-    if (!stored.ok) throw new Error(stored.message);
+    const reservationId = `RSV-${callId}`;
+    const telemetryEnabled = input.telemetryEnabled !== false;
+    if (telemetryEnabled) {
+      const stored = storeRunReport(input.root, createRunReportHeader({
+        runId,
+        runtimeProfile: input.runtimeProfile,
+        qualityTier: "economy",
+        projectHashBefore: projectStateHash(input.root),
+      }));
+      if (!stored.ok) throw new Error(stored.message);
+    }
+    const at = new Date(this.#now()).toISOString();
+    const reserved = transactBudgetLedger<BudgetReservationResult>(input.root, (ledger) => {
+      const result = reserveBudget(ledger, {
+        reservationId,
+        runId,
+        callId,
+        chapter: input.chapter,
+        tier: "economy",
+        minimumTokens,
+        limits: input.limits ?? UNLIMITED_BUDGET,
+        createdAt: at,
+      });
+      return { ledger: result.ledger, value: result.result };
+    });
+    if (!reserved.ok) throw new Error(reserved.message);
+    if (reserved.value.action !== "reserved") {
+      if (telemetryEnabled) appendRunBudgetEvent(input.root, runId, {
+        type: reserved.value.action,
+        reason: reserved.value.reason,
+        atCallId: callId,
+      });
+      if (reserved.value.action === "downgrade") {
+        throw new QualityBudgetDowngradeError(reserved.value.reason, reserved.value.fromTier, reserved.value.toTier);
+      }
+      throw new QualityBudgetStopError(reserved.value.reason, reserved.value.tier);
+    }
     this.#pending = {
       root: input.root,
       runId,
       callId,
+      reservationId,
       chapter: input.chapter,
       runtimeProfile: input.runtimeProfile,
+      telemetryEnabled,
       startedMs: this.#now(),
       prompt: "",
     };
@@ -134,7 +177,13 @@ export class ForegroundEconomyTelemetry {
   }
 
   cancel(): void {
+    const pending = this.#pending;
     this.#pending = null;
+    if (!pending) return;
+    transactBudgetLedger(pending.root, (ledger) => ({
+      ledger: releaseBudgetReservation(ledger, pending.reservationId),
+      value: undefined,
+    }));
   }
 
   complete(message: unknown, contextUsage?: { tokens: number | null; contextWindow: number; percent: number | null }): void {
@@ -142,7 +191,13 @@ export class ForegroundEconomyTelemetry {
     this.#pending = null;
     if (!pending) return;
     const output = assistantText(message);
-    if (!output) return;
+    if (!output) {
+      transactBudgetLedger(pending.root, (ledger) => ({
+        ledger: releaseBudgetReservation(ledger, pending.reservationId),
+        value: undefined,
+      }));
+      return;
+    }
     const messageRecord = record(message);
     const raw = usagePayload(message, contextUsage?.tokens);
     const normalized = normalizeModelUsage(raw.payload, {
@@ -159,19 +214,18 @@ export class ForegroundEconomyTelemetry {
       ...(typeof messageRecord.stopReason === "string" ? { finishReason: messageRecord.stopReason } : {}),
     });
     const usage = raw.usedContextEstimate ? { ...normalized, estimated: true } : normalized;
-    const appended = appendModelCallReport(pending.root, pending.runId, usage);
-    if (!appended.ok) return;
     transactBudgetLedger(pending.root, (ledger) => ({
-      ledger: recordSettledBudgetCall(ledger, {
+      ledger: settleBudgetReservation(ledger, pending.reservationId, {
         runId: pending.runId,
         callId: pending.callId,
         chapter: pending.chapter,
         tier: "economy",
-        tokens: (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
+        actualTokens: (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
         estimated: usage.estimated,
         settledAt: new Date(this.#now()).toISOString(),
       }),
       value: undefined,
     }));
+    if (pending.telemetryEnabled) appendModelCallReport(pending.root, pending.runId, usage);
   }
 }
