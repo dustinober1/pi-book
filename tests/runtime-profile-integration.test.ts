@@ -3,30 +3,33 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { decideNextRun, directDraftDecision, directRevisionDecision } from "../src/application/run.js";
+import { beginPersistentRun, decideNextRun, directDraftDecision, directRevisionDecision } from "../src/application/run.js";
 import { getProjectStatus } from "../src/application/status.js";
-import { initializeProject, readProject } from "../src/project/store.js";
+import { buildChapterContext } from "../src/context/context-builder.js";
+import type { RuntimeProfileId } from "../src/domain/runtime-profile.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
+import { initializeProject, readProject } from "../src/project/store.js";
+import { completePlot, queueFixture } from "./phase4-fixtures.js";
 
 function tickets() {
   return {
     schema_version: "1.0.0",
-    tickets: [1, 2, 3, 4].map((index) => ({
-      id: `B1-T${String(index).padStart(3, "0")}`,
-      severity: "blocker",
-      scope: "chapter-01",
-      problem: `Problem ${index}`,
-      evidence: ["chapter-01.md:1"],
-      required_change: `Change ${index}`,
-      protected_constraints: ["preserve canon"],
-      acceptance_tests: ["resolved"],
-      regression_checks: ["canon intact"],
+    tickets: [1, 2, 3].map((number) => ({
+      id: `B01-T${String(number).padStart(3, "0")}`,
+      severity: "high",
+      category: "continuity",
+      chapter: number,
+      evidence: `Chapter ${number} contradicts the locked state.`,
+      problem: `Ticket ${number} problem.`,
+      required_change: `Repair ticket ${number}.`,
+      protected_constraints: ["Preserve the reveal order."],
+      acceptance_tests: [`Ticket ${number} is resolved without changing canon.`],
       status: "open",
     })),
   };
 }
 
-function setup(stage: "drafting" | "revision", runtimeProfile: "tiny-local" | "local" | "full") {
+function setup(stage: "drafting" | "revision", runtimeProfile: RuntimeProfileId) {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-runtime-integration-"));
   const root = initializeProject(parent, {
     projectName: "Runtime Integration",
@@ -37,64 +40,74 @@ function setup(stage: "drafting" | "revision", runtimeProfile: "tiny-local" | "l
   const project = readProject(root);
   project.current_stage = stage;
   project.next_gate = null;
-  project.gates["voice-approval"] = "approved";
-  project.gates["book-plan-approval"] = "approved";
-  project.gates["first-chapter-approval"] = "approved";
+  project.automation.max_chapters_per_run = 8;
   writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
-  writeFileSync(join(root, "books", "book-01", "plot-grid.yaml"), stringifyYaml({
+  writeFileSync(join(root, "series", "canon.yaml"), stringifyYaml({
     schema_version: "1.0.0",
-    acts: [{ id: "I", label: "Act I", start_chapter: 1, end_chapter: 4, gate: null }],
-    decisions: [],
-    chapters: Array.from({ length: 8 }, (_, index) => ({
-      chapter: index + 1,
-      act: "I",
-      causality: "therefore",
-      state_change: `state ${index + 1}`,
-      setup_ids: [],
-      payoff_ids: [],
-      profile_obligations: [],
-    })),
+    facts: [{
+      id: "CAN-001",
+      category: "access",
+      subject: "Mara",
+      fact: "Mara has archive access.",
+      source: "chapter-00",
+      status: "locked",
+      introduced_in: "book-01",
+    }],
+    relationships: [],
   }), "utf8");
-  writeFileSync(join(root, "books", "book-01", "chapter-queue.yaml"), stringifyYaml({
+  writeFileSync(join(root, "series", "story-threads.yaml"), stringifyYaml({
     schema_version: "1.0.0",
-    active_window: "I",
-    packets: Array.from({ length: 8 }, (_, index) => ({
-      chapter: index + 1,
-      title: `Chapter ${index + 1}`,
-      status: "ready",
-      pov: "Mara",
-      purpose: "advance",
-      scene_engine: "operation",
-      pressure_movement: "+1",
-      character_movement: "commits",
-      relationship_movement: "shifts",
-      story_thread_refs: [],
-      continuity_refs: [],
-      character_refs: ["Mara"],
-      required_research: [],
-      profile_fields: { threat_delta: "+1", evidence_delta: "gained", reader_forecast_change: "changes", protagonist_choice: "continues" },
-      ending_hook: "hook",
-      milestone_gate: null,
-      target_words: 1500,
-    })),
+    threads: [{
+      id: "ST-001",
+      type: "mystery",
+      setup: "The archive log is missing.",
+      reader_knows: "The log existed.",
+      characters_know: { Mara: "The log is missing." },
+      status: "open",
+      intended_payoff: "book-01",
+      last_advanced_in: null,
+    }],
   }), "utf8");
+  writeFileSync(join(root, "books", "book-01", "plot-grid.yaml"), stringifyYaml(completePlot()), "utf8");
+  const queue = queueFixture();
+  for (const packet of queue.packets) packet.required_research = [];
+  writeFileSync(join(root, "books", "book-01", "chapter-queue.yaml"), stringifyYaml(queue), "utf8");
   writeFileSync(join(root, "books", "book-01", "remarkability.yaml"), stringifyYaml({
     schema_version: "1.0.0",
-    safe_obvious_version: "A safe version.",
-    author_only_advantage: "A specific advantage.",
-    productive_discomfort: "Moral discomfort.",
-    retellable_hook: "A building changes evidence.",
+    safe_obvious_version: "A routine archive breach.",
+    author_only_advantage: "Institutional pressure rendered through procedure.",
+    productive_discomfort: "Mara protects evidence before safety.",
+    retellable_hook: "The building edits its own evacuation record.",
     signature_moments: [
-      { id: "RM-001", description: "The exit changes.", intended_reader_memory: "The building lies.", planned_location: "chapter-01", status: "planned" },
-      { id: "RM-002", description: "Mara opens the archive while security erases her access.", intended_reader_memory: "Truth and institutional permission separate in real time.", planned_location: "chapter-04", status: "planned" },
+      {
+        id: "RM-001",
+        description: "The exit sign changes its testimony.",
+        intended_reader_memory: "The building lies in plain sight.",
+        planned_location: "chapter-01",
+        status: "planned",
+      },
+      {
+        id: "RM-002",
+        description: "Mara opens the archive while security erases her access.",
+        intended_reader_memory: "Truth and institutional permission separate in real time.",
+        planned_location: "chapter-04",
+        status: "planned",
+      },
     ],
-    productive_disagreements: [{ question: "Was Mara right to stay?", competing_readings: ["She protected truth.", "She valued proof over people."] }],
+    productive_disagreements: [{
+      question: "Was Mara right to stay?",
+      competing_readings: ["She protected truth.", "She valued proof over people."],
+    }],
     recurring_motifs: [],
     lingering_question: "What evidence is worth a life?",
     hand_sell_reason: "A procedural thriller with a building that falsifies its record.",
     accepted_reader_costs: ["Moral discomfort without reassurance."],
   }), "utf8");
-  writeFileSync(join(root, "books", "book-01", "revision-tickets.yaml"), stringifyYaml(stage === "revision" ? tickets() : { schema_version: "1.0.0", tickets: [] }), "utf8");
+  writeFileSync(
+    join(root, "books", "book-01", "revision-tickets.yaml"),
+    stringifyYaml(stage === "revision" ? tickets() : { schema_version: "1.0.0", tickets: [] }),
+    "utf8",
+  );
   return { parent, root };
 }
 
@@ -123,32 +136,57 @@ test("drafting decisions enforce tiny and local chapter caps while full preserve
       const decision = decideNextRun(root, { maxChapters: 8 });
       assert.equal(decision.runtimeProfile, profile);
       assert.match(decision.message, new RegExp(`up to ${expected} chapter`));
-    } finally { rmSync(parent, { recursive: true, force: true }); }
+      assert.match(decision.prompt ?? "", new RegExp(`no more than ${expected} chapter workflow event`));
+    } finally {
+      rmSync(parent, { recursive: true, force: true });
+    }
   }
 });
 
 test("direct revision decisions enforce profile ticket caps even for explicit ticket IDs", () => {
-  for (const [profile, expected] of [["tiny-local", 1], ["local", 2], ["full", 3]] as const) {
+  for (const [profile, included, excluded] of [
+    ["tiny-local", ["B01-T001"], ["B01-T002", "B01-T003"]],
+    ["local", ["B01-T001", "B01-T002"], ["B01-T003"]],
+    ["full", ["B01-T001", "B01-T002", "B01-T003"], []],
+  ] as const) {
     const { parent, root } = setup("revision", profile);
     try {
-      const decision = directRevisionDecision(root, ["B1-T001", "B1-T002", "B1-T003", "B1-T004"]);
+      const decision = directRevisionDecision(root, ["B01-T001", "B01-T002", "B01-T003"]);
       assert.equal(decision.runtimeProfile, profile);
-      assert.equal((decision.prompt?.match(/B1-T\d{3}:/g) ?? []).length, expected);
-    } finally { rmSync(parent, { recursive: true, force: true }); }
+      for (const id of included) assert.match(decision.prompt ?? "", new RegExp(id));
+      for (const id of excluded) assert.doesNotMatch(decision.prompt ?? "", new RegExp(id));
+    } finally {
+      rmSync(parent, { recursive: true, force: true });
+    }
   }
 });
 
 test("persistent runs store the resolved profile and normalized chapter budget", () => {
-  for (const [profile, expected] of [["tiny-local", 1], ["local", 1], ["full", 8]] as const) {
-    const { parent, root } = setup("drafting", profile);
-    try {
-      const decision = decideNextRun(root, { maxChapters: 8 });
-      assert.equal(decision.runtimeProfile, profile);
-      const direct = directDraftDecision(root, 1);
-      assert.equal(direct.runtimeProfile, profile);
-      assert.ok(direct.prompt);
-      assert.ok(direct.prompt!.length > 0);
-      assert.equal(expected >= 1, true);
-    } finally { rmSync(parent, { recursive: true, force: true }); }
+  const { parent, root } = setup("drafting", "tiny-local");
+  try {
+    const decision = beginPersistentRun(root, {
+      target: "next-milestone",
+      maxChapters: 8,
+      runtimeProfile: "tiny-local",
+      now: "2026-07-16T20:00:00Z",
+    });
+    const run = readProject(root).automation.active_run;
+    assert.equal(decision.runtimeProfile, "tiny-local");
+    assert.equal(run?.requestedMaxChapters, 1);
+    assert.equal(run?.runtimeProfile, "tiny-local");
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("tiny-local drafting context uses its hard character budget and graph depth one", () => {
+  const { parent, root } = setup("drafting", "tiny-local");
+  try {
+    const context = buildChapterContext(root, 1, 12_000, 1);
+    assert.equal(context.report.graph.maxDepth, 1);
+    assert.ok(context.text.length <= 12_000);
+    assert.equal(directDraftDecision(root, 1).runtimeProfile, "tiny-local");
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
   }
 });
