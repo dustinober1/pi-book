@@ -1,0 +1,109 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { ForegroundEconomyTelemetry } from "../src/application/foreground-economy-telemetry.js";
+import { readBudgetLedger } from "../src/infrastructure/budget-ledger-store.js";
+import { createDraftableQualityProject } from "./quality-project-fixture.js";
+
+function assistant(overrides: Record<string, unknown> = {}) {
+  return {
+    role: "assistant",
+    content: [{ type: "thinking", thinking: "PRIVATE-THINKING-SENTINEL" }, { type: "text", text: "FINAL-OUTPUT-SENTINEL" }],
+    provider: "fake",
+    model: "economy-model",
+    usage: {
+      input: 700,
+      cacheRead: 100,
+      cacheWrite: 20,
+      output: 200,
+      reasoning: 50,
+      cost: { total: 0.003 },
+    },
+    stopReason: "stop",
+    ...overrides,
+  };
+}
+
+test("foreground economy turns hash transient content and record actual usage in reports and ledger", () => {
+  const project = createDraftableQualityProject("economy");
+  let now = 1_000;
+  try {
+    const tracker = new ForegroundEconomyTelemetry({ now: () => now, runId: () => "ECO-TEST" });
+    assert.equal(tracker.begin({ root: project.root, chapter: 3, runtimeProfile: "local" }), "ECO-TEST");
+    tracker.capturePrompt("RAW-PROMPT-SENTINEL");
+    tracker.captureModel({ provider: "selected-provider", id: "selected-model" });
+    now = 1_125;
+    tracker.complete(assistant(), { tokens: 1_500, contextWindow: 128_000, percent: 1.17 });
+    assert.equal(tracker.active, false);
+
+    const reportText = readFileSync(join(project.root, ".pi-book", "runs", "ECO-TEST", "run-report.json"), "utf8");
+    const report = JSON.parse(reportText) as { modelCalls: Array<Record<string, unknown>>; totals: { totalTokens: number; costUsd: number } };
+    assert.equal(report.modelCalls.length, 1);
+    assert.equal(report.modelCalls[0]?.inputTokens, 820);
+    assert.equal(report.modelCalls[0]?.cachedInputTokens, 100);
+    assert.equal(report.modelCalls[0]?.outputTokens, 200);
+    assert.equal(report.modelCalls[0]?.reasoningTokens, 50);
+    assert.equal(report.modelCalls[0]?.provider, "fake");
+    assert.equal(report.modelCalls[0]?.model, "economy-model");
+    assert.equal(report.modelCalls[0]?.elapsedMs, 125);
+    assert.equal(report.totals.totalTokens, 1_020);
+    assert.equal(report.totals.costUsd, 0.003);
+    for (const sentinel of ["RAW-PROMPT-SENTINEL", "FINAL-OUTPUT-SENTINEL", "PRIVATE-THINKING-SENTINEL"]) {
+      assert.equal(reportText.includes(sentinel), false);
+    }
+
+    const ledger = readBudgetLedger(project.root);
+    assert.equal(ledger.settledCalls.length, 1);
+    assert.equal(ledger.settledCalls[0]?.tokens, 1_020);
+    assert.equal(ledger.settledCalls[0]?.tier, "economy");
+  } finally {
+    rmSync(project.parent, { recursive: true, force: true });
+  }
+});
+
+test("context usage supplies a marked estimate when provider usage is incomplete", () => {
+  const project = createDraftableQualityProject("economy");
+  try {
+    const tracker = new ForegroundEconomyTelemetry({ now: () => 2_000, runId: () => "ECO-ESTIMATE" });
+    tracker.begin({ root: project.root, chapter: 1, runtimeProfile: "full" });
+    tracker.capturePrompt("prompt");
+    tracker.complete(assistant({ usage: { output: 40 } }), { tokens: 600, contextWindow: 128_000, percent: 0.5 });
+    const report = JSON.parse(readFileSync(join(project.root, ".pi-book", "runs", "ECO-ESTIMATE", "run-report.json"), "utf8")) as { modelCalls: Array<{ inputTokens: number; outputTokens: number; estimated: boolean }> };
+    assert.equal(report.modelCalls[0]?.inputTokens, 600);
+    assert.equal(report.modelCalls[0]?.outputTokens, 40);
+    assert.equal(report.modelCalls[0]?.estimated, true);
+  } finally {
+    rmSync(project.parent, { recursive: true, force: true });
+  }
+});
+
+test("telemetry opt-out still settles the budget ledger without creating a run report", () => {
+  const project = createDraftableQualityProject("economy");
+  try {
+    const tracker = new ForegroundEconomyTelemetry({ runId: () => "ECO-OFF" });
+    assert.equal(tracker.begin({ root: project.root, chapter: 1, runtimeProfile: "full", telemetryEnabled: false }), "ECO-OFF");
+    tracker.complete(assistant(), { tokens: 100, contextWindow: 1_000, percent: 10 });
+    assert.equal(tracker.active, false);
+    assert.equal(existsSync(join(project.root, ".pi-book", "runs", "ECO-OFF", "run-report.json")), false);
+    const ledger = readBudgetLedger(project.root);
+    assert.equal(ledger.reservations.length, 0);
+    assert.equal(ledger.settledCalls.length, 1);
+  } finally {
+    rmSync(project.parent, { recursive: true, force: true });
+  }
+});
+
+test("cancelling a foreground turn releases its economy reservation", () => {
+  const project = createDraftableQualityProject("economy");
+  try {
+    const tracker = new ForegroundEconomyTelemetry({ runId: () => "ECO-CANCEL" });
+    tracker.begin({ root: project.root, chapter: 1, runtimeProfile: "full" });
+    assert.equal(readBudgetLedger(project.root).reservations.length, 1);
+    tracker.cancel();
+    assert.equal(tracker.active, false);
+    assert.equal(readBudgetLedger(project.root).reservations.length, 0);
+  } finally {
+    rmSync(project.parent, { recursive: true, force: true });
+  }
+});
