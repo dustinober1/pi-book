@@ -51,7 +51,7 @@ function piUsage(message: UnknownRecord): UnknownRecord {
     ...(totalInput !== undefined ? { inputTokens: totalInput } : {}),
     ...(cacheRead !== undefined ? { cachedInputTokens: cacheRead } : {}),
     ...(output !== undefined ? { outputTokens: output } : {}),
-    ...(reasoning !== undefined ? { reasoningTokens: reasoning } : {}),
+    ...(reasoning !== undefined ? { reasoningTokens } : {}),
     ...(finiteNonnegative(cost.total) !== undefined ? { costUsd: finiteNonnegative(cost.total) } : {}),
     ...(typeof message.provider === "string" ? { provider: message.provider } : {}),
     ...(typeof message.model === "string" ? { model: message.model } : {}),
@@ -127,9 +127,9 @@ export function parsePiModelList(
   const header = lines.findIndex((line) => /^provider\s{2,}model\s{2,}context\s{2,}max-out\b/i.test(line));
   if (header < 0) return null;
   for (const line of lines.slice(header + 1)) {
-    const columns = line.split(/\s{2,}/).map((item) => item.trim());
-    if (columns.length < 4) continue;
-    const [rowProvider, rowModel, context, maxOut] = columns;
+    const match = line.match(/^\s*(?:\*\s+)?(\S+)\s+(\S+)\s+(\S+)\s+(\S+)/);
+    if (!match) continue;
+    const [, rowProvider, rowModel, context, maxOut] = match;
     if (!rowProvider || !rowModel || rowModel !== model || (provider !== undefined && rowProvider !== provider)) continue;
     const contextWindowTokens = tokenCount(context ?? "");
     const maxOutputTokens = tokenCount(maxOut ?? "");
