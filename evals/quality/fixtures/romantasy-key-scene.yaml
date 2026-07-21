@@ -1,0 +1,45 @@
+schema_version: 1.0.0
+id: QEF-ROMANTASY-001
+profile: romantasy
+chapter: 18
+project_hash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+packet:
+  chapter: 18
+  title: The Oath Beneath the Thorn Gate
+  status: ready
+  pov: Elara
+  purpose: Secure passage through the thorn gate without surrendering bodily or magical autonomy.
+  scene_engine: consent-bound magical negotiation
+  pressure_movement: The gate closes while the enemy patrol approaches.
+  character_movement: Elara states the limit she previously avoided naming.
+  relationship_movement: Vael must accept a narrower bond than the one that would guarantee victory.
+  story_thread_refs:
+    - ST-THORN-OATH
+    - ST-MATRIARCH-DEBT
+  continuity_refs:
+    - CAN-BOND-LIMITS
+    - CAN-GATE-COST
+  character_refs:
+    - Elara
+    - Vael
+  required_research: []
+  profile_fields:
+    key_scene: true
+    consent_contract:
+      - explicit offer
+      - informed refusal remains possible
+      - no magical coercion
+    intimacy_level: emotionally intimate, non-explicit
+  ending_hook: The gate accepts the smaller oath and takes a different price.
+  milestone_gate: null
+  target_words: 2400
+context: |-
+  CAN-BOND-LIMITS: a permanent bond cannot be initiated without an explicit spoken yes from both parties.
+  CAN-GATE-COST: the thorn gate always takes a voluntarily offered cost and cannot choose a body part or memory on its own.
+  Elara knows the gate can accept a temporary shared burden.
+  Vael believes only a permanent bond will open the gate, but that belief is incorrect.
+protected_constraints:
+  - Preserve explicit, revocable consent.
+  - Do not convert refusal into flirtation or implied agreement.
+  - Keep the scene emotionally intimate but non-explicit.
+  - End with the gate accepting the smaller oath and redirecting the cost.
