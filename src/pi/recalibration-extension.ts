@@ -75,9 +75,9 @@ function withQualityDraft(definition: CommandDefinition, options: NovelForgeExte
         const project = readProject(root);
         const qualityState = qualityStateWithOverride(project.quality, draft.quality);
         const runtime = resolveRuntimeProfile({ project: project.runtime?.profile });
-        const worker = options.createQualityWorker?.(root) ?? new PiPrintWorker({ cwd: root });
         const provider = process.env.NOVEL_FORGE_QUALITY_PROVIDER?.trim();
         const model = process.env.NOVEL_FORGE_QUALITY_MODEL?.trim();
+        let worker: QualityWorker | undefined;
 
         while (true) {
           const quality = resolveQualityConfig(qualityState);
@@ -85,6 +85,7 @@ function withQualityDraft(definition: CommandDefinition, options: NovelForgeExte
             await original.handler(args, context);
             return;
           }
+          worker ??= options.createQualityWorker?.(root) ?? new PiPrintWorker({ cwd: root });
           try {
             const result = await runBudgetedQualityDraft({
               root,
