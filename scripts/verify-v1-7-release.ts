@@ -39,6 +39,11 @@ export function verifyV17ReleaseTree(root: string): V17ReleaseCheck[] {
     "docs/grounded-accuracy.md",
     "docs/releases/v1.7.0.md",
   ];
+  const packagedQualityAssets = [
+    "evals/quality/README.md",
+    "evals/quality/fixtures/",
+    "evals/quality/rubrics/",
+  ];
   return [
     check("package-version", pkg.version === "1.7.0", `package.json version is ${pkg.version}.`),
     check("lock-version", lock.version === "1.7.0" && lock.packages[""]?.version === "1.7.0", `Lock versions are ${lock.version} and ${lock.packages[""]?.version ?? "missing"}.`),
@@ -47,8 +52,8 @@ export function verifyV17ReleaseTree(root: string): V17ReleaseCheck[] {
     check("quality-script", /evaluate-quality\.ts/.test(pkg.scripts["eval:quality"] ?? ""), "eval:quality targets the opt-in runner."),
     check("release-script", pkg.scripts["verify:release"] === "node --import tsx scripts/verify-v1-7-release.ts", "verify:release targets the 1.7 checker."),
     check("release-test", /v1-7-release-checklist\.test\.ts/.test(pkg.scripts["test:release"] ?? ""), "test:release includes the 1.7 checklist."),
-    check("package-assets", ["src/", "scripts/", "docs/", "evals/quality/", "SKILL.md", "README.md"].every((path) => pkg.files.includes(path)), "Package allowlist includes runtime, focused docs, and frozen evaluation fixtures."),
-    check("paid-output-excluded", /evals\/quality\/runs\//.test(ignore) && !pkg.files.includes("evals/quality/runs/"), "Paid evaluation outputs are ignored and not allowlisted."),
+    check("package-assets", ["src/", "scripts/", "docs/", "SKILL.md", "README.md", ...packagedQualityAssets].every((path) => pkg.files.includes(path)), "Package allowlist includes runtime, focused docs, and only frozen evaluation assets."),
+    check("paid-output-excluded", /evals\/quality\/runs\//.test(ignore) && !pkg.files.some((path) => path === "evals/quality/" || path.startsWith("evals/quality/runs")), "Paid evaluation outputs are ignored and outside the package allowlist."),
     check("paid-ci-excluded", !/npm run eval:quality/.test(workflow) && !/NOVEL_FORGE_RUN_PAID_EVAL:\s*["']?1/.test(workflow), "Normal CI does not run paid evaluation."),
     check("node-matrix", /22\.19\.0/.test(workflow) && /['"]24['"]/.test(workflow), "CI qualifies Node 22.19.0 and Node 24."),
     check("readme-install", /@v1\.7\.0/.test(readme), "README pins v1.7.0 installation."),
