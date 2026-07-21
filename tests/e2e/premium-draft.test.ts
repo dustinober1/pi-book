@@ -39,7 +39,7 @@ class PremiumWorker implements QualityWorker {
     const usage: ModelCallReport = {
       callId: request.callId,
       stage: request.stage,
-      chapter: request.chapter,
+      ...(request.chapter !== undefined ? { chapter: request.chapter } : {}),
       pass: request.pass,
       provider: "fake",
       model: "quality-model",
