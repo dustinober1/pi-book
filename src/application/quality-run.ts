@@ -2,6 +2,7 @@ import type { QualityProjectState, QualityRunOverride, QualityTierId } from "../
 import { qualityStateWithOverride, resolveQualityConfig } from "../domain/quality-profile.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import { readProject } from "../project/store.js";
+import { beginAutopilotRun } from "./autopilot.js";
 import {
   beginPersistentRun,
   cancelPersistentRun,
@@ -44,6 +45,16 @@ function activeRunQuality(root: string): QualityProjectState {
   return structuredClone(project.automation.active_run?.quality_snapshot ?? project.quality ?? qualityStateWithOverride(undefined, undefined));
 }
 
+function persistentOptions(options: BeginQualityPersistentRunOptions, quality: QualityProjectState) {
+  return {
+    target: options.target,
+    maxChapters: options.maxChapters,
+    qualitySnapshot: quality,
+    ...(options.runtimeProfile ? { runtimeProfile: options.runtimeProfile } : {}),
+    ...(options.now ? { now: options.now } : {}),
+  };
+}
+
 export function decideQualityNextRun(root: string, options: RunOptions & { quality?: QualityRunOverride } = {}): QualityRunDecision {
   const quality = projectQuality(root, options.quality);
   return decisionWithQuality(decideNextRun(root, options), quality);
@@ -51,14 +62,12 @@ export function decideQualityNextRun(root: string, options: RunOptions & { quali
 
 export function beginQualityPersistentRun(root: string, options: BeginQualityPersistentRunOptions): QualityRunDecision {
   const quality = projectQuality(root, options.quality);
-  const decision = beginPersistentRun(root, {
-    target: options.target,
-    maxChapters: options.maxChapters,
-    qualitySnapshot: quality,
-    ...(options.runtimeProfile ? { runtimeProfile: options.runtimeProfile } : {}),
-    ...(options.now ? { now: options.now } : {}),
-  });
-  return decisionWithQuality(decision, quality);
+  return decisionWithQuality(beginPersistentRun(root, persistentOptions(options, quality)), quality);
+}
+
+export function beginQualityAutopilotRun(root: string, options: BeginQualityPersistentRunOptions): QualityRunDecision {
+  const quality = projectQuality(root, options.quality);
+  return decisionWithQuality(beginAutopilotRun(root, persistentOptions(options, quality)), quality);
 }
 
 export function directQualityDraftDecision(root: string, chapter?: number, qualityOverride?: QualityRunOverride): QualityRunDecision {
