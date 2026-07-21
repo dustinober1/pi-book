@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { ForegroundEconomyTelemetry } from "../src/application/foreground-economy-telemetry.js";
 import { readBudgetLedger } from "../src/infrastructure/budget-ledger-store.js";
+import { createDraftableQualityProject } from "./quality-project-fixture.js";
 
 function assistant(overrides: Record<string, unknown> = {}) {
   return {
@@ -26,18 +26,18 @@ function assistant(overrides: Record<string, unknown> = {}) {
 }
 
 test("foreground economy turns hash transient content and record actual usage in reports and ledger", () => {
-  const root = mkdtempSync(join(tmpdir(), "novel-forge-economy-telemetry-"));
+  const project = createDraftableQualityProject("economy");
   let now = 1_000;
   try {
     const tracker = new ForegroundEconomyTelemetry({ now: () => now, runId: () => "ECO-TEST" });
-    assert.equal(tracker.begin({ root, chapter: 3, runtimeProfile: "local" }), "ECO-TEST");
+    assert.equal(tracker.begin({ root: project.root, chapter: 3, runtimeProfile: "local" }), "ECO-TEST");
     tracker.capturePrompt("RAW-PROMPT-SENTINEL");
     tracker.captureModel({ provider: "selected-provider", id: "selected-model" });
     now = 1_125;
     tracker.complete(assistant(), { tokens: 1_500, contextWindow: 128_000, percent: 1.17 });
     assert.equal(tracker.active, false);
 
-    const reportText = readFileSync(join(root, ".pi-book", "runs", "ECO-TEST", "run-report.json"), "utf8");
+    const reportText = readFileSync(join(project.root, ".pi-book", "runs", "ECO-TEST", "run-report.json"), "utf8");
     const report = JSON.parse(reportText) as { modelCalls: Array<Record<string, unknown>>; totals: { totalTokens: number; costUsd: number } };
     assert.equal(report.modelCalls.length, 1);
     assert.equal(report.modelCalls[0]?.inputTokens, 820);
@@ -53,39 +53,39 @@ test("foreground economy turns hash transient content and record actual usage in
       assert.equal(reportText.includes(sentinel), false);
     }
 
-    const ledger = readBudgetLedger(root);
+    const ledger = readBudgetLedger(project.root);
     assert.equal(ledger.settledCalls.length, 1);
     assert.equal(ledger.settledCalls[0]?.tokens, 1_020);
     assert.equal(ledger.settledCalls[0]?.tier, "economy");
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(project.parent, { recursive: true, force: true });
   }
 });
 
 test("context usage supplies a marked estimate when provider usage is incomplete", () => {
-  const root = mkdtempSync(join(tmpdir(), "novel-forge-economy-estimate-"));
+  const project = createDraftableQualityProject("economy");
   try {
     const tracker = new ForegroundEconomyTelemetry({ now: () => 2_000, runId: () => "ECO-ESTIMATE" });
-    tracker.begin({ root, chapter: 1, runtimeProfile: "full" });
+    tracker.begin({ root: project.root, chapter: 1, runtimeProfile: "full" });
     tracker.capturePrompt("prompt");
     tracker.complete(assistant({ usage: { output: 40 } }), { tokens: 600, contextWindow: 128_000, percent: 0.5 });
-    const report = JSON.parse(readFileSync(join(root, ".pi-book", "runs", "ECO-ESTIMATE", "run-report.json"), "utf8")) as { modelCalls: Array<{ inputTokens: number; outputTokens: number; estimated: boolean }> };
+    const report = JSON.parse(readFileSync(join(project.root, ".pi-book", "runs", "ECO-ESTIMATE", "run-report.json"), "utf8")) as { modelCalls: Array<{ inputTokens: number; outputTokens: number; estimated: boolean }> };
     assert.equal(report.modelCalls[0]?.inputTokens, 600);
     assert.equal(report.modelCalls[0]?.outputTokens, 40);
     assert.equal(report.modelCalls[0]?.estimated, true);
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(project.parent, { recursive: true, force: true });
   }
 });
 
 test("telemetry opt-out and cancellation do not record model calls", () => {
-  const root = mkdtempSync(join(tmpdir(), "novel-forge-economy-optout-"));
+  const project = createDraftableQualityProject("economy");
   try {
     const tracker = new ForegroundEconomyTelemetry({ runId: () => "ECO-OFF" });
-    assert.equal(tracker.begin({ root, chapter: 1, runtimeProfile: "full", telemetryEnabled: false }), null);
+    assert.equal(tracker.begin({ root: project.root, chapter: 1, runtimeProfile: "full", telemetryEnabled: false }), null);
     tracker.complete(assistant(), { tokens: 100, contextWindow: 1_000, percent: 10 });
     assert.equal(tracker.active, false);
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(project.parent, { recursive: true, force: true });
   }
 });
