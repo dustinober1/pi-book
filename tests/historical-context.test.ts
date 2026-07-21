@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { bookPlanPrompt, reviewPrompt } from "../src/application/prompts.js";
+import { ContextBudgetError } from "../src/context/context-budget.js";
 import { buildChapterContext } from "../src/context/context-builder.js";
 import { defaultHistoricalContext, defaultInventionLedger } from "../src/domain/historical-fiction.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject } from "../src/project/store.js";
-import { bookPlanPrompt, reviewPrompt } from "../src/application/prompts.js";
 
 function temp(): string {
   return mkdtempSync(join(tmpdir(), "novel-forge-historical-context-"));
@@ -134,6 +135,24 @@ test("historical drafting context includes only packet-referenced historical evi
     assert.match(context.text, /Readable English represents spoken French/);
     assert.ok(context.report.included.includes("historical chronology HIST-001"));
     assert.ok(context.report.excluded.includes("unreferenced historical chronology"));
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("historical required-record overflow names every referenced evidence ID", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Historical Overflow", projectType: "standalone", profile: "historical-fiction" });
+    prepareHistoricalChapter(root);
+    assert.throws(
+      () => buildChapterContext(root, 1, 100),
+      (error: unknown) => {
+        assert.ok(error instanceof ContextBudgetError);
+        for (const id of ["HIST-001", "HC-001", "KB-001", "INV-001", "RES-001", "SRC-001"]) {
+          assert.ok(error.requiredRecordIds.includes(id), `missing historical overflow ID ${id}`);
+        }
+        return true;
+      },
+    );
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
