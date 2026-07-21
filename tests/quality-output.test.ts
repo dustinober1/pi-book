@@ -21,7 +21,7 @@ test("structured artifact parsing accepts one exact JSON object and rejects fenc
   assert.deepEqual(parseStructuredQualityArtifact(JSON.stringify(plan), QualityScenePlanSchema, "scene plan"), plan);
   assert.throws(() => parseStructuredQualityArtifact(`\`\`\`json\n${JSON.stringify(plan)}\n\`\`\``, QualityScenePlanSchema, "scene plan"), /exact JSON object/i);
   assert.throws(() => parseStructuredQualityArtifact(JSON.stringify({ ...plan, extra: true }), QualityScenePlanSchema, "scene plan"), /invalid scene plan/i);
-  assert.throws(() => parseStructuredQualityArtifact("not json", QualityScenePlanSchema, "scene plan"), /valid JSON/i);
+  assert.throws(() => parseStructuredQualityArtifact("{not json}", QualityScenePlanSchema, "scene plan"), /valid JSON/i);
 });
 
 test("final quality output is chapter-bound, path-safe, duplicate-free, and manuscript-bearing", () => {
