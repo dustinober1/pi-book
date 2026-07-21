@@ -140,7 +140,7 @@ export function projectTemplateFiles(options: ProjectTemplateOptions): Record<st
     },
     runtime: {
       profile: options.runtimeProfile ?? "full",
-      model_execution_profile: options.modelExecutionProfile ?? "host-default",
+      ...(options.modelExecutionProfile ? { model_execution_profile: options.modelExecutionProfile } : {}),
       telemetry: true,
     },
     quality: structuredClone(options.quality ?? defaultQualityProjectState()),
