@@ -3,7 +3,11 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { runQualityDraft, QualityBudgetDowngradeError, QualityBudgetStopError } from "../src/application/quality-orchestrator.js";
+import {
+  runBudgetedQualityDraft,
+  QualityBudgetDowngradeError,
+  QualityBudgetStopError,
+} from "../src/application/budgeted-quality-draft.js";
 import type { ModelCallReport } from "../src/domain/run-report.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import { readBudgetLedger } from "../src/infrastructure/budget-ledger-store.js";
@@ -56,7 +60,7 @@ test("stop policy blocks the next call before inference and keeps failure cache"
   try {
     const quality = configure(project.root, "stop");
     const worker = new BudgetWorker();
-    await assert.rejects(runQualityDraft({
+    await assert.rejects(runBudgetedQualityDraft({
       root: project.root, chapter: 1, runtimeProfile: "full", qualityConfig: quality, worker,
       runId: "QDR-STOP", cacheRetention: "delete-on-success",
     }), (error: unknown) => {
@@ -81,7 +85,7 @@ test("downgrade policy names the next lower tier without canonical mutation", as
   try {
     const quality = configure(project.root, "downgrade");
     const worker = new BudgetWorker();
-    await assert.rejects(runQualityDraft({
+    await assert.rejects(runBudgetedQualityDraft({
       root: project.root, chapter: 1, runtimeProfile: "full", qualityConfig: quality, worker, runId: "QDR-DOWN",
     }), (error: unknown) => {
       assert.ok(error instanceof QualityBudgetDowngradeError);
@@ -100,7 +104,7 @@ test("worker interruption releases its live reservation", async () => {
   const project = createDraftableQualityProject("premium");
   try {
     const quality = configure(project.root, "stop");
-    await assert.rejects(runQualityDraft({
+    await assert.rejects(runBudgetedQualityDraft({
       root: project.root, chapter: 1, runtimeProfile: "full", qualityConfig: quality, worker: new BudgetWorker(true), runId: "QDR-INTERRUPT",
     }), /worker interrupted/);
     const ledger = readBudgetLedger(project.root);
