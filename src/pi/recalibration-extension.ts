@@ -1,5 +1,9 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { runQualityDraft } from "../application/quality-orchestrator.js";
+import {
+  QualityBudgetDowngradeError,
+  QualityBudgetStopError,
+  runBudgetedQualityDraft,
+} from "../application/budgeted-quality-draft.js";
 import { runExplicitVoiceRecalibration } from "../application/recalibration.js";
 import { qualityStateWithOverride, resolveQualityConfig } from "../domain/quality-profile.js";
 import type { QualityWorker } from "../domain/quality-worker.js";
@@ -70,26 +74,43 @@ function withQualityDraft(definition: CommandDefinition, options: NovelForgeExte
         const draft = parseDraftOptions(args);
         const project = readProject(root);
         const qualityState = qualityStateWithOverride(project.quality, draft.quality);
-        const quality = resolveQualityConfig(qualityState);
-        if (quality.tier === "economy") {
-          await original.handler(args, context);
-          return;
-        }
         const runtime = resolveRuntimeProfile({ project: project.runtime?.profile });
         const worker = options.createQualityWorker?.(root) ?? new PiPrintWorker({ cwd: root });
         const provider = process.env.NOVEL_FORGE_QUALITY_PROVIDER?.trim();
         const model = process.env.NOVEL_FORGE_QUALITY_MODEL?.trim();
-        const result = await runQualityDraft({
-          root,
-          ...(draft.chapter !== undefined ? { chapter: draft.chapter } : {}),
-          runtimeProfile: runtime,
-          qualityConfig: quality,
-          worker,
-          ...(provider ? { provider } : {}),
-          ...(model ? { model } : {}),
-          onProgress(name) { context.ui.notify(`Quality pass: ${name}`, "info"); },
-        });
-        context.ui.notify(`${result.tier} quality draft complete for Chapter ${result.chapter}. ${result.calls.length} isolated model call(s); ${result.changed.length} canonical file(s) changed.`, "info");
+
+        while (true) {
+          const quality = resolveQualityConfig(qualityState);
+          if (quality.tier === "economy") {
+            await original.handler(args, context);
+            return;
+          }
+          try {
+            const result = await runBudgetedQualityDraft({
+              root,
+              ...(draft.chapter !== undefined ? { chapter: draft.chapter } : {}),
+              runtimeProfile: runtime,
+              qualityConfig: quality,
+              worker,
+              ...(provider ? { provider } : {}),
+              ...(model ? { model } : {}),
+              onProgress(name) { context.ui.notify(`Quality pass: ${name}`, "info"); },
+            });
+            context.ui.notify(`${result.tier} quality draft complete for Chapter ${result.chapter}. ${result.calls.length} isolated model call(s); ${result.changed.length} canonical file(s) changed.`, "info");
+            return;
+          } catch (error) {
+            if (error instanceof QualityBudgetDowngradeError) {
+              context.ui.notify(`Quality budget downgraded ${error.fromTier} to ${error.toTier} at ${error.reason}. Restarting without canonical manuscript changes.`, "info");
+              qualityState.tier = error.toTier;
+              continue;
+            }
+            if (error instanceof QualityBudgetStopError) {
+              context.ui.notify(`Quality budget stopped drafting at ${error.reason}. No canonical manuscript change was applied.`, "warning");
+              return;
+            }
+            throw error;
+          }
+        }
       } catch (error) {
         context.ui.notify(errorText(error), "warning");
       }
