@@ -6,9 +6,9 @@ import {
 } from "../domain/model-execution-profile.js";
 
 export interface ResolveModelExecutionProfileInput {
-  explicit?: ModelExecutionProfileId;
-  project?: ModelExecutionProfileId;
-  custom?: ModelExecutionProfile;
+  explicit?: ModelExecutionProfileId | undefined;
+  project?: ModelExecutionProfileId | undefined;
+  custom?: ModelExecutionProfile | undefined;
 }
 
 export function resolveModelExecutionProfile(input: ResolveModelExecutionProfileInput): ModelExecutionProfile {
