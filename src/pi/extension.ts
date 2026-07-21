@@ -14,6 +14,7 @@ import { renderOrganizationPreview, scanWritingRepository } from "../application
 import { buildPackagingChecklist } from "../application/package-checklist.js";
 import { bookPlanPrompt, packagePrompt, readerTestPrompt, reviewPrompt, seriesPlanPrompt, voicePlanPrompt } from "../application/prompts.js";
 import {
+  beginQualityAutopilotRun,
   beginQualityPersistentRun,
   cancelQualityPersistentRun,
   decideQualityNextRun,
@@ -284,7 +285,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     refreshGuidance(root, { lastAction: briefPath ? "Initialized project from authorized brief" : "Initialized project" });
     const autoTo = flagValue(supplied, "--auto-to");
     if (autoTo) {
-      sendDecision(pi, context, beginQualityPersistentRun(root, { target: autoTo, maxChapters: readProject(root).automation.max_chapters_per_run }));
+      sendDecision(pi, context, beginQualityAutopilotRun(root, { target: autoTo, maxChapters: readProject(root).automation.max_chapters_per_run }));
       context.ui.notify(`Novel Forge project created at ${root}. Autopilot stops at ${autoTo} or the next required writer decision.`, "info");
     } else context.ui.notify(`Novel Forge project created at ${root}. Run /novel.`, "info");
   } });
@@ -315,7 +316,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     }
     const projectName = positional.join(" ") || await context.ui.input("Project name:", basename(root));
     if (!projectName) return;
-    const profile = flagValue(items, "--profile") || await context.ui.select("Project profile:", listProfiles().map((item) => item.id));
+    const profile = flagValue(items, "--profile") || await context.ui.select("Novel profile:", listProfiles().map((item) => item.id));
     if (!isProfileId(profile)) return;
     const projectType = (flagValue(items, "--type") || await context.ui.select("Project type:", ["standalone", "planned-series", "open-ended-series"])) as ProjectType | undefined;
     if (!projectType || !["standalone", "planned-series", "open-ended-series"].includes(projectType)) return;
