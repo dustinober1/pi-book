@@ -1,9 +1,11 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import { buildChapterContext } from "../context/context-builder.js";
 import {
   QualityBudgetDowngradeError,
   QualityBudgetStopError,
   runBudgetedQualityDraft,
 } from "../application/budgeted-quality-draft.js";
+import { ForegroundEconomyTelemetry } from "../application/foreground-economy-telemetry.js";
 import { runExplicitVoiceRecalibration } from "../application/recalibration.js";
 import { qualityStateWithOverride, resolveQualityConfig } from "../domain/quality-profile.js";
 import type { QualityWorker } from "../domain/quality-worker.js";
@@ -26,6 +28,7 @@ interface ReviewCommandDefinition {
 
 export interface NovelForgeExtensionOptions {
   createQualityWorker?: (root: string) => QualityWorker;
+  foregroundTelemetry?: ForegroundEconomyTelemetry;
 }
 
 function errorText(error: unknown): string {
@@ -63,7 +66,11 @@ function withRecalibration(definition: CommandDefinition): CommandDefinition {
   return decorated as unknown as CommandDefinition;
 }
 
-function withQualityDraft(definition: CommandDefinition, options: NovelForgeExtensionOptions): CommandDefinition {
+function withQualityDraft(
+  definition: CommandDefinition,
+  options: NovelForgeExtensionOptions,
+  foreground: ForegroundEconomyTelemetry,
+): CommandDefinition {
   const original = definition as unknown as ReviewCommandDefinition;
   const decorated: ReviewCommandDefinition = {
     ...original,
@@ -82,7 +89,19 @@ function withQualityDraft(definition: CommandDefinition, options: NovelForgeExte
         while (true) {
           const quality = resolveQualityConfig(qualityState);
           if (quality.tier === "economy") {
-            await original.handler(args, context);
+            const chapter = buildChapterContext(root, draft.chapter, runtime.maxContextChars, runtime.graphDepth).packet.chapter;
+            foreground.begin({
+              root,
+              chapter,
+              runtimeProfile: runtime.id,
+              ...(project.runtime?.telemetry !== undefined ? { telemetryEnabled: project.runtime.telemetry } : {}),
+            });
+            try {
+              await original.handler(args, context);
+            } catch (error) {
+              foreground.cancel();
+              throw error;
+            }
             return;
           }
           worker ??= options.createQualityWorker?.(root) ?? new PiPrintWorker({ cwd: root });
@@ -120,7 +139,23 @@ function withQualityDraft(definition: CommandDefinition, options: NovelForgeExte
   return decorated as unknown as CommandDefinition;
 }
 
+function registerForegroundTelemetryHooks(pi: ExtensionAPI, foreground: ForegroundEconomyTelemetry): void {
+  const eventApi = pi as ExtensionAPI & { on?: ExtensionAPI["on"] };
+  if (typeof eventApi.on !== "function") return;
+  pi.on("before_agent_start", async (event) => {
+    foreground.capturePrompt(event.prompt);
+  });
+  pi.on("model_select", async (event) => {
+    foreground.captureModel(event.model);
+  });
+  pi.on("turn_end", async (event, context) => {
+    foreground.complete(event.message, context.getContextUsage());
+  });
+}
+
 export function registerNovelForgeWithRecalibration(pi: ExtensionAPI, options: NovelForgeExtensionOptions = {}): void {
+  const foreground = options.foregroundTelemetry ?? new ForegroundEconomyTelemetry();
+  registerForegroundTelemetryHooks(pi, foreground);
   const registerCommand = pi.registerCommand.bind(pi);
   const proxy = new Proxy(pi as object, {
     get(target, property, receiver) {
@@ -129,7 +164,7 @@ export function registerNovelForgeWithRecalibration(pi: ExtensionAPI, options: N
           const decorated = name === "novel-review"
             ? withRecalibration(definition)
             : name === "novel-draft"
-              ? withQualityDraft(definition, options)
+              ? withQualityDraft(definition, options, foreground)
               : definition;
           registerCommand(name, decorated);
         };
