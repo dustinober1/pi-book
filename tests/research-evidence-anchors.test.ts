@@ -2,8 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Value } from "@sinclair/typebox/value";
 import { researchEvidenceFindings } from "../src/application/research-evidence.js";
+import {
+  ResearchLedgerWithAnchorsSchema,
+  type ResearchLedgerWithAnchors,
+} from "../src/domain/research-evidence-anchors.js";
 import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../src/domain/v1-3-research-schemas.js";
-import { ResearchLedgerSchema, type ResearchLedger } from "../src/domain/v1-3-schemas.js";
 
 function readyItem(overrides: Record<string, unknown> = {}) {
   return {
@@ -24,8 +27,8 @@ function readyItem(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function ledger(item: unknown): ResearchLedger {
-  return { schema_version: "1.0.0", items: [item] } as ResearchLedger;
+function ledger(item: unknown): ResearchLedgerWithAnchors {
+  return { schema_version: "1.0.0", items: [item] } as ResearchLedgerWithAnchors;
 }
 
 function source(id: string, researchIds: string[] = ["RES-001"]): SourceRegisterV13["sources"][number] {
@@ -53,33 +56,33 @@ const direct = {
   support_type: "direct",
   paraphrase: "Two authorized operators must confirm the release.",
   excerpt_hash: "a".repeat(64),
-};
+} as const;
 
 const corroborating = (sourceId: string, hash: string) => ({
   source_id: sourceId,
   locator: "Release workflow discussion",
-  support_type: "corroborating",
+  support_type: "corroborating" as const,
   paraphrase: "The procedure requires two independent confirmations.",
   excerpt_hash: hash.repeat(64),
 });
 
 test("legacy research items and source records remain schema-readable", () => {
-  assert.equal(Value.Check(ResearchLedgerSchema, ledger(readyItem())), true);
+  assert.equal(Value.Check(ResearchLedgerWithAnchorsSchema, ledger(readyItem())), true);
   assert.equal(Value.Check(SourceRegisterV13Schema, sources(source("SRC-001"))), true);
 });
 
 test("evidence anchors are bounded typed records", () => {
   const valid = ledger(readyItem({ accuracy_risk: "high", evidence_anchors: [direct] }));
-  assert.equal(Value.Check(ResearchLedgerSchema, valid), true);
+  assert.equal(Value.Check(ResearchLedgerWithAnchorsSchema, valid), true);
 
   const blankLocator = ledger(readyItem({ accuracy_risk: "high", evidence_anchors: [{ ...direct, locator: "" }] }));
-  assert.equal(Value.Check(ResearchLedgerSchema, blankLocator), false);
+  assert.equal(Value.Check(ResearchLedgerWithAnchorsSchema, blankLocator), false);
 
   const longParaphrase = ledger(readyItem({ accuracy_risk: "high", evidence_anchors: [{ ...direct, paraphrase: "x".repeat(501) }] }));
-  assert.equal(Value.Check(ResearchLedgerSchema, longParaphrase), false);
+  assert.equal(Value.Check(ResearchLedgerWithAnchorsSchema, longParaphrase), false);
 
   const rawExcerpt = ledger(readyItem({ accuracy_risk: "high", evidence_anchors: [{ ...direct, excerpt_hash: "raw source quotation" }] }));
-  assert.equal(Value.Check(ResearchLedgerSchema, rawExcerpt), false);
+  assert.equal(Value.Check(ResearchLedgerWithAnchorsSchema, rawExcerpt), false);
 });
 
 test("high-risk ready research requires one direct anchor", () => {
