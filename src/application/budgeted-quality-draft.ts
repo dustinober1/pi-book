@@ -42,7 +42,7 @@ export async function runBudgetedQualityDraft(input: RunBudgetedQualityDraftInpu
     tier: quality.tier,
     limits: quality.budget,
     worker: input.worker,
-    telemetryEnabled: project.runtime?.telemetry,
+    ...(project.runtime?.telemetry !== undefined ? { telemetryEnabled: project.runtime.telemetry } : {}),
   });
   return runQualityDraft({
     ...input,
