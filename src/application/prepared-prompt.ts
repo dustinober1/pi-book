@@ -26,7 +26,7 @@ export function preparePrompt(spec: StageSpec, evidence: string, profile: Runtim
     text,
     instructionChars: instructions.characterCount,
     evidenceChars,
-    estimatedInputTokens: Math.ceil((instructions.characterCount + evidenceChars) / 4),
+    estimatedInputTokens: Math.ceil(text.length / 4),
     sectionCharacters: instructions.sectionCharacters,
   };
 }
