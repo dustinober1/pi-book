@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerNovelForge } from "../src/pi/extension.js";
@@ -32,6 +33,10 @@ function context(cwd: string, notifications: string[]) {
     },
     isIdle: () => true,
   };
+}
+
+function commitCount(root: string): number {
+  return Number.parseInt(execFileSync("git", ["rev-list", "--count", "HEAD"], { cwd: root, encoding: "utf8" }).trim(), 10);
 }
 
 test("run and draft parsers expose validated quality overrides", () => {
@@ -95,7 +100,7 @@ test("novel-start stores explicit quality and budget settings", async () => {
   }
 });
 
-test("novel-run snapshots quality overrides and budget command is read-only", async () => {
+test("novel-run snapshots quality and telemetry in one guarded run-start checkpoint", async () => {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-quality-run-"));
   try {
     const root = initializeProject(parent, {
@@ -104,10 +109,12 @@ test("novel-run snapshots quality overrides and budget command is read-only", as
       profile: "thriller",
     });
     const harness = commandHarness();
+    const beforeCommits = commitCount(root);
     await harness.commands.get("novel-run").handler(
       "--quality-tier editorial --max-total-tokens 300000 --max-tokens-per-chapter 18000 --max-calls-per-chapter 10 --on-budget-exhaustion stop --max-chapters 2 --until next-milestone",
       context(root, harness.notifications),
     );
+    assert.equal(commitCount(root), beforeCommits + 1);
     assert.deepEqual(readProject(root).automation.active_run?.quality_snapshot, {
       tier: "editorial",
       adaptive: true,
@@ -121,6 +128,10 @@ test("novel-run snapshots quality overrides and budget command is read-only", as
         on_exhaustion: "stop",
       },
     });
+    const report = JSON.parse(readFileSync(join(root, ".pi-book", "runs", "RUN-001", "run-report.json"), "utf8")) as { schemaVersion?: string; qualityTier?: string; modelCalls?: unknown[] };
+    assert.equal(report.schemaVersion, "2.0.0");
+    assert.equal(report.qualityTier, "editorial");
+    assert.deepEqual(report.modelCalls, []);
 
     const before = JSON.stringify(readProject(root));
     await harness.commands.get("novel-budget").handler("", context(root, harness.notifications));
