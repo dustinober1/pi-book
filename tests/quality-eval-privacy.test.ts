@@ -8,7 +8,7 @@ import { buildQualityEvalReport, renderHumanAnswerCsv, renderHumanReviewKit } fr
 
 function hash(value: string): string { return createHash("sha256").update(value).digest("hex"); }
 function meta(prompt: string): Record<string, unknown> {
-  const line = prompt.split("\n").find((value) => value.startsWith("{"));
+  const line = prompt.split("\n").find((value) => value.trim().startsWith("{"));
   if (!line) throw new Error("missing metadata");
   return JSON.parse(line) as Record<string, unknown>;
 }
