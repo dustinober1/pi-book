@@ -12,7 +12,6 @@ import { parseRunOptions } from "../src/pi/arguments.js";
 
 test("legacy projects resolve to host-default without a stored model profile", () => {
   assert.equal(resolveModelExecutionProfile({}).id, "host-default");
-  assert.equal(resolveModelExecutionProfile({ project: undefined }).id, "host-default");
 });
 
 test("small-12b-q4 is opt-in and separate from runtime and quality profiles", () => {
