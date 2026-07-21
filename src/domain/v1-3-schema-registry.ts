@@ -1,4 +1,5 @@
 import type { TSchema } from "@sinclair/typebox";
+import { ResearchLedgerWithAnchorsSchema } from "./research-evidence-anchors.js";
 import { PlotGridPhase4Schema } from "./v1-3-architecture-schemas.js";
 import {
   BookStrategyPhase5Schema,
@@ -7,7 +8,6 @@ import {
 } from "./v1-3-audit-schemas.js";
 import { SourceRegisterV13Schema } from "./v1-3-research-schemas.js";
 import {
-  ResearchLedgerSchema,
   TasteProfileSchema,
   VoiceExperimentFileSchema,
   VoiceExperimentIndexSchema,
@@ -19,7 +19,7 @@ const registry: Array<[RegExp, TSchema]> = [
   [/(^|\/)voice-guardrails\.yaml$/, VoiceGuardrailsSchema],
   [/(^|\/)voice-experiments\/index\.yaml$/, VoiceExperimentIndexSchema],
   [/(^|\/)voice-experiments\/VE-[0-9]{3}\/experiment\.yaml$/, VoiceExperimentFileSchema],
-  [/(^|\/)research-ledger\.yaml$/, ResearchLedgerSchema],
+  [/(^|\/)research-ledger\.yaml$/, ResearchLedgerWithAnchorsSchema],
   [/(^|\/)book-strategy\.yaml$/, BookStrategyPhase5Schema],
   [/(^|\/)plot-grid\.yaml$/, PlotGridPhase4Schema],
   [/(^|\/)revision-tickets\.yaml$/, RevisionTicketsPhase5Schema],
