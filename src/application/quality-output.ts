@@ -9,7 +9,7 @@ const QualityEventFileSchema = Type.Object({
 export const QualityEventOutputSchema = Type.Object({
   schema_version: Type.Literal("1.0.0"),
   chapter: Type.Integer({ minimum: 1 }),
-  files: Type.Array(QualityEventFileSchema, { minItems: 1 }),
+  files: Type.Array(QualityEventFileSchema),
   summary: Type.String({ minLength: 1 }),
 }, { additionalProperties: false });
 export type QualityEventOutput = Static<typeof QualityEventOutputSchema>;
