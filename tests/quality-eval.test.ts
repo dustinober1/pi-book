@@ -113,8 +113,8 @@ test("human review kit is blinded and reports cost and pairwise outcomes without
   const kit = renderHumanReviewKit(bundle);
   const csv = renderHumanAnswerCsv(bundle);
   for (const secret of ["economy", "premium", "fake-provider-secret", "secret-model-name", "QEF-THR-001", "QEF-ROM-001"]) {
-    assert.equal(kit.includes(secret), false);
-    assert.equal(csv.includes(secret), false);
+    assert.equal(kit.includes(secret), false, "kit should not contain " + secret);
+    assert.equal(csv.includes(secret), false, "csv should not contain " + secret);
   }
   assert.match(kit, /SMP-[A-F0-9]{12}/);
   assert.match(csv, /comparison_id,sample_a,sample_b,winner,severe_failure_sample_ids,notes/);
