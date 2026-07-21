@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { beginQualityAutopilotRun } from "../src/application/quality-run.js";
+import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { registerNovelForge } from "../src/pi/extension.js";
 import { parseDraftOptions, parseRunOptions } from "../src/pi/arguments.js";
 import { initializeProject, readProject } from "../src/project/store.js";
@@ -139,6 +141,35 @@ test("novel-run snapshots quality and telemetry in one guarded run-start checkpo
     assert.match(rendered, /Quality tier: economy/i);
     assert.match(rendered, /Recorded tokens: 0/i);
     assert.equal(JSON.stringify(readProject(root)), before);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("quality autopilot preserves existing human-gate stops", () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-quality-autopilot-"));
+  try {
+    const root = initializeProject(parent, {
+      projectName: "Quality Autopilot",
+      projectType: "standalone",
+      profile: "thriller",
+    });
+    const project = readProject(root);
+    project.gates["voice-approval"] = "pending";
+    project.next_gate = "voice-approval";
+    writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
+    const beforeCommits = commitCount(root);
+
+    const decision = beginQualityAutopilotRun(root, {
+      target: "book-plan-approval",
+      maxChapters: 3,
+      quality: { tier: "premium" },
+    });
+
+    assert.equal(decision.action, "human-gate");
+    assert.match(decision.message, /writer decision at voice-approval/i);
+    assert.equal(readProject(root).automation.active_run, null);
+    assert.equal(commitCount(root), beforeCommits);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
