@@ -14,6 +14,17 @@ export const QualityEventOutputSchema = Type.Object({
 }, { additionalProperties: false });
 export type QualityEventOutput = Static<typeof QualityEventOutputSchema>;
 
+export const QualityVerificationOutputSchema = Type.Object({
+  schema_version: Type.Literal("1.0.0"),
+  chapter: Type.Integer({ minimum: 1 }),
+  verdict: Type.Union([Type.Literal("accept"), Type.Literal("reject")]),
+  findings: Type.Array(Type.Object({
+    evidence: Type.String({ minLength: 1 }),
+    required_change: Type.String({ minLength: 1 }),
+  }, { additionalProperties: false })),
+}, { additionalProperties: false });
+export type QualityVerificationOutput = Static<typeof QualityVerificationOutputSchema>;
+
 function exactJsonObject(text: string, label: string): Record<string, unknown> {
   const trimmed = text.trim();
   if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
@@ -86,5 +97,11 @@ export function parseQualityEventOutput(
     if (kind === "manuscript") manuscript = true;
   }
   if (!manuscript) throw new Error(`Quality event output must include the Chapter ${expected.chapter} manuscript file.`);
+  return output;
+}
+
+export function parseQualityVerificationOutput(text: string, chapter: number, label: string): QualityVerificationOutput {
+  const output = parseStructuredQualityArtifact(text, QualityVerificationOutputSchema, label);
+  if (output.chapter !== chapter) throw new Error(`${label} must target Chapter ${chapter}.`);
   return output;
 }
