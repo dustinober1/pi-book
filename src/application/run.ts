@@ -5,7 +5,7 @@ import type { RuntimeProfile, RuntimeProfileId } from "../domain/runtime-profile
 import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import { PremiseLabSchema, type PremiseLab } from "../domain/v1-4-schemas.js";
 import { readText } from "../infrastructure/files.js";
-import { stringifyYaml } from "../infrastructure/yaml.js";
+import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject, readTickets } from "../project/store.js";
 import { openBlockingTickets } from "../review/review.js";
 import { assertOperationAllowed } from "./authorization.js";
