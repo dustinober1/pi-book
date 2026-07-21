@@ -1,9 +1,14 @@
 import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
+import { defaultEntityRegistry } from "../domain/entity-registry.js";
 import { defaultHistoricalContext, defaultInventionLedger } from "../domain/historical-fiction.js";
+import { defaultKnowledgeLedger } from "../domain/knowledge-ledger.js";
 import type { ModelExecutionProfileId } from "../domain/model-execution-profile.js";
+import { defaultObjectLedger } from "../domain/object-ledger.js";
 import { defaultQualityProjectState, type QualityProjectState } from "../domain/quality-profile.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProfileId, ProjectType, BookState } from "../domain/schemas.js";
+import { defaultStoryState } from "../domain/story-state.js";
+import { defaultTimelineLedger } from "../domain/timeline-ledger.js";
 import { defaultMarketingMetadata, defaultPublishingMetadata } from "../domain/v1-2-schemas.js";
 import { defaultPhase4StressTest } from "../domain/v1-3-architecture-schemas.js";
 import {
@@ -205,6 +210,11 @@ status: pending
     "series/series-arc.yaml": stringifyYaml({ schema_version: "1.0.0", books: [{ id: "book-01", status: "active", role: "establish the series promise", closes: [], carries: [] }], long_arcs: [] }),
     "series/canon.yaml": stringifyYaml({ schema_version: "1.0.0", facts: [], relationships: [] }),
     "series/story-threads.yaml": stringifyYaml({ schema_version: "1.0.0", threads: [] }),
+    "series/entity-registry.yaml": stringifyYaml(defaultEntityRegistry()),
+    "series/story-state.yaml": stringifyYaml(defaultStoryState()),
+    "series/knowledge-ledger.yaml": stringifyYaml(defaultKnowledgeLedger()),
+    "series/object-ledger.yaml": stringifyYaml(defaultObjectLedger()),
+    "series/timeline-ledger.yaml": stringifyYaml(defaultTimelineLedger()),
     ...bookTemplateFiles("book-01", 1, options.profile, options.targetWords ?? 100000),
     "research/source-register.yaml": stringifyYaml({ schema_version: "1.0.0", sources: [] }),
   };
