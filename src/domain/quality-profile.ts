@@ -44,6 +44,14 @@ export const QualityProjectStateSchema = Type.Object({
 }, { additionalProperties: false });
 export type QualityProjectState = Static<typeof QualityProjectStateSchema>;
 
+export interface QualityRunOverride {
+  tier?: QualityTierId;
+  maximumTotalTokens?: number | null;
+  maximumTokensPerChapter?: number | null;
+  maximumCallsPerChapter?: number | null;
+  onExhaustion?: BudgetExhaustionPolicy;
+}
+
 export interface ResolvedQualityConfig {
   tier: QualityTierId;
   adaptive: boolean;
@@ -79,6 +87,16 @@ export const QUALITY_TIER_POLICIES: Readonly<Record<QualityTierId, QualityTierPo
   editorial: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: lanes("continuity", "voice", "causality", "research"), finalReviewer: true, claimAudit: true }),
 });
 
+export function parseQualityTierId(value: unknown): QualityTierId {
+  if (typeof value === "string" && value in QUALITY_TIER_POLICIES) return value as QualityTierId;
+  throw new Error(`Unknown quality tier: ${String(value)}. Allowed: ${Object.keys(QUALITY_TIER_POLICIES).join(", ")}.`);
+}
+
+export function parseBudgetExhaustionPolicy(value: unknown): BudgetExhaustionPolicy {
+  if (value === "stop" || value === "downgrade") return value;
+  throw new Error(`Unknown budget exhaustion policy: ${String(value)}. Allowed: stop, downgrade.`);
+}
+
 export function defaultQualityProjectState(): QualityProjectState {
   return {
     tier: "economy",
@@ -101,8 +119,22 @@ function positiveOrNull(value: number | null, label: string): number | null {
   return value;
 }
 
+export function qualityStateWithOverride(
+  state: QualityProjectState | undefined,
+  override: QualityRunOverride | undefined,
+): QualityProjectState {
+  const base = structuredClone(state ?? defaultQualityProjectState());
+  if (override?.tier !== undefined) base.tier = parseQualityTierId(override.tier);
+  if (override?.maximumTotalTokens !== undefined) base.budget.maximum_total_tokens = positiveOrNull(override.maximumTotalTokens, "Maximum total tokens");
+  if (override?.maximumTokensPerChapter !== undefined) base.budget.maximum_tokens_per_chapter = positiveOrNull(override.maximumTokensPerChapter, "Maximum tokens per chapter");
+  if (override?.maximumCallsPerChapter !== undefined) base.budget.maximum_calls_per_chapter = positiveOrNull(override.maximumCallsPerChapter, "Maximum calls per chapter");
+  if (override?.onExhaustion !== undefined) base.budget.on_exhaustion = parseBudgetExhaustionPolicy(override.onExhaustion);
+  resolveQualityConfig(base);
+  return base;
+}
+
 export function resolveQualityConfig(state: QualityProjectState = defaultQualityProjectState()): ResolvedQualityConfig {
-  if (!(state.tier in QUALITY_TIER_POLICIES)) throw new Error(`Unknown quality tier: ${String(state.tier)}.`);
+  const tier = parseQualityTierId(state.tier);
   if (!Number.isInteger(state.key_scene_candidates) || state.key_scene_candidates < 1 || state.key_scene_candidates > 2) {
     throw new Error("Key scene candidates must be an integer from 1 to 2.");
   }
@@ -112,11 +144,9 @@ export function resolveQualityConfig(state: QualityProjectState = defaultQuality
   if (!(["off", "risk-based", "always"] as const).includes(state.fact_checking)) {
     throw new Error(`Unknown fact-checking policy: ${String(state.fact_checking)}.`);
   }
-  if (!(["stop", "downgrade"] as const).includes(state.budget.on_exhaustion)) {
-    throw new Error(`Unknown budget exhaustion policy: ${String(state.budget.on_exhaustion)}.`);
-  }
+  const onExhaustion = parseBudgetExhaustionPolicy(state.budget.on_exhaustion);
   return {
-    tier: state.tier,
+    tier,
     adaptive: state.adaptive,
     keySceneCandidates: state.key_scene_candidates,
     maximumRevisionPasses: state.maximum_revision_passes,
@@ -125,7 +155,7 @@ export function resolveQualityConfig(state: QualityProjectState = defaultQuality
       maximumTotalTokens: positiveOrNull(state.budget.maximum_total_tokens, "Maximum total tokens"),
       maximumTokensPerChapter: positiveOrNull(state.budget.maximum_tokens_per_chapter, "Maximum tokens per chapter"),
       maximumCallsPerChapter: positiveOrNull(state.budget.maximum_calls_per_chapter, "Maximum calls per chapter"),
-      onExhaustion: state.budget.on_exhaustion,
+      onExhaustion,
     },
   };
 }
