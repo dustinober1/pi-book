@@ -74,12 +74,13 @@ test("guided screen turns pending and rejected gates into friendly actions", () 
     writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
     const pending = buildGuideScreen(root);
     assert.match(pending.title, /Voice Profile/i);
-    assert.deepEqual(pending.actions.map((item) => item.id), ["approve", "request-changes", "view-evidence", "status", "advanced"]);
+    assert.deepEqual(pending.actions.map((item) => item.id), ["approve", "request-changes", "view-evidence", "budget", "status", "advanced"]);
     project.gates["voice-approval"] = "rejected";
     writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
     const rejected = buildGuideScreen(root);
     assert.equal(rejected.primary.id, "repair");
     assert.ok(rejected.actions.some((item) => item.id === "repair"));
+    assert.ok(rejected.actions.some((item) => item.id === "budget"));
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
