@@ -36,9 +36,17 @@ class BudgetWorker implements QualityWorker {
       ? JSON.stringify({ ...common, artifact_type: "scene-plan", objective: "Choose.", beats: ["Enter", "Choose"], protected_constraints: [], ending_hook: "Pressure.", evidence_refs: [] })
       : JSON.stringify({ ...common, artifact_type: "draft-candidate", candidate_id: meta.candidate_id, text: "# Chapter 1\n\nDraft.\n", proposed_delta: { canon: [], relationships: [], threads: [] } });
     const usage: ModelCallReport = {
-      callId: request.callId, stage: request.stage, chapter: request.chapter, pass: request.pass,
-      inputTokens: 120, outputTokens: 80, estimated: false, elapsedMs: 1,
-      promptHash: hash(request.prompt), contextHash: hash(request.context ?? ""), outputHash: hash(text),
+      callId: request.callId,
+      stage: request.stage,
+      ...(request.chapter !== undefined ? { chapter: request.chapter } : {}),
+      pass: request.pass,
+      inputTokens: 120,
+      outputTokens: 80,
+      estimated: false,
+      elapsedMs: 1,
+      promptHash: hash(request.prompt),
+      contextHash: hash(request.context ?? ""),
+      outputHash: hash(text),
     };
     return { text, usage };
   }
