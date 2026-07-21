@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test:
@@ -17,6 +17,8 @@ jobs:
         node: ['22.19.0', '24']
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Synchronize release metadata artifacts
         run: |
           node - <<'NODE'
@@ -34,6 +36,16 @@ jobs:
             fs.writeFileSync(skillPath, skill);
           }
           NODE
+      - name: Commit synchronized release files
+        if: matrix.node == '24'
+        run: |
+          if ! git diff --quiet -- package-lock.json SKILL.md; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json SKILL.md
+            git commit -m "release: synchronize 1.7 metadata and skill authority"
+            git push origin HEAD:feature/quality-evaluation-release
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
@@ -72,6 +84,7 @@ jobs:
       - name: Run prompt compiler benchmark
         run: npm run --silent benchmark:prompts > prompt-compiler-benchmark.json
       - run: npm run verify:release
+      - run: npm run test:release
       - run: npm pack --dry-run
       - name: Upload diagnostics
         if: always()
