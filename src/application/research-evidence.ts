@@ -1,3 +1,4 @@
+import type { ResearchLedgerWithAnchors, ResearchItemWithAnchors } from "../domain/research-evidence-anchors.js";
 import type { SourceRegisterV13 } from "../domain/v1-3-research-schemas.js";
 import type { ResearchLedger } from "../domain/v1-3-schemas.js";
 
@@ -12,7 +13,11 @@ export interface ResearchEvidenceFinding {
     | "missing-source-observation-date"
     | "missing-dramatic-use"
     | "missing-story-decision"
-    | "legacy-source-reference";
+    | "legacy-source-reference"
+    | "anchor-source-not-declared"
+    | "anchor-source-missing"
+    | "anchor-source-support-mismatch"
+    | "insufficient-high-risk-anchors";
   message: string;
 }
 
@@ -30,8 +35,12 @@ function nonblank(value: string | null | undefined): boolean {
   return Boolean(value?.trim());
 }
 
+function anchoredItem(item: ResearchLedger["items"][number] | ResearchItemWithAnchors): ResearchItemWithAnchors {
+  return item as ResearchItemWithAnchors;
+}
+
 export function researchEvidenceFindings(
-  ledger: ResearchLedger,
+  ledger: ResearchLedger | ResearchLedgerWithAnchors,
   sources: SourceRegisterV13,
 ): ResearchEvidenceFinding[] {
   const findings: ResearchEvidenceFinding[] = [];
@@ -43,8 +52,9 @@ export function researchEvidenceFindings(
   }
 
   const sourceById = new Map(sources.sources.map((source) => [source.id, source]));
-  for (const item of ledger.items) {
-    if (item.status !== "ready") continue;
+  for (const rawItem of ledger.items) {
+    if (rawItem.status !== "ready") continue;
+    const item = anchoredItem(rawItem);
     if (!item.dramatic_uses.length) {
       findings.push({ severity: "blocker", code: "missing-dramatic-use", message: `${item.id} is ready but has no dramatic use.` });
     }
@@ -65,6 +75,36 @@ export function researchEvidenceFindings(
       }
       if (!source.supports_research_ids?.includes(item.id)) {
         findings.push({ severity: "blocker", code: "source-support-mismatch", message: `${sourceId} does not declare support for ${item.id}.` });
+      }
+    }
+
+    const anchors = item.evidence_anchors ?? [];
+    const validAnchors = anchors.filter((anchor) => {
+      const declared = item.source_ids.includes(anchor.source_id);
+      const source = sourceById.get(anchor.source_id);
+      const linked = source?.supports_research_ids?.includes(item.id) ?? false;
+      if (!declared) {
+        findings.push({ severity: "blocker", code: "anchor-source-not-declared", message: `${item.id} anchor source ${anchor.source_id} is not listed in source_ids.` });
+      }
+      if (!source) {
+        findings.push({ severity: "blocker", code: "anchor-source-missing", message: `${item.id} anchor references missing source ${anchor.source_id}.` });
+      } else if (!linked) {
+        findings.push({ severity: "blocker", code: "anchor-source-support-mismatch", message: `${anchor.source_id} does not declare support for anchored research ${item.id}.` });
+      }
+      return declared && Boolean(source) && linked;
+    });
+
+    if (item.accuracy_risk === "high") {
+      const hasDirect = validAnchors.some((anchor) => anchor.support_type === "direct");
+      const corroboratingSources = new Set(
+        validAnchors.filter((anchor) => anchor.support_type === "corroborating").map((anchor) => anchor.source_id),
+      );
+      if (!hasDirect && corroboratingSources.size < 2) {
+        findings.push({
+          severity: "blocker",
+          code: "insufficient-high-risk-anchors",
+          message: `${item.id} is high-risk ready research and requires one direct anchor or two independent corroborating anchors.`,
+        });
       }
     }
   }

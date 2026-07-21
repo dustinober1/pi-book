@@ -1,7 +1,16 @@
 import type { QualityCriticLane } from "./quality-risk.js";
 
 export interface QualityPromptMetadata {
-  output_type: "scene-plan" | "draft-candidate" | "candidate-selection" | "lane-critique" | "event-output" | "verification";
+  output_type:
+    | "scene-plan"
+    | "draft-candidate"
+    | "candidate-selection"
+    | "lane-critique"
+    | "event-output"
+    | "verification"
+    | "claim-extraction"
+    | "claim-audit"
+    | "claim-repair";
   run_id: string;
   chapter: number;
   source_hashes: string[];
@@ -69,7 +78,7 @@ export function verificationPrompt(metadata: QualityPromptMetadata, purpose: "fi
   return [
     header(metadata),
     `Perform ${purpose}.`,
-    "Return {schema_version:'1.0.0', chapter, verdict:'accept'|'reject', findings:[{evidence,required_change}]}.",
+    "Return {schema_version:'1.0.0', chapter, verdict:'accept'|'reject', findings:[{evidence,required_change}] }.",
     "Reject only for concrete blockers. Do not rewrite the manuscript in this pass.",
   ].join("\n");
 }

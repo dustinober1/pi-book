@@ -32,6 +32,8 @@ class CommandPersistentWorker implements QualityWorker {
     else if (type === "candidate-selection") text = JSON.stringify({ ...common, artifact_type: "candidate-selection", candidate_ids: meta.candidate_ids, selected_candidate_id: "CAND-02", rationale: "Sharper.", evidence: ["Concrete consequence."] });
     else if (type === "lane-critique") text = JSON.stringify({ ...common, artifact_type: "lane-critique", candidate_id: meta.candidate_id, lane: meta.lane, findings: [], verdict: "accept" });
     else if (type === "event-output") text = JSON.stringify({ schema_version: "1.0.0", chapter, files: [{ path: `books/book-01/manuscript/chapters/${String(chapter).padStart(2, "0")}-chapter-${chapter}.md`, content: `# Chapter ${chapter}\n\nPersistent command drafted Chapter ${chapter}.\n` }], summary: "Done." });
+    else if (type === "claim-extraction") text = JSON.stringify({ ...common, artifact_type: "claim-extraction", claims: [] });
+    else if (type === "claim-audit") text = JSON.stringify({ ...common, artifact_type: "claim-audit", findings: [] });
     else throw new Error(`unexpected ${type}`);
     const usage: ModelCallReport = {
       callId: request.callId,

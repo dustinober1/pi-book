@@ -4,6 +4,13 @@ import { join } from "node:path";
 import type { Static, TSchema } from "@sinclair/typebox";
 import { buildChapterContext } from "../context/context-builder.js";
 import {
+  ClaimAuditArtifactSchema,
+  ClaimExtractionArtifactSchema,
+  type ClaimAuditArtifact,
+  type ClaimExtractionArtifact,
+} from "../domain/claim-audit.js";
+import { HistoricalContextSchema, InventionLedgerSchema, type HistoricalContext, type InventionLedger } from "../domain/historical-fiction.js";
+import {
   QualityCandidateSelectionSchema,
   QualityDraftCandidateSchema,
   QualityLaneCritiqueSchema,
@@ -14,18 +21,25 @@ import {
   type QualityScenePlan,
 } from "../domain/quality-artifacts.js";
 import { resolveQualityConfig, type QualityProjectState, type QualityTierId, type ResolvedQualityConfig } from "../domain/quality-profile.js";
+import { ResearchLedgerWithAnchorsSchema, type ResearchLedgerWithAnchors } from "../domain/research-evidence-anchors.js";
 import type { ModelCallReport } from "../domain/run-report.js";
 import type { QualityThinkingLevel, QualityWorker, QualityWorkerRequest } from "../domain/quality-worker.js";
 import { RUNTIME_PROFILES, type RuntimeProfile, type RuntimeProfileId } from "../domain/runtime-profile.js";
 import { RemarkabilitySchema, type RemarkabilityState } from "../domain/schemas.js";
 import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
 import { BookStrategyPhase5Schema, type BookStrategyPhase5 } from "../domain/v1-3-audit-schemas.js";
-import { HistoricalContextSchema, InventionLedgerSchema, type HistoricalContext, type InventionLedger } from "../domain/historical-fiction.js";
 import { readText } from "../infrastructure/files.js";
 import { finalizeQualityCache, writeQualityArtifact, type QualityCacheRetention } from "../infrastructure/quality-cache.js";
 import { appendModelCallReport, storeRunReport } from "../infrastructure/run-report-store.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject } from "../project/store.js";
+import {
+  claimAuditDecision,
+  shouldRunClaimAudit,
+  validateClaimAuditFindings,
+  validateProposedClaims,
+} from "./claim-audit.js";
+import { claimAuditPrompt, claimExtractionPrompt, claimRepairPrompt } from "./claim-audit-prompts.js";
 import { applyNovelEvent, projectStateHash } from "./events.js";
 import { normalizedContentHash } from "./model-usage.js";
 import {
@@ -45,7 +59,7 @@ import {
   verificationPrompt,
   type QualityPromptMetadata,
 } from "./quality-prompts.js";
-import { assessChapterQualityRisk, buildQualityPassPlan, type ChapterQualityRisk, type QualityPassPlan, type QualityCriticLane } from "./quality-risk.js";
+import { assessChapterQualityRisk, buildQualityPassPlan, type ChapterQualityRisk, type QualityPassPlan } from "./quality-risk.js";
 import { createRunReportHeader } from "./run-telemetry.js";
 import { resolveWorkerModelBudget } from "../pi/quality-worker.js";
 
@@ -132,6 +146,22 @@ function runReportPath(root: string, runId: string): string {
   return join(root, ".pi-book", "runs", runId, "run-report.json");
 }
 
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && Boolean(item.trim())) : [];
+}
+
+function manuscriptContent(output: QualityEventOutput, bookId: string, chapter: number): string {
+  const prefix = `books/${bookId}/manuscript/chapters/`;
+  const file = output.files.find((item) => {
+    if (!item.path.startsWith(prefix)) return false;
+    const filename = item.path.slice(prefix.length);
+    const match = filename.match(/^0*(\d+)(?:[-_ .]|$)/);
+    return Number(match?.[1]) === chapter;
+  });
+  if (!file) throw new Error(`Claim audit requires the Chapter ${chapter} manuscript output.`);
+  return file.content;
+}
+
 export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQualityDraftResult> {
   const profile = runtimeProfile(input.runtimeProfile);
   const quality = qualityConfig(input.qualityConfig);
@@ -145,6 +175,11 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   const plot = parseYaml<PlotGridPhase4>(requireText(input.root, `${bookRoot}/plot-grid.yaml`), PlotGridPhase4Schema, "plot-grid.yaml");
   const remarkability = parseYaml<RemarkabilityState>(requireText(input.root, `${bookRoot}/remarkability.yaml`), RemarkabilitySchema, "remarkability.yaml");
   const strategy = parseYaml<BookStrategyPhase5>(requireText(input.root, `${bookRoot}/book-strategy.yaml`), BookStrategyPhase5Schema, "book-strategy.yaml");
+  const research = parseYaml<ResearchLedgerWithAnchors>(
+    requireText(input.root, `${bookRoot}/research-ledger.yaml`),
+    ResearchLedgerWithAnchorsSchema,
+    "research-ledger.yaml",
+  );
   let historicalContext: HistoricalContext | undefined;
   let inventionLedger: InventionLedger | undefined;
   if (book.profile === "historical-fiction") {
@@ -159,7 +194,13 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     ...(inventionLedger ? { inventionLedger } : {}),
     approvedLearningGuardrail: approvedLearningGuardrail(strategy),
   });
-  const plan = buildQualityPassPlan(quality, risk);
+  const claimAuditRequired = shouldRunClaimAudit({
+    tier: quality.tier,
+    factChecking: quality.factChecking,
+    riskLevel: risk.level,
+    historical: book.profile === "historical-fiction",
+  });
+  const plan: QualityPassPlan = { ...buildQualityPassPlan(quality, risk), claimAudit: claimAuditRequired };
   const runId = input.runId ?? `QDR-${randomUUID()}`;
   const sourceHashes = [...new Set([projectStateHash(input.root), normalizedContentHash(context.text)])];
   const cacheRetention = input.cacheRetention ?? "delete-on-success";
@@ -326,7 +367,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   }
 
   const outputMeta = metadata({ output_type: "event-output", candidate_id: selected.candidate_id, book_id: book.book_id });
-  const eventOutput = await execute<QualityEventOutput>({
+  let eventOutput = await execute<QualityEventOutput>({
     label: "quality event output",
     metadata: outputMeta,
     prompt: eventOutputPrompt(outputMeta),
@@ -342,21 +383,119 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     cacheName: "event-output",
   });
 
-  for (const purpose of [
-    ...(plan.finalReviewer ? ["final-review" as const] : []),
-    ...(plan.claimAudit ? ["claim-audit" as const] : []),
-  ]) {
+  const allowedResearchIds = context.report.included
+    .map((item) => item.match(/^research (RES-[0-9]{3})$/)?.[1])
+    .filter((item): item is string => Boolean(item));
+  const allowedInventionIds = stringList(context.packet.profile_fields["invention_refs"])
+    .filter((item) => /^INV-[0-9]{3}$/.test(item));
+  const groundedResearch: ResearchLedgerWithAnchors = {
+    schema_version: "1.0.0",
+    items: research.items.filter((item) => allowedResearchIds.includes(item.id)),
+  };
+  const groundedInventions = inventionLedger
+    ? { ...inventionLedger, entries: inventionLedger.entries.filter((item) => allowedInventionIds.includes(item.id)) }
+    : undefined;
+
+  const auditDraft = async (draft: QualityEventOutput, round: number) => {
+    const chapterText = manuscriptContent(draft, book.book_id, chapter);
+    const extractionMeta = metadata({ output_type: "claim-extraction", book_id: book.book_id });
+    const extraction = await execute<ClaimExtractionArtifact>({
+      label: `claim extraction ${round}`,
+      metadata: extractionMeta,
+      prompt: claimExtractionPrompt(extractionMeta),
+      context: JSON.stringify({
+        chapter_text: chapterText,
+        allowed_research_ids: allowedResearchIds,
+        allowed_invention_ids: allowedInventionIds,
+        grounded_research: groundedResearch,
+        declared_inventions: groundedInventions?.entries ?? [],
+      }),
+      pass: "verification",
+      parse: (text) => {
+        const value = parseArtifact({ text, schema: ClaimExtractionArtifactSchema, metadata: extractionMeta, label: `claim extraction ${round}` });
+        validateProposedClaims({
+          chapterText,
+          claims: value.claims,
+          research: groundedResearch,
+          ...(groundedInventions ? { inventions: groundedInventions } : {}),
+          allowedResearchIds,
+          ...(groundedInventions ? { allowedInventionIds } : {}),
+        });
+        return value;
+      },
+      cacheName: `claim-extraction-${round}`,
+    });
+
+    const auditMeta = metadata({ output_type: "claim-audit", book_id: book.book_id });
+    const audit = await execute<ClaimAuditArtifact>({
+      label: `claim audit ${round}`,
+      metadata: auditMeta,
+      prompt: claimAuditPrompt(auditMeta),
+      context: JSON.stringify({
+        chapter_text: chapterText,
+        claims: extraction.claims,
+        grounded_research: groundedResearch,
+        declared_inventions: groundedInventions?.entries ?? [],
+      }),
+      pass: "verification",
+      parse: (text) => {
+        const value = parseArtifact({ text, schema: ClaimAuditArtifactSchema, metadata: auditMeta, label: `claim audit ${round}` });
+        validateClaimAuditFindings({ claims: extraction.claims, findings: value.findings, research: groundedResearch });
+        return value;
+      },
+      cacheName: `claim-audit-${round}`,
+    });
+    return {
+      extraction,
+      audit,
+      decision: claimAuditDecision({
+        claims: extraction.claims,
+        findings: audit.findings,
+        factChecking: quality.factChecking,
+      }),
+    };
+  };
+
+  if (claimAuditRequired) {
+    const firstAudit = await auditDraft(eventOutput, 1);
+    if (firstAudit.decision.blockers.length > 0) {
+      throw new Error(`Claim audit blocked the draft: ${firstAudit.decision.blockers.map((item) => `${item.claim_id}: ${item.reason}`).join("; ")}`);
+    }
+    if (firstAudit.decision.repairs.length > 0) {
+      const repairMeta = metadata({ output_type: "claim-repair", book_id: book.book_id });
+      eventOutput = await execute<QualityEventOutput>({
+        label: "claim repair",
+        metadata: repairMeta,
+        prompt: claimRepairPrompt(repairMeta),
+        context: JSON.stringify({
+          event_output: eventOutput,
+          repair_findings: firstAudit.decision.repairs,
+          grounded_research: groundedResearch,
+          declared_inventions: groundedInventions?.entries ?? [],
+        }),
+        pass: "revision",
+        parse: (text) => parseQualityEventOutput(text, { bookId: book.book_id, chapter }),
+        cacheName: "claim-repair",
+      });
+      const secondAudit = await auditDraft(eventOutput, 2);
+      if (secondAudit.decision.blockers.length > 0 || secondAudit.decision.repairs.length > 0) {
+        throw new Error("Claim audit failed after one targeted factual repair.");
+      }
+    }
+  }
+
+  if (plan.finalReviewer) {
     const verificationMeta = metadata({ output_type: "verification", book_id: book.book_id });
     const verification = await execute({
-      label: purpose,
+      label: "final-review",
       metadata: verificationMeta,
-      prompt: verificationPrompt(verificationMeta, purpose),
+      prompt: verificationPrompt(verificationMeta, "final-review"),
       context: JSON.stringify({ event_output: eventOutput, evidence: context.text }),
       pass: "verification" as const,
-      parse: (text) => parseQualityVerificationOutput(text, chapter, purpose),
-      cacheName: purpose,
+      parse: (text) => parseQualityVerificationOutput(text, chapter, "final-review"),
+      cacheName: "final-review",
     });
-    if (verification.verdict !== "accept") throw new Error(`${purpose} rejected the quality output with ${verification.findings.length} finding(s).`);
+    if (verification.verdict !== "accept") throw new Error(`final-review rejected the quality output with ${verification.findings.length} finding(s).`);
   }
 
   progress("guarded event application");

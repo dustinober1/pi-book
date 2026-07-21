@@ -88,6 +88,8 @@ class ScriptedWorker implements QualityWorker {
       const lane = String(meta.lane);
       text = JSON.stringify({ ...common, artifact_type: "lane-critique", candidate_id: "CAND-02", lane, findings: [{ severity: "medium", evidence: `${lane.toUpperCase()}-MARKER`, required_change: `Address ${lane}.` }], verdict: "revise" });
     } else if (type === "event-output") text = JSON.stringify({ schema_version: "1.0.0", chapter: 1, files: [{ path: "books/book-01/manuscript/chapters/01-chapter-1.md", content: "# Chapter 1\n\nCAND-02 makes the archive door lie, and Mara pays for believing it.\n" }], summary: "Applied isolated critique without changing the endpoint." });
+    else if (type === "claim-extraction") text = JSON.stringify({ ...common, artifact_type: "claim-extraction", claims: [] });
+    else if (type === "claim-audit") text = JSON.stringify({ ...common, artifact_type: "claim-audit", findings: [] });
     else throw new Error(`Unexpected output type ${type}.`);
     const usage: ModelCallReport = {
       callId: request.callId,
@@ -127,18 +129,19 @@ test("premium drafting isolates passes and ends in one guarded chapter event", a
     });
     assert.equal(result.chapter, 1);
     assert.equal(result.tier, "premium");
-    assert.equal(result.calls.length, 8);
-    assert.equal(worker.calls.length, 8);
+    assert.equal(result.calls.length, 10);
+    assert.equal(worker.calls.length, 10);
     assert.deepEqual(worker.calls.map((call) => metadata(call.prompt).output_type), [
       "scene-plan", "draft-candidate", "draft-candidate", "candidate-selection",
       "lane-critique", "lane-critique", "lane-critique", "event-output",
+      "claim-extraction", "claim-audit",
     ]);
     const criticCalls = worker.calls.filter((call) => metadata(call.prompt).output_type === "lane-critique");
     for (const call of criticCalls) {
       assert.doesNotMatch(call.context ?? "", /CONTINUITY-MARKER|VOICE-MARKER|CAUSALITY-MARKER/);
       assert.match(call.context ?? "", /CAND-02 makes the archive door lie/);
     }
-    const synthesis = worker.calls.at(-1)!;
+    const synthesis = worker.calls.find((call) => metadata(call.prompt).output_type === "event-output")!;
     assert.match(synthesis.context ?? "", /CONTINUITY-MARKER/);
     assert.match(synthesis.context ?? "", /VOICE-MARKER/);
     assert.match(synthesis.context ?? "", /CAUSALITY-MARKER/);

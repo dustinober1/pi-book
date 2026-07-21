@@ -35,6 +35,8 @@ class PremiumWorker implements QualityWorker {
     else if (outputType === "candidate-selection") text = JSON.stringify({ ...common, artifact_type: "candidate-selection", candidate_ids: value.candidate_ids, selected_candidate_id: "CAND-02", rationale: "The consequence is sharper.", evidence: ["Mara pays for entry."] });
     else if (outputType === "lane-critique") text = JSON.stringify({ ...common, artifact_type: "lane-critique", candidate_id: "CAND-02", lane: value.lane, findings: [], verdict: "accept" });
     else if (outputType === "event-output") text = JSON.stringify({ schema_version: "1.0.0", chapter: 1, files: [{ path: "books/book-01/manuscript/chapters/01-chapter-1.md", content: "# Chapter 1\n\nThe lying door opened, and Mara lost the authority that brought her there.\n" }], summary: "Premium synthesis complete." });
+    else if (outputType === "claim-extraction") text = JSON.stringify({ ...common, artifact_type: "claim-extraction", claims: [] });
+    else if (outputType === "claim-audit") text = JSON.stringify({ ...common, artifact_type: "claim-audit", findings: [] });
     else throw new Error(`Unexpected output type ${outputType}`);
     const usage: ModelCallReport = {
       callId: request.callId,
@@ -91,7 +93,8 @@ test("premium novel-draft runs isolated passes while economy retains the host pr
     const premium = harness(premiumWorker);
     await premium.commands.get("novel-draft").handler("1", context(premiumProject.root, premium.notifications));
     assert.equal(premium.messages.length, 0);
-    assert.equal(premiumWorker.calls.length, 8);
+    assert.equal(premiumWorker.calls.length, 10);
+    assert.deepEqual(premiumWorker.calls.slice(-2).map((call) => meta(call.prompt).output_type), ["claim-extraction", "claim-audit"]);
     assert.ok(premium.notifications.some((message) => /premium quality draft complete/i.test(message)));
     assert.match(readFileSync(join(premiumProject.root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md"), "utf8"), /lost the authority/);
 
