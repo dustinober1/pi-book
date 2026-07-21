@@ -31,7 +31,11 @@ test("model context capacity further bounds evidence after instructions and rese
 test("invalid envelopes and impossible model capacity fail before inference", () => {
   const valid = RUNTIME_PROFILES.full.modelBudget;
   assert.throws(() => resolveModelBudget(valid, valid.maxInstructionChars + 1), /Instruction budget exceeded/);
+  assert.throws(() => resolveModelBudget(valid, -1), /Instruction characters/);
+  assert.throws(() => resolveModelBudget({ ...valid, maxInstructionChars: -1 }, 1), /Instruction character budget/);
   assert.throws(() => resolveModelBudget({ ...valid, maxEvidenceChars: -1 }, 1), /Evidence character budget/);
   assert.throws(() => resolveModelBudget({ ...valid, reservedOutputTokens: 0 }, 1), /Reserved output tokens/);
+  assert.throws(() => resolveModelBudget({ ...valid, safetyMarginTokens: -1 }, 1), /Safety margin tokens/);
   assert.throws(() => resolveModelBudget(valid, 4_000, 10_000), /cannot fit instructions, reserved output, and safety margin/);
+  assert.throws(() => resolveModelBudget(valid, 4_000, -1), /Model context tokens/);
 });
