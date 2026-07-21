@@ -6,10 +6,14 @@ import {
   ModelCallReportSchema,
   RunBudgetEventSchema,
   RunReportV2Schema,
+  RunReportV3Schema,
+  summarizeWorkflowTelemetry,
   type ModelCallReport,
   type RunBudgetEvent,
   type RunReport,
   type RunReportV2,
+  type RunReportV3,
+  type RunTokenTotals,
 } from "../domain/run-report.js";
 
 export type RunReportStoreResult =
@@ -40,8 +44,8 @@ export function storeRunReport(root: string, report: RunReport): RunReportStoreR
   }
 }
 
-function recomputeTotals(calls: readonly ModelCallReport[]): RunReportV2["totals"] {
-  return calls.reduce<RunReportV2["totals"]>((totals, call) => ({
+function recomputeTotals(calls: readonly ModelCallReport[]): RunTokenTotals {
+  return calls.reduce<RunTokenTotals>((totals, call) => ({
     inputTokens: totals.inputTokens + (call.inputTokens ?? 0),
     cachedInputTokens: totals.cachedInputTokens + (call.cachedInputTokens ?? 0),
     outputTokens: totals.outputTokens + (call.outputTokens ?? 0),
@@ -60,21 +64,33 @@ function recomputeTotals(calls: readonly ModelCallReport[]): RunReportV2["totals
   });
 }
 
+function readAppendableReport(path: string): RunReportV2 | RunReportV3 {
+  const report = JSON.parse(readFileSync(path, "utf8")) as unknown;
+  if (Value.Check(RunReportV3Schema, report)) return report as RunReportV3;
+  if (Value.Check(RunReportV2Schema, report)) return report as RunReportV2;
+  throw new Error("appendable run report required");
+}
+
 export function appendModelCallReport(root: string, runId: string, call: ModelCallReport): RunReportStoreResult {
   if (!safeRunId(runId)) return { ok: false, message: "Unable to update the local run report." };
   const path = reportPath(root, runId);
   try {
     if (!Value.Check(ModelCallReportSchema, call)) throw new Error("invalid model call report");
-    const report = JSON.parse(readFileSync(path, "utf8")) as unknown;
-    if (!Value.Check(RunReportV2Schema, report)) throw new Error("schema-two run report required");
-    const current = report as RunReportV2;
+    const current = readAppendableReport(path);
     if (current.runId !== runId || current.modelCalls.some((item) => item.callId === call.callId)) throw new Error("invalid append target");
     const modelCalls = [...current.modelCalls, call];
-    const updated: RunReportV2 = {
-      ...current,
-      modelCalls,
-      totals: recomputeTotals(modelCalls),
-    };
+    const updated: RunReportV2 | RunReportV3 = current.schemaVersion === "3.0.0"
+      ? {
+          ...current,
+          modelCalls,
+          totals: recomputeTotals(modelCalls),
+          workflow: summarizeWorkflowTelemetry(modelCalls),
+        }
+      : {
+          ...current,
+          modelCalls,
+          totals: recomputeTotals(modelCalls),
+        };
     const result = storeRunReport(root, updated);
     return result.ok ? result : { ok: false, message: "Unable to update the local run report." };
   } catch {
@@ -87,11 +103,9 @@ export function appendRunBudgetEvent(root: string, runId: string, event: RunBudg
   const path = reportPath(root, runId);
   try {
     if (!Value.Check(RunBudgetEventSchema, event)) throw new Error("invalid budget event");
-    const report = JSON.parse(readFileSync(path, "utf8")) as unknown;
-    if (!Value.Check(RunReportV2Schema, report)) throw new Error("schema-two run report required");
-    const current = report as RunReportV2;
+    const current = readAppendableReport(path);
     if (current.runId !== runId) throw new Error("invalid append target");
-    const updated: RunReportV2 = { ...current, budgetEvents: [...current.budgetEvents, event] };
+    const updated: RunReportV2 | RunReportV3 = { ...current, budgetEvents: [...current.budgetEvents, event] };
     const result = storeRunReport(root, updated);
     return result.ok ? result : { ok: false, message: "Unable to update the local run report." };
   } catch {
