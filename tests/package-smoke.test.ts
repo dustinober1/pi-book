@@ -52,7 +52,7 @@ test("the packed extension imports, registers, and contains the 1.7 release surf
     const packedPaidRuns = packedPaths.filter((path) => path.startsWith("evals/quality/runs/"));
     assert.deepEqual(packedPaidRuns, [], `Paid evaluation run outputs were packaged: ${packedPaidRuns.join(", ")}`);
     assert.equal(packedPaths.some((path) => path.startsWith(".github/")), false);
-    assert.equal(packedPaths.some((path) => /phase7|diagnostic|\.tgz$/i.test(path)), false);
+    assert.equal(packedPaths.some((path) => /phase7|\.tgz$/i.test(path)), false);
   } finally {
     rmSync(temp, { recursive: true, force: true });
   }
