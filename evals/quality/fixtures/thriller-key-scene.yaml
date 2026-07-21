@@ -1,0 +1,46 @@
+schema_version: 1.0.0
+id: QEF-THRILLER-001
+profile: thriller
+chapter: 12
+project_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+packet:
+  chapter: 12
+  title: The Authentication Window
+  status: ready
+  pov: Julie
+  purpose: Enter a secured briefing annex before the authentication window closes and preserve the evidence chain.
+  scene_engine: timed infiltration
+  pressure_movement: The available window contracts while capture pressure rises.
+  character_movement: Julie chooses evidentiary integrity over the fastest physical route.
+  relationship_movement: Marcus accepts Julie's custody rule despite the tactical cost.
+  story_thread_refs:
+    - ST-STERLING
+  continuity_refs:
+    - CAN-EVIDENCE-TOTALS
+    - CAN-HARTWELL-WINDOW
+  character_refs:
+    - Julie
+    - Marcus
+    - Elias
+  required_research:
+    - RES-AUTH-001
+  profile_fields:
+    key_scene: true
+    reveal_order:
+      - access method
+      - authentication conflict
+      - personal authority remains unproven
+  ending_hook: The credentials work for someone who should not be present.
+  milestone_gate: null
+  target_words: 2600
+context: |-
+  CAN-EVIDENCE-TOTALS: the sealed case contains 136 verified files, 47 incomplete files, and 311 excluded files.
+  CAN-HARTWELL-WINDOW: authentication is available from 07:46:00 to 07:48:30 EDT.
+  RES-AUTH-001: executive annex authentication requires a registered authority and a valid local session.
+  Julie has no firearm and her wrist is significantly impaired.
+  Sterling's physical custody and personal keystrokes are not proven.
+protected_constraints:
+  - Preserve the 136/47/311 evidence totals.
+  - Do not prove Sterling's personal keystrokes or physical custody.
+  - Do not move the authentication window.
+  - End with the anomalous successful credential response.
