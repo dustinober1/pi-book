@@ -1,24 +1,24 @@
 import { join } from "node:path";
 import { buildChapterContext } from "../context/context-builder.js";
+import { resolveQualityConfig, type QualityProjectState } from "../domain/quality-profile.js";
 import type { RuntimeProfile, RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
+import { PremiseLabSchema, type PremiseLab } from "../domain/v1-4-schemas.js";
 import { readText } from "../infrastructure/files.js";
 import { stringifyYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject, readTickets } from "../project/store.js";
 import { openBlockingTickets } from "../review/review.js";
-import { getProjectStatus } from "./status.js";
-import { approveGate } from "./gates.js";
 import { assertOperationAllowed } from "./authorization.js";
-import { automationDraftPrompt, bookPlanPrompt, canonLockPrompt, draftPrompt, packagePrompt, premisePlanPrompt, queuePrompt, reviewPrompt, revisionPrompt, seriesPlanPrompt, voicePlanPrompt } from "./prompts.js";
-import { compileActiveBook } from "./package.js";
-import { applyGuidedProjectEvent } from "./handoff.js";
-import { canRetryEvent, rejectionInstruction, type EventRejectionDetail } from "./event-rejection.js";
-import { creativeProjectStateHash } from "./project-hash.js";
-import { recordPreparedPersistentRun } from "./persistent-run-telemetry.js";
-import { applyRuntimeLimits, resolveRuntimeProfile } from "./runtime-profile-resolver.js";
 import { cancelAutomationRun, pauseAutomationRun, resumeAutomationRun, startAutomationRun } from "./automation-run.js";
-import { PremiseLabSchema, type PremiseLab } from "../domain/v1-4-schemas.js";
-import { parseYaml } from "../infrastructure/yaml.js";
+import { canRetryEvent, rejectionInstruction, type EventRejectionDetail } from "./event-rejection.js";
+import { approveGate } from "./gates.js";
+import { applyGuidedProjectEvent } from "./handoff.js";
+import { compileActiveBook } from "./package.js";
+import { recordPreparedPersistentRun } from "./persistent-run-telemetry.js";
+import { creativeProjectStateHash } from "./project-hash.js";
+import { automationDraftPrompt, bookPlanPrompt, canonLockPrompt, draftPrompt, packagePrompt, premisePlanPrompt, queuePrompt, reviewPrompt, revisionPrompt, seriesPlanPrompt, voicePlanPrompt } from "./prompts.js";
+import { applyRuntimeLimits, resolveRuntimeProfile } from "./runtime-profile-resolver.js";
+import { getProjectStatus } from "./status.js";
 
 export interface RunOptions {
   approve?: string;
@@ -32,8 +32,21 @@ export interface RunOptions {
   pause?: boolean;
   cancel?: boolean;
 }
-export interface RunDecision { action: string; prompt: string | null; message: string; runtimeProfile?: RuntimeProfileId }
-export interface BeginPersistentRunOptions { target: string; maxChapters: number; runtimeProfile?: RuntimeProfileId; now?: string }
+
+export interface RunDecision {
+  action: string;
+  prompt: string | null;
+  message: string;
+  runtimeProfile?: RuntimeProfileId;
+}
+
+export interface BeginPersistentRunOptions {
+  target: string;
+  maxChapters: number;
+  runtimeProfile?: RuntimeProfileId;
+  qualitySnapshot?: QualityProjectState;
+  now?: string;
+}
 
 function projectV14(root: string): ProjectStateV14 {
   return readProject(root) as ProjectStateV14;
@@ -161,12 +174,16 @@ export function beginPersistentRun(root: string, options: BeginPersistentRunOpti
     creativeHash: creativeProjectStateHash(root),
     startedAt: now,
   });
+  if (options.qualitySnapshot && updated.automation.active_run) {
+    updated.automation.active_run.quality_snapshot = structuredClone(options.qualitySnapshot);
+  }
   const run = updated.automation.active_run!;
   persistRunProject(root, updated, `start automation ${run.id}`, `Started automation run ${run.id}`);
   const telemetryMessage = recordPreparedPersistentRun(root, {
     telemetryEnabled: updated.runtime?.telemetry,
     runId: run.id,
     runtimeProfile: runtimeProfile.id,
+    qualityTier: resolveQualityConfig(run.quality_snapshot ?? updated.quality).tier,
     promptChars: initial.prompt.length,
     projectHashBefore: run.lastProjectHash,
   });
@@ -233,7 +250,9 @@ export function directRevisionDecision(root: string, ticketIds: string[] = []): 
   return runtimeDecision(runtimeProfile, { action: "revise", prompt: revisionPrompt(root, selected, runtimeProfile), message: `Queued revision for ${selected.map((ticket) => ticket.id).join(", ")}.` });
 }
 
-export function bookPath(root: string): string { return join(root, "books", readBook(root).book_id); }
+export function bookPath(root: string): string {
+  return join(root, "books", readBook(root).book_id);
+}
 
 export function rejectionRunDecision(detail: EventRejectionDetail, previousRetries = 0): RunDecision {
   const instruction = rejectionInstruction(detail, previousRetries);
