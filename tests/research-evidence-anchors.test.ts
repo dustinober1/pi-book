@@ -47,7 +47,7 @@ function source(id: string, researchIds: string[] = ["RES-001"]): SourceRegister
 }
 
 function sources(...items: SourceRegisterV13["sources"]): SourceRegisterV13 {
-  return { schema_version: "1.0.0", sources: items.flat() };
+  return { schema_version: "1.0.0", sources: items };
 }
 
 const direct = {
@@ -58,12 +58,12 @@ const direct = {
   excerpt_hash: "a".repeat(64),
 } as const;
 
-const corroborating = (sourceId: string, hash: string) => ({
+const corroborating = (sourceId: string, seedOrHash: string) => ({
   source_id: sourceId,
   locator: "Release workflow discussion",
   support_type: "corroborating" as const,
   paraphrase: "The procedure requires two independent confirmations.",
-  excerpt_hash: hash.repeat(64),
+  excerpt_hash: seedOrHash.length === 64 ? seedOrHash : seedOrHash.repeat(64),
 });
 
 test("legacy research items and source records remain schema-readable", () => {
