@@ -67,17 +67,18 @@ test("model calls append atomically and recompute token and cost aggregates", ()
     });
     assert.equal(storeRunReport(root, header).ok, true);
     assert.equal(appendModelCallReport(root, "RUN-APPEND", call()).ok, true);
-    assert.equal(appendModelCallReport(root, "RUN-APPEND", call({
+    const second = call({
       callId: "CALL-002",
       pass: "critic",
       inputTokens: 400,
-      cachedInputTokens: undefined,
       outputTokens: 100,
-      reasoningTokens: undefined,
       estimated: true,
-      costUsd: undefined,
       outputHash: "d".repeat(64),
-    })).ok, true);
+    });
+    delete second.cachedInputTokens;
+    delete second.reasoningTokens;
+    delete second.costUsd;
+    assert.equal(appendModelCallReport(root, "RUN-APPEND", second).ok, true);
 
     const path = join(root, ".pi-book", "runs", "RUN-APPEND", "run-report.json");
     const report = JSON.parse(readFileSync(path, "utf8")) as ReturnType<typeof createRunReportHeader>;
