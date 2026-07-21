@@ -18,11 +18,14 @@ test("initialization creates a compact series-capable thriller project", () => {
     assert.equal(book.target_words, 95000);
     assert.equal(book.profile, "thriller");
     const controls = listFilesRecursive(root, (path) => !path.includes("/.git/") && !path.includes("manuscript/chapters"));
-    assert.ok(controls.length <= 32, `expected compact controls including 1.4 intake provenance, found ${controls.length}`);
+    assert.ok(controls.length <= 35, `expected compact controls including intake provenance and three atomic story ledgers, found ${controls.length}`);
     for (const path of [
       "remarkability.yaml", "reader-experiments.yaml", "publishing.yaml", "marketing.yaml", "reader-kits/index.yaml",
       "research-ledger.yaml", "book-strategy.yaml", "voice-audits.yaml",
     ]) assert.equal(existsSync(join(root, "books", "book-01", path)), true, path);
+    for (const path of ["entity-registry.yaml", "state-ledger.yaml", "knowledge-ledger.yaml"]) {
+      assert.equal(existsSync(join(root, "series", path)), true, path);
+    }
     assert.match(readFileSync(join(root, "series", "voice-profile.md"), "utf8"), /Not-this-author evidence/);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });

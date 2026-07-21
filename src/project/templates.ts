@@ -205,6 +205,9 @@ status: pending
     "series/series-arc.yaml": stringifyYaml({ schema_version: "1.0.0", books: [{ id: "book-01", status: "active", role: "establish the series promise", closes: [], carries: [] }], long_arcs: [] }),
     "series/canon.yaml": stringifyYaml({ schema_version: "1.0.0", facts: [], relationships: [] }),
     "series/story-threads.yaml": stringifyYaml({ schema_version: "1.0.0", threads: [] }),
+    "series/entity-registry.yaml": stringifyYaml({ schema_version: "1.0.0", entities: [] }),
+    "series/state-ledger.yaml": stringifyYaml({ schema_version: "1.0.0", records: [] }),
+    "series/knowledge-ledger.yaml": stringifyYaml({ schema_version: "1.0.0", records: [] }),
     ...bookTemplateFiles("book-01", 1, options.profile, options.targetWords ?? 100000),
     "research/source-register.yaml": stringifyYaml({ schema_version: "1.0.0", sources: [] }),
   };

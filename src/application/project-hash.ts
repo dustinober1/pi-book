@@ -19,6 +19,9 @@ function guardedEvidencePaths(root: string, bookId: string): string[] {
     "series/series-arc.yaml",
     "series/canon.yaml",
     "series/story-threads.yaml",
+    "series/entity-registry.yaml",
+    "series/state-ledger.yaml",
+    "series/knowledge-ledger.yaml",
     "research/source-register.yaml",
     `books/${bookId}/reader-experiments.yaml`,
     `books/${bookId}/revision-tickets.yaml`,
@@ -32,7 +35,10 @@ function guardedEvidencePaths(root: string, bookId: string): string[] {
   const experimentRoot = join(root, "series", "voice-experiments");
   const experimentFiles = listFilesRecursive(experimentRoot, (path) => /\.(?:yaml|md)$/i.test(path))
     .map((path) => normalizedRelative(root, path));
-  return [...new Set([...fixed, ...experimentFiles])].sort();
+  const contractRoot = join(root, "books", bookId, "contracts");
+  const contractFiles = listFilesRecursive(contractRoot, (path) => /\.yaml$/i.test(path))
+    .map((path) => normalizedRelative(root, path));
+  return [...new Set([...fixed, ...experimentFiles, ...contractFiles])].sort();
 }
 
 function calculateProjectHash(root: string, includeRunBookkeeping: boolean): string {
