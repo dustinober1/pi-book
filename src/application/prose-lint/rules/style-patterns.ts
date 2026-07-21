@@ -93,6 +93,46 @@ function metricOccurrences(input: ProseLintInput, terms: Set<string>, repeatsOnl
 
 const patternDefinitions: readonly PatternDefinition[] = [
   {
+    id: "style-pattern/sentence-variance-drift",
+    baselineKey: "sentence_length_variance",
+    message: "Sentence length variance (cadence fatigue) has drifted significantly from the baseline.",
+    occurrences: (input) => input.documents.flatMap((document) => sentenceOccurrences(document, (sentence) => /^\s*[a-zA-Z]/i.test(sentence))),
+    metric: (text) => {
+      const metrics = extractVoiceMetrics(text);
+      return { count: Math.round(metrics.sentence_length_variance * 10), rate: round4(metrics.sentence_length_variance) };
+    },
+  },
+
+  {
+    id: "style-pattern/showing-vs-telling",
+    baselineKey: "telling_emotion_rate_per_1000",
+    message: "Telling emotion words (e.g. angry, sad, happy, afraid) are highly concentrated here, indicating a lack of 'showing'.",
+    occurrences: (input) => input.documents.flatMap((document) => sentenceOccurrences(document, (sentence) => /\b(?:angry|sad|happy|afraid|scared|furious|terrified|joyful|depressed|nervous)\b/i.test(sentence))),
+  },
+
+  {
+    id: "style-pattern/dialogue-ratio-drift",
+    baselineKey: "dialogue_ratio",
+    message: "The dialogue-to-action ratio has drifted significantly from the baseline.",
+    occurrences: (input) => input.documents.flatMap((document) => sentenceOccurrences(document, (sentence) => /^\s*[“\"]/i.test(sentence))),
+    metric: (text) => {
+      const metrics = extractVoiceMetrics(text);
+      return { count: Math.round(metrics.dialogue_ratio * metrics.word_count), rate: round4(metrics.dialogue_ratio * 1_000) };
+    },
+  },
+  {
+    id: "style-pattern/ai-transition",
+    baselineKey: "ai_transition_rate_per_1000",
+    message: "Certain transition phrases are concentrated in this manuscript scope.",
+    occurrences: (input) => input.documents.flatMap((document) => sentenceOccurrences(document, (sentence) => /\b(?:it(?:'s| is) important to note|in conclusion|as a reminder|delving into|furthermore|testament to|symphony of|tapestry of)\b/i.test(sentence))),
+    metric: (text) => {
+      const metrics = extractVoiceMetrics(text);
+      return { count: Math.round(metrics.ai_transition_rate_per_1000 * metrics.word_count), rate: round4(metrics.ai_transition_rate_per_1000) };
+    },
+  },
+
+
+  {
     id: "style-pattern/negative-parallelism",
     baselineKey: "negative_parallelism_rate_per_1000",
     message: "Negative parallel constructions are concentrated in this manuscript scope.",

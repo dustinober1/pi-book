@@ -58,6 +58,7 @@ function markdownParagraphs(markdown: string): Paragraph[] {
 
 async function nodeDocxBytes(markdown: string, metadata: PublishingMetadata): Promise<Uint8Array> {
   const document = new Document({
+    lastModifiedBy: "Anonymous",
     creator: metadata.author.pen_name || metadata.author.name,
     title: metadata.title,
     description: metadata.descriptions.short,
@@ -114,6 +115,7 @@ function publishingCsv(metadata: PublishingMetadata): string {
 async function publishingWorkbook(metadata: PublishingMetadata): Promise<Uint8Array> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Novel Forge";
+  workbook.lastModifiedBy = "Anonymous";
   const sheet = workbook.addWorksheet("Publishing metadata");
   sheet.addRow(["field", "value"]);
   for (const row of publishingRows(metadata)) sheet.addRow(row);
@@ -132,6 +134,8 @@ function readerEvidenceCsv(experiments: ReaderExperimentFile[]): string {
 
 async function readerEvidenceWorkbook(experiments: ReaderExperimentFile[]): Promise<Uint8Array> {
   const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Novel Forge";
+  workbook.lastModifiedBy = "Anonymous";
   const sheet = workbook.addWorksheet("Reader evidence");
   sheet.addRow(["experiment_id", "status", "verdict", "target_reader", "immediate", "delayed", "continuation_rate", "purchase_intent_rate", "hook_recall_rate", "talkability_rate"]);
   for (const experiment of experiments) sheet.addRow([experiment.id, experiment.status, experiment.verdict, experiment.target_reader, experiment.immediate_responses.length, experiment.delayed_responses.length, experiment.metrics.continuation_rate, experiment.metrics.purchase_intent_rate, experiment.metrics.delayed_hook_recall_rate, experiment.metrics.talkability_rate]);
