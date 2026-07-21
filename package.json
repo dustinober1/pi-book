@@ -30,7 +30,23 @@
     "test:release": "node --import tsx --test tests/v1-7-release-checklist.test.ts tests/v1-6-2-release-checklist.test.ts tests/v1-6-1-release-checklist.test.ts tests/v1-5-release-checklist.test.ts tests/e2e/v1-5-release-journey.test.ts tests/package-smoke.test.ts tests/e2e/packed-clean-start.test.ts"
   },
   "pi": { "skills": ["."], "extensions": ["extensions/novel-forge.ts"] },
-  "files": ["SKILL.md", "README.md", "CHANGELOG.md", "RELEASE.md", "agents/", "docs/", "evals/quality/", "extensions/", "src/", "profiles/", "references/", "scripts/", "wizard/"],
+  "files": [
+    "SKILL.md",
+    "README.md",
+    "CHANGELOG.md",
+    "RELEASE.md",
+    "agents/",
+    "docs/",
+    "evals/quality/README.md",
+    "evals/quality/fixtures/",
+    "evals/quality/rubrics/",
+    "extensions/",
+    "src/",
+    "profiles/",
+    "references/",
+    "scripts/",
+    "wizard/"
+  ],
   "dependencies": {
     "@sinclair/typebox": "^0.34.52",
     "busboy": "^1.6.0",
