@@ -1,6 +1,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { manuscriptWordCount } from "../context/context-builder.js";
+import type { ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import { resolveQualityConfig, type QualityTierId } from "../domain/quality-profile.js";
 import { ContinuityDeltaSchema, GenreConfigSchema, PlotGridSchema, ReaderExperimentsSchema, RemarkabilitySchema, type ContinuityDeltaState, type GenreConfig, type PlotGridState, type ReaderExperimentsState, type RemarkabilityState } from "../domain/schemas.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
@@ -13,6 +14,7 @@ import { openBlockingTickets } from "../review/review.js";
 import { actBoundaryFindings, overdueMilestone } from "./act-boundaries.js";
 import { gateDetail } from "./gate-metadata.js";
 import { collectProjectIntegrityFindings } from "./integrity.js";
+import { resolveModelExecutionProfile } from "./model-execution-profile-resolver.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 import { resolveRuntimeProfile } from "./runtime-profile-resolver.js";
 import { versionFindings } from "./version-core.js";
@@ -26,6 +28,7 @@ export interface ProjectStatus {
   recommendedCommand: string;
   primaryBlocker: string | null;
   runtimeProfile: RuntimeProfileId;
+  modelExecutionProfile: ModelExecutionProfileId;
   qualityTier: QualityTierId;
   markdown: string;
 }
@@ -110,6 +113,7 @@ function optionalV13ArtifactPaths(bookId: string): string[] {
 export function getProjectStatus(root: string, options: ProjectStatusOptions = {}): ProjectStatus {
   const project = readProject(root);
   const runtimeProfile = resolveRuntimeProfile({ project: project.runtime?.profile });
+  const modelExecutionProfile = resolveModelExecutionProfile({ project: project.runtime?.model_execution_profile });
   const quality = resolveQualityConfig(project.quality);
   const book = readBook(root);
   const tickets = readTickets(root);
@@ -216,6 +220,7 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     `- Type: ${project.project_type}`,
     `- Genre profile: ${book.profile}`,
     `- Runtime profile: ${runtimeProfile.id}`,
+    `- Model execution profile: ${modelExecutionProfile.id}`,
     `- Quality tier: ${quality.tier}`,
     `- Active book: ${book.book_id}`,
     `- Stage: ${project.current_stage}`,
@@ -246,6 +251,7 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     recommendedCommand: decision.command,
     primaryBlocker: blockers[0] ?? null,
     runtimeProfile: runtimeProfile.id,
+    modelExecutionProfile: modelExecutionProfile.id,
     qualityTier: quality.tier,
     markdown,
   };
