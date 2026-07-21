@@ -215,6 +215,17 @@ export function settleBudgetReservation(ledger: BudgetLedger, reservationId: str
   return updated;
 }
 
+export function recordSettledBudgetCall(ledger: BudgetLedger, call: BudgetSettledCall): BudgetLedger {
+  nonnegativeInteger(call.tokens, "Recorded tokens");
+  positiveInteger(call.chapter, "Recorded chapter");
+  if (!call.runId.trim() || !call.callId.trim() || !call.settledAt.trim()) throw new Error("Recorded budget call identifiers and timestamp are required.");
+  if (ledger.settledCalls.some((item) => item.runId === call.runId && item.callId === call.callId)) return ledger;
+  const updated = clone(ledger);
+  updated.settledCalls.push(structuredClone(call));
+  updated.updatedAt = call.settledAt;
+  return updated;
+}
+
 export function releaseBudgetReservation(ledger: BudgetLedger, reservationId: string, releasedAt = new Date().toISOString()): BudgetLedger {
   const index = ledger.reservations.findIndex((item) => item.reservationId === reservationId);
   if (index < 0) return ledger;
