@@ -1,6 +1,16 @@
+import type { ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import type { QualityTierId } from "../domain/quality-profile.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
-import type { RunMetric, RunReportV1, RunReportV2, RunValidationFailure } from "../domain/run-report.js";
+import {
+  summarizeWorkflowTelemetry,
+  type RunMetric,
+  type RunReportV1,
+  type RunReportV2,
+  type RunReportV3,
+  type RunValidationFailure,
+} from "../domain/run-report.js";
+
+export { summarizeWorkflowTelemetry } from "../domain/run-report.js";
 
 export interface CreateRunReportInput {
   runId: string;
@@ -26,6 +36,10 @@ export interface CreateRunReportHeaderInput {
   projectHashAfter?: string;
 }
 
+export interface CreateRunReportV3HeaderInput extends CreateRunReportHeaderInput {
+  modelExecutionProfile: ModelExecutionProfileId;
+}
+
 export interface TelemetryPreferenceInput {
   explicit?: boolean | undefined;
   project?: boolean | undefined;
@@ -40,6 +54,18 @@ function nonblank(value: string, label: string): string {
   const normalized = value.trim();
   if (!normalized) throw new Error(`${label} must be nonblank.`);
   return normalized;
+}
+
+function zeroTotals(): RunReportV2["totals"] {
+  return {
+    inputTokens: 0,
+    cachedInputTokens: 0,
+    outputTokens: 0,
+    reasoningTokens: 0,
+    totalTokens: 0,
+    costUsd: 0,
+    estimatedCalls: 0,
+  };
 }
 
 export function estimateInputTokens(promptChars: number, contextChars: number): number {
@@ -88,15 +114,23 @@ export function createRunReportHeader(input: CreateRunReportHeaderInput): RunRep
     runtimeProfile: input.runtimeProfile,
     qualityTier: input.qualityTier,
     modelCalls: [],
-    totals: {
-      inputTokens: 0,
-      cachedInputTokens: 0,
-      outputTokens: 0,
-      reasoningTokens: 0,
-      totalTokens: 0,
-      costUsd: 0,
-      estimatedCalls: 0,
-    },
+    totals: zeroTotals(),
+    budgetEvents: [],
+    projectHashBefore: nonblank(input.projectHashBefore, "Project hash before"),
+    ...(input.projectHashAfter ? { projectHashAfter: nonblank(input.projectHashAfter, "Project hash after") } : {}),
+  };
+}
+
+export function createRunReportV3Header(input: CreateRunReportV3HeaderInput): RunReportV3 {
+  return {
+    schemaVersion: "3.0.0",
+    runId: nonblank(input.runId, "Run ID"),
+    runtimeProfile: input.runtimeProfile,
+    qualityTier: input.qualityTier,
+    modelExecutionProfile: input.modelExecutionProfile,
+    modelCalls: [],
+    totals: zeroTotals(),
+    workflow: summarizeWorkflowTelemetry([]),
     budgetEvents: [],
     projectHashBefore: nonblank(input.projectHashBefore, "Project hash before"),
     ...(input.projectHashAfter ? { projectHashAfter: nonblank(input.projectHashAfter, "Project hash after") } : {}),
