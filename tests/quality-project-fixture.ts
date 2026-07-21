@@ -37,7 +37,10 @@ export function createDraftableQualityProject(tier: "economy" | "balanced" | "pr
     author_only_advantage: "Institutional pressure rendered through procedure.",
     productive_discomfort: "Mara protects evidence before safety.",
     retellable_hook: "The building edits its own evacuation record.",
-    signature_moments: [{ id: "RM-001", description: "The exit sign changes its testimony.", intended_reader_memory: "The building lies.", planned_location: "chapter-01", status: "planned" }],
+    signature_moments: [
+      { id: "RM-001", description: "The exit sign changes its testimony.", intended_reader_memory: "The building lies.", planned_location: "chapter-01", status: "planned" },
+      { id: "RM-002", description: "Mara opens the archive while security erases her access.", intended_reader_memory: "Truth and institutional permission separate in real time.", planned_location: "chapter-04", status: "planned" },
+    ],
     productive_disagreements: [{ question: "Was Mara right to stay?", competing_readings: ["She protected truth.", "She valued proof over people."] }],
     recurring_motifs: [],
     lingering_question: "What evidence is worth a life?",
