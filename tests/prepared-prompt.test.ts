@@ -27,7 +27,7 @@ test("drafting evidence is budgeted separately from normative instructions", () 
   assert.ok(prepared.evidenceChars <= RUNTIME_PROFILES.full.modelBudget.maxEvidenceChars);
   assert.ok(prepared.text.includes("## Evidence and bounded project context"));
   assert.ok(prepared.text.endsWith(evidence));
-  assert.equal(prepared.estimatedInputTokens, Math.ceil((prepared.instructionChars + prepared.evidenceChars) / 4));
+  assert.equal(prepared.estimatedInputTokens, Math.ceil(prepared.text.length / 4));
 });
 
 test("prepared draft prompts preserve every normative instruction", () => {
