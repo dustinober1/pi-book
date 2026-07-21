@@ -1,6 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { budgetLedgerUsage } from "./budget-ledger.js";
 import { resolveQualityConfig } from "../domain/quality-profile.js";
+import { readBudgetLedger } from "../infrastructure/budget-ledger-store.js";
 import { readProject } from "../project/store.js";
 
 interface RecordedUsage {
@@ -57,10 +59,14 @@ function limit(value: number | null): string {
 export function renderBudgetStatus(root: string): string {
   const project = readProject(root);
   const quality = resolveQualityConfig(project.quality);
-  const usage = recordedBudgetUsage(root);
+  const reportUsageTotals = recordedBudgetUsage(root);
+  const ledger = readBudgetLedger(root);
+  const usage = budgetLedgerUsage(ledger);
   const remaining = quality.budget.maximumTotalTokens === null
     ? "unlimited"
-    : Math.max(0, quality.budget.maximumTotalTokens - usage.tokens).toLocaleString("en-US");
+    : Math.max(0, quality.budget.maximumTotalTokens - usage.totalTokens - usage.activeReservedTokens).toLocaleString("en-US");
+  const downgradeEvents = ledger.events.filter((event) => event.type === "downgrade").length;
+  const stopEvents = ledger.events.filter((event) => event.type === "stop").length;
   return [
     "# Quality Budget",
     "",
@@ -70,11 +76,15 @@ export function renderBudgetStatus(root: string): string {
     `Maximum tokens per chapter: ${limit(quality.budget.maximumTokensPerChapter)}`,
     `Maximum calls per chapter: ${limit(quality.budget.maximumCallsPerChapter)}`,
     `Budget exhaustion: ${quality.budget.onExhaustion}`,
-    `Recorded tokens: ${usage.tokens.toLocaleString("en-US")}`,
-    `Recorded model calls: ${usage.calls.toLocaleString("en-US")}`,
-    `Recorded cost: $${usage.costUsd.toFixed(4)}`,
+    `Recorded tokens: ${usage.totalTokens.toLocaleString("en-US")}`,
+    `Recorded model calls: ${usage.settledCalls.toLocaleString("en-US")}`,
+    `Active reserved tokens: ${usage.activeReservedTokens.toLocaleString("en-US")}`,
+    `Active reservations: ${usage.activeReservations.toLocaleString("en-US")}`,
+    `Recorded downgrades: ${downgradeEvents.toLocaleString("en-US")}`,
+    `Recorded stops: ${stopEvents.toLocaleString("en-US")}`,
+    `Recorded cost: $${reportUsageTotals.costUsd.toFixed(4)}`,
     `Remaining known tokens: ${remaining}`,
     "",
-    "Only completed schema-2 model calls in locally retained run reports are counted. Missing usage remains unknown rather than being invented.",
+    "The enforcement ledger counts settled calls and live reservations. Cost is read from privacy-safe schema-2 run reports; missing provider usage remains unknown rather than being invented.",
   ].join("\n");
 }
