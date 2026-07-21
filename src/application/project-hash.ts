@@ -8,7 +8,16 @@ function normalizedRelative(root: string, path: string): string {
   return relative(root, path).replace(/\\/g, "/");
 }
 
-function guardedEvidencePaths(root: string, bookId: string): string[] {
+export interface ProjectEvidenceHash {
+  path: string;
+  hash: string;
+}
+
+function hashText(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+export function guardedEvidencePaths(root: string, bookId: string): string[] {
   const fixed = [
     "series/intake.yaml",
     "series/decision-ledger.yaml",
@@ -19,6 +28,9 @@ function guardedEvidencePaths(root: string, bookId: string): string[] {
     "series/series-arc.yaml",
     "series/canon.yaml",
     "series/story-threads.yaml",
+    "series/entity-registry.yaml",
+    "series/state-ledger.yaml",
+    "series/knowledge-ledger.yaml",
     "research/source-register.yaml",
     `books/${bookId}/reader-experiments.yaml`,
     `books/${bookId}/revision-tickets.yaml`,
@@ -32,7 +44,18 @@ function guardedEvidencePaths(root: string, bookId: string): string[] {
   const experimentRoot = join(root, "series", "voice-experiments");
   const experimentFiles = listFilesRecursive(experimentRoot, (path) => /\.(?:yaml|md)$/i.test(path))
     .map((path) => normalizedRelative(root, path));
-  return [...new Set([...fixed, ...experimentFiles])].sort();
+  const contractRoot = join(root, "books", bookId, "contracts", "chapters");
+  const contractFiles = listFilesRecursive(contractRoot, (path) => /\.ya?ml$/i.test(path))
+    .map((path) => normalizedRelative(root, path));
+  return [...new Set([...fixed, ...experimentFiles, ...contractFiles])].sort();
+}
+
+export function guardedEvidenceHashes(root: string, bookId?: string): ProjectEvidenceHash[] {
+  const resolvedBookId = bookId ?? readBook(root).book_id;
+  return guardedEvidencePaths(root, resolvedBookId).map((path) => ({
+    path,
+    hash: hashText(readText(join(root, path)) ?? "<missing>"),
+  }));
 }
 
 function calculateProjectHash(root: string, includeRunBookkeeping: boolean): string {
