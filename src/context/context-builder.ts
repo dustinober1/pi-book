@@ -14,7 +14,7 @@ import { countWords, listChapterFiles, readText } from "../infrastructure/files.
 import { parseYaml } from "../infrastructure/yaml.js";
 import { getProfile } from "../profiles/index.js";
 import { readBook, readProject } from "../project/store.js";
-import { allocateContext, type ContextAllocationReport, type ContextRecord, type ContextSection } from "./context-budget.js";
+import { allocateContext, paragraphContextRecords, type ContextAllocationReport, type ContextRecord, type ContextSection } from "./context-budget.js";
 import { buildStoryGraph, resolveDraftingGraphContext, type StoryGraphBlockedSelection, type StoryGraphRecordNodeType, type StoryGraphSelection } from "./story-graph.js";
 
 export interface ChapterContextReport {
@@ -45,19 +45,6 @@ function previousChapterPath(files: string[], chapter: number): string | null {
 
 function jsonRecord(id: string, value: unknown, required: boolean, priority: number): ContextRecord {
   return { id, body: JSON.stringify(value, null, 2), required, priority };
-}
-
-function textParagraphRecords(prefix: string, text: string, priorityBase: number): ContextRecord[] {
-  return text
-    .split(/\n\s*\n/u)
-    .map((body) => body.trim())
-    .filter(Boolean)
-    .map((body, index, values) => ({
-      id: `${prefix}:paragraph:${String(index + 1).padStart(4, "0")}`,
-      body,
-      required: false,
-      priority: priorityBase + values.length - index,
-    }));
 }
 
 function section(id: string, title: string, records: readonly ContextRecord[], maxChars: number): ContextSection {
@@ -211,10 +198,10 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     ...historicalInventions.map((item) => jsonRecord(item.id, item, true, 90)),
     ...historicalUncertainties.map((item, index) => jsonRecord(`historical-uncertainty:${String(index + 1).padStart(3, "0")}`, item, true, 90)),
   ] : [];
-  const previousRecords = textParagraphRecords("previous", previous, 50);
+  const previousRecords = paragraphContextRecords("previous", previous, 50);
   const profileRuleRecords = profile.draftingRules.map((rule, index) => ({ id: `profile-rule:${String(index + 1).padStart(3, "0")}`, body: rule, required: false, priority: 30 }));
-  const voiceProfileRecords = textParagraphRecords("voice-profile", voiceProfileText, 30);
-  const bookBibleRecords = textParagraphRecords("book-bible", readText(join(bookRoot, "book-bible.md")) ?? "", 30);
+  const voiceProfileRecords = paragraphContextRecords("voice-profile", voiceProfileText, 30);
+  const bookBibleRecords = paragraphContextRecords("book-bible", readText(join(bookRoot, "book-bible.md")) ?? "", 30);
 
   const sections: ContextSection[] = [
     section("chapter-packet", "Approved chapter packet", [jsonRecord(`chapter-packet:${packet.chapter}`, packet, true, 100)], 12_000),
@@ -235,8 +222,8 @@ export function buildChapterContext(root: string, requestedChapter?: number, max
     section("genre", "Genre configuration", [{ id: "genre-configuration", body: readText(join(bookRoot, "genre.yaml")) ?? "", required: false, priority: 30 }], 6_000),
   ];
 
-  const allocation = allocateContext(sections, maxChars);
   const title = `# Drafting Context — Chapter ${packet.chapter}`;
+  const allocation = allocateContext(sections, Math.max(0, maxChars - title.length));
   const text = title + allocation.text;
   const selected = new Set(allocation.report.includedRecordIds);
   const graphIncluded = graphResolution.selections
