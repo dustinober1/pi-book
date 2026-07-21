@@ -52,6 +52,7 @@ export const ModelCallReportSchema = Type.Object({
   patchOperationCount: Type.Optional(Type.Integer({ minimum: 0 })),
   outcome: Type.Optional(ModelCallOutcomeSchema),
   acceptedProseWords: Type.Optional(Type.Integer({ minimum: 0 })),
+  escalationCode: Type.Optional(Type.String({ minLength: 1, maxLength: 80 })),
   provider: Type.Optional(Type.String({ minLength: 1 })),
   model: Type.Optional(Type.String({ minLength: 1 })),
   inputTokens: Type.Optional(Type.Integer({ minimum: 0 })),
