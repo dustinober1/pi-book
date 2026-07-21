@@ -76,7 +76,11 @@ export function parseDraftOptions(args: string): DraftOptions {
   };
 }
 
-export function parseRunOptions(args: string): RunOptions {
+export interface ParsedRunOptions extends RunOptions {
+  quality?: QualityRunOverride;
+}
+
+export function parseRunOptions(args: string): ParsedRunOptions {
   const items = tokens(args);
   const approve = flagValue(items, "--approve");
   const until = flagValue(items, "--until");
