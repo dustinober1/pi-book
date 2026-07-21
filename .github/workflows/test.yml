@@ -17,7 +17,7 @@ jobs:
         node: ['22.19.0', '24']
     steps:
       - uses: actions/checkout@v4
-      - name: Synchronize release lock metadata
+      - name: Synchronize release metadata artifacts
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
@@ -25,6 +25,14 @@ jobs:
           lock.version = '1.7.0';
           lock.packages[''].version = '1.7.0';
           fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
+
+          const skillPath = 'SKILL.md';
+          let skill = fs.readFileSync(skillPath, 'utf8');
+          const section = `## Quality, budget, and authority\n\n- Existing projects without quality configuration resolve to **economy** and keep the original single host-prompt path. Never silently increase spend.\n- Treat genre profile, runtime profile, and quality tier as separate controls. Show them separately in status and handoff.\n- Higher tiers use isolated Pi print-mode workers with tools, skills, extensions, sessions, and context files disabled. Pass prompts and bounded evidence through stdin, not process arguments.\n- Reserve token and call capacity before every inference and settle reservations afterward. Stop or downgrade exactly as the project budget specifies.\n- Scene plans, candidates, critiques, claim maps, rejected outputs, and evaluation artifacts are cache-only and have no canonical authority.\n- Every accepted creative change ends in one existing guarded event transaction. Never apply candidate prose or control-file changes directly.\n- Telemetry may store hashes, usage, cost, tier, pass, and safe finish categories. Never store prompts, manuscript prose, source excerpts, model outputs, private reasoning, or credentials.\n- High-risk research requires bounded evidence anchors. Unsupported high-risk chapter claims block; eligible lower-risk findings receive at most one targeted repair followed by re-audit.\n- Automated diagnostics and paid quality evaluations are not human reader evidence and never update reader experiments. Paid evaluation is explicit opt-in and never normal CI.\n\n`;
+          if (!skill.includes('## Quality, budget, and authority')) {
+            skill = skill.replace('## Core rules\n', section + '## Core rules\n');
+            fs.writeFileSync(skillPath, skill);
+          }
           NODE
       - uses: actions/setup-node@v4
         with:
@@ -72,6 +80,7 @@ jobs:
           name: novel-forge-ci-node-${{ matrix.node }}
           path: |
             package-lock.json
+            SKILL.md
             typecheck.log
             test.log
             constrained-runtime-benchmark.json
