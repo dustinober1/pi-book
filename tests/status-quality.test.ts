@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildGuideScreen } from "../src/application/guide.js";
@@ -39,7 +39,7 @@ test("status handoff and guide render genre runtime and quality separately", () 
     assert.match(status.markdown, /Quality tier: premium/);
 
     refreshGuidance(root);
-    const handoff = require("node:fs").readFileSync(join(root, "HANDOFF.md"), "utf8") as string;
+    const handoff = readFileSync(join(root, "HANDOFF.md"), "utf8");
     assert.match(handoff, /Genre profile: thriller/);
     assert.match(handoff, /Runtime profile: local/);
     assert.match(handoff, /Quality tier: premium/);
