@@ -4,22 +4,22 @@ import type {
   ExecutionNode,
 } from "../domain/chapter-execution-state.js";
 
-const TRANSITIONS: Readonly<Record<ExecutionNode, readonly ExecutionNode[]>> = Object.freeze({
-  "contract-compile": Object.freeze(["scene-contract-compile"]),
-  "scene-contract-compile": Object.freeze(["context-build"]),
-  "context-build": Object.freeze(["scene-plan"]),
-  "scene-plan": Object.freeze(["scene-draft"]),
-  "scene-draft": Object.freeze(["deterministic-validation"]),
-  "deterministic-validation": Object.freeze(["critic-review", "span-repair", "state-delta"]),
-  "critic-review": Object.freeze(["span-repair", "state-delta"]),
-  "span-repair": Object.freeze(["deterministic-validation"]),
-  "state-delta": Object.freeze(["scene-accept"]),
-  "scene-accept": Object.freeze(["context-build", "chapter-stitch"]),
-  "chapter-stitch": Object.freeze(["chapter-validate"]),
-  "chapter-validate": Object.freeze(["chapter-commit"]),
-  "chapter-commit": Object.freeze(["complete"]),
-  complete: Object.freeze([]),
-});
+const TRANSITIONS = {
+  "contract-compile": ["scene-contract-compile"],
+  "scene-contract-compile": ["context-build"],
+  "context-build": ["scene-plan"],
+  "scene-plan": ["scene-draft"],
+  "scene-draft": ["deterministic-validation"],
+  "deterministic-validation": ["critic-review", "span-repair", "state-delta"],
+  "critic-review": ["span-repair", "state-delta"],
+  "span-repair": ["deterministic-validation"],
+  "state-delta": ["scene-accept"],
+  "scene-accept": ["context-build", "chapter-stitch"],
+  "chapter-stitch": ["chapter-validate"],
+  "chapter-validate": ["chapter-commit"],
+  "chapter-commit": ["complete"],
+  complete: [],
+} as const satisfies Readonly<Record<ExecutionNode, readonly ExecutionNode[]>>;
 
 export interface CreateChapterExecutionStateInput {
   runId: string;
@@ -43,6 +43,12 @@ function timestamp(value?: string): string {
 
 function completedKey(state: ChapterExecutionState, sceneId?: string): string {
   return `${sceneId ?? state.current_scene_id ?? "chapter"}:${state.current_node}`;
+}
+
+function clearBlocker(state: ChapterExecutionState): ChapterExecutionState {
+  const copy = { ...state };
+  delete copy.blocker;
+  return copy;
 }
 
 export function createChapterExecutionState(input: CreateChapterExecutionStateInput): ChapterExecutionState {
@@ -71,19 +77,19 @@ export function transitionChapterExecution(
   sceneId?: string,
 ): ChapterExecutionState {
   if (state.status !== "active") throw new Error(`Chapter execution is ${state.status}, not active.`);
-  if (!TRANSITIONS[state.current_node].includes(next)) {
+  if (!(TRANSITIONS[state.current_node] as readonly ExecutionNode[]).includes(next)) {
     throw new Error(`Illegal chapter execution transition: ${state.current_node} -> ${next}.`);
   }
   const key = completedKey(state, sceneId);
   const completedNodes = state.completed_nodes.includes(key) ? state.completed_nodes : [...state.completed_nodes, key];
   const currentSceneId = sceneId ?? state.current_scene_id;
+  const base = clearBlocker(state);
   return {
-    ...state,
+    ...base,
     current_scene_id: currentSceneId,
     current_node: next,
     status: next === "complete" ? "completed" : "active",
     completed_nodes: completedNodes,
-    blocker: undefined,
     updated_at: timestamp(now),
   };
 }
@@ -129,7 +135,8 @@ export function resumeChapterExecution(state: ChapterExecutionState, input: Resu
   if (state.project_hash !== input.projectHash) throw new Error("Cannot resume chapter execution because the project hash changed.");
   if (state.canon_snapshot_hash !== input.canonSnapshotHash) throw new Error("Cannot resume chapter execution because the canon snapshot hash changed.");
   if (state.contract_hash !== input.contractHash) throw new Error("Cannot resume chapter execution because the contract hash changed.");
-  return { ...state, status: "active", blocker: undefined, updated_at: timestamp(input.now) };
+  const base = clearBlocker(state);
+  return { ...base, status: "active", updated_at: timestamp(input.now) };
 }
 
 export function legalChapterExecutionTransitions(node: ExecutionNode): readonly ExecutionNode[] {
