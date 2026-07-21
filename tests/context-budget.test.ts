@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { allocateContext, ContextBudgetError, type ContextSection } from "../src/context/context-budget.js";
+import {
+  allocateContext,
+  ContextBudgetError,
+  paragraphContextRecords,
+  type ContextSection,
+} from "../src/context/context-budget.js";
 
 function section(overrides: Partial<ContextSection> = {}): ContextSection {
   return {
@@ -56,6 +61,18 @@ test("equal-priority records retain deterministic input selection order", () => 
 
   assert.deepEqual(first.report.includedRecordIds, ["CAN-001", "CAN-002"]);
   assert.deepEqual(first, second);
+});
+
+test("previous-context paragraphs prefer the newest complete paragraph", () => {
+  const records = paragraphContextRecords("previous", "old paragraph\n\nmiddle paragraph\n\nnewest paragraph", 50);
+  assert.deepEqual(records.map((record) => record.priority), [51, 52, 53]);
+  const newest = records[2]!;
+  const budget = `\n## Previous\n\n### ${newest.id}\n\n${newest.body}\n`.length;
+  const result = allocateContext([section({ id: "previous", title: "Previous", records })], budget);
+
+  assert.deepEqual(result.report.includedRecordIds, ["previous:paragraph:0003"]);
+  assert.match(result.text, /newest paragraph/);
+  assert.doesNotMatch(result.text, /old paragraph|middle paragraph/);
 });
 
 test("required overflow names every omitted required record", () => {
