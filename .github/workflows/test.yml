@@ -17,6 +17,15 @@ jobs:
         node: ['22.19.0', '24']
     steps:
       - uses: actions/checkout@v4
+      - name: Synchronize release lock metadata
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          lock.version = '1.7.0';
+          lock.packages[''].version = '1.7.0';
+          fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
+          NODE
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
@@ -62,6 +71,7 @@ jobs:
         with:
           name: novel-forge-ci-node-${{ matrix.node }}
           path: |
+            package-lock.json
             typecheck.log
             test.log
             constrained-runtime-benchmark.json
