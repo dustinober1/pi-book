@@ -10,14 +10,14 @@ permissions:
 
 jobs:
   sync-v1-7-release-tree:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/quality-evaluation-release-1-7'
+    if: github.event_name == 'pull_request' && github.head_ref == 'feature/quality-evaluation-release-1-7'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feature/quality-evaluation-release-1-7
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
