@@ -15,6 +15,7 @@ import { ChapterContractSchema, type ChapterContract } from "../domain/chapter-c
 import { ChapterDeltaSummarySchema, type ChapterDeltaSummary } from "../domain/chapter-delta-summary.js";
 import { EntityRegistrySchema, type EntityRegistry } from "../domain/entity-registry.js";
 import { KnowledgeLedgerSchema, type KnowledgeLedger } from "../domain/knowledge-ledger.js";
+import { ApprovedPlanChangeRecordSchema, type ApprovedPlanChangeRecord } from "../domain/plan-change-request.js";
 import { CanonSchema, StoryThreadsSchema, type CanonState, type StoryThread, type StoryThreadsState } from "../domain/schemas.js";
 import { StateLedgerSchema, type StateLedger } from "../domain/state-ledger.js";
 import type { StoryRecordStatus } from "../domain/story-record-status.js";
@@ -146,6 +147,15 @@ function deltaDependencies(summary: ChapterDeltaSummary): string[] {
     ...summary.threads.advanced.map((item) => item.id),
     ...summary.threads.resolved.map((item) => item.id),
     ...summary.research_claims_introduced.map((item) => item.id),
+  ]);
+}
+
+function planChangeDependencies(change: ApprovedPlanChangeRecord): string[] {
+  return uniqueSorted([
+    ...change.affected_contract_ids,
+    ...change.affected_arc_ids,
+    ...change.affected_thread_ids,
+    ...change.affected_payoff_ids,
   ]);
 }
 
@@ -338,6 +348,28 @@ function collectRecords(root: string): { records: StoryRecordIndexRecord[]; sour
       dependencies: deltaDependencies(delta.value),
       chapters: [delta.value.chapter],
       payload: delta.value,
+    }));
+  }
+
+  const planChangeRoot = join(root, base, "plan-changes");
+  const planChangePaths = listFilesRecursive(planChangeRoot, (path) => /\.ya?ml$/i.test(path))
+    .map((path) => normalizedRelative(root, path))
+    .sort();
+  for (const path of planChangePaths) {
+    const change = addSource(loadYaml<ApprovedPlanChangeRecord>(root, path, ApprovedPlanChangeRecordSchema));
+    if (!change) continue;
+    const expectedPath = `${base}/plan-changes/${change.value.request_id}.yaml`;
+    if (path !== expectedPath || change.value.book_id !== book.book_id) {
+      throw new Error(`Approved plan-change identity does not match its canonical path: ${path}.`);
+    }
+    records.push(record({
+      id: change.value.request_id,
+      kind: "plan-change",
+      status: "accepted-manuscript-fact",
+      source: loadedAsUnknown(change),
+      dependencies: planChangeDependencies(change.value),
+      chapters: change.value.affected_chapters,
+      payload: change.value,
     }));
   }
 
