@@ -35,6 +35,8 @@ export function sceneExecutionDraftStageSpec(input: SceneExecutionDraftStageInpu
       "Do not write manuscript files, run artifacts, PROJECT.yaml, BOOK.yaml, STATUS.md, HANDOFF.md, or canonical story ledgers directly.",
       "Do not replay a completed model job or invent an attempt number.",
       "Do not bypass repair, validation, scene order, or writer approval boundaries.",
+      "Do not turn audit metrics into prose quotas or mechanical style targets.",
+      "Do not chase AI-detector patterns, mechanically restate the hook, manufacture quotable lines, or pad to target length.",
     ],
     outputs: [
       "one novel_advance_chapter_step result per tool call",
