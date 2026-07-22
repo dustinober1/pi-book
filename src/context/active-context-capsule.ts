@@ -69,7 +69,7 @@ function assertIndexValid(index: StoryRecordIndex): void {
   const seen = new Set<string>();
   for (const record of index.records) {
     if (!Value.Check(StoryRecordIndexRecordSchema, record)) {
-      throw new ActiveContextCapsuleError("invalid-capsule", [String(record.id ?? "unknown")], "Story record index contains an invalid record.");
+      throw new ActiveContextCapsuleError("invalid-capsule", [], "Story record index contains an invalid record.");
     }
     if (seen.has(record.id)) throw new ActiveContextCapsuleError("invalid-capsule", [record.id], `Story record index duplicates ${record.id}.`);
     seen.add(record.id);
