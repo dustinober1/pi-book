@@ -30,6 +30,7 @@ import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-archit
 import { BookStrategyPhase5Schema, type BookStrategyPhase5 } from "../domain/v1-3-audit-schemas.js";
 import { readText } from "../infrastructure/files.js";
 import { finalizeQualityCache, writeQualityArtifact, type QualityCacheRetention } from "../infrastructure/quality-cache.js";
+import { writeQualityJobPlanManifest } from "../infrastructure/quality-job-plan-store.js";
 import { appendModelCallReport, storeRunReport } from "../infrastructure/run-report-store.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject } from "../project/store.js";
@@ -42,6 +43,14 @@ import {
 import { claimAuditPrompt, claimExtractionPrompt, claimRepairPrompt } from "./claim-audit-prompts.js";
 import { applyNovelEvent, projectStateHash } from "./events.js";
 import { normalizedContentHash } from "./model-usage.js";
+import {
+  buildQualityJobPlan,
+  initialQualityJobPlanUsage,
+  qualityJobPlanHas,
+  recordQualityJobPlanUsage,
+  type QualityJobPlan,
+  type QualityJobPlanUsage,
+} from "./quality/job-plan.js";
 import {
   parseQualityEventOutput,
   parseQualityVerificationOutput,
@@ -59,7 +68,13 @@ import {
   verificationPrompt,
   type QualityPromptMetadata,
 } from "./quality-prompts.js";
-import { assessChapterQualityRisk, buildQualityPassPlan, type ChapterQualityRisk, type QualityPassPlan } from "./quality-risk.js";
+import {
+  assessChapterQualityRisk,
+  buildQualityPassPlan,
+  type ChapterQualityRisk,
+  type QualityCriticLane,
+  type QualityPassPlan,
+} from "./quality-risk.js";
 import { createRunReportHeader } from "./run-telemetry.js";
 import { resolveWorkerModelBudget } from "../pi/quality-worker.js";
 
@@ -84,6 +99,9 @@ export interface RunQualityDraftResult {
   tier: QualityTierId;
   risk: ChapterQualityRisk;
   plan: QualityPassPlan;
+  jobPlan: QualityJobPlan;
+  jobPlanManifestPath: string;
+  jobPlanUsage: QualityJobPlanUsage;
   calls: ModelCallReport[];
   changed: string[];
   projectHash: string;
@@ -162,6 +180,19 @@ function manuscriptContent(output: QualityEventOutput, bookId: string, chapter: 
   return file.content;
 }
 
+function criticLanesFromJobPlan(plan: QualityJobPlan): QualityCriticLane[] {
+  const lanes: QualityCriticLane[] = [];
+  const mapping: Array<[Parameters<typeof qualityJobPlanHas>[1], QualityCriticLane]> = [
+    ["critic-combined", "combined"],
+    ["critic-continuity", "continuity"],
+    ["critic-causality", "causality"],
+    ["critic-character-intent", "character-intent"],
+    ["critic-style", "style"],
+  ];
+  for (const [jobId, lane] of mapping) if (qualityJobPlanHas(plan, jobId)) lanes.push(lane);
+  return lanes;
+}
+
 export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQualityDraftResult> {
   const profile = runtimeProfile(input.runtimeProfile);
   const quality = qualityConfig(input.qualityConfig);
@@ -200,14 +231,30 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     riskLevel: risk.level,
     historical: book.profile === "historical-fiction",
   });
-  const plan: QualityPassPlan = { ...buildQualityPassPlan(quality, risk), claimAudit: claimAuditRequired };
+  const jobPlan = buildQualityJobPlan({
+    tier: quality.tier,
+    risk: {
+      key_scene: risk.keyScene,
+      factuality_required: claimAuditRequired,
+    },
+  });
+  const legacyPlan = buildQualityPassPlan(quality, risk);
+  const plan: QualityPassPlan = {
+    ...legacyPlan,
+    candidateCount: jobPlan.candidate_count,
+    criticLanes: criticLanesFromJobPlan(jobPlan),
+    finalReviewer: qualityJobPlanHas(jobPlan, "verify-chapter"),
+    claimAudit: qualityJobPlanHas(jobPlan, "critic-factuality"),
+  };
   const runId = input.runId ?? `QDR-${randomUUID()}`;
+  const jobPlanManifestPath = writeQualityJobPlanManifest(input.root, runId, jobPlan);
   const sourceHashes = [...new Set([projectStateHash(input.root), normalizedContentHash(context.text)])];
   const cacheRetention = input.cacheRetention ?? "delete-on-success";
   const calls: ModelCallReport[] = [];
   const advisories = new Set<string>();
   let creationOrder = 0;
   let callOrder = 0;
+  let jobPlanUsage = initialQualityJobPlanUsage();
   const telemetryEnabled = startingProject.runtime?.telemetry ?? true;
   if (telemetryEnabled && !existsSync(runReportPath(input.root, runId))) {
     storeRunReport(input.root, createRunReportHeader({
@@ -267,6 +314,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
         ...(input.thinking ? { thinking: input.thinking } : {}),
       };
       const result = await input.worker.run(request, input.signal);
+      jobPlanUsage = recordQualityJobPlanUsage(jobPlan, jobPlanUsage, { outputTokens: result.usage.outputTokens });
       calls.push(result.usage);
       if (telemetryEnabled) appendModelCallReport(input.root, runId, result.usage);
       try {
@@ -456,7 +504,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     };
   };
 
-  if (claimAuditRequired) {
+  if (plan.claimAudit) {
     const firstAudit = await auditDraft(eventOutput, 1);
     if (firstAudit.decision.blockers.length > 0) {
       throw new Error(`Claim audit blocked the draft: ${firstAudit.decision.blockers.map((item) => `${item.claim_id}: ${item.reason}`).join("; ")}`);
@@ -515,6 +563,9 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     tier: quality.tier,
     risk,
     plan,
+    jobPlan,
+    jobPlanManifestPath,
+    jobPlanUsage,
     calls,
     changed: applied.changed,
     projectHash: applied.projectHash,
