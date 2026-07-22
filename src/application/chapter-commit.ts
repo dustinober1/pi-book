@@ -2,10 +2,12 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
 import { Value } from "@sinclair/typebox/value";
+import { chapterDeltaSummaryPath } from "../domain/chapter-delta-summary.js";
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
 import type { ChapterStitchArtifact } from "../domain/chapter-stitch-artifact.js";
 import type { ChapterValidationArtifact } from "../domain/chapter-validation-artifact.js";
 import { ChapterCommitArtifactSchema, type ChapterCommitArtifact } from "../domain/chapter-commit-artifact.js";
+import { EntityRegistrySchema, type EntityRegistry } from "../domain/entity-registry.js";
 import {
   ChapterQueueSchema,
   GenreConfigSchema,
@@ -28,6 +30,7 @@ import { getProfile } from "../profiles/index.js";
 import { readBook, readProject } from "../project/store.js";
 import { actBoundaryFindings, requiredMilestoneGate } from "./act-boundaries.js";
 import { appendMilestoneVoiceAudit } from "./audit-events.js";
+import { buildChapterDeltaSummary, renderChapterDeltaSummary } from "./chapter-delta-summary.js";
 import { transitionChapterExecution } from "./chapter-execution-machine.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
 import { compactPacketWindow, packetWindowDecision } from "./packet-window.js";
@@ -35,6 +38,7 @@ import { projectStateHash } from "./project-hash.js";
 import { rebuildStoryRecordIndex, readStoryRecordIndex } from "./rebuild-story-index.js";
 
 const STATE_LEDGER_PATH = "series/state-ledger.yaml";
+const ENTITY_REGISTRY_PATH = "series/entity-registry.yaml";
 
 export interface CommitValidatedChapterInput {
   root: string;
@@ -57,6 +61,7 @@ interface PreparedCommit {
   validation: ChapterValidationArtifact;
   manuscriptContent: string;
   stateLedgerContent: string | null;
+  deltaSummaryContent: string;
 }
 
 interface InternalCommitEventResult {
@@ -194,6 +199,21 @@ function manuscriptPath(root: string, chapter: number): string {
   return `books/${book.book_id}/manuscript/chapters/${String(chapter).padStart(2, "0")}-${slug(packet.title)}.md`;
 }
 
+function readStateLedger(root: string, required: boolean): StateLedger {
+  const text = readText(join(root, STATE_LEDGER_PATH));
+  if (text === null) {
+    if (required) throw new Error("Chapter commit mutations require series/state-ledger.yaml.");
+    return { schema_version: "1.0.0", records: [] };
+  }
+  return parseYaml<StateLedger>(text, StateLedgerSchema, STATE_LEDGER_PATH);
+}
+
+function readEntityRegistry(root: string): EntityRegistry {
+  const text = readText(join(root, ENTITY_REGISTRY_PATH));
+  if (text === null) return { schema_version: "1.0.0", entities: [] };
+  return parseYaml<EntityRegistry>(text, EntityRegistrySchema, ENTITY_REGISTRY_PATH);
+}
+
 function buildPreparation(input: CommitValidatedChapterInput, state: ChapterExecutionState): PreparedCommit {
   if (state.status !== "active" || state.current_node !== "chapter-commit") {
     throw new Error(`Chapter commit requires active chapter-commit, current state is ${state.status}/${state.current_node}.`);
@@ -206,19 +226,31 @@ function buildPreparation(input: CommitValidatedChapterInput, state: ChapterExec
   const path = manuscriptPath(input.root, input.chapter);
   if (existsSync(join(input.root, path))) throw new Error(`Canonical manuscript chapter already exists at ${path}.`);
 
-  let stateLedgerContent: string | null = null;
-  let stateLedgerHash: string | null = null;
-  if (stitch.accepted_mutations.length) {
-    const ledgerText = readText(join(input.root, STATE_LEDGER_PATH));
-    if (ledgerText === null) throw new Error("Chapter commit mutations require series/state-ledger.yaml.");
-    const ledger = parseYaml<StateLedger>(ledgerText, StateLedgerSchema, STATE_LEDGER_PATH);
-    stateLedgerContent = stringifyYaml(applyAcceptedStateMutations(ledger, stitch.accepted_mutations, {
+  const beforeLedger = readStateLedger(input.root, stitch.accepted_mutations.length > 0);
+  const afterLedger = stitch.accepted_mutations.length
+    ? applyAcceptedStateMutations(beforeLedger, stitch.accepted_mutations, {
       runId: input.runId,
       bookId: book.book_id,
       chapter: input.chapter,
-    }));
-    stateLedgerHash = hashText(stateLedgerContent);
-  }
+    })
+    : structuredClone(beforeLedger);
+  const stateLedgerContent = stitch.accepted_mutations.length ? stringifyYaml(afterLedger) : null;
+  const stateLedgerHash = stateLedgerContent === null ? null : hashText(stateLedgerContent);
+  const preparedAt = timestamp(input.now);
+  const deltaPath = chapterDeltaSummaryPath(book.book_id, input.chapter);
+  const deltaSummaryContent = renderChapterDeltaSummary(buildChapterDeltaSummary({
+    runId: input.runId,
+    bookId: book.book_id,
+    chapter: input.chapter,
+    contractHash: stitch.contract_hash,
+    manuscriptPath: path,
+    manuscriptText: stitch.chapter_text,
+    beforeStateLedger: beforeLedger,
+    afterStateLedger: afterLedger,
+    entityRegistry: readEntityRegistry(input.root),
+    mutations: stitch.accepted_mutations,
+    createdAt: preparedAt,
+  }));
   const artifact: ChapterCommitArtifact = {
     schema_version: "1.0.0",
     run_id: input.runId,
@@ -236,14 +268,16 @@ function buildPreparation(input: CommitValidatedChapterInput, state: ChapterExec
     manuscript_hash: hashText(stitch.chapter_text),
     state_ledger_path: stateLedgerContent === null ? null : STATE_LEDGER_PATH,
     state_ledger_hash: stateLedgerHash,
+    delta_summary_path: deltaPath,
+    delta_summary_hash: hashText(deltaSummaryContent),
     applied_mutations: stitch.accepted_mutations,
     changed_paths: [],
     git_message: null,
-    prepared_at: timestamp(input.now),
+    prepared_at: preparedAt,
     committed_at: null,
   };
   if (!Value.Check(ChapterCommitArtifactSchema, artifact)) throw new Error("Prepared chapter commit artifact failed schema validation.");
-  return { artifact, stitch, validation, manuscriptContent: stitch.chapter_text, stateLedgerContent };
+  return { artifact, stitch, validation, manuscriptContent: stitch.chapter_text, stateLedgerContent, deltaSummaryContent };
 }
 
 function chapterNumber(path: string): number | null {
@@ -308,7 +342,10 @@ function applyInternalDraftCommit(root: string, prepared: PreparedCommit): Inter
   const plot = readPlot(root, book.book_id);
   validateInternalDraftCommit(root, project, book, queue, plot, prepared.artifact.chapter);
   const packet = queue.packets.find((item) => item.chapter === prepared.artifact.chapter)!;
-  const changes: FileChange[] = [{ path: prepared.artifact.manuscript_path, content: prepared.manuscriptContent }];
+  const changes: FileChange[] = [
+    { path: prepared.artifact.manuscript_path, content: prepared.manuscriptContent },
+    { path: prepared.artifact.delta_summary_path!, content: prepared.deltaSummaryContent },
+  ];
   if (prepared.stateLedgerContent !== null) changes.push({ path: STATE_LEDGER_PATH, content: prepared.stateLedgerContent });
 
   packet.status = "drafted";
@@ -351,8 +388,10 @@ function actualHash(root: string, path: string): string | null {
 
 function canonicalFilesMatch(root: string, artifact: ChapterCommitArtifact): boolean {
   if (actualHash(root, artifact.manuscript_path) !== artifact.manuscript_hash) return false;
-  if (artifact.state_ledger_path === null) return true;
-  return actualHash(root, artifact.state_ledger_path) === artifact.state_ledger_hash;
+  if (artifact.state_ledger_path !== null && actualHash(root, artifact.state_ledger_path) !== artifact.state_ledger_hash) return false;
+  if ((artifact.delta_summary_path === undefined) !== (artifact.delta_summary_hash === undefined)) return false;
+  if (artifact.delta_summary_path !== undefined && actualHash(root, artifact.delta_summary_path) !== artifact.delta_summary_hash) return false;
+  return true;
 }
 
 function finishCommit(
@@ -375,7 +414,11 @@ function finishCommit(
   }
   completed = { ...completed, project_hash: currentHash, canon_snapshot_hash: index.manifest.index_hash, updated_at: timestamp(input.now) };
   writeChapterExecutionState(input.root, completed);
-  const changed = event?.changed ?? [prepared.manuscript_path, ...(prepared.state_ledger_path ? [prepared.state_ledger_path] : [])];
+  const changed = event?.changed ?? [
+    prepared.manuscript_path,
+    ...(prepared.state_ledger_path ? [prepared.state_ledger_path] : []),
+    ...(prepared.delta_summary_path ? [prepared.delta_summary_path] : []),
+  ];
   const committed: ChapterCommitArtifact = {
     ...prepared,
     status: "committed",
@@ -406,7 +449,8 @@ export function commitValidatedChapter(input: CommitValidatedChapterInput): Comm
   if (existing) {
     if (existing.project_hash_before !== prepared.artifact.project_hash_before
       || existing.manuscript_hash !== prepared.artifact.manuscript_hash
-      || existing.state_ledger_hash !== prepared.artifact.state_ledger_hash) {
+      || existing.state_ledger_hash !== prepared.artifact.state_ledger_hash
+      || existing.delta_summary_hash !== prepared.artifact.delta_summary_hash) {
       throw new Error("Existing prepared chapter commit no longer matches the active run artifacts.");
     }
   } else writeChapterCommitArtifact(input.root, prepared.artifact);
