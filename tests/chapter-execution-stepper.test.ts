@@ -69,8 +69,13 @@ function workerResult(text: string, request: QualityWorkerRequest): QualityWorke
   return {
     text,
     usage: {
-      callId: request.callId, stage: request.stage, chapter: request.chapter, sceneId: request.sceneId,
-      attempt: request.attempt, pass: request.pass, jobType: request.jobType,
+      callId: request.callId,
+      stage: request.stage,
+      ...(request.chapter !== undefined ? { chapter: request.chapter } : {}),
+      ...(request.sceneId !== undefined ? { sceneId: request.sceneId } : {}),
+      ...(request.attempt !== undefined ? { attempt: request.attempt } : {}),
+      pass: request.pass,
+      ...(request.jobType !== undefined ? { jobType: request.jobType } : {}),
       estimated: true, elapsedMs: 5, promptHash: "1".repeat(64), contextHash: "2".repeat(64), outputHash: "3".repeat(64),
     },
   };
