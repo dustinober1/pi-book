@@ -13,10 +13,25 @@ import { MODEL_EXECUTION_PROFILES } from "../src/domain/model-execution-profile.
 import type { SceneContract } from "../src/domain/scene-contract.js";
 import type { StoryRecordIndex } from "../src/context/story-record-index.js";
 
+const sourceHash = "a".repeat(64);
 const storyIndex: StoryRecordIndex = {
-  schema_version: "1.0.0",
-  records: [{ id: "CHAR-MARA", record_type: "entity", status: "current-state", source_path: "series/entity-registry.yaml", introduced_in: "series-plan", chapter_scope: [], payload: { name: "Mara" }, dependencies: [] }],
-  manifest: { source_hashes: {}, record_count: 1 },
+  records: [{
+    id: "CHAR-MARA",
+    kind: "entity",
+    status: "current-state",
+    source_path: "series/entity-registry.yaml",
+    source_hash: sourceHash,
+    version: 1,
+    chapter_scope: [],
+    payload: { name: "Mara" },
+    dependencies: [],
+  }],
+  manifest: {
+    schema_version: "1.0.0",
+    sources: [{ path: "series/entity-registry.yaml", hash: sourceHash }],
+    record_count: 1,
+    index_hash: "f".repeat(64),
+  },
 };
 const sceneContract: SceneContract = {
   schema_version: "1.0.0",
