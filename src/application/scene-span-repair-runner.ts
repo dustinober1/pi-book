@@ -130,6 +130,21 @@ function requireSourceDraft(input: RunSceneSpanRepairInput, state: ChapterExecut
   return draft;
 }
 
+function activeStateDeltaAttempt(input: RunSceneSpanRepairInput, draft: SceneDraftArtifact): number | null {
+  if (input.stateDeltaExtractionAttempt !== undefined) return input.stateDeltaExtractionAttempt;
+  const state = readChapterExecutionState(input.root, input.runId);
+  const recorded = state?.attempts[`${draft.scene_id}:state-delta`] ?? 0;
+  if (!Number.isInteger(recorded) || recorded < 1) return null;
+  const artifact = readSceneStateDeltaArtifact(
+    input.root,
+    input.runId,
+    draft.scene_id,
+    input.sourceDraftAttempt,
+    recorded,
+  );
+  return artifact && !artifact.matches_expected && artifact.next_action === "span-repair" ? recorded : null;
+}
+
 function activeRepairFindings(input: RunSceneSpanRepairInput, draft: SceneDraftArtifact): RepairFinding[] {
   const findings: RepairFinding[] = [];
   const validation = readSceneValidationArtifact(input.root, input.runId, draft.scene_id, input.sourceDraftAttempt);
@@ -161,16 +176,17 @@ function activeRepairFindings(input: RunSceneSpanRepairInput, draft: SceneDraftA
       });
     });
   }
-  if (input.stateDeltaExtractionAttempt !== undefined) {
+  const stateDeltaAttempt = activeStateDeltaAttempt(input, draft);
+  if (stateDeltaAttempt !== null) {
     const artifact = readSceneStateDeltaArtifact(
       input.root,
       input.runId,
       draft.scene_id,
       input.sourceDraftAttempt,
-      input.stateDeltaExtractionAttempt,
+      stateDeltaAttempt,
     );
     if (!artifact) {
-      throw new Error(`State-delta repair source not found for draft ${input.sourceDraftAttempt} extraction attempt ${input.stateDeltaExtractionAttempt}.`);
+      throw new Error(`State-delta repair source not found for draft ${input.sourceDraftAttempt} extraction attempt ${stateDeltaAttempt}.`);
     }
     if (artifact.draft_attempt !== input.sourceDraftAttempt
       || artifact.draft_output_hash !== draft.output_hash
