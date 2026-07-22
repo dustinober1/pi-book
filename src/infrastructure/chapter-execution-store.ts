@@ -20,15 +20,20 @@ export function chapterExecutionStatePath(root: string, runId: string): string {
   return join(root, ".pi-book", "runs", runId, "execution-state.json");
 }
 
-export function writeChapterExecutionState(root: string, state: ChapterExecutionState): string {
+export function serializeChapterExecutionState(state: ChapterExecutionState): string {
   requireRunId(state.run_id);
   if (!Value.Check(ChapterExecutionStateSchema, state)) throw new Error("Invalid chapter execution state.");
+  return `${JSON.stringify(state, null, 2)}\n`;
+}
+
+export function writeChapterExecutionState(root: string, state: ChapterExecutionState): string {
+  const content = serializeChapterExecutionState(state);
   const directory = join(root, ".pi-book", "runs", state.run_id);
   const path = chapterExecutionStatePath(root, state.run_id);
   const temporary = join(directory, `.execution-state.${process.pid}.${randomUUID()}.tmp`);
   try {
     mkdirSync(directory, { recursive: true });
-    writeFileSync(temporary, `${JSON.stringify(state, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+    writeFileSync(temporary, content, { encoding: "utf8", flag: "wx" });
     renameSync(temporary, path);
     return path;
   } catch (error) {

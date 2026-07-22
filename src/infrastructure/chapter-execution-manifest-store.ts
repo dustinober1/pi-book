@@ -18,16 +18,21 @@ export function chapterExecutionManifestPath(root: string, runId: string, chapte
   return join(root, ".pi-book", "runs", runId, "chapters", `chapter-${String(chapter).padStart(3, "0")}`, "execution-manifest.json");
 }
 
-export function writeChapterExecutionManifest(root: string, manifest: ChapterExecutionManifest): string {
+export function serializeChapterExecutionManifest(manifest: ChapterExecutionManifest): string {
   requireRunId(manifest.run_id);
   requireChapter(manifest.chapter);
   if (!Value.Check(ChapterExecutionManifestSchema, manifest)) throw new Error("Invalid chapter execution manifest.");
+  return `${JSON.stringify(manifest, null, 2)}\n`;
+}
+
+export function writeChapterExecutionManifest(root: string, manifest: ChapterExecutionManifest): string {
+  const content = serializeChapterExecutionManifest(manifest);
   const path = chapterExecutionManifestPath(root, manifest.run_id, manifest.chapter);
   const directory = join(root, ".pi-book", "runs", manifest.run_id, "chapters", `chapter-${String(manifest.chapter).padStart(3, "0")}`);
   const temporary = join(directory, `.execution-manifest.${process.pid}.${randomUUID()}.tmp`);
   try {
     mkdirSync(directory, { recursive: true });
-    writeFileSync(temporary, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+    writeFileSync(temporary, content, { encoding: "utf8", flag: "wx" });
     renameSync(temporary, path);
     return path;
   } catch (error) {

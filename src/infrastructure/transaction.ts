@@ -19,6 +19,7 @@ export interface TransactionOptions {
   gitCheckpoint?: boolean;
   simulateFailureAfter?: number;
   deriveChanges?: () => TransactionFileChange[];
+  removePaths?: string[];
 }
 
 export interface TransactionResult {
@@ -35,8 +36,31 @@ function validateChange(change: TransactionFileChange): void {
   }
 }
 
+function validateOperationalRemoval(path: string): void {
+  if (path.startsWith("/") || path.includes("\\") || path.split("/").includes("..")) {
+    throw new Error(`Unsafe operational removal path: ${path}`);
+  }
+  if (!path.startsWith(".pi-book/") || path === ".pi-book/") {
+    throw new Error(`Operational removals must stay below .pi-book/: ${path}`);
+  }
+}
+
+function pathsOverlap(left: string, right: string): boolean {
+  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
+}
+
 export function applyTransaction(root: string, changes: TransactionFileChange[], options: TransactionOptions = {}): TransactionResult {
-  if (!changes.length && !options.deriveChanges) return { changed: [], git: null };
+  const removalPaths = options.removePaths ?? [];
+  if (!changes.length && !options.deriveChanges && !removalPaths.length) return { changed: [], git: null };
+  const removalSet = new Set<string>();
+  for (const path of removalPaths) {
+    validateOperationalRemoval(path);
+    if (removalSet.has(path)) throw new Error(`Duplicate operational removal path: ${path}`);
+    if ([...removalSet].some((known) => pathsOverlap(known, path))) {
+      throw new Error(`Overlapping operational removal paths: ${path}`);
+    }
+    removalSet.add(path);
+  }
   const transactionRoot = join(root, `.novel-forge-txn-${randomUUID()}`);
   const stagedRoot = join(transactionRoot, "staged");
   const backupRoot = join(transactionRoot, "backup");
@@ -52,12 +76,28 @@ export function applyTransaction(root: string, changes: TransactionFileChange[],
     for (const change of batch) {
       validateChange(change);
       if (knownPaths.has(change.path)) throw new Error(`Duplicate transaction path: ${change.path}`);
+      if ([...removalSet].some((path) => pathsOverlap(path, change.path))) {
+        throw new Error(`Transaction write overlaps operational removal path: ${change.path}`);
+      }
       knownPaths.add(change.path);
       allChanges.push(change);
       const staged = join(stagedRoot, change.path);
       mkdirSync(dirname(staged), { recursive: true });
       if (typeof change.content === "string") writeFileSync(staged, change.content, "utf8");
       else writeFileSync(staged, change.content);
+    }
+  }
+
+  function applyRemovals(): void {
+    for (const path of removalPaths) {
+      const destination = join(root, path);
+      if (!existsSync(destination)) continue;
+      const backup = join(backupRoot, path);
+      mkdirSync(dirname(backup), { recursive: true });
+      renameSync(destination, backup);
+      applied.push(path);
+      appliedCount += 1;
+      if (options.simulateFailureAfter === appliedCount) throw new Error("Simulated transaction failure");
     }
   }
 
@@ -80,6 +120,7 @@ export function applyTransaction(root: string, changes: TransactionFileChange[],
   try {
     stage(changes);
     validateCanonicalStoryTransaction(root, changes);
+    applyRemovals();
     apply(changes);
     const derived = options.deriveChanges?.() ?? [];
     if (derived.length) {
@@ -102,7 +143,10 @@ export function applyTransaction(root: string, changes: TransactionFileChange[],
   }
 
   rmSync(transactionRoot, { recursive: true, force: true });
-  const changed = allChanges.map((change) => relative(root, join(root, change.path)));
+  const changed = [
+    ...removalPaths.filter((path) => applied.includes(path)),
+    ...allChanges.map((change) => relative(root, join(root, change.path))),
+  ];
   const git = options.gitCheckpoint && options.commitMessage
     ? commitWorkflowEvent(root, changed, options.commitMessage)
     : null;

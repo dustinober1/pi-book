@@ -21,16 +21,21 @@ export function activeContextCapsulePath(root: string, runId: string, capsule: P
   return join(root, ".pi-book", "runs", runId, "capsules", `${capsule.capsule_id}.json`);
 }
 
-export function writeActiveContextCapsule(root: string, runId: string, capsule: ActiveContextCapsule): string {
+export function serializeActiveContextCapsule(runId: string, capsule: ActiveContextCapsule): string {
   requireRunId(runId);
   requireCapsuleId(capsule.capsule_id);
   if (!Value.Check(ActiveContextCapsuleSchema, capsule)) throw new Error("Invalid active context capsule.");
+  return `${JSON.stringify(capsule, null, 2)}\n`;
+}
+
+export function writeActiveContextCapsule(root: string, runId: string, capsule: ActiveContextCapsule): string {
+  const content = serializeActiveContextCapsule(runId, capsule);
   const directory = join(root, ".pi-book", "runs", runId, "capsules");
   const path = activeContextCapsulePath(root, runId, capsule);
   const temporary = join(directory, `.${capsule.capsule_id}.${process.pid}.${randomUUID()}.tmp`);
   try {
     mkdirSync(directory, { recursive: true });
-    writeFileSync(temporary, `${JSON.stringify(capsule, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+    writeFileSync(temporary, content, { encoding: "utf8", flag: "wx" });
     renameSync(temporary, path);
     return path;
   } catch (error) {
