@@ -4,25 +4,56 @@ import {
   ActiveContextCapsuleError,
   buildActiveContextCapsule,
 } from "../src/context/active-context-capsule.js";
-import { MODEL_EXECUTION_PROFILES } from "../src/domain/model-execution-profile.js";
+import { MODEL_EXECUTION_PROFILES, type ModelExecutionProfile } from "../src/domain/model-execution-profile.js";
 import type { SceneContract } from "../src/domain/scene-contract.js";
-import type { StoryRecordIndex } from "../src/context/story-record-index.js";
+import type { StoryRecordIndex, StoryRecordIndexRecord, StoryRecordKind } from "../src/context/story-record-index.js";
+import type { StoryRecordStatus } from "../src/domain/story-record-status.js";
+
+const sourceHash = "a".repeat(64);
+
+function record(input: {
+  id: string;
+  kind: StoryRecordKind;
+  status: StoryRecordStatus;
+  source_path: string;
+  payload: unknown;
+  dependencies?: string[];
+  chapter_scope?: number[];
+  introduced_in?: string | null;
+}): StoryRecordIndexRecord {
+  return {
+    id: input.id,
+    kind: input.kind,
+    status: input.status,
+    source_path: input.source_path,
+    source_hash: sourceHash,
+    version: 1,
+    introduced_in: input.introduced_in ?? null,
+    chapter_scope: input.chapter_scope ?? [],
+    payload: input.payload,
+    dependencies: input.dependencies ?? [],
+  };
+}
 
 function index(): StoryRecordIndex {
+  const records = [
+    record({ id: "CAN-ACCESS", kind: "canon-fact", status: "locked-canon", source_path: "series/canon.yaml", introduced_in: "chapter-00", chapter_scope: [1], payload: { fact: "Mara has archive access." }, dependencies: ["CHAR-MARA"] }),
+    record({ id: "CHAR-MARA", kind: "entity", status: "current-state", source_path: "series/entity-registry.yaml", introduced_in: "series-plan", payload: { display_name: "Mara Vale" } }),
+    record({ id: "STATE-MARA-LOCATION", kind: "state-record", status: "current-state", source_path: "series/state-ledger.yaml", introduced_in: "chapter-01", chapter_scope: [1], payload: { field: "location", value: "LOC-ARCHIVE" }, dependencies: ["CHAR-MARA", "LOC-ARCHIVE"] }),
+    record({ id: "LOC-ARCHIVE", kind: "entity", status: "current-state", source_path: "series/entity-registry.yaml", introduced_in: "series-plan", payload: { display_name: "Central Archive" } }),
+    record({ id: "KNOW-MARA-USER", kind: "knowledge-record", status: "current-state", source_path: "series/knowledge-ledger.yaml", introduced_in: "chapter-01", chapter_scope: [1], payload: { knowledge: "unknown" }, dependencies: ["CHAR-MARA", "FACT-PRIOR-USER"] }),
+    record({ id: "FACT-PRIOR-USER", kind: "canon-fact", status: "accepted-manuscript-fact", source_path: "series/canon.yaml", introduced_in: "chapter-01", chapter_scope: [1], payload: { fact: "Someone accessed the archive earlier." } }),
+    record({ id: "PLAN-MARA-VAULT", kind: "state-record", status: "proposed-plan", source_path: "series/state-ledger.yaml", introduced_in: "chapter-04", chapter_scope: [4], payload: { field: "location", value: "LOC-VAULT" }, dependencies: ["CHAR-MARA"] }),
+    record({ id: "THREAD-ALARM", kind: "story-thread", status: "current-state", source_path: "series/story-threads.yaml", introduced_in: "chapter-01", chapter_scope: [1], payload: { status: "open" }, dependencies: ["CHAR-MARA"] }),
+    record({ id: "CAN-OPTIONAL", kind: "canon-fact", status: "accepted-manuscript-fact", source_path: "series/canon.yaml", introduced_in: "chapter-00", chapter_scope: [1], payload: { fact: "Optional support." } }),
+  ];
   return {
-    schema_version: "1.0.0",
-    records: [
-      { id: "CAN-ACCESS", record_type: "canon-fact", status: "locked-canon", source_path: "series/canon.yaml", introduced_in: "chapter-00", chapter_scope: ["chapter-00"], payload: { fact: "Mara has archive access." }, dependencies: ["CHAR-MARA"] },
-      { id: "CHAR-MARA", record_type: "entity", status: "current-state", source_path: "series/entity-registry.yaml", introduced_in: "series-plan", chapter_scope: [], payload: { display_name: "Mara Vale" }, dependencies: [] },
-      { id: "STATE-MARA-LOCATION", record_type: "state", status: "current-state", source_path: "series/state-ledger.yaml", introduced_in: "chapter-01", chapter_scope: ["chapter-01"], payload: { field: "location", value: "LOC-ARCHIVE" }, dependencies: ["CHAR-MARA", "LOC-ARCHIVE"] },
-      { id: "LOC-ARCHIVE", record_type: "entity", status: "current-state", source_path: "series/entity-registry.yaml", introduced_in: "series-plan", chapter_scope: [], payload: { display_name: "Central Archive" }, dependencies: [] },
-      { id: "KNOW-MARA-USER", record_type: "knowledge", status: "current-state", source_path: "series/knowledge-ledger.yaml", introduced_in: "chapter-01", chapter_scope: ["chapter-01"], payload: { knowledge: "unknown" }, dependencies: ["CHAR-MARA", "FACT-PRIOR-USER"] },
-      { id: "FACT-PRIOR-USER", record_type: "canon-fact", status: "accepted-manuscript-fact", source_path: "series/canon.yaml", introduced_in: "chapter-01", chapter_scope: ["chapter-01"], payload: { fact: "Someone accessed the archive earlier." }, dependencies: [] },
-      { id: "PLAN-MARA-VAULT", record_type: "state", status: "proposed-plan", source_path: "series/state-ledger.yaml", introduced_in: "chapter-04", chapter_scope: ["chapter-04"], payload: { field: "location", value: "LOC-VAULT" }, dependencies: ["CHAR-MARA"] },
-      { id: "THREAD-ALARM", record_type: "story-thread", status: "current-state", source_path: "series/story-threads.yaml", introduced_in: "chapter-01", chapter_scope: ["chapter-01"], payload: { status: "open" }, dependencies: ["CHAR-MARA"] },
-      { id: "CAN-OPTIONAL", record_type: "canon-fact", status: "accepted-manuscript-fact", source_path: "series/canon.yaml", introduced_in: "chapter-00", chapter_scope: ["chapter-00"], payload: { fact: "Optional support." }, dependencies: [] },
-    ],
-    manifest: { source_hashes: { "series/canon.yaml": "a".repeat(64) }, record_count: 9 },
+    records,
+    manifest: {
+      sources: [...new Set(records.map((item) => item.source_path))].map((path) => ({ path, hash: sourceHash, version: 1 })),
+      record_count: records.length,
+      index_hash: "f".repeat(64),
+    },
   };
 }
 
@@ -74,9 +105,9 @@ test("capsule selection closes explicit dependencies and labels authority", () =
   assert.ok(first.manifest.included_record_ids.includes("CHAR-MARA"));
   assert.ok(first.manifest.included_record_ids.includes("LOC-ARCHIVE"));
   assert.ok(first.manifest.included_record_ids.includes("FACT-PRIOR-USER"));
-  assert.equal(first.records.find((record) => record.id === "CAN-ACCESS")?.authority, "established");
-  assert.equal(first.records.find((record) => record.id === "PLAN-MARA-VAULT")?.authority, "proposal");
-  assert.equal(first.records.find((record) => record.id === "KNOW-MARA-USER")?.required, true);
+  assert.equal(first.records.find((item) => item.id === "CAN-ACCESS")?.authority, "established");
+  assert.equal(first.records.find((item) => item.id === "PLAN-MARA-VAULT")?.authority, "proposal");
+  assert.equal(first.records.find((item) => item.id === "KNOW-MARA-USER")?.required, true);
   assert.ok(first.manifest.estimated_evidence_tokens <= first.manifest.maximum_evidence_tokens);
 });
 
@@ -95,7 +126,8 @@ test("missing or unsafe explicit records block before inference with exact IDs",
     && error.recordIds.includes("CAN-NOT-FOUND"));
 
   const unsafeIndex = index();
-  unsafeIndex.records.push({ id: "STATE-UNRESOLVED", record_type: "state", status: "unresolved", source_path: "series/state-ledger.yaml", introduced_in: null, chapter_scope: [], payload: {}, dependencies: [] });
+  unsafeIndex.records.push(record({ id: "STATE-UNRESOLVED", kind: "state-record", status: "unresolved", source_path: "series/state-ledger.yaml", payload: {} }));
+  unsafeIndex.manifest.record_count += 1;
   const unsafe = scene();
   unsafe.required_record_ids = ["STATE-UNRESOLVED"];
   assert.throws(() => buildActiveContextCapsule({
@@ -111,8 +143,14 @@ test("missing or unsafe explicit records block before inference with exact IDs",
 });
 
 test("required overflow stops and optional records are omitted whole", () => {
-  const tinyProfile = structuredClone(MODEL_EXECUTION_PROFILES["small-12b-q4"]);
-  tinyProfile.job_budgets["draft-scene"].maximumEvidenceTokens = 600;
+  const base = MODEL_EXECUTION_PROFILES["small-12b-q4"];
+  const tinyProfile: ModelExecutionProfile = {
+    ...base,
+    job_budgets: {
+      ...base.job_budgets,
+      "draft-scene": { ...base.job_budgets["draft-scene"], maximumEvidenceTokens: 600 },
+    },
+  };
   assert.throws(() => buildActiveContextCapsule({
     storyIndex: index(),
     sceneContract: scene(),
@@ -123,7 +161,7 @@ test("required overflow stops and optional records are omitted whole", () => {
   }), (error: unknown) => error instanceof ActiveContextCapsuleError && error.code === "required-context-overflow");
 
   const optionalHeavy = index();
-  optionalHeavy.records.find((record) => record.id === "CAN-OPTIONAL")!.payload = { fact: "x".repeat(20_000) };
+  optionalHeavy.records.find((item) => item.id === "CAN-OPTIONAL")!.payload = { fact: "x".repeat(20_000) };
   const capsule = buildActiveContextCapsule({
     storyIndex: optionalHeavy,
     sceneContract: scene(),
@@ -133,7 +171,7 @@ test("required overflow stops and optional records are omitted whole", () => {
     openingRules: ["Preserve canon."],
     closingTask: ["Draft the scene."],
   });
-  assert.equal(capsule.records.some((record) => record.id === "CAN-OPTIONAL"), false);
+  assert.equal(capsule.records.some((item) => item.id === "CAN-OPTIONAL"), false);
   assert.ok(capsule.manifest.omitted_record_ids.includes("CAN-OPTIONAL"));
   assert.equal(JSON.stringify(capsule).includes("x".repeat(100)), false);
 });
