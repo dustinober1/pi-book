@@ -1,5 +1,6 @@
 import type { TSchema } from "@sinclair/typebox";
 import { ChapterContractSchema } from "./chapter-contract.js";
+import { ChapterDeltaSummarySchema } from "./chapter-delta-summary.js";
 import { EntityRegistrySchema } from "./entity-registry.js";
 import { HistoricalContextSchema, InventionLedgerSchema } from "./historical-fiction.js";
 import { KnowledgeLedgerSchema } from "./knowledge-ledger.js";
@@ -11,6 +12,7 @@ const registry: Array<[RegExp, TSchema]> = [
   [/^books\/book-[0-9]{2}\/invention-ledger\.yaml$/, InventionLedgerSchema],
   [/^books\/book-[0-9]{2}\/thriller-evidence\.yaml$/, ThrillerEvidenceLedgerSchema],
   [/^books\/book-[0-9]{2}\/contracts\/chapters\/CH-[0-9]{3}\.yaml$/, ChapterContractSchema],
+  [/^books\/book-[0-9]{2}\/deltas\/CH-[0-9]{3}\.yaml$/, ChapterDeltaSummarySchema],
   [/^series\/entity-registry\.yaml$/, EntityRegistrySchema],
   [/^series\/state-ledger\.yaml$/, StateLedgerSchema],
   [/^series\/knowledge-ledger\.yaml$/, KnowledgeLedgerSchema],

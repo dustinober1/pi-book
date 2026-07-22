@@ -39,7 +39,10 @@ function guardedEvidencePaths(root: string, bookId: string): string[] {
   const contractRoot = join(root, "books", bookId, "contracts");
   const contractFiles = listFilesRecursive(contractRoot, (path) => /\.yaml$/i.test(path))
     .map((path) => normalizedRelative(root, path));
-  return [...new Set([...fixed, ...experimentFiles, ...contractFiles])].sort();
+  const deltaRoot = join(root, "books", bookId, "deltas");
+  const deltaFiles = listFilesRecursive(deltaRoot, (path) => /\.yaml$/i.test(path))
+    .map((path) => normalizedRelative(root, path));
+  return [...new Set([...fixed, ...experimentFiles, ...contractFiles, ...deltaFiles])].sort();
 }
 
 function calculateProjectHash(root: string, includeRunBookkeeping: boolean): string {

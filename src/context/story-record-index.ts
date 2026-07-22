@@ -11,6 +11,7 @@ export const StoryRecordKindSchema = Type.Union([
   Type.Literal("research"),
   Type.Literal("plot-chapter"),
   Type.Literal("chapter-contract"),
+  Type.Literal("chapter-delta"),
 ]);
 export type StoryRecordKind = Static<typeof StoryRecordKindSchema>;
 

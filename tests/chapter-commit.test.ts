@@ -7,6 +7,8 @@ import { join } from "node:path";
 import { commitValidatedChapter, applyAcceptedStateMutations } from "../src/application/chapter-commit.js";
 import { createChapterExecutionState, transitionChapterExecution } from "../src/application/chapter-execution-machine.js";
 import { projectStateHash } from "../src/application/project-hash.js";
+import { readStoryRecordIndex } from "../src/application/rebuild-story-index.js";
+import { ChapterDeltaSummarySchema, type ChapterDeltaSummary } from "../src/domain/chapter-delta-summary.js";
 import type { ChapterStitchArtifact } from "../src/domain/chapter-stitch-artifact.js";
 import type { ChapterValidationArtifact } from "../src/domain/chapter-validation-artifact.js";
 import type { StateLedger } from "../src/domain/state-ledger.js";
@@ -114,7 +116,7 @@ function setup(passed = true) {
   return { parent, root };
 }
 
-test("chapter commit writes manuscript and state ledger through the guarded draft event", () => {
+test("chapter commit writes manuscript, state ledger, and delta summary through one guarded draft event", () => {
   const { parent, root } = setup();
   try {
     const result = commitValidatedChapter({ root, runId, chapter, now: "2026-07-22T00:02:00.000Z" });
@@ -128,9 +130,39 @@ test("chapter commit writes manuscript and state ledger through the guarded draf
     assert.equal(ledger.records[0]?.value, "LOC-TERMINAL");
     assert.equal(ledger.records[0]?.updated_in, "book-01/chapter-001");
     assert.equal(ledger.records[0]?.evidence_ids.filter((item) => item.includes(runId)).length, 1);
+
+    assert.equal(result.artifact.delta_summary_path, "books/book-01/deltas/CH-001.yaml");
+    assert.ok(result.artifact.delta_summary_path);
+    assert.ok(result.artifact.delta_summary_hash);
+    const deltaText = readFileSync(join(root, result.artifact.delta_summary_path), "utf8");
+    const delta = parseYaml<ChapterDeltaSummary>(deltaText, ChapterDeltaSummarySchema, result.artifact.delta_summary_path);
+    assert.equal(hashText(deltaText), result.artifact.delta_summary_hash);
+    assert.equal(delta.character_state_changes.length, 1);
+    assert.equal(delta.character_state_changes[0]?.record_id, "STATE-MARA-LOCATION");
+    assert.equal(delta.character_state_changes[0]?.before, "LOC-CORRIDOR");
+    assert.equal(delta.character_state_changes[0]?.after, "LOC-TERMINAL");
+    assert.equal(delta.manuscript_evidence_anchors[0]?.paragraph, 1);
+    assert.ok(result.artifact.changed_paths.includes(result.artifact.delta_summary_path));
+
+    const indexedDelta = readStoryRecordIndex(root).records.find((record) => record.id === "DELTA-CH-001");
+    assert.equal(indexedDelta?.kind, "chapter-delta");
+    assert.equal(indexedDelta?.status, "accepted-manuscript-fact");
+    assert.deepEqual(indexedDelta?.chapter_scope, [1]);
     assert.equal(readBook(root).current_chapter, 1);
     assert.equal(readProject(root).next_gate, "first-chapter-approval");
     assert.deepEqual(readChapterCommitArtifact(root, runId, chapter), result.artifact);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("chapter delta changes invalidate both project ownership and the story index", () => {
+  const { parent, root } = setup();
+  try {
+    const result = commitValidatedChapter({ root, runId, chapter, now: "2026-07-22T00:02:00.000Z" });
+    const path = join(root, result.artifact.delta_summary_path!);
+    const beforeHash = projectStateHash(root);
+    writeFileSync(path, readFileSync(path, "utf8").replace("LOC-TERMINAL", "LOC-ROOF"), "utf8");
+    assert.notEqual(projectStateHash(root), beforeHash);
+    assert.throws(() => readStoryRecordIndex(root), /story record index is stale/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
@@ -163,6 +195,8 @@ test("prepared commits recover idempotently after an interruption following the 
     const prepared = readChapterCommitArtifact(root, runId, chapter)!;
     assert.equal(prepared.status, "prepared");
     assert.ok(existsSync(join(root, prepared.manuscript_path)));
+    assert.ok(prepared.delta_summary_path);
+    assert.ok(existsSync(join(root, prepared.delta_summary_path)));
     assert.equal(readChapterExecutionState(root, runId)?.current_node, "chapter-commit");
 
     const recovered = commitValidatedChapter({ root, runId, chapter });
