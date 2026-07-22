@@ -9,7 +9,7 @@ import { buildActiveContextCapsule } from "../context/active-context-capsule.js"
 import type { ActiveContextCapsule } from "../domain/active-context-capsule.js";
 import { RUNTIME_PROFILES } from "../domain/runtime-profile.js";
 import { readText } from "../infrastructure/files.js";
-import { readCachedContextCapsule, writeCachedContextCapsule } from "../infrastructure/context-capsule-cache.js";
+import { contextCapsuleCacheKey, readCachedContextCapsule, writeCachedContextCapsule } from "../infrastructure/context-capsule-cache.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { compileSceneContracts } from "./contracts/scene-contract-compiler.js";
 import { resolveModelExecutionProfile } from "./model-execution-profile-resolver.js";
@@ -93,15 +93,9 @@ export function buildExecutionContextCapsule(input: BuildExecutionContextCapsule
     maximumDependencyDepth: runtime.graphDepth,
   });
   const cacheInput = { projectHash: input.manifest.project_hash, runtimeProfile: input.manifest.runtime_profile, capsule };
+  const key = contextCapsuleCacheKey(cacheInput);
   const cached = readCachedContextCapsule(input.root, cacheInput);
-  if (cached) {
-    return {
-      capsule: cached,
-      cacheHit: true,
-      cacheKey: createHash("sha256").update(JSON.stringify({ project: input.manifest.project_hash, capsule: cached.capsule_id, job: cached.job_type }), "utf8").digest("hex"),
-      sceneContract: scene,
-    };
-  }
-  const written = writeCachedContextCapsule(input.root, cacheInput);
-  return { capsule, cacheHit: false, cacheKey: written.key, sceneContract: scene };
+  if (cached) return { capsule: cached, cacheHit: true, cacheKey: key, sceneContract: scene };
+  writeCachedContextCapsule(input.root, cacheInput);
+  return { capsule, cacheHit: false, cacheKey: key, sceneContract: scene };
 }
