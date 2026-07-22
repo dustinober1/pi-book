@@ -196,7 +196,7 @@ test("two invalid structured attempts stop before canonical mutation", async () 
 test("job-plan generated-token ceiling stops before canonical mutation", async () => {
   const { parent, root } = setup();
   try {
-    const worker = new ScriptedWorker(root, false, 22_001);
+    const worker = new ScriptedWorker(root, false, 25_001);
     await assert.rejects(runQualityDraft({
       root,
       chapter: 1,
