@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { randomUUID } from "node:crypto";
+import { validateCanonicalStoryTransaction } from "../application/canonical-story-transaction-validation.js";
 import { parseYaml } from "./yaml.js";
 import { schemaForPath } from "../domain/schemas.js";
 import { v12SchemaForPath } from "../domain/v1-2-schema-registry.js";
@@ -78,10 +79,14 @@ export function applyTransaction(root: string, changes: TransactionFileChange[],
 
   try {
     stage(changes);
+    validateCanonicalStoryTransaction(root, changes);
     apply(changes);
     const derived = options.deriveChanges?.() ?? [];
-    stage(derived);
-    apply(derived);
+    if (derived.length) {
+      stage(derived);
+      validateCanonicalStoryTransaction(root, [...changes, ...derived]);
+      apply(derived);
+    }
   } catch (error) {
     for (const path of [...applied].reverse()) {
       const destination = join(root, path);
