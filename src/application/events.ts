@@ -52,6 +52,7 @@ import { compactPacketWindow, packetWindowDecision, packetWindowFindings } from 
 import { historicalIntegrityFindings } from "./historical-integrity.js";
 import { actBoundaryFindings, requiredMilestoneGate } from "./act-boundaries.js";
 import { buildActiveBookManuscript } from "./package.js";
+import { isStoryControlPathAllowed } from "./story-control-paths.js";
 
 export { projectStateHash } from "./project-hash.js";
 
@@ -82,6 +83,7 @@ function allowedPath(event: NovelEventType, path: string, bookId: string, profil
   if (profile === "historical-fiction" && ["book-plan", "research-update"].includes(event)
     && [`${book}/historical-context.yaml`, `${book}/invention-ledger.yaml`].includes(path)) return true;
   if (profile === "historical-fiction" && event === "research-update" && path === "series/decision-ledger.yaml") return true;
+  if (isStoryControlPathAllowed(event, path, bookId)) return true;
   const exact: Record<NovelEventType, string[]> = {
     "voice-profile": ["series/voice-profile.md", "series/taste-profile.yaml", "series/voice-guardrails.yaml", "series/voice-experiments/index.yaml"],
     "series-plan": ["series/series-bible.md", "series/series-arc.yaml", "series/canon.yaml", "series/story-threads.yaml"],
@@ -460,7 +462,6 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
   const applied = applyGuidedProjectEvent(root, changes, message, { lastAction: `${input.eventType}${input.chapter ? ` chapter ${input.chapter}` : ""}` });
   return { changed: applied.changed, stage: project.current_stage, projectHash: projectStateHash(root), gitMessage: applied.git.message };
 }
-
 
 export function applyNovelEvent(root: string, input: NovelEventInput): NovelEventResult {
   let currentStage = String(input.expectedStage || "unknown");
