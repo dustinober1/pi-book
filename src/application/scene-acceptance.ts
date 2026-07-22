@@ -9,7 +9,7 @@ import { readSceneCriticSummaryArtifact } from "../infrastructure/scene-critic-s
 import { readSceneDraftArtifact } from "../infrastructure/scene-draft-artifact-store.js";
 import { readSceneStateDeltaArtifact } from "../infrastructure/scene-state-delta-artifact-store.js";
 import { readSceneValidationArtifact } from "../infrastructure/scene-validation-artifact-store.js";
-import { acceptExecutionScene, transitionChapterExecution } from "./chapter-execution-machine.js";
+import { acceptExecutionScene, chapterContractHash, transitionChapterExecution } from "./chapter-execution-machine.js";
 import { projectStateHash } from "./project-hash.js";
 
 export interface AcceptSceneCandidateInput {
@@ -105,7 +105,7 @@ export function acceptSceneCandidate(input: AcceptSceneCandidateInput): AcceptSc
   const transitioned = transitionChapterExecution(accepted, nextNode, input.now, input.sceneId);
   const advanced: ChapterExecutionState = nextSceneId
     ? { ...transitioned, current_scene_id: nextSceneId, contract_hash: nextContractHash ?? transitioned.contract_hash, updated_at: timestamp(input.now) }
-    : transitioned;
+    : { ...transitioned, contract_hash: chapterContractHash(state), updated_at: timestamp(input.now) };
   writeChapterExecutionState(input.root, advanced);
   return { artifact, artifactPath, state: advanced };
 }
