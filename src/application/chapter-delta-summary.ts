@@ -2,12 +2,13 @@ import { createHash } from "node:crypto";
 import { Value } from "@sinclair/typebox/value";
 import {
   ChapterDeltaSummarySchema,
+  type ChapterDeltaReference,
   type ChapterDeltaSummary,
   type ChapterMaterialStateChange,
   type ManuscriptEvidenceAnchor,
 } from "../domain/chapter-delta-summary.js";
 import type { EntityCategory, EntityRegistry } from "../domain/entity-registry.js";
-import type { SceneStateDeltaMutation } from "../domain/scene-state-delta-artifact.js";
+import type { SceneStateDeltaMutation, SceneThreadDelta } from "../domain/scene-state-delta-artifact.js";
 import type { StateLedger, StateRecord } from "../domain/state-ledger.js";
 import { stringifyYaml } from "../infrastructure/yaml.js";
 
@@ -22,6 +23,7 @@ export interface BuildChapterDeltaSummaryInput {
   afterStateLedger: StateLedger;
   entityRegistry: EntityRegistry;
   mutations: readonly SceneStateDeltaMutation[];
+  threadChanges?: readonly SceneThreadDelta[];
   createdAt?: string;
 }
 
@@ -73,6 +75,15 @@ function requireEvidenceParagraph(records: readonly ParagraphRecord[], quote: st
   return matches[0]!;
 }
 
+function evidenceAnchor(chapter: number, index: number, paragraph: ParagraphRecord, quote: string): ManuscriptEvidenceAnchor {
+  return {
+    id: `CH-${String(chapter).padStart(3, "0")}-EV-${String(index + 1).padStart(3, "0")}`,
+    paragraph: paragraph.paragraph,
+    paragraph_hash: paragraph.hash,
+    quote,
+  };
+}
+
 function materialChange(group: GroupedMutation): ChapterMaterialStateChange {
   return {
     record_id: group.record.id,
@@ -101,12 +112,7 @@ export function buildChapterDeltaSummary(input: BuildChapterDeltaSummaryInput): 
 
   input.mutations.forEach((mutation, index) => {
     const paragraph = requireEvidenceParagraph(paragraphRecords, mutation.evidence_quote);
-    const anchor: ManuscriptEvidenceAnchor = {
-      id: `CH-${String(input.chapter).padStart(3, "0")}-EV-${String(index + 1).padStart(3, "0")}`,
-      paragraph: paragraph.paragraph,
-      paragraph_hash: paragraph.hash,
-      quote: mutation.evidence_quote,
-    };
+    const anchor = evidenceAnchor(input.chapter, index, paragraph, mutation.evidence_quote);
     anchors.push(anchor);
 
     const beforeRecord = requireRecord(beforeById, mutation.record_id, "before");
@@ -130,6 +136,21 @@ export function buildChapterDeltaSummary(input: BuildChapterDeltaSummaryInput): 
         evidenceAnchorIds: [anchor.id],
       });
     }
+  });
+
+  const threadChanges = input.threadChanges ?? [];
+  const threadRefs: Record<SceneThreadDelta["operation"], ChapterDeltaReference[]> = {
+    opened: [], advanced: [], resolved: [],
+  };
+  threadChanges.forEach((change, index) => {
+    const paragraph = requireEvidenceParagraph(paragraphRecords, change.evidence_quote);
+    const anchor = evidenceAnchor(input.chapter, input.mutations.length + index, paragraph, change.evidence_quote);
+    anchors.push(anchor);
+    threadRefs[change.operation].push({
+      id: change.thread_id,
+      description: change.description,
+      evidence_anchor_ids: [anchor.id],
+    });
   });
 
   const worldStateChanges: ChapterMaterialStateChange[] = [];
@@ -162,7 +183,7 @@ export function buildChapterDeltaSummary(input: BuildChapterDeltaSummaryInput): 
     relationship_changes: relationshipChanges,
     object_transfers_or_destruction: objectTransfersOrDestruction,
     timeline_movement: timelineMovement,
-    threads: { opened: [], advanced: [], resolved: [] },
+    threads: threadRefs,
     promises_to_reader: [],
     research_claims_introduced: [],
     unresolved_ambiguities: [],
