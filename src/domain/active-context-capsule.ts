@@ -3,6 +3,7 @@ import { ModelExecutionProfileIdSchema } from "./model-execution-profile.js";
 import { ModelJobTypeSchema } from "./model-job.js";
 import { SceneContractSchema } from "./scene-contract.js";
 import { StoryRecordStatusSchema } from "./story-record-status.js";
+import { StyleCardSchema } from "./style-card.js";
 import { StoryRecordKindSchema } from "../context/story-record-index.js";
 
 const HashSchema = Type.String({ pattern: "^[a-f0-9]{64}$" });
@@ -55,7 +56,7 @@ export const ActiveContextCapsuleSchema = Type.Object({
   opening_rules: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
   records: Type.Array(ActiveContextRecordSchema),
   previous_tail: Type.Union([Type.String(), Type.Null()]),
-  style_card: Type.Union([Type.String(), Type.Null()]),
+  style_card: Type.Union([StyleCardSchema, Type.String(), Type.Null()]),
   closing_task: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
   manifest: ActiveContextManifestSchema,
 }, { additionalProperties: false });
