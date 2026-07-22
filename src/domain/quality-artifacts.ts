@@ -9,6 +9,9 @@ const QualityLaneSchema = Type.Union([
   Type.Literal("voice"),
   Type.Literal("causality"),
   Type.Literal("research"),
+  Type.Literal("character-intent"),
+  Type.Literal("style"),
+  Type.Literal("factuality"),
 ]);
 
 const common = {

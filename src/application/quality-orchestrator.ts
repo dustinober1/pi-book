@@ -21,6 +21,7 @@ import {
   type QualityScenePlan,
 } from "../domain/quality-artifacts.js";
 import { resolveQualityConfig, type QualityProjectState, type QualityTierId, type ResolvedQualityConfig } from "../domain/quality-profile.js";
+import type { ModelJobType } from "../domain/model-job.js";
 import { ResearchLedgerWithAnchorsSchema, type ResearchLedgerWithAnchors } from "../domain/research-evidence-anchors.js";
 import type { ModelCallReport } from "../domain/run-report.js";
 import type { QualityThinkingLevel, QualityWorker, QualityWorkerRequest } from "../domain/quality-worker.js";
@@ -30,6 +31,7 @@ import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-archit
 import { BookStrategyPhase5Schema, type BookStrategyPhase5 } from "../domain/v1-3-audit-schemas.js";
 import { readText } from "../infrastructure/files.js";
 import { finalizeQualityCache, writeQualityArtifact, type QualityCacheRetention } from "../infrastructure/quality-cache.js";
+import { writeQualityJobPlanManifest } from "../infrastructure/quality-job-plan-store.js";
 import { appendModelCallReport, storeRunReport } from "../infrastructure/run-report-store.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject } from "../project/store.js";
@@ -42,6 +44,16 @@ import {
 import { claimAuditPrompt, claimExtractionPrompt, claimRepairPrompt } from "./claim-audit-prompts.js";
 import { applyNovelEvent, projectStateHash } from "./events.js";
 import { normalizedContentHash } from "./model-usage.js";
+import {
+  buildQualityJobPlan,
+  assertQualityJobPlanCallAllowed,
+  initialQualityJobPlanUsage,
+  qualityJobPlanHas,
+  recordQualityJobPlanUsage,
+  type QualityJobPlan,
+  type QualityJobId,
+  type QualityJobPlanUsage,
+} from "./quality/job-plan.js";
 import {
   parseQualityEventOutput,
   parseQualityVerificationOutput,
@@ -59,7 +71,13 @@ import {
   verificationPrompt,
   type QualityPromptMetadata,
 } from "./quality-prompts.js";
-import { assessChapterQualityRisk, buildQualityPassPlan, type ChapterQualityRisk, type QualityPassPlan } from "./quality-risk.js";
+import {
+  assessChapterQualityRisk,
+  buildQualityPassPlan,
+  type ChapterQualityRisk,
+  type QualityCriticLane,
+  type QualityPassPlan,
+} from "./quality-risk.js";
 import { createRunReportHeader } from "./run-telemetry.js";
 import { resolveWorkerModelBudget } from "../pi/quality-worker.js";
 
@@ -84,6 +102,9 @@ export interface RunQualityDraftResult {
   tier: QualityTierId;
   risk: ChapterQualityRisk;
   plan: QualityPassPlan;
+  jobPlan: QualityJobPlan;
+  jobPlanManifestPath: string;
+  jobPlanUsage: QualityJobPlanUsage;
   calls: ModelCallReport[];
   changed: string[];
   projectHash: string;
@@ -162,6 +183,35 @@ function manuscriptContent(output: QualityEventOutput, bookId: string, chapter: 
   return file.content;
 }
 
+function criticLanesFromJobPlan(plan: QualityJobPlan): QualityCriticLane[] {
+  const lanes: QualityCriticLane[] = [];
+  const mapping: Array<[Parameters<typeof qualityJobPlanHas>[1], QualityCriticLane]> = [
+    ["critic-combined", "combined"],
+    ["critic-continuity", "continuity"],
+    ["critic-causality", "causality"],
+    ["critic-character-intent", "character-intent"],
+    ["critic-style", "style"],
+  ];
+  for (const [jobId, lane] of mapping) if (qualityJobPlanHas(plan, jobId)) lanes.push(lane);
+  return lanes;
+}
+
+type ExecutableQualityJobId = QualityJobId & ModelJobType;
+
+function criticJobId(lane: QualityCriticLane): ExecutableQualityJobId {
+  const mapping: Partial<Record<QualityCriticLane, ExecutableQualityJobId>> = {
+    combined: "critic-combined",
+    continuity: "critic-continuity",
+    causality: "critic-causality",
+    "character-intent": "critic-character-intent",
+    style: "critic-style",
+    factuality: "critic-factuality",
+  };
+  const jobId = mapping[lane];
+  if (!jobId) throw new Error(`Quality critic lane ${lane} has no executable job identity.`);
+  return jobId;
+}
+
 export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQualityDraftResult> {
   const profile = runtimeProfile(input.runtimeProfile);
   const quality = qualityConfig(input.qualityConfig);
@@ -200,14 +250,31 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     riskLevel: risk.level,
     historical: book.profile === "historical-fiction",
   });
-  const plan: QualityPassPlan = { ...buildQualityPassPlan(quality, risk), claimAudit: claimAuditRequired };
+  const jobPlan = buildQualityJobPlan({
+    tier: quality.tier,
+    keySceneCandidates: quality.keySceneCandidates,
+    risk: {
+      key_scene: risk.keyScene,
+      factuality_required: claimAuditRequired,
+    },
+  });
+  const legacyPlan = buildQualityPassPlan(quality, risk);
+  const plan: QualityPassPlan = {
+    ...legacyPlan,
+    candidateCount: jobPlan.candidate_count,
+    criticLanes: criticLanesFromJobPlan(jobPlan),
+    finalReviewer: qualityJobPlanHas(jobPlan, "verify-chapter"),
+    claimAudit: qualityJobPlanHas(jobPlan, "critic-factuality"),
+  };
   const runId = input.runId ?? `QDR-${randomUUID()}`;
+  const jobPlanManifestPath = writeQualityJobPlanManifest(input.root, runId, jobPlan);
   const sourceHashes = [...new Set([projectStateHash(input.root), normalizedContentHash(context.text)])];
   const cacheRetention = input.cacheRetention ?? "delete-on-success";
   const calls: ModelCallReport[] = [];
   const advisories = new Set<string>();
   let creationOrder = 0;
   let callOrder = 0;
+  let jobPlanUsage = initialQualityJobPlanUsage();
   const telemetryEnabled = startingProject.runtime?.telemetry ?? true;
   if (telemetryEnabled && !existsSync(runReportPath(input.root, runId))) {
     storeRunReport(input.root, createRunReportHeader({
@@ -228,6 +295,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   });
 
   const execute = async <T>(spec: {
+    jobId: ExecutableQualityJobId;
     label: string;
     metadata: QualityPromptMetadata;
     prompt: string;
@@ -237,7 +305,9 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     cacheName?: string;
   }): Promise<T> => {
     let prompt = spec.prompt;
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    for (let attempt = 0; attempt <= jobPlan.maximum_correction_attempts; attempt += 1) {
+      const planAttempt = attempt + 1;
+      assertQualityJobPlanCallAllowed(jobPlan, jobPlanUsage, { jobId: spec.jobId, attempt: planAttempt });
       progress(attempt === 0 ? spec.label : `${spec.label} correction`);
       const budget = await resolveWorkerModelBudget({
         worker: input.worker,
@@ -259,6 +329,8 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
         stage: "drafting",
         chapter,
         pass: spec.pass,
+        jobType: spec.jobId,
+        attempt: planAttempt,
         prompt,
         context: spec.context,
         timeoutMs: spec.pass === "critic" || spec.pass === "verification" ? 5 * 60_000 : 10 * 60_000,
@@ -267,14 +339,24 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
         ...(input.thinking ? { thinking: input.thinking } : {}),
       };
       const result = await input.worker.run(request, input.signal);
-      calls.push(result.usage);
-      if (telemetryEnabled) appendModelCallReport(input.root, runId, result.usage);
+      const usage: ModelCallReport = {
+        ...result.usage,
+        jobType: spec.jobId,
+        attempt: planAttempt,
+      };
+      calls.push(usage);
+      if (telemetryEnabled) appendModelCallReport(input.root, runId, usage);
+      jobPlanUsage = recordQualityJobPlanUsage(jobPlan, jobPlanUsage, {
+        jobId: spec.jobId,
+        attempt: planAttempt,
+        outputTokens: usage.outputTokens,
+      });
       try {
         const parsed = spec.parse(result.text);
         if (spec.cacheName) writeQualityArtifact(input.root, { runId, chapter, name: spec.cacheName, artifact: parsed });
         return parsed;
       } catch (error) {
-        if (attempt === 1) throw new Error(`${spec.label} failed after one correction attempt: ${errorIssues(error).join("; ")}`);
+        if (attempt === jobPlan.maximum_correction_attempts) throw new Error(`${spec.label} failed after one correction attempt: ${errorIssues(error).join("; ")}`);
         prompt = correctionPrompt({
           metadata: spec.metadata,
           label: spec.label,
@@ -288,6 +370,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
 
   const planMeta = metadata({ output_type: "scene-plan" });
   const scenePlan = await execute<QualityScenePlan>({
+    jobId: "plan-scene",
     label: "scene plan",
     metadata: planMeta,
     prompt: scenePlanPrompt(planMeta),
@@ -302,6 +385,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     const candidateId = `CAND-${String(index).padStart(2, "0")}`;
     const candidateMeta = metadata({ output_type: "draft-candidate", candidate_id: candidateId });
     candidates.push(await execute<QualityDraftCandidate>({
+      jobId: "draft-scene",
       label: `draft candidate ${candidateId}`,
       metadata: candidateMeta,
       prompt: candidatePrompt(candidateMeta),
@@ -323,6 +407,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     const candidateIds = candidates.map((candidate) => candidate.candidate_id);
     const selectorMeta = metadata({ output_type: "candidate-selection", candidate_ids: candidateIds });
     const selection = await execute<QualityCandidateSelection>({
+      jobId: "candidate-selection",
       label: "candidate selection",
       metadata: selectorMeta,
       prompt: selectorPrompt(selectorMeta),
@@ -347,6 +432,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   for (const lane of plan.criticLanes) {
     const critiqueMeta = metadata({ output_type: "lane-critique", lane, candidate_id: selected.candidate_id });
     critiques.push(await execute<QualityLaneCritique>({
+      jobId: criticJobId(lane),
       label: `${lane} critique`,
       metadata: critiqueMeta,
       prompt: criticPrompt(critiqueMeta),
@@ -368,6 +454,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
 
   const outputMeta = metadata({ output_type: "event-output", candidate_id: selected.candidate_id, book_id: book.book_id });
   let eventOutput = await execute<QualityEventOutput>({
+    jobId: "synthesize-event-output",
     label: "quality event output",
     metadata: outputMeta,
     prompt: eventOutputPrompt(outputMeta),
@@ -400,6 +487,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     const chapterText = manuscriptContent(draft, book.book_id, chapter);
     const extractionMeta = metadata({ output_type: "claim-extraction", book_id: book.book_id });
     const extraction = await execute<ClaimExtractionArtifact>({
+      jobId: "extract-factual-claims",
       label: `claim extraction ${round}`,
       metadata: extractionMeta,
       prompt: claimExtractionPrompt(extractionMeta),
@@ -428,6 +516,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
 
     const auditMeta = metadata({ output_type: "claim-audit", book_id: book.book_id });
     const audit = await execute<ClaimAuditArtifact>({
+      jobId: "critic-factuality",
       label: `claim audit ${round}`,
       metadata: auditMeta,
       prompt: claimAuditPrompt(auditMeta),
@@ -456,7 +545,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     };
   };
 
-  if (claimAuditRequired) {
+  if (plan.claimAudit) {
     const firstAudit = await auditDraft(eventOutput, 1);
     if (firstAudit.decision.blockers.length > 0) {
       throw new Error(`Claim audit blocked the draft: ${firstAudit.decision.blockers.map((item) => `${item.claim_id}: ${item.reason}`).join("; ")}`);
@@ -464,6 +553,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     if (firstAudit.decision.repairs.length > 0) {
       const repairMeta = metadata({ output_type: "claim-repair", book_id: book.book_id });
       eventOutput = await execute<QualityEventOutput>({
+        jobId: "repair-factuality",
         label: "claim repair",
         metadata: repairMeta,
         prompt: claimRepairPrompt(repairMeta),
@@ -487,6 +577,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   if (plan.finalReviewer) {
     const verificationMeta = metadata({ output_type: "verification", book_id: book.book_id });
     const verification = await execute({
+      jobId: "verify-chapter",
       label: "final-review",
       metadata: verificationMeta,
       prompt: verificationPrompt(verificationMeta, "final-review"),
@@ -515,6 +606,9 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     tier: quality.tier,
     risk,
     plan,
+    jobPlan,
+    jobPlanManifestPath,
+    jobPlanUsage,
     calls,
     changed: applied.changed,
     projectHash: applied.projectHash,

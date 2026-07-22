@@ -46,6 +46,18 @@ test("release docs and skill describe authority, budgets, privacy, and evaluatio
   }
 });
 
+test("quality tier docs name the public specialist critic lanes", () => {
+  const docs = readFileSync(join(root, "docs/quality-and-cost.md"), "utf8");
+  const premiumRow = docs.split("\n").find((line) => line.startsWith("| `premium`")) ?? "";
+  const editorialRow = docs.split("\n").find((line) => line.startsWith("| `editorial`")) ?? "";
+
+  for (const lane of ["continuity", "causality", "character-intent", "style"]) {
+    assert.match(premiumRow, new RegExp(lane));
+  }
+  assert.doesNotMatch(premiumRow, /voice|research criticism/i);
+  assert.match(editorialRow, /premium behavior/i);
+});
+
 test("normal CI never runs paid quality evaluation", () => {
   const workflow = readFileSync(join(root, ".github/workflows/test.yml"), "utf8");
   assert.doesNotMatch(workflow, /npm run eval:quality/);

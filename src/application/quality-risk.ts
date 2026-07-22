@@ -8,7 +8,15 @@ export interface ChapterQualityRisk {
   reasons: string[];
 }
 
-export type QualityCriticLane = "combined" | "continuity" | "voice" | "causality" | "research";
+export type QualityCriticLane =
+  | "combined"
+  | "continuity"
+  | "voice"
+  | "causality"
+  | "research"
+  | "character-intent"
+  | "style"
+  | "factuality";
 
 export interface QualityPassPlan {
   tier: QualityTierId;

@@ -51,7 +51,14 @@ function stopForCurrentState(project: ReturnType<typeof readProject>): string | 
   return null;
 }
 
-function updateAfterChapter(root: string, runId: string, result: RunQualityDraftResult, finalIteration: boolean, now: string): ReturnType<typeof readProject> {
+function updateAfterChapter(
+  root: string,
+  runId: string,
+  result: RunQualityDraftResult,
+  finalIteration: boolean,
+  now: string,
+  attemptKey: string,
+): ReturnType<typeof readProject> {
   const current = readProject(root);
   const updated = completeAutomationEvent(
     current,
@@ -61,6 +68,7 @@ function updateAfterChapter(root: string, runId: string, result: RunQualityDraft
     now,
   );
   const run = updated.automation.active_run!;
+  delete run.retryCounts[attemptKey];
   const stateStop = stopForCurrentState(updated);
   if (stateStop) {
     run.status = "stopped";
@@ -78,11 +86,14 @@ function updateForBudgetBoundary(
   runId: string,
   error: QualityBudgetStopError | QualityBudgetDowngradeError,
   now: string,
+  attemptKey: string,
+  attempt: number,
 ): ReturnType<typeof readProject> {
   const updated = structuredClone(readProject(root));
   const run = updated.automation.active_run;
   if (!run || run.id !== runId) throw new Error(`Automation run ${runId} is no longer active.`);
   run.updatedAt = now;
+  run.retryCounts[attemptKey] = attempt;
   if (error instanceof QualityBudgetDowngradeError) {
     if (!run.quality_snapshot) throw new Error(`Automation run ${runId} has no quality snapshot.`);
     run.quality_snapshot.tier = error.toTier;
@@ -131,7 +142,10 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
     }
 
     input.onProgress?.(`persistent chapter ${index + 1}`);
-    const childRunId = `${run.id}-CH-${String(run.completedEventKeys.length + 1).padStart(3, "0")}`;
+    const childOrdinal = run.completedEventKeys.length + 1;
+    const attemptKey = `quality-child-attempt:${childOrdinal}`;
+    const childAttempt = (run.retryCounts[attemptKey] ?? 0) + 1;
+    const childRunId = `${run.id}-CH-${String(childOrdinal).padStart(3, "0")}-ATT-${String(childAttempt).padStart(3, "0")}`;
     try {
       const result = await runBudgetedQualityDraft({
         root: input.root,
@@ -146,7 +160,7 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
         ...(input.onProgress ? { onProgress: input.onProgress } : {}),
       });
       chapters.push(result);
-      const updated = updateAfterChapter(input.root, run.id, result, index === limit - 1, timestamp(input));
+      const updated = updateAfterChapter(input.root, run.id, result, index === limit - 1, timestamp(input), attemptKey);
       const updatedRun = updated.automation.active_run!;
       if (updatedRun.status !== "active") {
         return {
@@ -158,7 +172,7 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
       }
     } catch (error) {
       if (error instanceof QualityBudgetStopError || error instanceof QualityBudgetDowngradeError) {
-        const updated = updateForBudgetBoundary(input.root, run.id, error, timestamp(input));
+        const updated = updateForBudgetBoundary(input.root, run.id, error, timestamp(input), attemptKey, childAttempt);
         const updatedRun = updated.automation.active_run!;
         return {
           runId: run.id,

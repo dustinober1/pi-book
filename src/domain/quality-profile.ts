@@ -66,11 +66,19 @@ export interface ResolvedQualityConfig {
   };
 }
 
-export type QualityCriticLane = "combined" | "continuity" | "voice" | "causality" | "research";
+export type QualityCriticLane =
+  | "combined"
+  | "continuity"
+  | "voice"
+  | "causality"
+  | "research"
+  | "character-intent"
+  | "style"
+  | "factuality";
 
 export interface QualityTierPolicy {
   scenePlan: boolean;
-  /** Routine chapter candidate count. PR C may raise key scenes to `keySceneCandidates`. */
+  /** Routine chapter candidate count. Key scenes may raise premium/editorial to `keySceneCandidates`. */
   candidates: number;
   criticLanes: readonly QualityCriticLane[];
   finalReviewer: boolean;
@@ -84,8 +92,8 @@ function lanes(...items: QualityCriticLane[]): readonly QualityCriticLane[] {
 export const QUALITY_TIER_POLICIES: Readonly<Record<QualityTierId, QualityTierPolicy>> = Object.freeze({
   economy: Object.freeze({ scenePlan: false, candidates: 1, criticLanes: lanes(), finalReviewer: false, claimAudit: false }),
   balanced: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: lanes("combined"), finalReviewer: false, claimAudit: false }),
-  premium: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: lanes("continuity", "voice", "causality", "research"), finalReviewer: false, claimAudit: false }),
-  editorial: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: lanes("continuity", "voice", "causality", "research"), finalReviewer: true, claimAudit: true }),
+  premium: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: lanes("continuity", "causality", "character-intent", "style"), finalReviewer: false, claimAudit: false }),
+  editorial: Object.freeze({ scenePlan: true, candidates: 1, criticLanes: lanes("continuity", "causality", "character-intent", "style"), finalReviewer: true, claimAudit: true }),
 });
 
 export function parseQualityTierId(value: unknown): QualityTierId {

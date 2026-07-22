@@ -93,7 +93,11 @@ test("premium novel-draft runs isolated passes while economy retains the host pr
     const premium = harness(premiumWorker);
     await premium.commands.get("novel-draft").handler("1", context(premiumProject.root, premium.notifications));
     assert.equal(premium.messages.length, 0);
-    assert.equal(premiumWorker.calls.length, 10);
+    assert.equal(premiumWorker.calls.length, 11);
+    assert.deepEqual(
+      premiumWorker.calls.filter((call) => meta(call.prompt).output_type === "lane-critique").map((call) => meta(call.prompt).lane),
+      ["continuity", "causality", "character-intent", "style"],
+    );
     assert.deepEqual(premiumWorker.calls.slice(-2).map((call) => meta(call.prompt).output_type), ["claim-extraction", "claim-audit"]);
     assert.ok(premium.notifications.some((message) => /premium quality draft complete/i.test(message)));
     assert.match(readFileSync(join(premiumProject.root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md"), "utf8"), /lost the authority/);
