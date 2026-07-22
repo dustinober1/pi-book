@@ -52,11 +52,18 @@ function critics(value: SceneDraftArtifact): SceneCriticSummaryArtifact {
 }
 function delta(value: SceneDraftArtifact, matchesExpected = true): SceneStateDeltaArtifact {
   const mutation = value.scene_id === scenes[0] ? { record_id: "STATE-MARA-LOCATION", field: "location", operation: "set" as const, value: "LOC-TERMINAL-1" } : { record_id: "STATE-MARA-LOG", field: "custody", operation: "set" as const, value: "secured" };
+  const threadChange = {
+    thread_id: "THREAD-ACCESS",
+    operation: value.scene_id === scenes[0] ? "opened" as const : "advanced" as const,
+    description: value.scene_id === scenes[0] ? "The access anomaly becomes an active investigation." : "Mara secures new evidence about the access anomaly.",
+    evidence_quote: value.scene_id === scenes[0] ? "reached the first terminal" : "copied the final access log",
+  };
   return {
     schema_version: "1.0.0", run_id: value.run_id, chapter: 1, scene_id: value.scene_id, draft_attempt: 1,
     draft_output_hash: value.output_hash, capsule_id: "CAP-4444444444444444", contract_hash: value.contract_hash,
     extraction_attempt: 1, expected_mutations: [mutation],
     actual_mutations: matchesExpected ? [{ ...mutation, evidence_quote: value.scene_id === scenes[0] ? "reached the first terminal" : "copied the final access log" }] : [],
+    actual_thread_changes: matchesExpected ? [threadChange] : [],
     mismatches: matchesExpected ? [] : [{ code: "missing-expected-mutation", record_id: mutation.record_id, field: mutation.field, message: "Expected mutation is missing." }],
     matches_expected: matchesExpected, next_action: matchesExpected ? "scene-accept" : "span-repair",
     usage: { callId: `${value.scene_id}-delta`, stage: "drafting", chapter: 1, sceneId: value.scene_id, attempt: 1, pass: "verification", jobType: "extract-state-delta", contractHash: value.contract_hash, capsuleHash: "2".repeat(64), includedRecordCount: 1, estimated: true, elapsedMs: 1, promptHash: "3".repeat(64), contextHash: "4".repeat(64), outputHash: "5".repeat(64) },
@@ -81,11 +88,13 @@ function setup(sceneId: typeof scenes[number], accepted: string[] = [], matchesE
 
 const acceptanceInput = (root: string, runId: string, sceneId: typeof scenes[number]) => ({ root, runId, sceneId, draftAttempt: 1, stateDeltaExtractionAttempt: 1, chapterSceneIds: [...scenes], chapterSceneContractHashes: sceneContractHashes });
 
-test("accepting a non-final scene rolls active contract ownership to the next scene", () => {
+test("accepting a non-final scene preserves thread evidence and rolls active contract ownership", () => {
   const { parent, root, runId } = setup(scenes[0]);
   try {
     const result = acceptSceneCandidate({ ...acceptanceInput(root, runId, scenes[0]), now: "2026-07-22T00:01:00.000Z" });
     assert.equal(result.artifact.contract_hash, sceneHash(scenes[0]));
+    assert.equal(result.artifact.accepted_thread_changes?.[0]?.thread_id, "THREAD-ACCESS");
+    assert.equal(result.artifact.accepted_thread_changes?.[0]?.operation, "opened");
     assert.equal(result.state.current_node, "context-build");
     assert.equal(result.state.current_scene_id, scenes[1]);
     assert.equal(result.state.contract_hash, sceneHash(scenes[1]));
@@ -100,6 +109,7 @@ test("accepting the final ordered scene restores chapter ownership and routes to
   try {
     const result = acceptSceneCandidate(acceptanceInput(root, runId, scenes[1]));
     assert.equal(result.artifact.next_node, "chapter-stitch");
+    assert.equal(result.artifact.accepted_thread_changes?.[0]?.operation, "advanced");
     assert.equal(result.state.current_node, "chapter-stitch");
     assert.equal(result.state.contract_hash, chapterContractHash);
     assert.equal(result.state.chapter_contract_hash, chapterContractHash);
