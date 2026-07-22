@@ -20,6 +20,8 @@ export const ChapterCommitArtifactSchema = Type.Object({
   manuscript_hash: HashSchema,
   state_ledger_path: Type.Union([Type.Literal("series/state-ledger.yaml"), Type.Null()]),
   state_ledger_hash: Type.Union([HashSchema, Type.Null()]),
+  delta_summary_path: Type.Optional(Type.String({ pattern: "^books/book-[0-9]{2}/deltas/CH-[0-9]{3}\\.yaml$" })),
+  delta_summary_hash: Type.Optional(HashSchema),
   applied_mutations: Type.Array(SceneStateDeltaMutationSchema, { maxItems: 60 }),
   changed_paths: Type.Array(Type.String({ minLength: 1 }), { uniqueItems: true }),
   git_message: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
