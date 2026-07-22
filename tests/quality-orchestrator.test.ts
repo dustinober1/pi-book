@@ -172,6 +172,12 @@ test("premium drafting consumes one bounded job plan and ends in one guarded cha
     assert.match(readFileSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md"), "utf8"), /Mara pays/);
     assert.equal(readProject(root).current_stage, "drafting");
     assert.equal(existsSync(join(root, ".pi-book", "cache", "generation", "QDR-001")), false);
+    const report = JSON.parse(readFileSync(join(root, ".pi-book", "runs", "QDR-001", "run-report.json"), "utf8"));
+    assert.equal(report.schemaVersion, "3.0.0");
+    assert.equal(report.modelExecutionProfile, "host-default");
+    assert.equal(report.workflow.jobs, 11);
+    assert.equal(report.workflow.firstPassAccepted, 11);
+    assert.equal(report.modelCalls.every((call: ModelCallReport) => call.outcome === "accepted"), true);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
@@ -254,6 +260,17 @@ test("two invalid structured attempts stop before canonical mutation", async () 
     assert.equal(worker.calls.length, 2);
     assert.match(worker.calls[1]?.prompt ?? "", /rejected output hash/i);
     assert.doesNotMatch(worker.calls[1]?.prompt ?? "", /not-json/);
+    const report = JSON.parse(readFileSync(join(root, ".pi-book", "runs", "QDR-FAIL", "run-report.json"), "utf8"));
+    assert.deepEqual(report.modelCalls.map((call: ModelCallReport) => ({
+      attempt: call.attempt,
+      outcome: call.outcome,
+      escalationCode: call.escalationCode,
+    })), [
+      { attempt: 1, outcome: "rejected", escalationCode: undefined },
+      { attempt: 2, outcome: "escalated", escalationCode: "schema-failure" },
+    ]);
+    assert.equal(report.workflow.repairsAttempted, 1);
+    assert.equal(report.workflow.repairsSucceeded, 0);
     assert.equal(existsSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), false);
     assert.equal(queueFixture().packets[0]?.status, "ready");
   } finally {
@@ -279,6 +296,8 @@ test("job-plan generated-token ceiling stops before canonical mutation", async (
     assert.equal(report.modelCalls.length, 1);
     assert.equal(report.modelCalls[0].jobType, "plan-scene");
     assert.equal(report.modelCalls[0].outputTokens, qualityJobPlanLimits("premium").maximum_generated_tokens + 1);
+    assert.equal(report.modelCalls[0].outcome, "escalated");
+    assert.equal(report.modelCalls[0].escalationCode, "job-budget-exceeded");
     assert.equal(report.totals.outputTokens, qualityJobPlanLimits("premium").maximum_generated_tokens + 1);
     assert.equal(existsSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), false);
   } finally {

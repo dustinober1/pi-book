@@ -114,3 +114,26 @@ test("schema three rejects raw prompt or output content", () => {
   assert.equal(Value.Check(RunReportV3Schema, { ...report, prompt: "RAW-PROMPT" }), false);
   assert.equal(Value.Check(RunReportV3Schema, { ...report, output: "RAW-OUTPUT" }), false);
 });
+
+test("model-call escalation codes are privacy-safe machine identifiers", () => {
+  assert.equal(Value.Check(RunReportV3Schema, {
+    ...createRunReportV3Header({
+      runId: "RUN-ESCALATION",
+      runtimeProfile: "tiny-local",
+      qualityTier: "balanced",
+      modelExecutionProfile: "small-12b-q4",
+      projectHashBefore: "before",
+    }),
+    modelCalls: [call({ outcome: "escalated", escalationCode: "schema-failure" })],
+  }), true);
+  assert.equal(Value.Check(RunReportV3Schema, {
+    ...createRunReportV3Header({
+      runId: "RUN-BAD-ESCALATION",
+      runtimeProfile: "tiny-local",
+      qualityTier: "balanced",
+      modelExecutionProfile: "small-12b-q4",
+      projectHashBefore: "before",
+    }),
+    modelCalls: [call({ outcome: "escalated", escalationCode: "Schema failure: raw output" })],
+  }), false);
+});

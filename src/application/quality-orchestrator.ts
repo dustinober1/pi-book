@@ -78,7 +78,8 @@ import {
   type QualityCriticLane,
   type QualityPassPlan,
 } from "./quality-risk.js";
-import { createRunReportHeader } from "./run-telemetry.js";
+import { createRunReportV3Header } from "./run-telemetry.js";
+import { resolveModelExecutionProfile } from "./model-execution-profile-resolver.js";
 import { resolveWorkerModelBudget } from "../pi/quality-worker.js";
 
 export interface RunQualityDraftInput {
@@ -218,6 +219,9 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   if (quality.tier === "economy") throw new Error("Economy drafting must use the existing direct prompt workflow.");
 
   const startingProject = readProject(input.root);
+  const modelExecutionProfile = resolveModelExecutionProfile(startingProject.runtime?.model_execution_profile
+    ? { project: startingProject.runtime.model_execution_profile }
+    : {});
   const book = readBook(input.root);
   const context = buildChapterContext(input.root, input.chapter, profile.maxContextChars, profile.graphDepth);
   const chapter = context.packet.chapter;
@@ -277,10 +281,11 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   let jobPlanUsage = initialQualityJobPlanUsage();
   const telemetryEnabled = startingProject.runtime?.telemetry ?? true;
   if (telemetryEnabled && !existsSync(runReportPath(input.root, runId))) {
-    storeRunReport(input.root, createRunReportHeader({
+    storeRunReport(input.root, createRunReportV3Header({
       runId,
       runtimeProfile: profile.id,
       qualityTier: quality.tier,
+      modelExecutionProfile: modelExecutionProfile.id,
       projectHashBefore: sourceHashes[0]!,
     }));
   }
@@ -339,24 +344,38 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
         ...(input.thinking ? { thinking: input.thinking } : {}),
       };
       const result = await input.worker.run(request, input.signal);
-      const usage: ModelCallReport = {
+      const baseUsage: ModelCallReport = {
         ...result.usage,
         jobType: spec.jobId,
         attempt: planAttempt,
       };
-      calls.push(usage);
-      if (telemetryEnabled) appendModelCallReport(input.root, runId, usage);
-      jobPlanUsage = recordQualityJobPlanUsage(jobPlan, jobPlanUsage, {
-        jobId: spec.jobId,
-        attempt: planAttempt,
-        outputTokens: usage.outputTokens,
-      });
+      const publishUsage = (usage: ModelCallReport): void => {
+        calls.push(usage);
+        if (telemetryEnabled) appendModelCallReport(input.root, runId, usage);
+      };
+      try {
+        jobPlanUsage = recordQualityJobPlanUsage(jobPlan, jobPlanUsage, {
+          jobId: spec.jobId,
+          attempt: planAttempt,
+          outputTokens: baseUsage.outputTokens,
+        });
+      } catch (error) {
+        publishUsage({ ...baseUsage, outcome: "escalated", escalationCode: "job-budget-exceeded" });
+        throw error;
+      }
       try {
         const parsed = spec.parse(result.text);
         if (spec.cacheName) writeQualityArtifact(input.root, { runId, chapter, name: spec.cacheName, artifact: parsed });
+        publishUsage({ ...baseUsage, outcome: planAttempt > 1 ? "repair-succeeded" : "accepted" });
         return parsed;
       } catch (error) {
-        if (attempt === jobPlan.maximum_correction_attempts) throw new Error(`${spec.label} failed after one correction attempt: ${errorIssues(error).join("; ")}`);
+        const correctionExhausted = attempt === jobPlan.maximum_correction_attempts;
+        publishUsage({
+          ...baseUsage,
+          outcome: correctionExhausted ? "escalated" : "rejected",
+          ...(correctionExhausted ? { escalationCode: "schema-failure" } : {}),
+        });
+        if (correctionExhausted) throw new Error(`${spec.label} failed after one correction attempt: ${errorIssues(error).join("; ")}`);
         prompt = correctionPrompt({
           metadata: spec.metadata,
           label: spec.label,

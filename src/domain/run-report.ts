@@ -50,6 +50,7 @@ export const ModelCallReportSchema = Type.Object({
   includedRecordCount: Type.Optional(Type.Integer({ minimum: 0 })),
   validationCategoryCounts: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.Integer({ minimum: 0 }))),
   patchOperationCount: Type.Optional(Type.Integer({ minimum: 0 })),
+  escalationCode: Type.Optional(Type.String({ pattern: "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" })),
   outcome: Type.Optional(ModelCallOutcomeSchema),
   acceptedProseWords: Type.Optional(Type.Integer({ minimum: 0 })),
   provider: Type.Optional(Type.String({ minLength: 1 })),
