@@ -29,6 +29,7 @@ export function applyAcceptedThreadChanges(
       throw new Error(`Story thread ${thread.id} is ${thread.status} and cannot ${change.operation}.`);
     }
     if (change.operation === "opened") {
+      if (thread.status === "advanced") throw new Error(`Story thread ${thread.id} is already advanced and cannot reopen or regress its lifecycle.`);
       thread.status = "open";
       thread.opened_in ??= context.chapter;
     } else if (change.operation === "advanced") {
