@@ -37,7 +37,8 @@ test("accepted opened, advanced, and resolved changes update thread chronology d
   assert.equal(resolved.threads[0]?.last_advanced_in, "book-01/chapter-004");
 });
 
-test("thread transitions reject unknown IDs and advancement after resolution", () => {
+test("thread transitions reject unknown IDs, terminal changes, and lifecycle regression", () => {
   assert.throws(() => applyAcceptedThreadChanges(state(), [{ thread_id: "THREAD-MISSING", operation: "advanced", description: "No.", evidence_quote: evidence }], { bookId: "book-01", chapter: 2 }), /unknown story thread.*THREAD-MISSING/i);
   assert.throws(() => applyAcceptedThreadChanges(state("paid-off"), [{ thread_id: "THREAD-ACCESS", operation: "advanced", description: "No.", evidence_quote: evidence }], { bookId: "book-01", chapter: 5 }), /paid-off|resolved|cannot advance/i);
+  assert.throws(() => applyAcceptedThreadChanges(state("advanced"), [{ thread_id: "THREAD-ACCESS", operation: "opened", description: "No.", evidence_quote: evidence }], { bookId: "book-01", chapter: 5 }), /cannot reopen|already advanced|lifecycle/i);
 });
