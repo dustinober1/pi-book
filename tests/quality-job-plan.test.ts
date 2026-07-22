@@ -2,7 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildQualityJobPlan,
+  initialQualityJobPlanUsage,
+  qualityJobPlanHas,
   qualityJobPlanLimits,
+  recordQualityJobPlanUsage,
   type QualityJobPlanTier,
 } from "../src/application/quality/job-plan.js";
 
@@ -29,7 +32,9 @@ test("quality tiers add bounded jobs instead of enlarging one prompt", () => {
     "chapter-commit",
   ]);
   assert.ok(balanced.includes("critic-combined"));
+  assert.ok(balanced.includes("synthesize-event-output"));
   assert.ok(balanced.includes("patch-spans"));
+  assert.equal(premium.includes("critic-combined"), false);
   assert.ok(premium.includes("critic-continuity"));
   assert.ok(premium.includes("critic-causality"));
   assert.ok(premium.includes("critic-character-intent"));
@@ -43,10 +48,11 @@ test("quality tiers add bounded jobs instead of enlarging one prompt", () => {
 
   for (const tier of tiers) {
     const plan = buildQualityJobPlan({ tier, risk: {} });
-    assert.ok(plan.jobs.every((job) => job.maximum_calls >= 0 && job.maximum_calls <= 2));
+    assert.ok(plan.jobs.every((job) => job.maximum_calls >= 0 && job.maximum_calls <= 3));
     assert.ok(plan.jobs.every((job) => job.maximum_attempts >= 1 && job.maximum_attempts <= 2));
     assert.equal(plan.prompt_mode, "job-specific");
     assert.ok(plan.planned_model_calls <= plan.limits.maximum_model_calls);
+    assert.ok(plan.planned_generated_tokens <= plan.limits.maximum_generated_tokens);
   }
 });
 
@@ -71,6 +77,8 @@ test("risk selects bounded depth without changing configured ceilings", () => {
   assert.equal(ids("premium", { factuality_required: true }).includes("critic-factuality"), true);
   assert.equal(ids("balanced", { factuality_required: true }).includes("critic-factuality"), false);
   assert.equal(ids("editorial", { unresolved_blocker: true }).includes("stronger-model-escalation"), true);
+  const factuality = buildQualityJobPlan({ tier: "premium", risk: { factuality_required: true } }).jobs.find((job) => job.id === "critic-factuality");
+  assert.equal(factuality?.maximum_calls, 2);
 });
 
 test("only key scenes at premium or editorial receive a second candidate", () => {
@@ -84,9 +92,10 @@ test("only key scenes at premium or editorial receive a second candidate", () =>
   const draft = premiumKey.jobs.find((job) => job.id === "draft-scene");
   assert.equal(draft?.maximum_calls, 2);
   assert.equal(premiumKey.jobs.filter((job) => job.id === "draft-scene").length, 1);
+  assert.equal(qualityJobPlanHas(premiumKey, "candidate-selection"), true);
 });
 
-test("repair and correction loops remain capped at two attempts", () => {
+test("repair and correction loops remain capped", () => {
   for (const tier of tiers) {
     const plan = buildQualityJobPlan({ tier, risk: { key_scene: true, factuality_required: true } });
     const patch = plan.jobs.find((job) => job.id === "patch-spans");
@@ -94,4 +103,25 @@ test("repair and correction loops remain capped at two attempts", () => {
     assert.equal(plan.maximum_correction_attempts, 1);
     assert.equal(plan.maximum_repair_attempts, tier === "economy" ? 0 : 2);
   }
+});
+
+test("editorial book review jobs are deferred from the chapter call budget", () => {
+  const plan = buildQualityJobPlan({ tier: "editorial", risk: { key_scene: true, factuality_required: true } });
+  const bookJobs = plan.jobs.filter((job) => job.scope === "book");
+  assert.ok(bookJobs.length >= 8);
+  assert.ok(bookJobs.every((job) => job.kind === "model"));
+  assert.ok(plan.deferred_job_ids.includes("review-book-chronology"));
+  assert.ok(plan.deferred_job_ids.includes("review-book-repetition"));
+  assert.equal(plan.planned_model_calls, 12);
+});
+
+test("runtime usage cannot exceed fixed tier call or generated-token ceilings", () => {
+  const plan = buildQualityJobPlan({ tier: "premium", risk: { key_scene: true, factuality_required: true } });
+  let usage = initialQualityJobPlanUsage();
+  for (let index = 0; index < plan.limits.maximum_model_calls; index += 1) {
+    usage = recordQualityJobPlanUsage(plan, usage, { outputTokens: 10 });
+  }
+  assert.equal(usage.model_calls, plan.limits.maximum_model_calls);
+  assert.throws(() => recordQualityJobPlanUsage(plan, usage, { outputTokens: 1 }), /model-call ceiling/i);
+  assert.throws(() => recordQualityJobPlanUsage(plan, initialQualityJobPlanUsage(), { outputTokens: plan.limits.maximum_generated_tokens + 1 }), /generated-token ceiling/i);
 });
