@@ -8,6 +8,8 @@ export interface QualityWorkerRequest {
   callId: string;
   stage: string;
   chapter?: number;
+  sceneId?: string;
+  attempt?: number;
   pass: QualityPassKind;
   jobType?: ModelJobType;
   prompt: string;
