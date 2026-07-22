@@ -64,6 +64,7 @@ function contentFindings(stitch: ChapterStitchArtifact): ChapterValidationFindin
   if (/^\s*(?:chapter|scene)\s+(?:\d+|[ivxlcdm]+)\b/im.test(text)) findings.push(finding("scene-boundary", "Stitched chapter contains an extra chapter or scene boundary."));
   if (text !== text.trim() || /\n{3,}/.test(text)) findings.push(finding("boundary-whitespace", "Stitched chapter contains invalid leading, trailing, or repeated scene-boundary whitespace."));
   for (const mutation of stitch.accepted_mutations) if (!text.includes(mutation.evidence_quote)) findings.push(finding("mutation-evidence-missing", `Accepted mutation ${mutation.record_id}.${mutation.field} has evidence absent from the stitched chapter.`));
+  for (const change of stitch.accepted_thread_changes ?? []) if (!text.includes(change.evidence_quote)) findings.push(finding("mutation-evidence-missing", `Accepted thread change ${change.thread_id}.${change.operation} has evidence absent from the stitched chapter.`));
   return findings;
 }
 
@@ -73,6 +74,7 @@ export function validateStitchedChapter(input: ValidateStitchedChapterInput): Va
   const acceptances = requireAcceptances(input, stitch);
   if (acceptances.map((item) => item.accepted_prose).join("\n\n") !== stitch.chapter_text) throw new Error("Chapter stitch reconstruction integrity check failed.");
   if (JSON.stringify(acceptances.flatMap((item) => item.accepted_mutations)) !== JSON.stringify(stitch.accepted_mutations)) throw new Error("Chapter stitch accepted-mutation provenance check failed.");
+  if (JSON.stringify(acceptances.flatMap((item) => item.accepted_thread_changes ?? [])) !== JSON.stringify(stitch.accepted_thread_changes ?? [])) throw new Error("Chapter stitch accepted-thread-change provenance check failed.");
   if (readChapterValidationArtifact(input.root, input.runId, input.chapter)) throw new Error(`Chapter validation artifact already exists for chapter ${input.chapter}.`);
   const findings = contentFindings(stitch);
   const blockerCount = findings.filter((item) => item.severity === "blocker").length;
