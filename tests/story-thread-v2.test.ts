@@ -5,6 +5,7 @@ import { StoryThreadsSchema } from "../src/domain/schemas.js";
 import {
   StoryThreadsV2Schema,
   normalizeStoryThreads,
+  type StoryThreadsV2State,
 } from "../src/domain/story-thread-v2.js";
 
 const legacy = {
@@ -27,7 +28,7 @@ test("story-thread schema one remains valid and normalizes without changing lega
   assert.equal(normalized.schema_version, "2.0.0");
   assert.equal(Value.Check(StoryThreadsV2Schema, normalized), true);
   assert.deepEqual(normalized.threads[0], {
-    ...legacy.threads[0],
+    ...legacy.threads[0]!,
     priority: "normal",
     opened_in: null,
     last_touched_in: 3,
@@ -35,17 +36,17 @@ test("story-thread schema one remains valid and normalizes without changing lega
     payoff_window: { earliest_chapter: null, latest_chapter: null },
     dependent_thread_ids: [],
     participating_entity_ids: ["CHAR-MARA"],
-    reader_knowledge_state: legacy.threads[0].reader_knows,
+    reader_knowledge_state: legacy.threads[0]!.reader_knows,
     character_knowledge_refs: [],
   });
 });
 
 test("story-thread schema two carries scheduling, dependency, entity, and knowledge metadata", () => {
-  const state = {
-    schema_version: "2.0.0" as const,
+  const state: StoryThreadsV2State = {
+    schema_version: "2.0.0",
     threads: [{
-      ...legacy.threads[0],
-      priority: "high" as const,
+      ...legacy.threads[0]!,
+      priority: "high",
       opened_in: 1,
       last_touched_in: 3,
       next_required_touch: 6,
