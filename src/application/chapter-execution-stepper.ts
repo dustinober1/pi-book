@@ -373,6 +373,7 @@ export async function advanceChapterExecutionStep(
       root: input.root,
       runId: input.runId,
       chapterSceneIds: prepared.manifest.scenes.map((scene) => scene.scene_id),
+      sceneContractHashes: sceneContractHashes(prepared.manifest),
       draftAttempts,
       ...(input.now ? { now: input.now } : {}),
     });
