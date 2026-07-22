@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -15,7 +16,32 @@ import {
   RunReportV3Schema,
   type ModelCallReport,
 } from "../src/domain/run-report.js";
-import { appendModelCallReport, storeRunReport } from "../src/infrastructure/run-report-store.js";
+import { appendModelCallReport, initializeRunReport, storeRunReport } from "../src/infrastructure/run-report-store.js";
+
+function initializeInChild(root: string, report: unknown, releaseAt: number): Promise<{ ok: boolean; message?: string }> {
+  const script = [
+    'import { initializeRunReport } from "./src/infrastructure/run-report-store.js";',
+    'const [root, encoded, release] = process.argv.slice(1);',
+    'const sleeper = new Int32Array(new SharedArrayBuffer(4));',
+    'while (Date.now() < Number(release)) Atomics.wait(sleeper, 0, 0, Math.min(20, Number(release) - Date.now()));',
+    'process.stdout.write(JSON.stringify(initializeRunReport(root, JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")))));',
+  ].join("\n");
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [
+      "--import", "tsx", "--input-type=module", "-e", script,
+      root, Buffer.from(JSON.stringify(report), "utf8").toString("base64url"), String(releaseAt),
+    ], { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8").on("data", (chunk) => { stdout += chunk; });
+    child.stderr.setEncoding("utf8").on("data", (chunk) => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code !== 0) reject(new Error(`Run-report initializer child failed (${code}): ${stderr}`));
+      else resolve(JSON.parse(stdout) as { ok: boolean; message?: string });
+    });
+  });
+}
 
 function call(overrides: Partial<ModelCallReport> = {}): ModelCallReport {
   return {
@@ -150,4 +176,30 @@ test("workflow job counts exclude correction attempts from the first-pass denomi
     acceptedProseWords: 800,
     acceptedWordsPerGeneratedToken: 0.25,
   });
+});
+
+test("competing processes cannot both reserve the same run report", async () => {
+  const root = mkdtempSync(join(tmpdir(), "novel-forge-run-report-race-"));
+  try {
+    const report = createRunReportV3Header({
+      runId: "RUN-RACE",
+      runtimeProfile: "tiny-local",
+      qualityTier: "balanced",
+      modelExecutionProfile: "small-12b-q4",
+      projectHashBefore: "before",
+    });
+    const releaseAt = Date.now() + 2_000;
+    const results = await Promise.all([
+      initializeInChild(root, report, releaseAt),
+      initializeInChild(root, report, releaseAt),
+    ]);
+    assert.equal(results.filter((result) => result.ok).length, 1);
+    assert.equal(results.filter((result) => !result.ok && /already exists/i.test(result.message ?? "")).length, 1);
+    assert.deepEqual(initializeRunReport(root, report), { ok: false, message: "Run report already exists." });
+    const stored = JSON.parse(readFileSync(join(root, ".pi-book", "runs", report.runId, "run-report.json"), "utf8"));
+    assert.equal(Value.Check(RunReportV3Schema, stored), true);
+    assert.deepEqual(stored, report);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

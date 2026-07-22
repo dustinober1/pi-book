@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, linkSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Value } from "@sinclair/typebox/value";
 import {
@@ -41,6 +41,30 @@ export function storeRunReport(root: string, report: RunReport): RunReportStoreR
   } catch {
     if (existsSync(temporary)) rmSync(temporary, { force: true });
     return { ok: false, message: "Unable to write the local run report." };
+  }
+}
+
+export function initializeRunReport(root: string, report: RunReport): RunReportStoreResult {
+  if (!safeRunId(report.runId)) return { ok: false, message: "Unable to write the local run report." };
+  const directory = join(root, ".pi-book", "runs", report.runId);
+  const path = join(directory, "run-report.json");
+  const temporary = join(directory, `.run-report.${process.pid}.${randomUUID()}.tmp`);
+  try {
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(temporary, `${JSON.stringify(report, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+    try {
+      linkSync(temporary, path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+        return { ok: false, message: "Run report already exists." };
+      }
+      throw error;
+    }
+    return { ok: true, path };
+  } catch {
+    return { ok: false, message: "Unable to write the local run report." };
+  } finally {
+    if (existsSync(temporary)) rmSync(temporary, { force: true });
   }
 }
 

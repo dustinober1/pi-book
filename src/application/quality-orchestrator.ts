@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Static, TSchema } from "@sinclair/typebox";
 import { buildChapterContext } from "../context/context-builder.js";
@@ -32,7 +31,7 @@ import { BookStrategyPhase5Schema, type BookStrategyPhase5 } from "../domain/v1-
 import { countWords, readText } from "../infrastructure/files.js";
 import { finalizeQualityCache, writeQualityArtifact, type QualityCacheRetention } from "../infrastructure/quality-cache.js";
 import { writeQualityJobPlanManifest } from "../infrastructure/quality-job-plan-store.js";
-import { appendModelCallReport, recordAcceptedProseWords, storeRunReport } from "../infrastructure/run-report-store.js";
+import { appendModelCallReport, initializeRunReport, recordAcceptedProseWords } from "../infrastructure/run-report-store.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject } from "../project/store.js";
 import {
@@ -163,10 +162,6 @@ function approvedLearningGuardrail(strategy: BookStrategyPhase5): boolean {
   return (strategy.revision_learning_guardrails ?? []).some((item) => item.status === "approved");
 }
 
-function runReportPath(root: string, runId: string): string {
-  return join(root, ".pi-book", "runs", runId, "run-report.json");
-}
-
 function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && Boolean(item.trim())) : [];
 }
@@ -269,9 +264,6 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   };
   const runId = input.runId ?? `QDR-${randomUUID()}`;
   const telemetryEnabled = startingProject.runtime?.telemetry ?? true;
-  if (telemetryEnabled && existsSync(runReportPath(input.root, runId))) {
-    throw new Error(`Run report for ${runId} already exists; use a new run ID.`);
-  }
   const jobPlanManifestPath = writeQualityJobPlanManifest(input.root, runId, jobPlan);
   const sourceHashes = [...new Set([projectStateHash(input.root), normalizedContentHash(context.text)])];
   const cacheRetention = input.cacheRetention ?? "delete-on-success";
@@ -282,7 +274,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   let jobPlanUsage = initialQualityJobPlanUsage();
   let acceptedProseCallId: string | undefined;
   if (telemetryEnabled) {
-    const stored = storeRunReport(input.root, createRunReportV3Header({
+    const stored = initializeRunReport(input.root, createRunReportV3Header({
       runId,
       runtimeProfile: profile.id,
       qualityTier: quality.tier,
