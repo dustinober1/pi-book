@@ -34,6 +34,7 @@ export type ExecutionStatus = Static<typeof ExecutionStatusSchema>;
 
 export const ExecutionBlockerCodeSchema = Type.Union([
   Type.Literal("missing-canon"),
+  Type.Literal("unknown-state-record"),
   Type.Literal("conflicting-locks"),
   Type.Literal("needs-editorial-decision"),
   Type.Literal("needs-research"),
