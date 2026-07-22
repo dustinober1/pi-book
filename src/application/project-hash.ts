@@ -13,6 +13,7 @@ function guardedEvidencePaths(root: string, bookId: string): string[] {
     "series/intake.yaml",
     "series/decision-ledger.yaml",
     "series/taste-profile.yaml",
+    "series/voice-profile.md",
     "series/voice-guardrails.yaml",
     "series/voice-experiments/index.yaml",
     "series/series-bible.md",
