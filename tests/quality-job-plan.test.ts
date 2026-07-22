@@ -115,7 +115,7 @@ test("fixed ceilings cover each tier's declared conditional chapter repair capac
     assert.ok(plan.planned_generated_tokens + conditionalTokens <= plan.limits.maximum_generated_tokens, `${tier} token ceiling excludes its repair path`);
   }
   const premiumRepair = buildQualityJobPlan({ tier: "premium", risk: { key_scene: true, factuality_required: true } }).jobs.find((job) => job.id === "patch-spans");
-  assert.equal(premiumRepair?.maximum_calls, 3);
+  assert.equal(premiumRepair?.maximum_calls, 2);
 });
 
 test("editorial book review jobs are deferred from the chapter call budget", () => {
