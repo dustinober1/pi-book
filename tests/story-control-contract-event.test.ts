@@ -12,6 +12,35 @@ import { completePlot, queueFixture } from "./phase4-fixtures.js";
 
 const chapterOneContractPath = "books/book-01/contracts/chapters/CH-001.yaml";
 
+function writeReferencePrerequisites(root: string): void {
+  writeFileSync(join(root, "series", "canon.yaml"), stringifyYaml({
+    schema_version: "1.0.0",
+    facts: [{
+      id: "CAN-001",
+      category: "access",
+      subject: "Mara",
+      fact: "Mara has archive access.",
+      source: "series-plan",
+      status: "locked",
+      introduced_in: "book-01",
+    }],
+    relationships: [],
+  }), "utf8");
+  writeFileSync(join(root, "series", "story-threads.yaml"), stringifyYaml({
+    schema_version: "1.0.0",
+    threads: [{
+      id: "ST-001",
+      type: "mystery",
+      setup: "The archive log is incomplete.",
+      reader_knows: "The log existed.",
+      characters_know: { Mara: "The log is incomplete." },
+      status: "open",
+      intended_payoff: "book-01",
+      last_advanced_in: null,
+    }],
+  }), "utf8");
+}
+
 test("chapter queue events may store schema-validated compiled contracts", () => {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-contract-event-"));
   try {
@@ -22,6 +51,7 @@ test("chapter queue events may store schema-validated compiled contracts", () =>
     writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
     const queue = queueFixture();
     for (const packet of queue.packets) packet.required_research = [];
+    writeReferencePrerequisites(root);
     writeFileSync(join(root, "books", "book-01", "plot-grid.yaml"), stringifyYaml(completePlot()), "utf8");
     writeFileSync(join(root, "books", "book-01", "chapter-queue.yaml"), stringifyYaml(queue), "utf8");
     const contractContent = renderChapterContract(compileLegacyChapterContract(queue.packets[0]!));
