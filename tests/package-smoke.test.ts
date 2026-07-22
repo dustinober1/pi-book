@@ -29,7 +29,7 @@ test("the packed extension imports, registers, and contains the 1.7 release surf
     assert.ok(commands.includes("novel-readers"));
     assert.ok(commands.includes("novel-adopt"));
     assert.ok(commands.includes("novel-organize"));
-    assert.deepEqual(tools, ["novel_apply_event"]);
+    assert.deepEqual(tools, ["novel_apply_event", "novel_advance_chapter_step"]);
     const project = store.initializeProject(temp, { projectName: "Packed Prose Audit", projectType: "standalone", profile: "thriller" });
     writeFileSync(resolve(project, "books", "book-01", "manuscript", "chapters", "01-opening.md"), "# Opening\n\nThe the lantern failed.\n", "utf8");
     const proseOutput = execFileSync("npm", ["run", "audit:prose", "--", project], { cwd: packageRoot, encoding: "utf8" });
