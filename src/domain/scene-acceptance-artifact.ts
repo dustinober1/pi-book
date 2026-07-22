@@ -1,5 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { SceneStateDeltaMutationSchema } from "./scene-state-delta-artifact.js";
+import { SceneStateDeltaMutationSchema, SceneThreadDeltaSchema } from "./scene-state-delta-artifact.js";
 
 const HashSchema = Type.String({ pattern: "^[a-f0-9]{64}$" });
 const SceneIdSchema = Type.String({ pattern: "^CH-[0-9]{3}-SC-[0-9]{2}-V[0-9]+$" });
@@ -21,6 +21,7 @@ export const SceneAcceptanceArtifactSchema = Type.Object({
   accepted_prose: Type.String({ minLength: 1 }),
   word_count: Type.Integer({ minimum: 1 }),
   accepted_mutations: Type.Array(SceneStateDeltaMutationSchema, { maxItems: 12 }),
+  accepted_thread_changes: Type.Optional(Type.Array(SceneThreadDeltaSchema, { maxItems: 12 })),
   next_node: Type.Union([Type.Literal("context-build"), Type.Literal("chapter-stitch")]),
   next_scene_id: Type.Union([SceneIdSchema, Type.Null()]),
   accepted_at: Type.String({ minLength: 1 }),
