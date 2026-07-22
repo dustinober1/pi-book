@@ -12,6 +12,7 @@ import {
   type StoryRecordKind,
 } from "../context/story-record-index.js";
 import { ChapterContractSchema, type ChapterContract } from "../domain/chapter-contract.js";
+import { ChapterDeltaSummarySchema, type ChapterDeltaSummary } from "../domain/chapter-delta-summary.js";
 import { EntityRegistrySchema, type EntityRegistry } from "../domain/entity-registry.js";
 import { KnowledgeLedgerSchema, type KnowledgeLedger } from "../domain/knowledge-ledger.js";
 import { CanonSchema, StoryThreadsSchema, type CanonState, type StoryThread, type StoryThreadsState } from "../domain/schemas.js";
@@ -96,6 +97,24 @@ function researchStatus(status: ResearchLedger["items"][number]["status"]): Stor
 
 function loadedAsUnknown<T>(source: LoadedSource<T>): LoadedSource<unknown> {
   return source;
+}
+
+function deltaDependencies(summary: ChapterDeltaSummary): string[] {
+  const changes = [
+    ...summary.world_state_changes,
+    ...summary.character_state_changes,
+    ...summary.knowledge_changes,
+    ...summary.relationship_changes,
+    ...summary.object_transfers_or_destruction,
+    ...summary.timeline_movement,
+  ];
+  return uniqueSorted([
+    ...changes.flatMap((change) => [change.record_id, change.subject_id]),
+    ...summary.threads.opened.map((item) => item.id),
+    ...summary.threads.advanced.map((item) => item.id),
+    ...summary.threads.resolved.map((item) => item.id),
+    ...summary.research_claims_introduced.map((item) => item.id),
+  ]);
 }
 
 function collectRecords(root: string): { records: StoryRecordIndexRecord[]; sources: Array<{ path: string; hash: string }> } {
@@ -229,6 +248,24 @@ function collectRecords(root: string): { records: StoryRecordIndexRecord[]; sour
       dependencies: contract.value.required_record_ids,
       chapters: [contract.value.chapter],
       payload: contract.value,
+    }));
+  }
+
+  const deltaRoot = join(root, base, "deltas");
+  const deltaPaths = listFilesRecursive(deltaRoot, (path) => /\.ya?ml$/i.test(path))
+    .map((path) => normalizedRelative(root, path))
+    .sort();
+  for (const path of deltaPaths) {
+    const delta = addSource(loadYaml<ChapterDeltaSummary>(root, path, ChapterDeltaSummarySchema));
+    if (!delta) continue;
+    records.push(record({
+      id: `DELTA-CH-${String(delta.value.chapter).padStart(3, "0")}`,
+      kind: "chapter-delta",
+      status: "accepted-manuscript-fact",
+      source: loadedAsUnknown(delta),
+      dependencies: deltaDependencies(delta.value),
+      chapters: [delta.value.chapter],
+      payload: delta.value,
     }));
   }
 
