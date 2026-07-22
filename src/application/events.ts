@@ -17,6 +17,7 @@ import {
   type Stage,
   type StoryThreadsState,
 } from "../domain/schemas.js";
+import type { WriterApprovalEvidence } from "../domain/plan-change-request.js";
 import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
 import {
   BookStrategyPhase5Schema,
@@ -52,12 +53,21 @@ import { compactPacketWindow, packetWindowDecision, packetWindowFindings } from 
 import { historicalIntegrityFindings } from "./historical-integrity.js";
 import { actBoundaryFindings, requiredMilestoneGate } from "./act-boundaries.js";
 import { buildActiveBookManuscript } from "./package.js";
+import { isPlanChangeControlPathAllowed, validatePlanChangeEvent } from "./plan-change-policy.js";
 import { isStoryControlPathAllowed } from "./story-control-paths.js";
 
 export { projectStateHash } from "./project-hash.js";
 
-export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "research-update" | "intake-update" | "premise-update" | "revise" | "canon-lock" | "package";
-export interface NovelEventInput { eventType: NovelEventType; expectedStage: Stage; expectedProjectHash: string; files: FileChange[]; chapter?: number; scope?: string }
+export type NovelEventType = "voice-profile" | "series-plan" | "book-plan" | "chapter-queue" | "draft-chapter" | "review" | "reader-test" | "research-update" | "intake-update" | "premise-update" | "plan-change" | "revise" | "canon-lock" | "package";
+export interface NovelEventInput {
+  eventType: NovelEventType;
+  expectedStage: Stage;
+  expectedProjectHash: string;
+  files: FileChange[];
+  chapter?: number;
+  scope?: string;
+  planChangeApproval?: WriterApprovalEvidence;
+}
 export interface NovelEventResult { changed: string[]; stage: Stage; projectHash: string; gitMessage: string }
 
 const eventStages: Record<NovelEventType, Stage[]> = {
@@ -71,6 +81,7 @@ const eventStages: Record<NovelEventType, Stage[]> = {
   "research-update": ["voice-intake", "series-planning", "book-planning", "drafting", "act-review", "revision", "manuscript-review", "packaging"],
   "intake-update": ["voice-intake", "series-planning", "book-planning"],
   "premise-update": ["book-planning"],
+  "plan-change": ["chapter-queue", "drafting", "act-review", "revision", "manuscript-review"],
   revise: ["revision"],
   "canon-lock": ["canon-lock"],
   package: ["packaging"],
@@ -80,6 +91,7 @@ function normalized(path: string): string { return path.replace(/\\/g, "/").repl
 
 function allowedPath(event: NovelEventType, path: string, bookId: string, profile: ProfileId, chapter?: number): boolean {
   const book = `books/${bookId}`;
+  if (event === "plan-change") return isPlanChangeControlPathAllowed(path, bookId);
   if (profile === "historical-fiction" && ["book-plan", "research-update"].includes(event)
     && [`${book}/historical-context.yaml`, `${book}/invention-ledger.yaml`].includes(path)) return true;
   if (profile === "historical-fiction" && event === "research-update" && path === "series/decision-ledger.yaml") return true;
@@ -94,6 +106,7 @@ function allowedPath(event: NovelEventType, path: string, bookId: string, profil
     "reader-test": [`${book}/reader-experiments.yaml`, `${book}/revision-tickets.yaml`],
     "intake-update": ["series/intake.yaml", "series/decision-ledger.yaml"],
     "premise-update": [`${book}/premise-lab.yaml`, "series/decision-ledger.yaml"],
+    "plan-change": [],
     "research-update": [
       "series/taste-profile.yaml",
       "series/voice-guardrails.yaml",
@@ -166,6 +179,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
   if (input.eventType === "research-update" && input.files.length === 0) throw new Error("research-update requires at least one evidence file.");
   if (input.eventType === "intake-update" && input.files.length === 0) throw new Error("intake-update requires at least one intake evidence file.");
   if (input.eventType === "premise-update" && input.files.length === 0) throw new Error("premise-update requires at least one premise evidence file.");
+  if (input.eventType === "plan-change" && input.files.length < 2) throw new Error("plan-change requires one approval record and at least one future control file.");
   const seen = new Set<string>();
   for (const file of input.files) {
     file.path = normalized(file.path);
@@ -181,11 +195,21 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     "draft-chapter": /manuscript\/chapters\/.*\.md$/,
     review: /review-report\.md$|revision-tickets\.yaml$/,
     "reader-test": /reader-experiments\.yaml$/,
+    "plan-change": /plan-changes\/PC-[0-9]{3}\.yaml$/,
     "canon-lock": /series\/canon\.yaml$/,
     package: /package\.md$/,
   };
   const pattern = required[input.eventType];
   if (pattern && !input.files.some((file) => pattern.test(file.path))) throw new Error(`${input.eventType} event is missing its required output file.`);
+  if (input.eventType === "plan-change") {
+    validatePlanChangeEvent({
+      root,
+      files: input.files,
+      book,
+      expectedProjectHash: input.expectedProjectHash,
+      ...(input.planChangeApproval ? { approval: input.planChangeApproval } : {}),
+    });
+  }
   if (input.eventType === "voice-profile") {
     const missing = missingRequiredPaths(input.files, [
       "series/voice-profile.md",
@@ -431,6 +455,8 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
       break;
     case "premise-update":
       break;
+    case "plan-change":
+      break;
     case "revise": {
       const tickets = parseOverlay<RevisionTicketsPhase5>(root, changes, `books/${book.book_id}/revision-tickets.yaml`, RevisionTicketsPhase5Schema);
       book.status = "revision";
@@ -454,7 +480,7 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
       break;
   }
 
-  if (input.eventType !== "research-update" && input.eventType !== "intake-update" && input.eventType !== "premise-update") {
+  if (!["research-update", "intake-update", "premise-update", "plan-change"].includes(input.eventType)) {
     setChange(changes, "PROJECT.yaml", stringifyYaml(project));
     setChange(changes, `books/${book.book_id}/BOOK.yaml`, stringifyYaml(book));
   }
