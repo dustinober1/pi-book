@@ -11,7 +11,8 @@ import type { ModelJobType } from "../domain/model-job.js";
 import type { SceneContract } from "../domain/scene-contract.js";
 import type { StoryRecordStatus } from "../domain/story-record-status.js";
 import {
-  assertStoryRecordIndexValid,
+  StoryRecordIndexManifestSchema,
+  StoryRecordIndexRecordSchema,
   type StoryRecordIndex,
   type StoryRecordIndexRecord,
 } from "./story-record-index.js";
@@ -58,6 +59,23 @@ function estimatedTokens(value: unknown): number {
   return Math.max(1, Math.ceil(Buffer.byteLength(JSON.stringify(value), "utf8") / 4));
 }
 
+function assertIndexValid(index: StoryRecordIndex): void {
+  if (!Value.Check(StoryRecordIndexManifestSchema, index.manifest)) {
+    throw new ActiveContextCapsuleError("invalid-capsule", [], "Story record index manifest is invalid.");
+  }
+  if (index.manifest.record_count !== index.records.length) {
+    throw new ActiveContextCapsuleError("invalid-capsule", [], "Story record index count disagrees with its manifest.");
+  }
+  const seen = new Set<string>();
+  for (const record of index.records) {
+    if (!Value.Check(StoryRecordIndexRecordSchema, record)) {
+      throw new ActiveContextCapsuleError("invalid-capsule", [String(record.id ?? "unknown")], "Story record index contains an invalid record.");
+    }
+    if (seen.has(record.id)) throw new ActiveContextCapsuleError("invalid-capsule", [record.id], `Story record index duplicates ${record.id}.`);
+    seen.add(record.id);
+  }
+}
+
 function authority(status: StoryRecordStatus): ContextAuthority | null {
   switch (status) {
     case "locked-canon":
@@ -79,12 +97,14 @@ function activeRecord(record: StoryRecordIndexRecord, required: boolean, reason:
   if (!recordAuthority) throw new Error(`Unsafe story record ${record.id} cannot become active context.`);
   const base = {
     id: record.id,
-    record_type: record.record_type,
+    kind: record.kind,
     status: record.status,
     authority: recordAuthority,
     required,
     reason,
     source_path: record.source_path,
+    source_hash: record.source_hash,
+    version: record.version,
     payload: structuredClone(record.payload),
     dependencies: [...record.dependencies].sort(),
     estimated_tokens: 1,
@@ -113,7 +133,7 @@ function explicitSeedIds(scene: SceneContract): string[] {
 }
 
 export function buildActiveContextCapsule(input: BuildActiveContextCapsuleInput): ActiveContextCapsule {
-  assertStoryRecordIndexValid(input.storyIndex);
+  assertIndexValid(input.storyIndex);
   const openingRules = unique(input.openingRules);
   const closingTask = unique(input.closingTask);
   if (!openingRules.length || !closingTask.length) {
@@ -200,10 +220,7 @@ export function buildActiveContextCapsule(input: BuildActiveContextCapsuleInput)
 
   const records = [...requiredRecords, ...optionalRecords];
   const contractHash = stableHash(input.sceneContract);
-  const storyIndexHash = stableHash({
-    records: [...input.storyIndex.records].sort((left, right) => left.id.localeCompare(right.id)),
-    manifest: input.storyIndex.manifest,
-  });
+  const storyIndexHash = input.storyIndex.manifest.index_hash;
   const capsuleSeed = {
     job_type: input.jobType,
     model_execution_profile: input.modelProfile.id,
