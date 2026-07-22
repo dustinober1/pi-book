@@ -4,7 +4,7 @@ import { renderActiveContextCapsule } from "../context/active-context-renderer.j
 import type { ActiveContextCapsule } from "../domain/active-context-capsule.js";
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
 import { MODEL_EXECUTION_PROFILES, type ModelExecutionProfile } from "../domain/model-execution-profile.js";
-import type { ModelCallReport } from "../domain/run-report.js";
+import { ModelCallReportSchema, type ModelCallReport } from "../domain/run-report.js";
 import type { QualityThinkingLevel, QualityWorker, QualityWorkerRequest } from "../domain/quality-worker.js";
 import { RUNTIME_PROFILES, type RuntimeProfileId } from "../domain/runtime-profile.js";
 import { SceneDraftArtifactSchema, type SceneDraftArtifact } from "../domain/scene-draft-artifact.js";
@@ -58,9 +58,7 @@ function requireExecutionState(input: RunSceneDraftJobInput): ChapterExecutionSt
   if (!state) throw new Error(`Chapter execution state not found for ${input.runId}.`);
   if (state.status !== "active") throw new Error(`Chapter execution is ${state.status}, not active.`);
   if (state.current_node !== "scene-draft") throw new Error(`Scene draft job requires scene-draft, current node is ${state.current_node}.`);
-  if (state.current_scene_id !== input.capsule.scene_contract.scene_id) {
-    throw new Error(`Execution scene ${state.current_scene_id ?? "none"} does not match capsule scene ${input.capsule.scene_contract.scene_id}.`);
-  }
+  if (state.current_scene_id !== input.capsule.scene_contract.scene_id) throw new Error(`Execution scene ${state.current_scene_id ?? "none"} does not match capsule scene ${input.capsule.scene_contract.scene_id}.`);
   if (state.project_hash !== projectStateHash(input.root)) throw new Error("Cannot draft scene because the project hash changed.");
   if (state.contract_hash !== input.capsule.contract_hash) throw new Error("Cannot draft scene because the contract hash changed.");
   if (state.canon_snapshot_hash !== input.capsule.story_index_hash) throw new Error("Cannot draft scene because the canon snapshot or story index changed.");
@@ -72,17 +70,9 @@ function requirePlan(input: RunSceneDraftJobInput, state: ChapterExecutionState)
   const scene = input.capsule.scene_contract;
   const plan = readScenePlanArtifact(input.root, input.runId, scene.scene_id, input.planAttempt);
   if (!plan) throw new Error(`Scene plan artifact not found for ${scene.scene_id} attempt ${input.planAttempt}.`);
-  if (plan.run_id !== input.runId
-    || plan.chapter !== state.chapter
-    || plan.scene_id !== scene.scene_id
-    || plan.contract_hash !== input.capsule.contract_hash
-    || plan.story_index_hash !== input.capsule.story_index_hash) {
-    throw new Error("Scene plan provenance does not match the active draft capsule and execution state.");
-  }
+  if (plan.run_id !== input.runId || plan.chapter !== state.chapter || plan.scene_id !== scene.scene_id || plan.contract_hash !== input.capsule.contract_hash || plan.story_index_hash !== input.capsule.story_index_hash) throw new Error("Scene plan provenance does not match the active draft capsule and execution state.");
   const plannedBeats = plan.steps.map((item) => item.required_beat);
-  if (plannedBeats.length !== scene.required_beats.length || plannedBeats.some((item, index) => item !== scene.required_beats[index])) {
-    throw new Error("Scene plan required beats no longer match the active scene contract.");
-  }
+  if (plannedBeats.length !== scene.required_beats.length || plannedBeats.some((item, index) => item !== scene.required_beats[index])) throw new Error("Scene plan required beats no longer match the active scene contract.");
   const allowed = new Set(input.capsule.records.map((record) => record.id));
   const unknown = plan.evidence_record_ids.filter((id) => !allowed.has(id));
   if (unknown.length) throw new Error(`Scene plan evidence is unavailable in the draft capsule: ${unknown.join(", ")}.`);
@@ -90,11 +80,7 @@ function requirePlan(input: RunSceneDraftJobInput, state: ChapterExecutionState)
 }
 
 function promptFor(capsule: ActiveContextCapsule): string {
-  return [
-    `Draft exactly one scene: ${capsule.scene_contract.scene_id}.`,
-    "Follow the supplied scene contract, approved scene plan, authority labels, knowledge boundaries, and style card.",
-    "Return scene prose only. Do not add analysis, headings, notes, or alternative versions.",
-  ].join("\n");
+  return [`Draft exactly one scene: ${capsule.scene_contract.scene_id}.`, "Follow the supplied scene contract, approved scene plan, authority labels, knowledge boundaries, and style card.", "Return scene prose only. Do not add analysis, headings, notes, or alternative versions."].join("\n");
 }
 
 function contextWithPlan(capsule: ActiveContextCapsule, plan: ScenePlanArtifact, style: "compact" | "standard"): string {
@@ -102,20 +88,8 @@ function contextWithPlan(capsule: ActiveContextCapsule, plan: ScenePlanArtifact,
   const marker = "\n\nEXACT TASK\n";
   const taskIndex = rendered.lastIndexOf(marker);
   if (taskIndex < 0) throw new Error("Active context capsule is missing the exact task section.");
-  const lines = plan.steps.flatMap((step, index) => [
-    `${index + 1}. ${step.required_beat}`,
-    `   Execution: ${step.execution}`,
-    `   Pressure: ${step.pressure}`,
-  ]);
-  return [
-    rendered.slice(0, taskIndex),
-    "\n\nSCENE PLAN",
-    ...lines.map((line) => `\n${line}`),
-    `\nTurn: ${plan.turn_execution}`,
-    `\nEnding: ${plan.ending_execution}`,
-    plan.evidence_record_ids.length ? `\nEvidence IDs: ${plan.evidence_record_ids.join(", ")}` : "\nEvidence IDs: none",
-    rendered.slice(taskIndex),
-  ].join("");
+  const lines = plan.steps.flatMap((step, index) => [`${index + 1}. ${step.required_beat}`, `   Execution: ${step.execution}`, `   Pressure: ${step.pressure}`]);
+  return [rendered.slice(0, taskIndex), "\n\nSCENE PLAN", ...lines.map((line) => `\n${line}`), `\nTurn: ${plan.turn_execution}`, `\nEnding: ${plan.ending_execution}`, plan.evidence_record_ids.length ? `\nEvidence IDs: ${plan.evidence_record_ids.join(", ")}` : "\nEvidence IDs: none", rendered.slice(taskIndex)].join("");
 }
 
 function validatedProse(text: string, capsule: ActiveContextCapsule): { prose: string; wordCount: number } {
@@ -133,13 +107,11 @@ export async function runSceneDraftJob(input: RunSceneDraftJobInput): Promise<Ru
   const runtime = RUNTIME_PROFILES[input.runtimeProfile];
   const modelProfile = resolveModelProfile(input.capsule, input.customModelProfile);
   if (modelProfile.id !== input.capsule.model_execution_profile) throw new Error(`Model profile ${modelProfile.id} does not match capsule profile ${input.capsule.model_execution_profile}.`);
-
   const sceneId = input.capsule.scene_contract.scene_id;
   const attemptKey = `${sceneId}:scene-draft`;
   const attempted = recordChapterExecutionAttempt(state, attemptKey, input.now);
   const attempt = attempted.attempts[attemptKey]!;
   writeChapterExecutionState(input.root, attempted);
-
   const context = contextWithPlan(input.capsule, plan, runtime.promptStyle);
   const prompt = promptFor(input.capsule);
   if (context.length > runtime.maxContextChars) throw new Error("Rendered scene context exceeds the runtime profile before inference.");
@@ -147,34 +119,15 @@ export async function runSceneDraftJob(input: RunSceneDraftJobInput): Promise<Ru
   const budget = modelProfile.job_budgets["draft-scene"];
   const evidenceTokens = Math.max(1, Math.ceil(Buffer.byteLength(context, "utf8") / 4));
   if (evidenceTokens > budget.maximumEvidenceTokens) throw new Error(`Scene draft context needs approximately ${evidenceTokens} evidence tokens, above the ${budget.maximumEvidenceTokens}-token budget.`);
-
   const callId = `${input.runId}-${sceneId}-DRAFT-${attempt}`;
-  const request: QualityWorkerRequest = {
-    callId, stage: "drafting", chapter: state.chapter, sceneId, attempt, pass: "candidate", jobType: "draft-scene",
-    prompt, context, decoding: modelProfile.decoding["draft-scene"], timeoutMs: 10 * 60_000,
-    ...(input.provider ? { provider: input.provider } : {}), ...(input.model ? { model: input.model } : {}),
-    ...(input.thinking ? { thinking: input.thinking } : {}),
-  };
+  const request: QualityWorkerRequest = { callId, stage: "drafting", chapter: state.chapter, sceneId, attempt, pass: "candidate", jobType: "draft-scene", prompt, context, decoding: modelProfile.decoding["draft-scene"], timeoutMs: 10 * 60_000, ...(input.provider ? { provider: input.provider } : {}), ...(input.model ? { model: input.model } : {}), ...(input.thinking ? { thinking: input.thinking } : {}) };
   const result = await input.worker.run(request, input.signal);
   const validated = validatedProse(result.text, input.capsule);
   const outputHash = hashText(validated.prose);
   const capsuleHash = stableHash(input.capsule);
-  const usage: ModelCallReport = {
-    ...result.usage, callId, stage: "drafting", chapter: state.chapter, sceneId, attempt, pass: "candidate", jobType: "draft-scene",
-    contractHash: input.capsule.contract_hash, capsuleHash, includedRecordCount: input.capsule.records.length,
-    promptHash: hashText(prompt), contextHash: hashText(context), outputHash,
-  };
+  const usage: ModelCallReport = { ...result.usage, callId, stage: "drafting", chapter: state.chapter, sceneId, attempt, pass: "candidate", jobType: "draft-scene", contractHash: input.capsule.contract_hash, capsuleHash, includedRecordCount: input.capsule.records.length, promptHash: hashText(prompt), contextHash: hashText(context), outputHash };
   if (!Value.Check(ModelCallReportSchema, usage)) throw new Error("Scene draft worker returned invalid usage telemetry.");
-
-  const artifact: SceneDraftArtifact = {
-    schema_version: "1.0.0", run_id: input.runId, chapter: state.chapter, scene_id: sceneId,
-    chapter_contract_id: input.capsule.scene_contract.chapter_contract_id,
-    chapter_contract_version: input.capsule.scene_contract.chapter_contract_version,
-    job_type: "draft-scene", capsule_id: input.capsule.capsule_id, contract_hash: input.capsule.contract_hash,
-    story_index_hash: input.capsule.story_index_hash, model_execution_profile: input.capsule.model_execution_profile,
-    runtime_profile: input.runtimeProfile, attempt, prose: validated.prose, word_count: validated.wordCount,
-    output_hash: outputHash, usage, created_at: timestamp(input.now),
-  };
+  const artifact: SceneDraftArtifact = { schema_version: "1.0.0", run_id: input.runId, chapter: state.chapter, scene_id: sceneId, chapter_contract_id: input.capsule.scene_contract.chapter_contract_id, chapter_contract_version: input.capsule.scene_contract.chapter_contract_version, job_type: "draft-scene", capsule_id: input.capsule.capsule_id, contract_hash: input.capsule.contract_hash, story_index_hash: input.capsule.story_index_hash, model_execution_profile: input.capsule.model_execution_profile, runtime_profile: input.runtimeProfile, attempt, prose: validated.prose, word_count: validated.wordCount, output_hash: outputHash, usage, created_at: timestamp(input.now) };
   if (!Value.Check(SceneDraftArtifactSchema, artifact)) throw new Error("Scene draft artifact failed schema validation.");
   const artifactPath = writeSceneDraftArtifact(input.root, artifact);
   const advanced = transitionChapterExecution(attempted, "deterministic-validation", input.now, sceneId);
