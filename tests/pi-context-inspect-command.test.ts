@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { inspectActiveContext, renderContextInspection } from "../src/application/context-inspection.js";
@@ -91,6 +91,7 @@ function setup(): { parent: string; root: string } {
     chapters: [{ chapter: 1, act: "act-1", causality: "therefore she enters", state_change: "access is tested", setup_ids: [], payoff_ids: [], profile_obligations: [] }],
     decisions: [],
   }), "utf8");
+  mkdirSync(join(root, "books", "book-01", "contracts", "chapters"), { recursive: true });
   writeFileSync(join(root, chapterContractPath("book-01", 1)), stringifyYaml({
     schema_version: "2.0.0",
     contract_id: "CH-001",
