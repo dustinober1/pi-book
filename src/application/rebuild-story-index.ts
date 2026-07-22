@@ -18,6 +18,7 @@ import { KnowledgeLedgerSchema, type KnowledgeLedger } from "../domain/knowledge
 import { CanonSchema, StoryThreadsSchema, type CanonState, type StoryThread, type StoryThreadsState } from "../domain/schemas.js";
 import { StateLedgerSchema, type StateLedger } from "../domain/state-ledger.js";
 import type { StoryRecordStatus } from "../domain/story-record-status.js";
+import type { StoryThreadV2 } from "../domain/story-thread-v2.js";
 import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
 import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
 import { listFilesRecursive, readText } from "../infrastructure/files.js";
@@ -87,11 +88,22 @@ function record(input: {
   };
 }
 
-function threadStatus(thread: StoryThread): StoryRecordStatus {
+function threadStatus(thread: StoryThread | StoryThreadV2): StoryRecordStatus {
   if (thread.status === "planned") return "proposed-plan";
   if (thread.status === "paid-off") return "accepted-manuscript-fact";
   if (thread.status === "abandoned") return "deprecated";
   return "current-state";
+}
+
+function threadDependencies(thread: StoryThread | StoryThreadV2): string[] {
+  const legacy = Object.keys(thread.characters_know);
+  if (!("dependent_thread_ids" in thread)) return legacy;
+  return uniqueSorted([
+    ...legacy,
+    ...thread.dependent_thread_ids,
+    ...thread.participating_entity_ids,
+    ...thread.character_knowledge_refs,
+  ]);
 }
 
 function researchStatus(status: ResearchLedger["items"][number]["status"]): StoryRecordStatus {
@@ -246,7 +258,7 @@ function collectRecords(root: string): { records: StoryRecordIndexRecord[]; sour
         kind: "story-thread",
         status: threadStatus(thread),
         source: loadedAsUnknown(threads),
-        dependencies: Object.keys(thread.characters_know),
+        dependencies: threadDependencies(thread),
         payload: thread,
       }));
     }

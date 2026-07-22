@@ -1,5 +1,6 @@
 import { Type, type Static, type TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
+import { StoryThreadsV2Schema } from "./story-thread-v2.js";
 
 export const PROFILE_IDS = ["thriller", "romantasy", "historical-fiction"] as const;
 export const ProfileIdSchema = Type.Union([
@@ -201,7 +202,8 @@ export const StoryThreadSchema = Type.Object({
   intended_payoff: Type.Union([Type.String(), Type.Null()]), last_advanced_in: Type.Union([Type.String(), Type.Null()]),
 });
 export type StoryThread = Static<typeof StoryThreadSchema>;
-export const StoryThreadsSchema = Type.Object({ schema_version: Type.Literal("1.0.0"), threads: Type.Array(StoryThreadSchema) });
+export const StoryThreadsV1Schema = Type.Object({ schema_version: Type.Literal("1.0.0"), threads: Type.Array(StoryThreadSchema) });
+export const StoryThreadsSchema = Type.Union([StoryThreadsV1Schema, StoryThreadsV2Schema]);
 export type StoryThreadsState = Static<typeof StoryThreadsSchema>;
 
 export const ChapterPacketSchema = Type.Object({

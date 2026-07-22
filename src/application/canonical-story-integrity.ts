@@ -78,6 +78,39 @@ export function canonicalStoryFindings(input: CanonicalStoryInputs): CanonicalSt
     ...plotIds,
   ]);
 
+  if (threadIds.size !== input.threads.threads.length) {
+    findings.push(blocker("duplicate-thread-id", "Story threads contain duplicate IDs.", input.threads.threads.map((item) => item.id)));
+  }
+  if (input.threads.schema_version === "2.0.0") {
+    for (const thread of input.threads.threads) {
+      for (const dependencyId of thread.dependent_thread_ids) {
+        if (dependencyId === thread.id) {
+          findings.push(blocker("self-dependent-thread", `Story thread ${thread.id} cannot depend on itself.`, [thread.id]));
+        } else if (!threadIds.has(dependencyId)) {
+          findings.push(blocker("unknown-thread-dependency", `Story thread ${thread.id} depends on missing thread ${dependencyId}.`, [thread.id, dependencyId]));
+        }
+      }
+      for (const entityId of thread.participating_entity_ids) {
+        if (!entityIds.has(entityId)) {
+          findings.push(blocker("unknown-thread-entity", `Story thread ${thread.id} references missing participating entity ${entityId}.`, [thread.id, entityId]));
+        }
+      }
+      for (const knowledgeId of thread.character_knowledge_refs) {
+        if (!knowledgeIds.has(knowledgeId)) {
+          findings.push(blocker("unknown-thread-knowledge", `Story thread ${thread.id} references missing knowledge record ${knowledgeId}.`, [thread.id, knowledgeId]));
+        }
+      }
+      const earliest = thread.payoff_window.earliest_chapter;
+      const latest = thread.payoff_window.latest_chapter;
+      if (earliest !== null && latest !== null && earliest > latest) {
+        findings.push(blocker("invalid-thread-payoff-window", `Story thread ${thread.id} payoff window starts after it ends.`, [thread.id]));
+      }
+      if (thread.opened_in !== null && thread.last_touched_in !== null && thread.last_touched_in < thread.opened_in) {
+        findings.push(blocker("invalid-thread-touch-order", `Story thread ${thread.id} was last touched before it opened.`, [thread.id]));
+      }
+    }
+  }
+
   for (const record of input.state.records) {
     if (!entityIds.has(record.subject_id)) {
       findings.push(blocker("unknown-state-subject", `State record ${record.id} references missing entity ${record.subject_id}.`, [record.id, record.subject_id]));
