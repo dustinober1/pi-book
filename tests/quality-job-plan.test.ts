@@ -112,7 +112,7 @@ test("editorial book review jobs are deferred from the chapter call budget", () 
   assert.ok(bookJobs.every((job) => job.kind === "model"));
   assert.ok(plan.deferred_job_ids.includes("review-book-chronology"));
   assert.ok(plan.deferred_job_ids.includes("review-book-repetition"));
-  assert.equal(plan.planned_model_calls, 12);
+  assert.equal(plan.planned_model_calls, 13);
 });
 
 test("runtime usage cannot exceed fixed tier call or generated-token ceilings", () => {
