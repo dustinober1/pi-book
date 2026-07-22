@@ -6,14 +6,24 @@ import { MODEL_EXECUTION_PROFILES } from "../src/domain/model-execution-profile.
 import type { SceneContract } from "../src/domain/scene-contract.js";
 import type { StoryRecordIndex } from "../src/context/story-record-index.js";
 
+const sourceHash = "a".repeat(64);
 const storyIndex: StoryRecordIndex = {
-  schema_version: "1.0.0",
   records: [
-    { id: "CAN-001", record_type: "canon-fact", status: "locked-canon", source_path: "series/canon.yaml", introduced_in: "chapter-00", chapter_scope: ["chapter-00"], payload: { fact: "The archive requires a credential." }, dependencies: [] },
-    { id: "STATE-001", record_type: "state", status: "current-state", source_path: "series/state-ledger.yaml", introduced_in: "chapter-01", chapter_scope: ["chapter-01"], payload: { field: "location", value: "LOC-ARCHIVE" }, dependencies: [] },
-    { id: "PLAN-001", record_type: "state", status: "required-future-event", source_path: "series/state-ledger.yaml", introduced_in: "chapter-01", chapter_scope: ["chapter-01"], payload: { requirement: "Mara must leave with a copied log." }, dependencies: [] },
+    { id: "CHAR-MARA", kind: "entity", status: "current-state", source_path: "series/entity-registry.yaml", source_hash: sourceHash, version: 1, chapter_scope: [], payload: { display_name: "Mara" }, dependencies: [] },
+    { id: "CAN-001", kind: "canon-fact", status: "locked-canon", source_path: "series/canon.yaml", source_hash: sourceHash, version: 1, chapter_scope: [1], payload: { fact: "The archive requires a credential." }, dependencies: [] },
+    { id: "STATE-001", kind: "state", status: "current-state", source_path: "series/state-ledger.yaml", source_hash: sourceHash, version: 1, chapter_scope: [1], payload: { field: "location", value: "LOC-ARCHIVE" }, dependencies: [] },
+    { id: "PLAN-001", kind: "state", status: "required-future-event", source_path: "series/state-ledger.yaml", source_hash: sourceHash, version: 1, chapter_scope: [1], payload: { requirement: "Mara must leave with a copied log." }, dependencies: [] },
   ],
-  manifest: { source_hashes: { "series/canon.yaml": "a".repeat(64) }, record_count: 3 },
+  manifest: {
+    schema_version: "1.0.0",
+    sources: [
+      { path: "series/canon.yaml", hash: sourceHash },
+      { path: "series/entity-registry.yaml", hash: sourceHash },
+      { path: "series/state-ledger.yaml", hash: sourceHash },
+    ],
+    record_count: 4,
+    index_hash: "f".repeat(64),
+  },
 };
 
 const sceneContract: SceneContract = {
