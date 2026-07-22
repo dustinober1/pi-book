@@ -63,7 +63,11 @@ function metadata(prompt: string): Record<string, unknown> {
 
 class ScriptedWorker implements QualityWorker {
   calls: QualityWorkerRequest[] = [];
-  constructor(readonly root: string, readonly invalidForever = false) {}
+  constructor(
+    readonly root: string,
+    readonly invalidForever = false,
+    readonly outputTokens = 50,
+  ) {}
   async resolveModelCapacity() { return { provider: "fake", model: "quality-model", contextWindowTokens: 128_000, maxOutputTokens: 32_000 }; }
   async run(request: QualityWorkerRequest): Promise<QualityWorkerResult> {
     this.calls.push(request);
@@ -99,7 +103,7 @@ class ScriptedWorker implements QualityWorker {
       provider: "fake",
       model: "quality-model",
       inputTokens: 100,
-      outputTokens: 50,
+      outputTokens: this.outputTokens,
       estimated: false,
       costUsd: 0.001,
       elapsedMs: 1,
@@ -112,7 +116,7 @@ class ScriptedWorker implements QualityWorker {
   }
 }
 
-test("premium drafting isolates passes and ends in one guarded chapter event", async () => {
+test("premium drafting consumes one bounded job plan and ends in one guarded chapter event", async () => {
   const { parent, root } = setup();
   try {
     const worker = new ScriptedWorker(root);
@@ -129,22 +133,34 @@ test("premium drafting isolates passes and ends in one guarded chapter event", a
     });
     assert.equal(result.chapter, 1);
     assert.equal(result.tier, "premium");
-    assert.equal(result.calls.length, 10);
-    assert.equal(worker.calls.length, 10);
+    assert.equal(result.jobPlan.tier, "premium");
+    assert.equal(result.jobPlan.candidate_count, 2);
+    assert.equal(result.jobPlanManifestPath, ".pi-book/runs/QDR-001/quality-job-plan.json");
+    const manifest = readFileSync(join(root, result.jobPlanManifestPath), "utf8");
+    assert.doesNotMatch(manifest, /chapter text|private reasoning|prompt|prose/i);
+    assert.equal(JSON.parse(manifest).tier, "premium");
+
+    assert.equal(result.calls.length, 11);
+    assert.equal(worker.calls.length, 11);
     assert.deepEqual(worker.calls.map((call) => metadata(call.prompt).output_type), [
       "scene-plan", "draft-candidate", "draft-candidate", "candidate-selection",
-      "lane-critique", "lane-critique", "lane-critique", "event-output",
+      "lane-critique", "lane-critique", "lane-critique", "lane-critique", "event-output",
       "claim-extraction", "claim-audit",
     ]);
+    assert.deepEqual(
+      worker.calls.filter((call) => metadata(call.prompt).output_type === "lane-critique").map((call) => metadata(call.prompt).lane),
+      ["continuity", "causality", "character-intent", "style"],
+    );
     const criticCalls = worker.calls.filter((call) => metadata(call.prompt).output_type === "lane-critique");
     for (const call of criticCalls) {
-      assert.doesNotMatch(call.context ?? "", /CONTINUITY-MARKER|VOICE-MARKER|CAUSALITY-MARKER/);
+      assert.doesNotMatch(call.context ?? "", /CONTINUITY-MARKER|CAUSALITY-MARKER|CHARACTER-INTENT-MARKER|STYLE-MARKER/);
       assert.match(call.context ?? "", /CAND-02 makes the archive door lie/);
     }
     const synthesis = worker.calls.find((call) => metadata(call.prompt).output_type === "event-output")!;
     assert.match(synthesis.context ?? "", /CONTINUITY-MARKER/);
-    assert.match(synthesis.context ?? "", /VOICE-MARKER/);
     assert.match(synthesis.context ?? "", /CAUSALITY-MARKER/);
+    assert.match(synthesis.context ?? "", /CHARACTER-INTENT-MARKER/);
+    assert.match(synthesis.context ?? "", /STYLE-MARKER/);
     assert.equal(existsSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), true);
     assert.match(readFileSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md"), "utf8"), /Mara pays/);
     assert.equal(readProject(root).current_stage, "drafting");
@@ -172,6 +188,26 @@ test("two invalid structured attempts stop before canonical mutation", async () 
     assert.doesNotMatch(worker.calls[1]?.prompt ?? "", /not-json/);
     assert.equal(existsSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), false);
     assert.equal(queueFixture().packets[0]?.status, "ready");
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("job-plan generated-token ceiling stops before canonical mutation", async () => {
+  const { parent, root } = setup();
+  try {
+    const worker = new ScriptedWorker(root, false, 22_001);
+    await assert.rejects(runQualityDraft({
+      root,
+      chapter: 1,
+      runtimeProfile: "full",
+      qualityConfig: readProject(root).quality!,
+      worker,
+      runId: "QDR-CEILING",
+      cacheRetention: "keep-all",
+    }), /generated-token ceiling/i);
+    assert.equal(worker.calls.length, 1);
+    assert.equal(existsSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), false);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
