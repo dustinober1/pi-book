@@ -235,7 +235,7 @@ export function initialQualityJobPlanUsage(): QualityJobPlanUsage {
 export function recordQualityJobPlanUsage(
   plan: QualityJobPlan,
   current: QualityJobPlanUsage,
-  call: { outputTokens?: number },
+  call: { outputTokens?: number | undefined },
 ): QualityJobPlanUsage {
   const outputTokens = call.outputTokens ?? 0;
   if (!Number.isInteger(outputTokens) || outputTokens < 0) throw new Error("Quality job plan output tokens must be a non-negative integer.");
