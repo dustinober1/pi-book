@@ -33,10 +33,12 @@ test("series planning may update all canonical story controls in one guarded eve
         schema_version: "1.0.0",
         entities: [{
           id: "CHAR-MARA",
-          entity_type: "character",
-          canonical_name: "Mara Vale",
+          category: "character",
+          display_name: "Mara Vale",
           aliases: ["Mara"],
           status: "current-state",
+          source: "author-interview",
+          introduced_in: "series-plan",
         }],
       }) },
       { path: "series/state-ledger.yaml", content: stringifyYaml({
@@ -59,7 +61,7 @@ test("series planning may update all canonical story controls in one guarded eve
           id: "KNOW-MARA-ARCHIVE",
           knower_id: "CHAR-MARA",
           fact_id: "FACT-ARCHIVE-EXISTS",
-          knowledge_state: "knows",
+          knowledge: "known",
           status: "current-state",
           source: "author-interview",
           introduced_in: "series-plan",
