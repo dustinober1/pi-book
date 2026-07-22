@@ -4,6 +4,7 @@ import { Type } from "typebox";
 import { assertOperationAllowed, assertReviewAllowed } from "../application/authorization.js";
 import { bootstrapProjectFromBrief } from "../application/brief-bootstrap.js";
 import { renderBudgetStatus } from "../application/budget-status.js";
+import { inspectActiveContext, inspectNextActiveContext, renderContextInspection } from "../application/context-inspection.js";
 import { normalizeEventRejection, rejectionInstruction } from "../application/event-rejection.js";
 import { applyNovelEvent, projectStateHash, type NovelEventType } from "../application/events.js";
 import { gateDetail } from "../application/gate-metadata.js";
@@ -26,6 +27,7 @@ import { explainFirstBlocker, inspectUndo, runIntegritySummary, undoLastNovelEve
 import { approveProjectGate, directRevisionDecision, rejectProjectGate, type RunDecision } from "../application/run.js";
 import { upgradeProjectVersion } from "../application/version.js";
 import { launchNovelWizard } from "../application/wizard-launch.js";
+import { isModelJobType } from "../domain/model-job.js";
 import { defaultQualityProjectState, qualityStateWithOverride } from "../domain/quality-profile.js";
 import { parseRuntimeProfileId } from "../domain/runtime-profile.js";
 import { PROFILE_IDS, isProfileId, type ProjectType, type Stage } from "../domain/schemas.js";
@@ -162,6 +164,7 @@ async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): 
   const id: GuideActionId = action.id;
   if (id === "status") context.ui.notify(refreshGuidance(root).markdown, "info");
   else if (id === "budget") context.ui.notify(renderBudgetStatus(root), "info");
+  else if (id === "context") context.ui.notify(renderContextInspection(inspectNextActiveContext(root)), "info");
   else if (id === "view-evidence") context.ui.notify(["Evidence files:", ...screen.evidencePaths.map((path) => `- ${path}`)].join("\n"), "info");
   else if (id === "advanced") await guidedAdvanced(root, context);
   else if (id === "readers") await guidedReaders(root, context);
@@ -291,6 +294,22 @@ export function registerNovelForge(pi: ExtensionAPI): void {
   } });
   pi.registerCommand("novel-status", { description: "Show Novel Forge decisions, blockers, warnings, progress, and next action", handler: async (_args, context) => { try { const root = requireProjectRoot(context.cwd); context.ui.notify(refreshGuidance(root).markdown, "info"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-budget", { description: "Show the quality tier, token and call ceilings, and locally recorded usage", handler: async (_args, context) => { try { context.ui.notify(renderBudgetStatus(requireProjectRoot(context.cwd)), "info"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-context", { description: "Inspect the bounded active-context capsule for an executable scene without exposing record payloads", handler: async (args, context) => { try {
+    const root = requireProjectRoot(context.cwd);
+    const items = tokens(args);
+    const chapterRaw = flagValue(items, "--chapter");
+    const sceneId = flagValue(items, "--scene");
+    const jobRaw = flagValue(items, "--job") ?? "draft-scene";
+    if (!isModelJobType(jobRaw)) throw new Error(`Unknown context job type: ${jobRaw}.`);
+    if (!chapterRaw && !sceneId) {
+      context.ui.notify(renderContextInspection(inspectNextActiveContext(root, jobRaw)), "info");
+      return;
+    }
+    const chapter = Number.parseInt(chapterRaw ?? "", 10);
+    if (!Number.isInteger(chapter) || chapter < 1) throw new Error("novel-context requires --chapter <positive integer>.");
+    if (!sceneId) throw new Error("novel-context requires --scene <CH-NNN-SC-NN-VN> when --chapter is supplied.");
+    context.ui.notify(renderContextInspection(inspectActiveContext(root, { chapter, sceneId, jobType: jobRaw })), "info");
+  } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-plan", { description: "Build or repair voice, series, or active-book architecture", getArgumentCompletions: (prefix) => { const filtered = ["voice", "series", "book"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const items = tokens(args); if (items.includes("--add-book")) { if (items.includes("--force")) { const target = Number.parseInt(flagValue(items, "--target-words") ?? "100000", 10) || 100000; const bookId = addBook(root, target, { force: true }); context.ui.notify(`Force-created ${bookId} and made it active. Run /novel.`, "info"); } else await openWizard(root, context, "next-book"); return; } const prompt = planPromptFor(root, items[0] ?? ""); if (!context.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" }); else pi.sendUserMessage(prompt); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-run", { description: "Start, resume, pause, or cancel persistent safe work until a gate, blocker, or requested limit", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const options = parseRunOptions(args); const decision = options.resume ? resumeQualityPersistentRun(root) : options.pause ? pauseQualityPersistentRun(root) : options.cancel ? cancelQualityPersistentRun(root) : (options.until || options.maxChapters) ? beginQualityPersistentRun(root, { target: options.until ?? "next-milestone", maxChapters: options.maxChapters ?? readProject(root).automation.max_chapters_per_run, ...(options.runtimeProfile ? { runtimeProfile: options.runtimeProfile } : {}), ...(options.quality ? { quality: options.quality } : {}) }) : decideQualityNextRun(root, options); sendDecision(pi, context, decision); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-draft", { description: "Draft the next approved chapter packet with bounded context", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const options = parseDraftOptions(args); sendDecision(pi, context, directQualityDraftDecision(root, options.chapter, options.quality)); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
