@@ -20,10 +20,11 @@ test("the packed extension imports, registers, and contains the 1.7 release surf
     const commands: string[] = [];
     const tools: string[] = [];
     module.default({ registerCommand(name: string) { commands.push(name); }, registerTool(tool: { name: string }) { tools.push(tool.name); }, sendUserMessage() {} });
-    assert.equal(commands.length, 15);
+    assert.equal(commands.length, 16);
     assert.ok(commands.includes("novel"));
     assert.ok(commands.includes("novel-wizard"));
     assert.ok(commands.includes("novel-budget"));
+    assert.ok(commands.includes("novel-context"));
     assert.ok(commands.includes("novel-readers"));
     assert.ok(commands.includes("novel-adopt"));
     assert.ok(commands.includes("novel-organize"));
