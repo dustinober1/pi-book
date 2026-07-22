@@ -3,7 +3,7 @@ import { ModelExecutionProfileIdSchema } from "./model-execution-profile.js";
 import { ModelJobTypeSchema } from "./model-job.js";
 import { SceneContractSchema } from "./scene-contract.js";
 import { StoryRecordStatusSchema } from "./story-record-status.js";
-import { StoryRecordTypeSchema } from "../context/story-record-index.js";
+import { StoryRecordKindSchema } from "../context/story-record-index.js";
 
 const HashSchema = Type.String({ pattern: "^[a-f0-9]{64}$" });
 
@@ -16,12 +16,14 @@ export type ContextAuthority = Static<typeof ContextAuthoritySchema>;
 
 export const ActiveContextRecordSchema = Type.Object({
   id: Type.String({ minLength: 1 }),
-  record_type: StoryRecordTypeSchema,
+  kind: StoryRecordKindSchema,
   status: StoryRecordStatusSchema,
   authority: ContextAuthoritySchema,
   required: Type.Boolean(),
   reason: Type.String({ minLength: 1 }),
   source_path: Type.String({ minLength: 1 }),
+  source_hash: HashSchema,
+  version: Type.Integer({ minimum: 1 }),
   payload: Type.Unknown(),
   dependencies: Type.Array(Type.String({ minLength: 1 }), { uniqueItems: true }),
   estimated_tokens: Type.Integer({ minimum: 1 }),
