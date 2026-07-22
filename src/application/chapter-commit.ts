@@ -214,7 +214,7 @@ function readEntityRegistry(root: string): EntityRegistry {
   return parseYaml<EntityRegistry>(text, EntityRegistrySchema, ENTITY_REGISTRY_PATH);
 }
 
-function buildPreparation(input: CommitValidatedChapterInput, state: ChapterExecutionState): PreparedCommit {
+function buildPreparation(input: CommitValidatedChapterInput, state: ChapterExecutionState, preparedAtOverride?: string): PreparedCommit {
   if (state.status !== "active" || state.current_node !== "chapter-commit") {
     throw new Error(`Chapter commit requires active chapter-commit, current state is ${state.status}/${state.current_node}.`);
   }
@@ -236,7 +236,7 @@ function buildPreparation(input: CommitValidatedChapterInput, state: ChapterExec
     : structuredClone(beforeLedger);
   const stateLedgerContent = stitch.accepted_mutations.length ? stringifyYaml(afterLedger) : null;
   const stateLedgerHash = stateLedgerContent === null ? null : hashText(stateLedgerContent);
-  const preparedAt = timestamp(input.now);
+  const preparedAt = preparedAtOverride ?? timestamp(input.now);
   const deltaPath = chapterDeltaSummaryPath(book.book_id, input.chapter);
   const deltaSummaryContent = renderChapterDeltaSummary(buildChapterDeltaSummary({
     runId: input.runId,
@@ -445,7 +445,7 @@ export function commitValidatedChapter(input: CommitValidatedChapterInput): Comm
     return finishCommit(input, existing, state, null, true);
   }
 
-  const prepared = buildPreparation(input, state);
+  const prepared = buildPreparation(input, state, existing?.status === "prepared" ? existing.prepared_at : undefined);
   if (existing) {
     if (existing.project_hash_before !== prepared.artifact.project_hash_before
       || existing.manuscript_hash !== prepared.artifact.manuscript_hash
