@@ -47,7 +47,7 @@ function setup() {
     purpose: "Reach the terminal.", required_beats: ["Enter the archive", "Discover revoked access"],
     active_thread_ids: [], required_record_ids: ["CAN-ACCESS"], start_state_ids: ["STATE-MARA-LOCATION"],
     required_end_state: [], forbidden_changes: ["Do not identify the prior user."], knowledge_boundary_ids: [],
-    target_words: { minimum: 140, maximum: 180 }, ending_hook: "Mara reaches the terminal unseen.",
+    target_words: { minimum: 300, maximum: 360 }, ending_hook: "Mara reaches the terminal unseen.",
     small_model_ready: true, missing_small_model_fields: [],
   }), "utf8");
   return { parent, root };
@@ -63,7 +63,7 @@ const planOutput = {
   ending_execution: "She reaches the terminal unseen.",
   evidence_record_ids: ["CAN-ACCESS"],
 };
-const draftProse = Array.from({ length: 160 }, (_, index) => index % 16 === 15 ? `checkpoint${index + 1}.` : `word${index + 1}`).join(" ");
+const draftProse = Array.from({ length: 320 }, (_, index) => index % 16 === 15 ? `checkpoint${index + 1}.` : `word${index + 1}`).join(" ");
 
 function workerResult(text: string, request: QualityWorkerRequest): QualityWorkerResult {
   return {
