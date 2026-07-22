@@ -14,7 +14,7 @@ Spending more tokens is therefore not treated as “make the first prompt longer
 |---|---|
 | `economy` | Existing foreground one-pass draft. This remains the compatibility default. |
 | `balanced` | Scene plan, one candidate, combined critic, and an adaptive revision when risk warrants it. |
-| `premium` | Scene plan, one candidate for routine chapters or two for key scenes, separate continuity/voice/causality critics, research criticism when relevant, and synthesis. |
+| `premium` | Scene plan, one candidate for routine chapters or two for key scenes, separate continuity/causality/character-intent/style critics, and synthesis. |
 | `editorial` | Premium behavior plus final review and claim audit. |
 
 Risk is deterministic and inspectable. Opening and structural chapters, signature moments, research density, historical risk, setup/payoff/reveal density, state-reference density, and approved learning guardrails determine whether additional passes are justified.

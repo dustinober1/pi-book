@@ -115,3 +115,59 @@ test("persistent premium drafting reloads after each chapter and respects pause 
     rmSync(project.parent, { recursive: true, force: true });
   }
 });
+
+test("budget downgrade resume uses a fresh deterministic child attempt with matching manifest and report", async () => {
+  const project = createDraftableQualityProject("premium");
+  try {
+    const state = readProject(project.root);
+    state.automation.require_first_chapter_approval = false;
+    state.quality!.budget.maximum_calls_per_chapter = 1;
+    state.quality!.budget.on_exhaustion = "downgrade";
+    writeFileSync(join(project.root, "PROJECT.yaml"), stringifyYaml(state), "utf8");
+    beginQualityPersistentRun(project.root, {
+      target: "next-milestone",
+      maxChapters: 1,
+      quality: { tier: "premium" },
+      now: "2026-07-21T16:00:00Z",
+    });
+
+    const worker = new PersistentWorker();
+    const first = await runPersistentQualityDraft({
+      root: project.root,
+      worker,
+      maxChapters: 1,
+      now: () => "2026-07-21T16:01:00Z",
+    });
+    assert.equal(first.status, "paused");
+    assert.equal(first.downgradedTo, "balanced");
+    assert.equal(worker.calls.length, 1);
+
+    resumeQualityPersistentRun(project.root);
+    const second = await runPersistentQualityDraft({
+      root: project.root,
+      worker,
+      maxChapters: 1,
+      now: () => "2026-07-21T16:02:00Z",
+    });
+    assert.equal(second.status, "paused");
+    assert.equal(second.downgradedTo, "economy");
+    assert.equal(worker.calls.length, 1);
+
+    const attempts = [
+      ["RUN-001-CH-001-ATT-001", "premium"],
+      ["RUN-001-CH-001-ATT-002", "balanced"],
+    ] as const;
+    for (const [runId, tier] of attempts) {
+      const directory = join(project.root, ".pi-book", "runs", runId);
+      const manifest = JSON.parse(readFileSync(join(directory, "quality-job-plan.json"), "utf8"));
+      const report = JSON.parse(readFileSync(join(directory, "run-report.json"), "utf8"));
+      assert.equal(manifest.tier, tier);
+      assert.equal(report.runId, runId);
+      assert.equal(report.qualityTier, tier);
+    }
+    assert.equal(readProject(project.root).automation.active_run?.completedEventKeys.length, 0);
+    assert.equal(existsSync(join(project.root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), false);
+  } finally {
+    rmSync(project.parent, { recursive: true, force: true });
+  }
+});

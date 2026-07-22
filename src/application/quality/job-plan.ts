@@ -11,7 +11,9 @@ export type QualityJobId =
   | "critic-causality"
   | "critic-character-intent"
   | "critic-style"
+  | "extract-factual-claims"
   | "critic-factuality"
+  | "repair-factuality"
   | "patch-spans"
   | "synthesize-event-output"
   | "extract-state-delta"
@@ -58,6 +60,16 @@ export interface QualityJobPlanJob {
 export interface QualityJobPlanUsage {
   model_calls: number;
   generated_tokens: number;
+  job_calls: Partial<Record<QualityJobId, {
+    primary: number;
+    corrections: number;
+  }>>;
+}
+
+export interface QualityJobPlanCall {
+  jobId: QualityJobId;
+  attempt: number;
+  outputTokens?: number | undefined;
 }
 
 export interface QualityJobPlan {
@@ -75,10 +87,10 @@ export interface QualityJobPlan {
 }
 
 const LIMITS: Record<QualityJobPlanTier, QualityJobPlanLimits> = {
-  economy: { maximum_model_calls: 6, maximum_generated_tokens: 13_200 },
-  balanced: { maximum_model_calls: 14, maximum_generated_tokens: 30_000 },
-  premium: { maximum_model_calls: 28, maximum_generated_tokens: 50_000 },
-  editorial: { maximum_model_calls: 30, maximum_generated_tokens: 52_400 },
+  economy: { maximum_model_calls: 4, maximum_generated_tokens: 10_800 },
+  balanced: { maximum_model_calls: 18, maximum_generated_tokens: 38_000 },
+  premium: { maximum_model_calls: 28, maximum_generated_tokens: 54_000 },
+  editorial: { maximum_model_calls: 30, maximum_generated_tokens: 56_400 },
 };
 
 const OUTPUT_TOKENS: Record<QualityJobId, number> = {
@@ -92,7 +104,9 @@ const OUTPUT_TOKENS: Record<QualityJobId, number> = {
   "critic-causality": 1_000,
   "critic-character-intent": 1_000,
   "critic-style": 1_000,
+  "extract-factual-claims": 1_000,
   "critic-factuality": 1_000,
+  "repair-factuality": 4_200,
   "patch-spans": 1_500,
   "synthesize-event-output": 4_200,
   "extract-state-delta": 1_200,
@@ -147,7 +161,6 @@ function economyJobs(candidateCount: 1 | 2): QualityJobPlanJob[] {
     job("plan-scene", "model"),
     job("draft-scene", "model", { maximumCalls: candidateCount }),
     job("deterministic-validation", "deterministic"),
-    job("extract-state-delta", "model"),
     job("scene-accept", "deterministic"),
     job("chapter-stitch", "deterministic"),
     job("chapter-commit", "deterministic"),
@@ -187,20 +200,27 @@ function planJobs(tier: QualityJobPlanTier, risk: QualityJobPlanRisk, candidateC
   const jobs = economyJobs(candidateCount);
   addCandidateSelection(jobs, candidateCount);
 
+  const factualityJobs = risk.factuality_required && tier !== "economy"
+    ? [
+        job("extract-factual-claims", "model", { maximumCalls: 2 }),
+        job("critic-factuality", "model", { maximumCalls: 2 }),
+        job("repair-factuality", "model", { maximumCalls: 1, maximumAttempts: 1, conditional: true }),
+      ]
+    : [];
+
   if (tier === "balanced") {
-    insertBefore(jobs, "extract-state-delta", [
+    insertBefore(jobs, "scene-accept", [
       job("critic-combined", "model"),
-      job("patch-spans", "model", { maximumCalls: 2, maximumAttempts: 2, conditional: true }),
       job("synthesize-event-output", "model"),
+      ...factualityJobs,
     ]);
   }
 
   if (tier === "premium" || tier === "editorial") {
-    insertBefore(jobs, "extract-state-delta", [
+    insertBefore(jobs, "scene-accept", [
       ...SPECIALIST_CRITICS.map((id) => job(id, "model")),
-      job("patch-spans", "model", { maximumCalls: 2, maximumAttempts: 2, conditional: true }),
       job("synthesize-event-output", "model"),
-      ...(risk.factuality_required ? [job("critic-factuality", "model", { maximumCalls: 2 })] : []),
+      ...factualityJobs,
     ]);
   }
 
@@ -229,23 +249,53 @@ export function qualityJobPlanHas(plan: QualityJobPlan, id: QualityJobId): boole
 }
 
 export function initialQualityJobPlanUsage(): QualityJobPlanUsage {
-  return { model_calls: 0, generated_tokens: 0 };
+  return { model_calls: 0, generated_tokens: 0, job_calls: {} };
+}
+
+export function assertQualityJobPlanCallAllowed(
+  plan: QualityJobPlan,
+  current: QualityJobPlanUsage,
+  call: Pick<QualityJobPlanCall, "jobId" | "attempt">,
+): void {
+  const scheduled = plan.jobs.find((item) => item.id === call.jobId);
+  if (!scheduled || scheduled.kind !== "model" || scheduled.scope !== "chapter") {
+    throw new Error(`Quality job ${call.jobId} is not a scheduled chapter model job.`);
+  }
+  if (!Number.isInteger(call.attempt) || call.attempt < 1 || call.attempt > 1 + plan.maximum_correction_attempts) {
+    throw new Error(`Quality job ${call.jobId} correction attempt exceeds the plan allowance.`);
+  }
+  const jobUsage = current.job_calls[call.jobId] ?? { primary: 0, corrections: 0 };
+  if (call.attempt === 1 && jobUsage.primary >= scheduled.maximum_calls) {
+    throw new Error(`Quality job ${call.jobId} primary-call ceiling of ${scheduled.maximum_calls} exceeded.`);
+  }
+  if (call.attempt > 1 && jobUsage.corrections >= jobUsage.primary * plan.maximum_correction_attempts) {
+    throw new Error(`Quality job ${call.jobId} has no primary call available for correction attempt ${call.attempt}.`);
+  }
+  if (current.model_calls + 1 > plan.limits.maximum_model_calls) {
+    throw new Error(`Quality job plan model-call ceiling exceeded for ${plan.tier}.`);
+  }
 }
 
 export function recordQualityJobPlanUsage(
   plan: QualityJobPlan,
   current: QualityJobPlanUsage,
-  call: { outputTokens?: number | undefined },
+  call: QualityJobPlanCall,
 ): QualityJobPlanUsage {
+  assertQualityJobPlanCallAllowed(plan, current, call);
   const outputTokens = call.outputTokens ?? 0;
   if (!Number.isInteger(outputTokens) || outputTokens < 0) throw new Error("Quality job plan output tokens must be a non-negative integer.");
+  const previousJobUsage = current.job_calls[call.jobId] ?? { primary: 0, corrections: 0 };
   const next = {
     model_calls: current.model_calls + 1,
     generated_tokens: current.generated_tokens + outputTokens,
+    job_calls: {
+      ...current.job_calls,
+      [call.jobId]: {
+        primary: previousJobUsage.primary + Number(call.attempt === 1),
+        corrections: previousJobUsage.corrections + Number(call.attempt > 1),
+      },
+    },
   };
-  if (next.model_calls > plan.limits.maximum_model_calls) {
-    throw new Error(`Quality job plan model-call ceiling exceeded for ${plan.tier}.`);
-  }
   if (next.generated_tokens > plan.limits.maximum_generated_tokens) {
     throw new Error(`Quality job plan generated-token ceiling exceeded for ${plan.tier}.`);
   }
@@ -254,11 +304,18 @@ export function recordQualityJobPlanUsage(
 
 export function buildQualityJobPlan(input: {
   tier: QualityJobPlanTier;
+  keySceneCandidates?: number;
   risk?: QualityJobPlanRisk;
 }): QualityJobPlan {
   const maximumCorrectionAttempts = 1;
   const risk = input.risk ?? {};
-  const candidateCount: 1 | 2 = risk.key_scene && (input.tier === "premium" || input.tier === "editorial") ? 2 : 1;
+  const configuredCandidates = input.keySceneCandidates ?? 2;
+  if (!Number.isInteger(configuredCandidates) || configuredCandidates < 1 || configuredCandidates > 2) {
+    throw new Error("Quality job plan key-scene candidates must be one or two.");
+  }
+  const candidateCount: 1 | 2 = risk.key_scene && (input.tier === "premium" || input.tier === "editorial")
+    ? configuredCandidates as 1 | 2
+    : 1;
   const jobs = planJobs(input.tier, risk, candidateCount);
   const plannedJobs = plannedChapterModelJobs(jobs);
   const plannedModelCalls = plannedJobs.reduce((sum, item) => sum + item.maximum_calls, 0);

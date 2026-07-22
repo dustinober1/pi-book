@@ -4,11 +4,12 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { qualityJobPlanLimits } from "../src/application/quality/job-plan.js";
+import { buildQualityJobPlan, qualityJobPlanLimits } from "../src/application/quality/job-plan.js";
 import { runQualityDraft } from "../src/application/quality-orchestrator.js";
 import type { ModelCallReport } from "../src/domain/run-report.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
+import { writeQualityJobPlanManifest } from "../src/infrastructure/quality-job-plan-store.js";
 import { initializeProject, readProject } from "../src/project/store.js";
 import { completePlot, queueFixture } from "./phase4-fixtures.js";
 
@@ -91,7 +92,7 @@ class ScriptedWorker implements QualityWorker {
     } else if (type === "candidate-selection") text = JSON.stringify({ ...common, artifact_type: "candidate-selection", candidate_ids: ["CAND-01", "CAND-02"], selected_candidate_id: "CAND-02", rationale: "The second candidate makes the consequence concrete.", evidence: ["It preserves CAN-001."] });
     else if (type === "lane-critique") {
       const lane = String(meta.lane);
-      text = JSON.stringify({ ...common, artifact_type: "lane-critique", candidate_id: "CAND-02", lane, findings: [{ severity: "medium", evidence: `${lane.toUpperCase()}-MARKER`, required_change: `Address ${lane}.` }], verdict: "revise" });
+      text = JSON.stringify({ ...common, artifact_type: "lane-critique", candidate_id: meta.candidate_id, lane, findings: [{ severity: "medium", evidence: `${lane.toUpperCase()}-MARKER`, required_change: `Address ${lane}.` }], verdict: "revise" });
     } else if (type === "event-output") text = JSON.stringify({ schema_version: "1.0.0", chapter: 1, files: [{ path: "books/book-01/manuscript/chapters/01-chapter-1.md", content: "# Chapter 1\n\nCAND-02 makes the archive door lie, and Mara pays for believing it.\n" }], summary: "Applied isolated critique without changing the endpoint." });
     else if (type === "claim-extraction") text = JSON.stringify({ ...common, artifact_type: "claim-extraction", claims: [] });
     else if (type === "claim-audit") text = JSON.stringify({ ...common, artifact_type: "claim-audit", findings: [] });
@@ -148,6 +149,11 @@ test("premium drafting consumes one bounded job plan and ends in one guarded cha
       "lane-critique", "lane-critique", "lane-critique", "lane-critique", "event-output",
       "claim-extraction", "claim-audit",
     ]);
+    assert.deepEqual(worker.calls.map((call) => call.jobType), [
+      "plan-scene", "draft-scene", "draft-scene", "candidate-selection",
+      "critic-continuity", "critic-causality", "critic-character-intent", "critic-style",
+      "synthesize-event-output", "extract-factual-claims", "critic-factuality",
+    ]);
     assert.deepEqual(
       worker.calls.filter((call) => metadata(call.prompt).output_type === "lane-critique").map((call) => metadata(call.prompt).lane),
       ["continuity", "causality", "character-intent", "style"],
@@ -166,6 +172,67 @@ test("premium drafting consumes one bounded job plan and ends in one guarded cha
     assert.match(readFileSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md"), "utf8"), /Mara pays/);
     assert.equal(readProject(root).current_stage, "drafting");
     assert.equal(existsSync(join(root, ".pi-book", "cache", "generation", "QDR-001")), false);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("premium drafting preserves a configured one-candidate key-scene limit", async () => {
+  const { parent, root } = setup();
+  try {
+    const state = readProject(root);
+    state.quality!.key_scene_candidates = 1;
+    writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(state), "utf8");
+    const worker = new ScriptedWorker(root);
+
+    const result = await runQualityDraft({
+      root,
+      chapter: 1,
+      runtimeProfile: "full",
+      qualityConfig: state.quality!,
+      worker,
+      runId: "QDR-ONE-CANDIDATE",
+      cacheRetention: "delete-on-success",
+    });
+
+    assert.equal(result.jobPlan.candidate_count, 1);
+    assert.equal(worker.calls.filter((call) => metadata(call.prompt).output_type === "draft-candidate").length, 1);
+    assert.equal(worker.calls.some((call) => metadata(call.prompt).output_type === "candidate-selection"), false);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("balanced fact-checking always runs the scheduled claim audit", async () => {
+  const { parent, root } = setup();
+  try {
+    const state = readProject(root);
+    state.quality!.tier = "balanced";
+    state.quality!.fact_checking = "always";
+    writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(state), "utf8");
+    const worker = new ScriptedWorker(root);
+
+    const result = await runQualityDraft({
+      root,
+      chapter: 1,
+      runtimeProfile: "full",
+      qualityConfig: state.quality!,
+      worker,
+      runId: "QDR-BALANCED-FACTS",
+      cacheRetention: "delete-on-success",
+    });
+
+    assert.equal(result.plan.claimAudit, true);
+    assert.equal(result.jobPlan.jobs.some((job) => job.id === "extract-factual-claims"), true);
+    assert.equal(result.jobPlan.jobs.some((job) => job.id === "critic-factuality"), true);
+    assert.deepEqual(worker.calls.map((call) => call.jobType), [
+      "plan-scene",
+      "draft-scene",
+      "critic-combined",
+      "synthesize-event-output",
+      "extract-factual-claims",
+      "critic-factuality",
+    ]);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
@@ -208,7 +275,36 @@ test("job-plan generated-token ceiling stops before canonical mutation", async (
       cacheRetention: "keep-all",
     }), /generated-token ceiling/i);
     assert.equal(worker.calls.length, 1);
+    const report = JSON.parse(readFileSync(join(root, ".pi-book", "runs", "QDR-CEILING", "run-report.json"), "utf8"));
+    assert.equal(report.modelCalls.length, 1);
+    assert.equal(report.modelCalls[0].jobType, "plan-scene");
+    assert.equal(report.modelCalls[0].outputTokens, qualityJobPlanLimits("premium").maximum_generated_tokens + 1);
+    assert.equal(report.totals.outputTokens, qualityJobPlanLimits("premium").maximum_generated_tokens + 1);
     assert.equal(existsSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), false);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("conflicting direct run-ID reuse is rejected before inference or canonical mutation", async () => {
+  const { parent, root } = setup();
+  try {
+    writeQualityJobPlanManifest(root, "QDR-CONFLICT", buildQualityJobPlan({ tier: "balanced", risk: {} }));
+    const worker = new ScriptedWorker(root);
+
+    await assert.rejects(runQualityDraft({
+      root,
+      chapter: 1,
+      runtimeProfile: "full",
+      qualityConfig: readProject(root).quality!,
+      worker,
+      runId: "QDR-CONFLICT",
+      cacheRetention: "keep-all",
+    }), /conflicting quality job plan.*QDR-CONFLICT/i);
+
+    assert.equal(worker.calls.length, 0);
+    assert.equal(existsSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), false);
+    assert.equal(existsSync(join(root, ".pi-book", "runs", "QDR-CONFLICT", "run-report.json")), false);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }

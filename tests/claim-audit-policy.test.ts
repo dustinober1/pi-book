@@ -4,7 +4,9 @@ import { shouldRunClaimAudit } from "../src/application/claim-audit.js";
 
 const cases = [
   [{ tier: "balanced", factChecking: "risk-based", riskLevel: "high", historical: false }, true],
+  [{ tier: "balanced", factChecking: "risk-based", riskLevel: "high", historical: true }, true],
   [{ tier: "balanced", factChecking: "risk-based", riskLevel: "low", historical: true }, true],
+  [{ tier: "balanced", factChecking: "always", riskLevel: "low", historical: false }, true],
   [{ tier: "balanced", factChecking: "risk-based", riskLevel: "medium", historical: false }, false],
   [{ tier: "premium", factChecking: "risk-based", riskLevel: "medium", historical: false }, true],
   [{ tier: "premium", factChecking: "risk-based", riskLevel: "low", historical: false }, false],
