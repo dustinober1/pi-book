@@ -50,6 +50,12 @@ function loadYaml<T>(root: string, path: string, schema: TSchema): LoadedSource<
   return { path, text, hash: hashText(text), value: parseYaml<T>(text, schema, path) };
 }
 
+function loadTextSource(root: string, path: string): LoadedSource<string> | null {
+  const text = readText(join(root, path));
+  if (text === null) return null;
+  return { path, text, hash: hashText(text), value: text };
+}
+
 function uniqueSorted(values: readonly string[]): string[] {
   return [...new Set(values.filter(Boolean))].sort();
 }
@@ -99,8 +105,8 @@ function loadedAsUnknown<T>(source: LoadedSource<T>): LoadedSource<unknown> {
   return source;
 }
 
-function deltaDependencies(summary: ChapterDeltaSummary): string[] {
-  const changes = [
+function deltaMaterialChanges(summary: ChapterDeltaSummary) {
+  return [
     ...summary.world_state_changes,
     ...summary.character_state_changes,
     ...summary.knowledge_changes,
@@ -108,13 +114,57 @@ function deltaDependencies(summary: ChapterDeltaSummary): string[] {
     ...summary.object_transfers_or_destruction,
     ...summary.timeline_movement,
   ];
+}
+
+function deltaReferences(summary: ChapterDeltaSummary) {
+  return [
+    ...summary.threads.opened,
+    ...summary.threads.advanced,
+    ...summary.threads.resolved,
+    ...summary.promises_to_reader,
+    ...summary.research_claims_introduced,
+    ...summary.unresolved_ambiguities,
+  ];
+}
+
+function deltaDependencies(summary: ChapterDeltaSummary): string[] {
   return uniqueSorted([
-    ...changes.flatMap((change) => [change.record_id, change.subject_id]),
+    ...deltaMaterialChanges(summary).flatMap((change) => [change.record_id, change.subject_id]),
     ...summary.threads.opened.map((item) => item.id),
     ...summary.threads.advanced.map((item) => item.id),
     ...summary.threads.resolved.map((item) => item.id),
     ...summary.research_claims_introduced.map((item) => item.id),
   ]);
+}
+
+function manuscriptParagraphs(text: string): string[] {
+  return text
+    .split(/\r?\n\s*\r?\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}
+
+function validateDeltaManuscript(summary: ChapterDeltaSummary, manuscript: LoadedSource<string>): void {
+  if (manuscript.hash !== summary.manuscript_hash) {
+    throw new Error(`Chapter delta ${summary.chapter_ref} manuscript hash does not match ${summary.manuscript_path}.`);
+  }
+  const paragraphs = manuscriptParagraphs(manuscript.text);
+  const anchors = new Map<string, ChapterDeltaSummary["manuscript_evidence_anchors"][number]>();
+  for (const anchor of summary.manuscript_evidence_anchors) {
+    if (anchors.has(anchor.id)) throw new Error(`Chapter delta ${summary.chapter_ref} repeats evidence anchor ${anchor.id}.`);
+    const paragraph = paragraphs[anchor.paragraph - 1];
+    if (paragraph === undefined) throw new Error(`Chapter delta ${summary.chapter_ref} evidence anchor ${anchor.id} references a missing paragraph.`);
+    if (hashText(paragraph) !== anchor.paragraph_hash) throw new Error(`Chapter delta ${summary.chapter_ref} evidence anchor ${anchor.id} paragraph hash does not match.`);
+    if (!paragraph.includes(anchor.quote)) throw new Error(`Chapter delta ${summary.chapter_ref} evidence anchor ${anchor.id} quote is absent from its paragraph.`);
+    anchors.set(anchor.id, anchor);
+  }
+  const evidenceIds = [
+    ...deltaMaterialChanges(summary).flatMap((change) => change.evidence_anchor_ids),
+    ...deltaReferences(summary).flatMap((item) => item.evidence_anchor_ids),
+  ];
+  for (const evidenceId of evidenceIds) {
+    if (!anchors.has(evidenceId)) throw new Error(`Chapter delta ${summary.chapter_ref} references unknown evidence anchor ${evidenceId}.`);
+  }
 }
 
 function collectRecords(root: string): { records: StoryRecordIndexRecord[]; sources: Array<{ path: string; hash: string }> } {
@@ -258,6 +308,16 @@ function collectRecords(root: string): { records: StoryRecordIndexRecord[]; sour
   for (const path of deltaPaths) {
     const delta = addSource(loadYaml<ChapterDeltaSummary>(root, path, ChapterDeltaSummarySchema));
     if (!delta) continue;
+    const expectedPath = `${base}/deltas/CH-${String(delta.value.chapter).padStart(3, "0")}.yaml`;
+    if (path !== expectedPath || delta.value.chapter_ref !== `${book.book_id}/chapter-${String(delta.value.chapter).padStart(3, "0")}`) {
+      throw new Error(`Chapter delta identity does not match its canonical path: ${path}.`);
+    }
+    if (!delta.value.manuscript_path.startsWith(`${base}/manuscript/chapters/`)) {
+      throw new Error(`Chapter delta ${delta.value.chapter_ref} points outside the active book manuscript.`);
+    }
+    const manuscript = addSource(loadTextSource(root, delta.value.manuscript_path));
+    if (!manuscript) throw new Error(`Chapter delta ${delta.value.chapter_ref} manuscript is missing at ${delta.value.manuscript_path}.`);
+    validateDeltaManuscript(delta.value, manuscript);
     records.push(record({
       id: `DELTA-CH-${String(delta.value.chapter).padStart(3, "0")}`,
       kind: "chapter-delta",
