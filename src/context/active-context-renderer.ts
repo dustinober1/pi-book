@@ -11,7 +11,7 @@ function payload(record: ActiveContextRecord): string {
 }
 
 function compactRecord(record: ActiveContextRecord): string {
-  return `- ${record.id} | Authority: ${record.authority} | Type: ${record.record_type} | ${payload(record)}`;
+  return `- ${record.id} | Authority: ${record.authority} | Type: ${record.kind} | ${payload(record)}`;
 }
 
 function standardRecord(record: ActiveContextRecord): string {
@@ -19,9 +19,10 @@ function standardRecord(record: ActiveContextRecord): string {
     `### ${record.id}`,
     `Authority: ${record.authority}`,
     `Status: ${record.status}`,
-    `Type: ${record.record_type}`,
+    `Type: ${record.kind}`,
     `Reason included: ${record.reason}`,
     `Source: ${record.source_path}`,
+    `Version: ${record.version}`,
     `Payload: ${payload(record)}`,
   ].join("\n");
 }
