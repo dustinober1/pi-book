@@ -48,6 +48,7 @@ export type ActiveContextManifest = Static<typeof ActiveContextManifestSchema>;
 export const ActiveContextCapsuleSchema = Type.Object({
   schema_version: Type.Literal("1.0.0"),
   capsule_id: Type.String({ pattern: "^CAP-[A-F0-9]{16}$" }),
+  project_hash: Type.Optional(HashSchema),
   job_type: ModelJobTypeSchema,
   model_execution_profile: ModelExecutionProfileIdSchema,
   scene_contract: SceneContractSchema,

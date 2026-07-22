@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { join } from "node:path";
+import { join, relative } from "node:path";
+import type { ActiveContextCapsule } from "../domain/active-context-capsule.js";
 import { ChapterContractSchema, chapterContractPath, type ChapterContract } from "../domain/chapter-contract.js";
 import type { ChapterExecutionManifest } from "../domain/chapter-execution-manifest.js";
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
@@ -8,17 +9,32 @@ import { readText } from "../infrastructure/files.js";
 import {
   chapterExecutionManifestPath,
   readChapterExecutionManifest,
+  serializeChapterExecutionManifest,
   writeChapterExecutionManifest,
 } from "../infrastructure/chapter-execution-manifest-store.js";
 import {
   chapterExecutionStatePath,
   readChapterExecutionState,
+  serializeChapterExecutionState,
   writeChapterExecutionState,
 } from "../infrastructure/chapter-execution-store.js";
+import { chapterCommitArtifactPath } from "../infrastructure/chapter-commit-artifact-store.js";
+import { chapterStitchArtifactPath } from "../infrastructure/chapter-stitch-artifact-store.js";
+import { chapterValidationArtifactPath } from "../infrastructure/chapter-validation-artifact-store.js";
+import {
+  activeContextCapsulePath,
+  serializeActiveContextCapsule,
+} from "../infrastructure/context-capsule-store.js";
+import {
+  applyTransaction,
+  recoverInterruptedOperationalTransactions,
+  type TransactionFileChange,
+} from "../infrastructure/transaction.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject } from "../project/store.js";
 import { chapterContractHash, createChapterExecutionState } from "./chapter-execution-machine.js";
 import { compileSceneContracts } from "./contracts/scene-contract-compiler.js";
+import { buildExecutionContextCapsule } from "./execution-context-capsule.js";
 import { resolveModelExecutionProfile } from "./model-execution-profile-resolver.js";
 import { projectStateHash } from "./project-hash.js";
 import { rebuildStoryRecordIndex, readStoryRecordIndex } from "./rebuild-story-index.js";
@@ -36,6 +52,22 @@ export interface PrepareChapterExecutionResult {
   state: ChapterExecutionState;
   statePath: string;
   alreadyPrepared: boolean;
+}
+
+export interface RebaseChapterExecutionInput {
+  root: string;
+  chapter: number;
+  runId: string;
+  now?: string;
+}
+
+export interface RebaseChapterExecutionResult {
+  manifest: ChapterExecutionManifest;
+  manifestPath: string;
+  state: ChapterExecutionState;
+  statePath: string;
+  capsules: ActiveContextCapsule[];
+  capsulePaths: string[];
 }
 
 function requireRunId(runId: string): void {
@@ -124,13 +156,27 @@ function initialState(manifest: ChapterExecutionManifest, createdAt: string): Ch
   return { ...state, current_scene_id: firstScene.scene_id };
 }
 
-export function prepareChapterExecution(input: PrepareChapterExecutionInput): PrepareChapterExecutionResult {
-  requireChapter(input.chapter);
-  const runId = input.runId ?? `CHRUN-${randomUUID()}`;
-  requireRunId(runId);
-  const book = readBook(input.root);
+interface CompiledChapterExecution {
+  manifest: ChapterExecutionManifest;
+}
+
+function compileChapterExecution(
+  input: PrepareChapterExecutionInput,
+  runId: string,
+  expectedIdentity?: Pick<ChapterExecutionManifest, "book_id" | "chapter" | "chapter_contract_id">,
+): CompiledChapterExecution {
   const project = readProject(input.root);
+  if (expectedIdentity && project.active_book !== expectedIdentity.book_id) {
+    throw new Error(`Chapter execution rebase cannot change the prepared book identity from ${expectedIdentity.book_id} to ${project.active_book}.`);
+  }
+  const book = readBook(input.root);
+  if (expectedIdentity && book.book_id !== expectedIdentity.book_id) {
+    throw new Error(`Chapter execution rebase cannot change the prepared book identity from ${expectedIdentity.book_id} to ${book.book_id}.`);
+  }
   const contract = readContract(input.root, book.book_id, input.chapter);
+  if (expectedIdentity && (input.chapter !== expectedIdentity.chapter || contract.contract_id !== expectedIdentity.chapter_contract_id)) {
+    throw new Error("Chapter execution rebase cannot change the prepared chapter contract identity.");
+  }
   const scenes = compileSceneContracts(contract);
   rebuildStoryRecordIndex(input.root);
   const storyIndex = readStoryRecordIndex(input.root);
@@ -139,22 +185,46 @@ export function prepareChapterExecution(input: PrepareChapterExecutionInput): Pr
   const modelProfile = project.runtime?.model_execution_profile
     ? resolveModelExecutionProfile({ project: project.runtime.model_execution_profile })
     : resolveModelExecutionProfile({});
-  const createdAt = timestamp(input.now);
-  const expected: ChapterExecutionManifest = {
-    schema_version: "1.0.0",
-    run_id: runId,
-    book_id: book.book_id,
-    chapter: input.chapter,
-    chapter_contract_id: contract.contract_id,
-    chapter_contract_version: contract.version,
-    chapter_contract_hash: stableHash(contract),
-    project_hash: projectHash,
-    story_index_hash: storyIndex.manifest.index_hash,
-    runtime_profile: runtimeProfile,
-    model_execution_profile: modelProfile.id,
-    scenes: sceneEntries(scenes),
-    created_at: createdAt,
+  return {
+    manifest: {
+      schema_version: "1.0.0",
+      run_id: runId,
+      book_id: book.book_id,
+      chapter: input.chapter,
+      chapter_contract_id: contract.contract_id,
+      chapter_contract_version: contract.version,
+      chapter_contract_hash: stableHash(contract),
+      project_hash: projectHash,
+      story_index_hash: storyIndex.manifest.index_hash,
+      runtime_profile: runtimeProfile,
+      model_execution_profile: modelProfile.id,
+      scenes: sceneEntries(scenes),
+      created_at: timestamp(input.now),
+    },
   };
+}
+
+function transactionPath(root: string, absolutePath: string): string {
+  const path = relative(root, absolutePath).replace(/\\/g, "/");
+  if (!path || path.startsWith("../") || path === "..") throw new Error("Chapter execution publication path escaped the project root.");
+  return path;
+}
+
+function rebaseCapsules(root: string, manifest: ChapterExecutionManifest): ActiveContextCapsule[] {
+  return manifest.scenes.map((scene) => buildExecutionContextCapsule({
+    root,
+    manifest,
+    sceneId: scene.scene_id,
+    jobType: "plan-scene",
+  }).capsule);
+}
+
+export function prepareChapterExecution(input: PrepareChapterExecutionInput): PrepareChapterExecutionResult {
+  requireChapter(input.chapter);
+  const runId = input.runId ?? `CHRUN-${randomUUID()}`;
+  requireRunId(runId);
+  recoverInterruptedOperationalTransactions(input.root);
+  const expected = compileChapterExecution(input, runId).manifest;
 
   const existingManifest = readChapterExecutionManifest(input.root, runId, input.chapter);
   const existingState = readChapterExecutionState(input.root, runId);
@@ -180,4 +250,42 @@ export function prepareChapterExecution(input: PrepareChapterExecutionInput): Pr
     ? chapterExecutionStatePath(input.root, runId)
     : writeChapterExecutionState(input.root, state);
   return { manifest, manifestPath, state, statePath, alreadyPrepared: Boolean(existingManifest || existingState) };
+}
+
+export function rebaseChapterExecution(input: RebaseChapterExecutionInput): RebaseChapterExecutionResult {
+  requireChapter(input.chapter);
+  requireRunId(input.runId);
+  recoverInterruptedOperationalTransactions(input.root);
+  const previousManifest = readChapterExecutionManifest(input.root, input.runId, input.chapter);
+  const previousState = readChapterExecutionState(input.root, input.runId);
+  if (!previousManifest || !previousState) {
+    throw new Error("Chapter execution rebase requires an existing prepared manifest and execution state.");
+  }
+  assertStateMatches(previousState, previousManifest);
+
+  const manifest = compileChapterExecution(input, input.runId, previousManifest).manifest;
+  const state = initialState(manifest, manifest.created_at);
+  const capsules = rebaseCapsules(input.root, manifest);
+  const manifestPath = chapterExecutionManifestPath(input.root, input.runId, input.chapter);
+  const statePath = chapterExecutionStatePath(input.root, input.runId);
+  const capsulePaths = capsules.map((capsule) => activeContextCapsulePath(input.root, input.runId, capsule));
+  const changes: TransactionFileChange[] = [
+    ...capsules.map((capsule, index) => ({
+      path: transactionPath(input.root, capsulePaths[index]!),
+      content: serializeActiveContextCapsule(input.runId, capsule),
+    })),
+    { path: transactionPath(input.root, manifestPath), content: serializeChapterExecutionManifest(manifest) },
+    { path: transactionPath(input.root, statePath), content: serializeChapterExecutionState(state) },
+  ];
+  const capsuleRoot = transactionPath(input.root, join(input.root, ".pi-book", "runs", input.runId, "capsules"));
+  applyTransaction(input.root, changes, {
+    removePaths: [
+      transactionPath(input.root, join(input.root, ".pi-book", "runs", input.runId, "scenes")),
+      transactionPath(input.root, chapterStitchArtifactPath(input.root, input.runId, input.chapter)),
+      transactionPath(input.root, chapterValidationArtifactPath(input.root, input.runId, input.chapter)),
+      transactionPath(input.root, chapterCommitArtifactPath(input.root, input.runId, input.chapter)),
+    ],
+    replacePaths: [capsuleRoot],
+  });
+  return { manifest, manifestPath, state, statePath, capsules, capsulePaths };
 }

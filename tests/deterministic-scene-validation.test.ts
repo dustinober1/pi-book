@@ -30,7 +30,7 @@ function proseWords(count: number): string {
   return Array.from({ length: count }, (_, index) => index % 12 === 11 ? "checkpoint." : `word${index + 1}`).join(" ");
 }
 
-function capsule(): ActiveContextCapsule {
+function capsule(root: string): ActiveContextCapsule {
   return {
     schema_version: "1.0.0",
     capsule_id: capsuleId,
@@ -58,6 +58,7 @@ function capsule(): ActiveContextCapsule {
     },
     contract_hash: contractHash,
     story_index_hash: storyIndexHash,
+    project_hash: projectStateHash(root),
     opening_rules: ["Preserve canon."],
     records: [],
     previous_tail: null,
@@ -148,7 +149,7 @@ test("a structurally valid scene routes to concern-specific critic review", () =
   const draft = artifact(proseWords(160));
   const { parent, root, runId } = setup(draft);
   try {
-    const result = validateSceneDraft({ root, runId, capsule: capsule(), attempt: 1, now: "2026-07-22T00:01:00.000Z" });
+    const result = validateSceneDraft({ root, runId, capsule: capsule(root), attempt: 1, now: "2026-07-22T00:01:00.000Z" });
     assert.equal(result.artifact.passed, true);
     assert.equal(result.artifact.blocker_count, 0);
     assert.equal(result.artifact.next_node, "critic-review");
@@ -163,7 +164,7 @@ test("deterministic blockers route only to bounded span repair with exact codes"
   const draft = artifact("Here is the scene. ```markdown\n# Scene One\nMara waits.\n```");
   const { parent, root, runId } = setup(draft);
   try {
-    const result = validateSceneDraft({ root, runId, capsule: capsule(), attempt: 1 });
+    const result = validateSceneDraft({ root, runId, capsule: capsule(root), attempt: 1 });
     const codes = result.artifact.findings.map((finding) => finding.code);
     assert.equal(result.artifact.passed, false);
     assert.equal(result.artifact.next_node, "span-repair");
@@ -182,7 +183,7 @@ test("draft provenance corruption blocks without advancing execution state", () 
   const draft = artifact(prose, { output_hash: "f".repeat(64) });
   const { parent, root, runId } = setup(draft);
   try {
-    assert.throws(() => validateSceneDraft({ root, runId, capsule: capsule(), attempt: 1 }), /output hash|provenance|integrity/i);
+    assert.throws(() => validateSceneDraft({ root, runId, capsule: capsule(root), attempt: 1 }), /output hash|provenance|integrity/i);
     assert.equal(readChapterExecutionState(root, runId)?.current_node, "deterministic-validation");
     assert.equal(readSceneValidationArtifact(root, runId, sceneId, 1), null);
   } finally {

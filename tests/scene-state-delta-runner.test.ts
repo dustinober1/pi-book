@@ -25,7 +25,7 @@ const storyIndexHash = "b".repeat(64);
 const prose = "Mara crossed the maintenance corridor. Mara reached the terminal. The access light remained dark behind her.";
 const hash = (value: string) => createHash("sha256").update(value, "utf8").digest("hex");
 
-function capsule(): ActiveContextCapsule {
+function capsule(root: string): ActiveContextCapsule {
   return {
     schema_version: "1.0.0",
     capsule_id: "CAP-4444444444444444",
@@ -53,6 +53,7 @@ function capsule(): ActiveContextCapsule {
     },
     contract_hash: contractHash,
     story_index_hash: storyIndexHash,
+    project_hash: projectStateHash(root),
     opening_rules: ["Extract only evidence-grounded state and thread changes."],
     records: [
       {
@@ -143,7 +144,7 @@ test("matching evidence-grounded state and thread deltas route to scene acceptan
   const { parent, root, runId } = setup();
   try {
     const worker = new StubWorker(workerResult(JSON.stringify({ schema_version: "1.0.0", mutations: [matchingMutation], thread_changes: [matchingThreadChange] })));
-    const result = await runSceneStateDeltaExtraction({ root, runId, capsule: capsule(), draftAttempt: 1, runtimeProfile: "tiny-local", worker });
+    const result = await runSceneStateDeltaExtraction({ root, runId, capsule: capsule(root), draftAttempt: 1, runtimeProfile: "tiny-local", worker });
     assert.equal(worker.requests[0]?.jobType, "extract-state-delta");
     assert.ok(worker.requests[0]?.context?.endsWith("EXACT TASK\n- Extract the actual state delta for this scene.\n- Return one exact JSON object."));
     assert.equal(result.artifact.matches_expected, true);
@@ -157,7 +158,7 @@ test("matching evidence-grounded state and thread deltas route to scene acceptan
 test("missing expected mutation routes to span repair while old outputs without thread changes remain compatible", async () => {
   const { parent, root, runId } = setup();
   try {
-    const result = await runSceneStateDeltaExtraction({ root, runId, capsule: capsule(), draftAttempt: 1, runtimeProfile: "tiny-local", worker: new StubWorker(workerResult('{"schema_version":"1.0.0","mutations":[]}')) });
+    const result = await runSceneStateDeltaExtraction({ root, runId, capsule: capsule(root), draftAttempt: 1, runtimeProfile: "tiny-local", worker: new StubWorker(workerResult('{"schema_version":"1.0.0","mutations":[]}')) });
     assert.equal(result.artifact.next_action, "span-repair");
     assert.deepEqual(result.artifact.actual_thread_changes, []);
     assert.ok(result.artifact.mismatches.some((item) => item.code === "missing-expected-mutation"));
@@ -169,7 +170,7 @@ test("uncontracted thread changes block before scene acceptance", async () => {
   const { parent, root, runId } = setup();
   try {
     const threadChange = { ...matchingThreadChange, thread_id: "THREAD-OTHER" };
-    const result = await runSceneStateDeltaExtraction({ root, runId, capsule: capsule(), draftAttempt: 1, runtimeProfile: "tiny-local", worker: new StubWorker(workerResult(JSON.stringify({ schema_version: "1.0.0", mutations: [matchingMutation], thread_changes: [threadChange] }))) });
+    const result = await runSceneStateDeltaExtraction({ root, runId, capsule: capsule(root), draftAttempt: 1, runtimeProfile: "tiny-local", worker: new StubWorker(workerResult(JSON.stringify({ schema_version: "1.0.0", mutations: [matchingMutation], thread_changes: [threadChange] }))) });
     assert.equal(result.artifact.next_action, "blocked");
     assert.equal(result.state.blocker?.code, "needs-editorial-decision");
     assert.deepEqual(result.state.blocker?.record_ids, ["THREAD-OTHER"]);
@@ -180,7 +181,7 @@ test("unknown records block while hallucinated evidence remains retryable", asyn
   const unknown = setup();
   try {
     const mutation = { record_id: "STATE-UNKNOWN", field: "status", operation: "set", value: "open", evidence_quote: "Mara reached the terminal." };
-    const result = await runSceneStateDeltaExtraction({ root: unknown.root, runId: unknown.runId, capsule: capsule(), draftAttempt: 1, runtimeProfile: "tiny-local", worker: new StubWorker(workerResult(JSON.stringify({ schema_version: "1.0.0", mutations: [mutation] }))) });
+    const result = await runSceneStateDeltaExtraction({ root: unknown.root, runId: unknown.runId, capsule: capsule(unknown.root), draftAttempt: 1, runtimeProfile: "tiny-local", worker: new StubWorker(workerResult(JSON.stringify({ schema_version: "1.0.0", mutations: [mutation] }))) });
     assert.equal(result.artifact.next_action, "blocked");
     assert.equal(result.state.blocker?.code, "unknown-state-record");
   } finally { rmSync(unknown.parent, { recursive: true, force: true }); }
@@ -188,7 +189,7 @@ test("unknown records block while hallucinated evidence remains retryable", asyn
   const evidence = setup();
   try {
     const mutation = { ...matchingMutation, evidence_quote: "This quote does not exist." };
-    await assert.rejects(() => runSceneStateDeltaExtraction({ root: evidence.root, runId: evidence.runId, capsule: capsule(), draftAttempt: 1, runtimeProfile: "tiny-local", worker: new StubWorker(workerResult(JSON.stringify({ schema_version: "1.0.0", mutations: [mutation] }))) }), /evidence quote.*not found|exact evidence/i);
+    await assert.rejects(() => runSceneStateDeltaExtraction({ root: evidence.root, runId: evidence.runId, capsule: capsule(evidence.root), draftAttempt: 1, runtimeProfile: "tiny-local", worker: new StubWorker(workerResult(JSON.stringify({ schema_version: "1.0.0", mutations: [mutation] }))) }), /evidence quote.*not found|exact evidence/i);
     const state = readChapterExecutionState(evidence.root, evidence.runId)!;
     assert.equal(state.current_node, "state-delta");
     assert.equal(state.attempts[`${sceneId}:state-delta`], 1);

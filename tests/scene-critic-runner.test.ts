@@ -29,7 +29,7 @@ function hash(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
-function capsule(jobType: "critic-continuity" | "critic-style"): ActiveContextCapsule {
+function capsule(root: string, jobType: "critic-continuity" | "critic-style"): ActiveContextCapsule {
   return {
     schema_version: "1.0.0",
     capsule_id: jobType === "critic-continuity" ? "CAP-1111111111111111" : "CAP-2222222222222222",
@@ -57,6 +57,7 @@ function capsule(jobType: "critic-continuity" | "critic-style"): ActiveContextCa
     },
     contract_hash: contractHash,
     story_index_hash: storyIndexHash,
+    project_hash: projectStateHash(root),
     opening_rules: ["Use exact evidence from the candidate scene."],
     records: [],
     previous_tail: null,
@@ -197,7 +198,7 @@ test("one critic job reviews one concern and stores an independent artifact", as
     const result = await runSceneCriticJob({
       root,
       runId,
-      capsule: capsule("critic-continuity"),
+      capsule: capsule(root, "critic-continuity"),
       draftAttempt: 1,
       runtimeProfile: "tiny-local",
       worker,
@@ -227,7 +228,7 @@ test("critic findings require an exact bounded evidence quote from the candidate
       verdict: "repair",
       findings: [{ severity: "high", category: "continuity", evidence_quote: "The access panel stayed dark.", required_change: "Clarify why Mara continues after the failed credential." }],
     })));
-    const valid = await runSceneCriticJob({ root, runId, capsule: capsule("critic-continuity"), draftAttempt: 1, runtimeProfile: "tiny-local", worker: validWorker });
+    const valid = await runSceneCriticJob({ root, runId, capsule: capsule(root, "critic-continuity"), draftAttempt: 1, runtimeProfile: "tiny-local", worker: validWorker });
     assert.equal(valid.artifact.findings[0]?.evidence_quote, "The access panel stayed dark.");
 
     const hallucinatedWorker = new StubWorker(workerResult(JSON.stringify({
@@ -235,7 +236,7 @@ test("critic findings require an exact bounded evidence quote from the candidate
       verdict: "repair",
       findings: [{ severity: "high", category: "continuity", evidence_quote: "A sentence that is not in the draft.", required_change: "Repair it." }],
     })));
-    await assert.rejects(() => runSceneCriticJob({ root, runId, capsule: capsule("critic-style"), draftAttempt: 1, runtimeProfile: "tiny-local", worker: hallucinatedWorker }), /evidence quote.*not found|exact evidence/i);
+    await assert.rejects(() => runSceneCriticJob({ root, runId, capsule: capsule(root, "critic-style"), draftAttempt: 1, runtimeProfile: "tiny-local", worker: hallucinatedWorker }), /evidence quote.*not found|exact evidence/i);
     assert.equal(readSceneCriticArtifact(root, runId, sceneId, "critic-style", 1), null);
     assert.equal(readChapterExecutionState(root, runId)?.current_node, "critic-review");
   } finally {

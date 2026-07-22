@@ -62,6 +62,7 @@ function requireState(input: RunScenePlanJobInput): ChapterExecutionState {
   const sceneId = input.capsule.scene_contract.scene_id;
   if (state.current_scene_id !== sceneId) throw new Error(`Execution scene ${state.current_scene_id ?? "none"} does not match capsule scene ${sceneId}.`);
   if (state.project_hash !== projectStateHash(input.root)) throw new Error("Cannot plan scene because the project hash changed.");
+  if (input.capsule.project_hash !== state.project_hash) throw new Error("Cannot plan scene because the capsule project hash does not match the active project snapshot.");
   if (state.contract_hash !== input.capsule.contract_hash) throw new Error("Cannot plan scene because the contract hash changed.");
   if (state.canon_snapshot_hash !== input.capsule.story_index_hash) throw new Error("Cannot plan scene because the story index changed.");
   if (input.capsule.job_type !== "plan-scene") throw new Error(`Scene plan runner requires plan-scene, received ${input.capsule.job_type}.`);

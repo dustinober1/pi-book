@@ -38,6 +38,7 @@ export class ActiveContextCapsuleError extends Error {
 export interface BuildActiveContextCapsuleInput {
   storyIndex: StoryRecordIndex;
   sceneContract: SceneContract;
+  projectHash?: string;
   modelProfile: ModelExecutionProfile;
   jobType: ModelJobType;
   optionalRecordIds?: string[];
@@ -231,6 +232,7 @@ export function buildActiveContextCapsule(input: BuildActiveContextCapsuleInput)
   const contractHash = stableHash(input.sceneContract);
   const storyIndexHash = input.storyIndex.manifest.index_hash;
   const capsuleSeed = {
+    project_hash: input.projectHash ?? null,
     job_type: input.jobType,
     model_execution_profile: input.modelProfile.id,
     contract_hash: contractHash,
@@ -244,6 +246,7 @@ export function buildActiveContextCapsule(input: BuildActiveContextCapsuleInput)
   const capsule: ActiveContextCapsule = {
     schema_version: "1.0.0",
     capsule_id: `CAP-${stableHash(capsuleSeed).slice(0, 16).toUpperCase()}`,
+    ...(input.projectHash ? { project_hash: input.projectHash } : {}),
     job_type: input.jobType,
     model_execution_profile: input.modelProfile.id,
     scene_contract: structuredClone(input.sceneContract),

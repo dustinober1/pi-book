@@ -18,7 +18,7 @@ const contractHash = "a".repeat(64);
 const storyIndexHash = "b".repeat(64);
 const sceneId = "CH-001-SC-01-V1";
 
-function capsule(): ActiveContextCapsule {
+function capsule(root: string): ActiveContextCapsule {
   return {
     schema_version: "1.0.0", capsule_id: "CAP-0123456789ABCDEF", job_type: "draft-scene",
     model_execution_profile: "small-12b-q4",
@@ -30,7 +30,7 @@ function capsule(): ActiveContextCapsule {
       forbidden_changes: ["Do not identify the prior user."], knowledge_boundary_ids: [],
       target_words: { minimum: 150, maximum: 260 }, ending_requirement: "Reach the terminal unseen.",
     },
-    contract_hash: contractHash, story_index_hash: storyIndexHash, opening_rules: ["Preserve canon."], records: [],
+    contract_hash: contractHash, story_index_hash: storyIndexHash, project_hash: projectStateHash(root), opening_rules: ["Preserve canon."], records: [],
     previous_tail: null, style_card: null,
     closing_task: ["Draft only CH-001-SC-01-V1.", "Return scene prose only."],
     manifest: { included_record_ids: [], omitted_record_ids: [], missing_required_record_ids: [], unsafe_required_record_ids: [], dependency_edges: [], estimated_evidence_tokens: 120, maximum_evidence_tokens: 6000 },
@@ -82,7 +82,7 @@ class StubWorker implements QualityWorker {
 
 const sceneProse = "Mara held the revoked credential against the reader anyway. The panel stayed dark. She followed the maintenance conduit behind the terminal bank, counting each junction until the access light appeared beneath the floor grate. The route was narrow enough to force her onto one shoulder, but it kept her below the camera line. At the final turn, she heard the security door cycle behind her. She reached the terminal before the patrol entered the archive.";
 
-const draftInput = (root: string, runId: string, worker: QualityWorker) => ({ root, runId, capsule: capsule(), planAttempt: 1, runtimeProfile: "tiny-local" as const, worker });
+const draftInput = (root: string, runId: string, worker: QualityWorker) => ({ root, runId, capsule: capsule(root), planAttempt: 1, runtimeProfile: "tiny-local" as const, worker });
 
 test("one draft-scene job consumes one plan, stores one artifact, and advances only to deterministic validation", async () => {
   const { parent, root, runId } = setup();

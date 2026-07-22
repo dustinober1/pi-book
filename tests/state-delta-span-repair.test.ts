@@ -25,7 +25,7 @@ const storyIndexHash = "b".repeat(64);
 const prose = "Mara reached the terminal and pressed her revoked credential against the reader. The panel stayed dark while the patrol crossed the archive corridor.";
 const hash = (value: string) => createHash("sha256").update(value, "utf8").digest("hex");
 
-function capsule(): ActiveContextCapsule {
+function capsule(root: string): ActiveContextCapsule {
   return {
     schema_version: "1.0.0", capsule_id: "CAP-7777777777777777", job_type: "patch-spans",
     model_execution_profile: "small-12b-q4",
@@ -38,7 +38,7 @@ function capsule(): ActiveContextCapsule {
       forbidden_changes: [], knowledge_boundary_ids: [], target_words: { minimum: 20, maximum: 120 },
       ending_requirement: "Mara remains at the terminal.",
     },
-    contract_hash: contractHash, story_index_hash: storyIndexHash,
+    contract_hash: contractHash, story_index_hash: storyIndexHash, project_hash: projectStateHash(root),
     opening_rules: ["Repair only the mismatched state evidence."],
     records: [{
       id: "STATE-MARA-LOCATION", kind: "state", status: "current-state", authority: "established",
@@ -140,7 +140,7 @@ test("state-delta mismatches become bounded span-repair findings", async () => {
 
     const worker = new StubWorker();
     const repairInput = {
-      root, runId, capsule: capsule(), sourceDraftAttempt: 1, stateDeltaExtractionAttempt: 1,
+      root, runId, capsule: capsule(root), sourceDraftAttempt: 1, stateDeltaExtractionAttempt: 1,
       runtimeProfile: "tiny-local" as const, worker,
     };
     const result = await runSceneSpanRepair(repairInput);

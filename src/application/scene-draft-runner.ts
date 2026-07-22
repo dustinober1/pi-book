@@ -60,6 +60,7 @@ function requireExecutionState(input: RunSceneDraftJobInput): ChapterExecutionSt
   if (state.current_node !== "scene-draft") throw new Error(`Scene draft job requires scene-draft, current node is ${state.current_node}.`);
   if (state.current_scene_id !== input.capsule.scene_contract.scene_id) throw new Error(`Execution scene ${state.current_scene_id ?? "none"} does not match capsule scene ${input.capsule.scene_contract.scene_id}.`);
   if (state.project_hash !== projectStateHash(input.root)) throw new Error("Cannot draft scene because the project hash changed.");
+  if (input.capsule.project_hash !== state.project_hash) throw new Error("Cannot draft scene because the capsule project hash does not match the active project snapshot.");
   if (state.contract_hash !== input.capsule.contract_hash) throw new Error("Cannot draft scene because the contract hash changed.");
   if (state.canon_snapshot_hash !== input.capsule.story_index_hash) throw new Error("Cannot draft scene because the canon snapshot or story index changed.");
   if (input.capsule.job_type !== "draft-scene") throw new Error(`Scene draft runner requires a draft-scene capsule, received ${input.capsule.job_type}.`);
