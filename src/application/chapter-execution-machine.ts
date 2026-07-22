@@ -13,7 +13,7 @@ const TRANSITIONS = {
   "deterministic-validation": ["critic-review", "span-repair", "state-delta"],
   "critic-review": ["span-repair", "state-delta"],
   "span-repair": ["deterministic-validation"],
-  "state-delta": ["scene-accept"],
+  "state-delta": ["scene-accept", "span-repair"],
   "scene-accept": ["context-build", "chapter-stitch"],
   "chapter-stitch": ["chapter-validate"],
   "chapter-validate": ["chapter-commit"],
