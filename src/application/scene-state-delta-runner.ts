@@ -124,10 +124,12 @@ function contextWithCandidate(capsule: ActiveContextCapsule, draft: SceneDraftAr
 
 function deltaPrompt(): string {
   return [
-    "Return one exact JSON object with schema_version and mutations.",
-    "Report only state mutations that actually occur in the supplied scene candidate.",
+    "Return one exact JSON object with schema_version, mutations, and optional thread_changes.",
+    "Report only state mutations and story-thread changes that actually occur in the supplied scene candidate.",
     "Each mutation must include record_id, field, operation, value, and an exact evidence_quote copied from the candidate.",
-    "Use an empty mutations array when the scene changes no tracked state.",
+    "Each thread change must include thread_id, operation (opened, advanced, or resolved), description, and an exact evidence_quote copied from the candidate.",
+    "Report thread changes only for the active thread IDs in the scene contract.",
+    "Use empty arrays when the scene changes no tracked state or thread.",
     "Do not include Markdown fences or commentary outside the JSON object.",
   ].join("\n");
 }
@@ -153,6 +155,14 @@ function validateOutput(output: SceneStateDeltaOutput, draft: SceneDraftArtifact
     seen.add(key);
     if (!draft.prose.includes(mutation.evidence_quote)) {
       throw new Error(`State-delta exact evidence quote was not found in the candidate: ${mutation.evidence_quote}`);
+    }
+  }
+  const seenThreads = new Set<string>();
+  for (const change of output.thread_changes ?? []) {
+    if (seenThreads.has(change.thread_id)) throw new Error(`State-delta output duplicates thread change ${change.thread_id}.`);
+    seenThreads.add(change.thread_id);
+    if (!draft.prose.includes(change.evidence_quote)) {
+      throw new Error(`Thread-delta exact evidence quote was not found in the candidate: ${change.evidence_quote}`);
     }
   }
   return output;
@@ -268,8 +278,14 @@ export async function runSceneStateDeltaExtraction(
   ]);
   const mismatches = compareMutations(expectedMutations, output.mutations, knownRecordIds);
   const unknownRecords = [...new Set(mismatches.filter((item) => item.code === "unknown-record").map((item) => item.record_id))];
+  const activeThreadIds = new Set(input.capsule.scene_contract.active_thread_ids);
+  const uncontractedThreadIds = [...new Set((output.thread_changes ?? [])
+    .filter((item) => !activeThreadIds.has(item.thread_id))
+    .map((item) => item.thread_id))];
   const matchesExpected = mismatches.length === 0;
-  const nextAction = unknownRecords.length ? "blocked" : matchesExpected ? "scene-accept" : "span-repair";
+  const nextAction = unknownRecords.length || uncontractedThreadIds.length
+    ? "blocked"
+    : matchesExpected ? "scene-accept" : "span-repair";
   const outputHash = hashText(result.text.trim());
   const capsuleHash = stableHash(input.capsule);
   const usage: ModelCallReport = {
@@ -302,6 +318,7 @@ export async function runSceneStateDeltaExtraction(
     extraction_attempt: extractionAttempt,
     expected_mutations: expectedMutations,
     actual_mutations: output.mutations,
+    actual_thread_changes: output.thread_changes ?? [],
     mismatches,
     matches_expected: matchesExpected,
     next_action: nextAction,
@@ -316,7 +333,13 @@ export async function runSceneStateDeltaExtraction(
       message: `Scene ${sceneId} references state records that require a human canon decision.`,
       recordIds: unknownRecords,
     }, input.now)
-    : transitionChapterExecution(attempted, matchesExpected ? "scene-accept" : "span-repair", input.now, sceneId);
+    : uncontractedThreadIds.length
+      ? blockChapterExecution(attempted, {
+        code: "needs-editorial-decision",
+        message: `Scene ${sceneId} changes story threads outside the active scene contract.`,
+        recordIds: uncontractedThreadIds,
+      }, input.now)
+      : transitionChapterExecution(attempted, matchesExpected ? "scene-accept" : "span-repair", input.now, sceneId);
   writeChapterExecutionState(input.root, advanced);
   return { artifact, artifactPath, state: advanced, request };
 }

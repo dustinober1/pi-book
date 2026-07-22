@@ -1,5 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { SceneStateDeltaMutationSchema } from "./scene-state-delta-artifact.js";
+import { SceneStateDeltaMutationSchema, SceneThreadDeltaSchema } from "./scene-state-delta-artifact.js";
 
 const HashSchema = Type.String({ pattern: "^[a-f0-9]{64}$" });
 
@@ -16,13 +16,16 @@ export const ChapterCommitArtifactSchema = Type.Object({
   stitch_artifact_hash: HashSchema,
   validation_artifact_hash: HashSchema,
   stitch_output_hash: HashSchema,
-  manuscript_path: Type.String({ pattern: "^books/book-[0-9]{2}/manuscript/chapters/[^/]+\\.md$" }),
+  manuscript_path: Type.String({ pattern: "^books/book-[0-9]{2}/manuscript/chapters/[^/]+\.md$" }),
   manuscript_hash: HashSchema,
   state_ledger_path: Type.Union([Type.Literal("series/state-ledger.yaml"), Type.Null()]),
   state_ledger_hash: Type.Union([HashSchema, Type.Null()]),
-  delta_summary_path: Type.Optional(Type.String({ pattern: "^books/book-[0-9]{2}/deltas/CH-[0-9]{3}\\.yaml$" })),
+  story_threads_path: Type.Optional(Type.Literal("series/story-threads.yaml")),
+  story_threads_hash: Type.Optional(HashSchema),
+  delta_summary_path: Type.Optional(Type.String({ pattern: "^books/book-[0-9]{2}/deltas/CH-[0-9]{3}\.yaml$" })),
   delta_summary_hash: Type.Optional(HashSchema),
   applied_mutations: Type.Array(SceneStateDeltaMutationSchema, { maxItems: 60 }),
+  applied_thread_changes: Type.Optional(Type.Array(SceneThreadDeltaSchema, { maxItems: 60 })),
   changed_paths: Type.Array(Type.String({ minLength: 1 }), { uniqueItems: true }),
   git_message: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
   prepared_at: Type.String({ minLength: 1 }),

@@ -10,9 +10,25 @@ export const SceneStateDeltaMutationSchema = Type.Object({
 }, { additionalProperties: false });
 export type SceneStateDeltaMutation = Static<typeof SceneStateDeltaMutationSchema>;
 
+export const SceneThreadDeltaOperationSchema = Type.Union([
+  Type.Literal("opened"),
+  Type.Literal("advanced"),
+  Type.Literal("resolved"),
+]);
+export type SceneThreadDeltaOperation = Static<typeof SceneThreadDeltaOperationSchema>;
+
+export const SceneThreadDeltaSchema = Type.Object({
+  thread_id: Type.String({ minLength: 1 }),
+  operation: SceneThreadDeltaOperationSchema,
+  description: Type.String({ minLength: 1, maxLength: 500 }),
+  evidence_quote: Type.String({ minLength: 1, maxLength: 240 }),
+}, { additionalProperties: false });
+export type SceneThreadDelta = Static<typeof SceneThreadDeltaSchema>;
+
 export const SceneStateDeltaOutputSchema = Type.Object({
   schema_version: Type.Literal("1.0.0"),
   mutations: Type.Array(SceneStateDeltaMutationSchema, { maxItems: 12 }),
+  thread_changes: Type.Optional(Type.Array(SceneThreadDeltaSchema, { maxItems: 12 })),
 }, { additionalProperties: false });
 export type SceneStateDeltaOutput = Static<typeof SceneStateDeltaOutputSchema>;
 
@@ -44,6 +60,7 @@ export const SceneStateDeltaArtifactSchema = Type.Object({
   extraction_attempt: Type.Integer({ minimum: 1 }),
   expected_mutations: Type.Array(StateMutationSchema, { maxItems: 12 }),
   actual_mutations: Type.Array(SceneStateDeltaMutationSchema, { maxItems: 12 }),
+  actual_thread_changes: Type.Optional(Type.Array(SceneThreadDeltaSchema, { maxItems: 12 })),
   mismatches: Type.Array(SceneStateDeltaMismatchSchema, { maxItems: 24 }),
   matches_expected: Type.Boolean(),
   next_action: Type.Union([Type.Literal("scene-accept"), Type.Literal("span-repair"), Type.Literal("blocked")]),

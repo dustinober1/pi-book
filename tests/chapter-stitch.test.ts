@@ -33,6 +33,12 @@ function acceptance(sceneId: typeof sceneIds[number]): SceneAcceptanceArtifact {
     accepted_mutations: index === 0
       ? [{ record_id: "STATE-MARA-LOCATION", field: "location", operation: "set", value: "LOC-TERMINAL-1", evidence_quote: "reached the first terminal" }]
       : [{ record_id: "STATE-MARA-LOG", field: "custody", operation: "set", value: "secured", evidence_quote: "copied the final access log" }],
+    accepted_thread_changes: [{
+      thread_id: "THREAD-ACCESS",
+      operation: index === 0 ? "opened" : "advanced",
+      description: index === 0 ? "The access anomaly becomes an active thread." : "Mara secures new access evidence.",
+      evidence_quote: index === 0 ? "reached the first terminal" : "copied the final access log",
+    }],
     next_node: nextScene ? "context-build" : "chapter-stitch", next_scene_id: nextScene,
     accepted_at: `2026-07-22T00:00:0${index}.000Z`,
   };
@@ -54,7 +60,7 @@ function setup(options: { writeSecond?: boolean; acceptedIds?: string[]; corrupt
 
 const stitchInput = (root: string, runId: string) => ({ root, runId, chapterSceneIds: [...sceneIds], sceneContractHashes, draftAttempts: { [sceneIds[0]]: 1, [sceneIds[1]]: 1 } });
 
-test("ordered distinct scene contracts stitch into the chapter contract and route to validation", () => {
+test("ordered distinct scene contracts stitch state and thread deltas into the chapter contract", () => {
   const { parent, root, runId } = setup();
   try {
     const result = stitchAcceptedChapter({ ...stitchInput(root, runId), now: "2026-07-22T00:01:00.000Z" });
@@ -62,6 +68,7 @@ test("ordered distinct scene contracts stitch into the chapter contract and rout
     assert.equal(result.artifact.chapter_text, `${prose[sceneIds[0]]}\n\n${prose[sceneIds[1]]}`);
     assert.deepEqual(result.artifact.scenes.map((item) => item.contract_hash), [sceneContractHashes[sceneIds[0]], sceneContractHashes[sceneIds[1]]]);
     assert.equal(result.artifact.accepted_mutations.length, 2);
+    assert.deepEqual(result.artifact.accepted_thread_changes?.map((item) => item.operation), ["opened", "advanced"]);
     assert.equal(result.state.current_node, "chapter-validate");
     assert.deepEqual(readChapterStitchArtifact(root, runId, 1), result.artifact);
   } finally { rmSync(parent, { recursive: true, force: true }); }

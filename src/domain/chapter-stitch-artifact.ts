@@ -1,5 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { SceneStateDeltaMutationSchema } from "./scene-state-delta-artifact.js";
+import { SceneStateDeltaMutationSchema, SceneThreadDeltaSchema } from "./scene-state-delta-artifact.js";
 
 const HashSchema = Type.String({ pattern: "^[a-f0-9]{64}$" });
 const SceneIdSchema = Type.String({ pattern: "^CH-[0-9]{3}-SC-[0-9]{2}-V[0-9]+$" });
@@ -26,6 +26,7 @@ export const ChapterStitchArtifactSchema = Type.Object({
   word_count: Type.Integer({ minimum: 1 }),
   output_hash: HashSchema,
   accepted_mutations: Type.Array(SceneStateDeltaMutationSchema, { maxItems: 60 }),
+  accepted_thread_changes: Type.Optional(Type.Array(SceneThreadDeltaSchema, { maxItems: 60 })),
   next_node: Type.Literal("chapter-validate"),
   created_at: Type.String({ minLength: 1 }),
 }, { additionalProperties: false });

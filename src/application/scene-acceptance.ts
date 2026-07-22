@@ -97,6 +97,7 @@ export function acceptSceneCandidate(input: AcceptSceneCandidateInput): AcceptSc
     validation_artifact_hash: artifactHash(validation), critic_summary_artifact_hash: artifactHash(criticSummary),
     state_delta_artifact_hash: artifactHash(stateDelta), state_delta_extraction_attempt: input.stateDeltaExtractionAttempt,
     accepted_prose: draft.prose, word_count: draft.word_count, accepted_mutations: stateDelta.actual_mutations,
+    accepted_thread_changes: stateDelta.actual_thread_changes ?? [],
     next_node: nextNode, next_scene_id: nextSceneId, accepted_at: timestamp(input.now),
   };
   if (!Value.Check(SceneAcceptanceArtifactSchema, artifact)) throw new Error("Scene acceptance artifact failed schema validation.");

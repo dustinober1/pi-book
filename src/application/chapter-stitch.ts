@@ -77,6 +77,7 @@ export function stitchAcceptedChapter(input: StitchAcceptedChapterInput): Stitch
     scene_ids: [...input.chapterSceneIds], scenes, chapter_text: chapterText,
     word_count: countWords(chapterText), output_hash: hashText(chapterText),
     accepted_mutations: acceptances.flatMap((item) => item.accepted_mutations),
+    accepted_thread_changes: acceptances.flatMap((item) => item.accepted_thread_changes ?? []),
     next_node: "chapter-validate", created_at: timestamp(input.now),
   };
   if (!Value.Check(ChapterStitchArtifactSchema, artifact)) throw new Error("Chapter stitch artifact failed schema validation.");
