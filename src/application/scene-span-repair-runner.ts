@@ -27,6 +27,7 @@ import { readChapterExecutionState, writeChapterExecutionState } from "../infras
 import { readSceneCriticArtifact } from "../infrastructure/scene-critic-artifact-store.js";
 import { readSceneDraftArtifact, writeSceneDraftArtifact } from "../infrastructure/scene-draft-artifact-store.js";
 import { writeScenePatchArtifact } from "../infrastructure/scene-patch-artifact-store.js";
+import { readSceneStateDeltaArtifact } from "../infrastructure/scene-state-delta-artifact-store.js";
 import { readSceneValidationArtifact } from "../infrastructure/scene-validation-artifact-store.js";
 import { recordChapterExecutionAttempt, transitionChapterExecution } from "./chapter-execution-machine.js";
 import { projectStateHash } from "./project-hash.js";
@@ -46,6 +47,7 @@ export interface RunSceneSpanRepairInput {
   runtimeProfile: RuntimeProfileId;
   worker: QualityWorker;
   criticAttempts?: Partial<Record<SceneCriticJobType, number>>;
+  stateDeltaExtractionAttempt?: number;
   customModelProfile?: ModelExecutionProfile;
   provider?: string;
   model?: string;
@@ -92,6 +94,10 @@ function resolveModelProfile(capsule: ActiveContextCapsule, custom?: ModelExecut
 function requireState(input: RunSceneSpanRepairInput): ChapterExecutionState {
   if (!Number.isInteger(input.sourceDraftAttempt) || input.sourceDraftAttempt < 1) {
     throw new Error("Scene span repair requires a positive source draft attempt.");
+  }
+  if (input.stateDeltaExtractionAttempt !== undefined
+    && (!Number.isInteger(input.stateDeltaExtractionAttempt) || input.stateDeltaExtractionAttempt < 1)) {
+    throw new Error("Scene span repair requires a positive state-delta extraction attempt when supplied.");
   }
   const state = readChapterExecutionState(input.root, input.runId);
   if (!state) throw new Error(`Chapter execution state not found for ${input.runId}.`);
@@ -155,10 +161,37 @@ function activeRepairFindings(input: RunSceneSpanRepairInput, draft: SceneDraftA
       });
     });
   }
+  if (input.stateDeltaExtractionAttempt !== undefined) {
+    const artifact = readSceneStateDeltaArtifact(
+      input.root,
+      input.runId,
+      draft.scene_id,
+      input.sourceDraftAttempt,
+      input.stateDeltaExtractionAttempt,
+    );
+    if (!artifact) {
+      throw new Error(`State-delta repair source not found for draft ${input.sourceDraftAttempt} extraction attempt ${input.stateDeltaExtractionAttempt}.`);
+    }
+    if (artifact.draft_attempt !== input.sourceDraftAttempt
+      || artifact.draft_output_hash !== draft.output_hash
+      || artifact.contract_hash !== draft.contract_hash
+      || artifact.matches_expected
+      || artifact.next_action !== "span-repair"
+      || artifact.mismatches.length === 0) {
+      throw new Error("State-delta repair source does not match the active repairable draft.");
+    }
+    for (const mismatch of artifact.mismatches) {
+      findings.push({
+        ref: `state-delta:${mismatch.code}:${mismatch.record_id}:${mismatch.field}`,
+        message: mismatch.message,
+        evidenceQuote: null,
+      });
+    }
+  }
   const deduplicated = new Map<string, RepairFinding>();
   for (const item of findings) deduplicated.set(item.ref, item);
   const result = [...deduplicated.values()];
-  if (!result.length) throw new Error("Scene span repair has no active deterministic or critic findings.");
+  if (!result.length) throw new Error("Scene span repair has no active deterministic, critic, or state-delta findings.");
   return result;
 }
 
