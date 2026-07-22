@@ -16,6 +16,7 @@ import type { QualityWorker } from "../domain/quality-worker.js";
 import { readProject, requireProjectRoot } from "../project/store.js";
 import { resolveRuntimeProfile } from "../application/runtime-profile-resolver.js";
 import { parseDraftOptions, parseRunOptions } from "./arguments.js";
+import { registerChapterStepCommand } from "./chapter-step-command.js";
 import { registerNovelForge } from "./extension.js";
 import { PiPrintWorker } from "./pi-print-worker.js";
 
@@ -276,4 +277,5 @@ export function registerNovelForgeWithRecalibration(pi: ExtensionAPI, options: N
     },
   }) as ExtensionAPI;
   registerNovelForge(proxy);
+  registerChapterStepCommand(pi, options);
 }
