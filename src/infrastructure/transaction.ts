@@ -52,14 +52,22 @@ interface JournalRetired {
   had_original: boolean;
 }
 
+interface OperationalTransactionOwner {
+  pid: number;
+  token: string;
+}
+
 interface OperationalTransactionJournal {
   schema_version: "1.0.0";
+  owner: OperationalTransactionOwner;
   state: "prepared" | "applying" | "committed";
   writes: JournalWrite[];
   retired: JournalRetired[];
 }
 
 const TRANSACTION_NAME = /^TXN-[a-f0-9]{32}$/;
+const OWNER_TOKEN = /^[a-f0-9]{32}$/;
+const OPERATIONAL_RUNTIME_ROOTS = new Set(["runs", "cache", "index"]);
 
 function validateChange(change: TransactionFileChange): void {
   if (change.path.startsWith("/") || change.path.includes("..")) throw new Error(`Unsafe transaction path: ${change.path}`);
@@ -75,11 +83,11 @@ function validateOperationalPath(path: string, source: "request" | "journal"): v
   if (path.startsWith("/") || path.includes("\\") || parts.some((part) => !part || part === "." || part === "..")) {
     throw new Error(`Unsafe operational ${source} path: ${path}`);
   }
-  if (parts[0] !== ".pi-book" || parts.length < 2) {
-    throw new Error(`Operational ${source} paths must stay below .pi-book/: ${path}`);
-  }
-  if (parts[1] === "transactions") {
+  if (parts[0] === ".pi-book" && parts[1] === "transactions") {
     throw new Error(`Operational ${source} paths cannot target transaction journals: ${path}`);
+  }
+  if (parts[0] !== ".pi-book" || parts.length < 3 || !OPERATIONAL_RUNTIME_ROOTS.has(parts[1]!)) {
+    throw new Error(`Operational ${source} paths must stay below the .pi-book/runs/, .pi-book/cache/, or .pi-book/index/ runtime roots: ${path}`);
   }
 }
 
@@ -120,6 +128,127 @@ function objectWithKeys(value: unknown, keys: readonly string[]): value is Recor
   return actual.length === keys.length && actual.every((key, index) => key === [...keys].sort()[index]);
 }
 
+function parseOwner(value: unknown, source: "lock" | "journal"): OperationalTransactionOwner {
+  if (!objectWithKeys(value, ["pid", "token"])
+    || !Number.isSafeInteger(value.pid)
+    || Number(value.pid) <= 0
+    || typeof value.token !== "string"
+    || !OWNER_TOKEN.test(value.token)) {
+    throw new Error(`Operational transaction ${source} owner is invalid.`);
+  }
+  return { pid: Number(value.pid), token: value.token };
+}
+
+function processIsLive(pid: number): boolean {
+  if (pid === process.pid) return true;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ESRCH") return false;
+    if (code === "EPERM") return true;
+    throw error;
+  }
+}
+
+function lockRoot(root: string): string {
+  return join(transactionJournalRoot(root), "lock");
+}
+
+function readLockOwner(path: string): OperationalTransactionOwner {
+  let value: unknown;
+  try {
+    value = JSON.parse(readFileSync(join(path, "owner.json"), "utf8")) as unknown;
+  } catch (error) {
+    throw new Error("Operational transaction lock owner is unreadable.", { cause: error });
+  }
+  return parseOwner(value, "lock");
+}
+
+function sameOwner(left: OperationalTransactionOwner, right: OperationalTransactionOwner): boolean {
+  return left.pid === right.pid && left.token === right.token;
+}
+
+function lockConflict(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code;
+  return code === "EEXIST" || code === "ENOTEMPTY" || code === "EISDIR";
+}
+
+function cleanupStaleLocks(journalRoot: string): void {
+  for (const entry of readdirSync(journalRoot, { withFileTypes: true })) {
+    if (entry.isDirectory() && entry.name.startsWith(".stale-lock-")) {
+      rmSync(join(journalRoot, entry.name), { recursive: true, force: true });
+    }
+  }
+}
+
+function acquireOperationalTransactionLock(root: string): OperationalTransactionOwner {
+  const journalRoot = transactionJournalRoot(root);
+  mkdirSync(journalRoot, { recursive: true });
+  const owner: OperationalTransactionOwner = {
+    pid: process.pid,
+    token: randomUUID().replace(/-/g, ""),
+  };
+  const candidate = join(journalRoot, `.lock-candidate-${owner.token}`);
+  mkdirSync(candidate);
+  writeFileSync(join(candidate, "owner.json"), `${JSON.stringify(owner, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+  syncFile(join(candidate, "owner.json"));
+  syncDirectory(candidate);
+
+  try {
+    for (;;) {
+      try {
+        renameSync(candidate, lockRoot(root));
+        syncDirectory(journalRoot);
+        return owner;
+      } catch (error) {
+        if (!lockConflict(error)) {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT" && !existsSync(lockRoot(root))) continue;
+          throw error;
+        }
+      }
+
+      const current = readLockOwner(lockRoot(root));
+      if (processIsLive(current.pid)) {
+        throw new Error(`Operational transaction lock is held by live process ${current.pid}.`);
+      }
+      const stale = join(journalRoot, `.stale-lock-${current.token}`);
+      try {
+        renameSync(lockRoot(root), stale);
+        syncDirectory(journalRoot);
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code === "ENOENT" || lockConflict(error)) continue;
+        throw error;
+      }
+      const displaced = readLockOwner(stale);
+      if (!sameOwner(displaced, current)) {
+        throw new Error("Operational transaction lock changed during stale-owner takeover.");
+      }
+    }
+  } catch (error) {
+    rmSync(candidate, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+function releaseOperationalTransactionLock(root: string, owner: OperationalTransactionOwner): void {
+  const current = readLockOwner(lockRoot(root));
+  if (!sameOwner(current, owner)) {
+    throw new Error("Operational transaction lock token changed before release.");
+  }
+  const released = join(transactionJournalRoot(root), `.released-lock-${owner.token}`);
+  renameSync(lockRoot(root), released);
+  const displaced = readLockOwner(released);
+  if (!sameOwner(displaced, owner)) {
+    throw new Error("Operational transaction lock token changed during release.");
+  }
+  cleanupStaleLocks(transactionJournalRoot(root));
+  rmSync(released, { recursive: true, force: true });
+  syncDirectory(transactionJournalRoot(root));
+}
+
 function parseJournal(transactionRoot: string): OperationalTransactionJournal {
   const path = join(transactionRoot, "journal.json");
   let value: unknown;
@@ -128,13 +257,14 @@ function parseJournal(transactionRoot: string): OperationalTransactionJournal {
   } catch (error) {
     throw new Error("Interrupted operational transaction journal is unreadable.", { cause: error });
   }
-  if (!objectWithKeys(value, ["retired", "schema_version", "state", "writes"])
+  if (!objectWithKeys(value, ["owner", "retired", "schema_version", "state", "writes"])
     || value.schema_version !== "1.0.0"
     || !["prepared", "applying", "committed"].includes(String(value.state))
     || !Array.isArray(value.writes)
     || !Array.isArray(value.retired)) {
     throw new Error("Interrupted operational transaction journal is invalid.");
   }
+  const owner = parseOwner(value.owner, "journal");
   const writes: JournalWrite[] = value.writes.map((entry) => {
     if (!objectWithKeys(entry, ["covered_by_retired", "had_original", "path"])
       || typeof entry.path !== "string"
@@ -171,6 +301,7 @@ function parseJournal(transactionRoot: string): OperationalTransactionJournal {
   }
   const journal: OperationalTransactionJournal = {
     schema_version: "1.0.0",
+    owner,
     state: value.state as OperationalTransactionJournal["state"],
     writes,
     retired,
@@ -209,9 +340,8 @@ function restoreJournal(root: string, transactionRoot: string, journal: Operatio
   }
 }
 
-export function recoverInterruptedOperationalTransactions(root: string): string[] {
+function recoverInterruptedOperationalTransactionsWhileLocked(root: string): string[] {
   const journalRoot = transactionJournalRoot(root);
-  if (!existsSync(journalRoot)) return [];
   const recovered: string[] = [];
   const entries = readdirSync(journalRoot, { withFileTypes: true })
     .filter((entry) => TRANSACTION_NAME.test(entry.name))
@@ -226,11 +356,25 @@ export function recoverInterruptedOperationalTransactions(root: string): string[
       continue;
     }
     const journal = parseJournal(transactionRoot);
+    if (processIsLive(journal.owner.pid)) {
+      throw new Error(`Interrupted operational transaction journal belongs to live process ${journal.owner.pid}.`);
+    }
     if (journal.state !== "committed") restoreJournal(root, transactionRoot, journal);
     rmSync(transactionRoot, { recursive: true, force: true });
     recovered.push(entry.name);
   }
   return recovered;
+}
+
+export function recoverInterruptedOperationalTransactions(root: string): string[] {
+  const journalRoot = transactionJournalRoot(root);
+  if (!existsSync(journalRoot)) return [];
+  const owner = acquireOperationalTransactionLock(root);
+  try {
+    return recoverInterruptedOperationalTransactionsWhileLocked(root);
+  } finally {
+    releaseOperationalTransactionLock(root, owner);
+  }
 }
 
 function applyStandardTransaction(root: string, changes: TransactionFileChange[], options: TransactionOptions): TransactionResult {
@@ -340,6 +484,7 @@ function applyRecoverableOperationalTransaction(
   options: TransactionOptions,
   removePaths: string[],
   replacePaths: string[],
+  owner: OperationalTransactionOwner,
 ): TransactionResult {
   if (options.deriveChanges || options.gitCheckpoint || options.commitMessage) {
     throw new Error("Recoverable operational transactions cannot derive or checkpoint canonical changes.");
@@ -385,7 +530,7 @@ function applyRecoverableOperationalTransaction(
     throw error;
   }
 
-  let journal: OperationalTransactionJournal = { schema_version: "1.0.0", state: "prepared", writes, retired };
+  let journal: OperationalTransactionJournal = { schema_version: "1.0.0", owner, state: "prepared", writes, retired };
   writeJournal(transactionRoot, journal);
   journal = { ...journal, state: "applying" };
   writeJournal(transactionRoot, journal);
@@ -421,15 +566,22 @@ function applyRecoverableOperationalTransaction(
 }
 
 export function applyTransaction(root: string, changes: TransactionFileChange[], options: TransactionOptions = {}): TransactionResult {
-  recoverInterruptedOperationalTransactions(root);
   const removePaths = options.removePaths ?? [];
   const replacePaths = options.replacePaths ?? [];
   const hasOperationalMutation = removePaths.length > 0 || replacePaths.length > 0;
-  if (!changes.length && !options.deriveChanges && !hasOperationalMutation) return { changed: [], git: null };
-  if (options.simulateProcessExitAfter !== undefined && !hasOperationalMutation) {
-    throw new Error("Process-exit simulation requires a recoverable operational transaction.");
+  if (!hasOperationalMutation) {
+    recoverInterruptedOperationalTransactions(root);
+    if (!changes.length && !options.deriveChanges) return { changed: [], git: null };
+    if (options.simulateProcessExitAfter !== undefined) {
+      throw new Error("Process-exit simulation requires a recoverable operational transaction.");
+    }
+    return applyStandardTransaction(root, changes, options);
   }
-  return hasOperationalMutation
-    ? applyRecoverableOperationalTransaction(root, changes, options, removePaths, replacePaths)
-    : applyStandardTransaction(root, changes, options);
+  const owner = acquireOperationalTransactionLock(root);
+  try {
+    recoverInterruptedOperationalTransactionsWhileLocked(root);
+    return applyRecoverableOperationalTransaction(root, changes, options, removePaths, replacePaths, owner);
+  } finally {
+    releaseOperationalTransactionLock(root, owner);
+  }
 }

@@ -7,5 +7,6 @@ scripts/.novel-forge-test-*
 .pi-book/runs/
 .pi-book/cache/
 .pi-book/index/
+.pi-book/transactions/
 evals/quality/runs/
 .worktrees/
