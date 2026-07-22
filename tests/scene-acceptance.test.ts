@@ -95,13 +95,13 @@ test("accepting a non-final scene rolls active contract ownership to the next sc
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
-test("accepting the final ordered scene preserves chapter ownership and routes to chapter stitch", () => {
+test("accepting the final ordered scene restores chapter ownership and routes to chapter stitch", () => {
   const { parent, root, runId } = setup(scenes[1], [scenes[0]]);
   try {
     const result = acceptSceneCandidate(acceptanceInput(root, runId, scenes[1]));
     assert.equal(result.artifact.next_node, "chapter-stitch");
     assert.equal(result.state.current_node, "chapter-stitch");
-    assert.equal(result.state.contract_hash, sceneHash(scenes[1]));
+    assert.equal(result.state.contract_hash, chapterContractHash);
     assert.equal(result.state.chapter_contract_hash, chapterContractHash);
     assert.deepEqual(result.state.accepted_scene_ids, [...scenes]);
   } finally { rmSync(parent, { recursive: true, force: true }); }
@@ -115,12 +115,10 @@ test("mismatched delta, skipped prior scene, or missing next-scene hash blocks a
   } finally { rmSync(mismatch.parent, { recursive: true, force: true }); }
 
   const skipped = setup(scenes[1]);
-  try {
-    assert.throws(() => acceptSceneCandidate(acceptanceInput(skipped.root, skipped.runId, scenes[1])), /previous scene|order|CH-001-SC-01-V1/i);
-  } finally { rmSync(skipped.parent, { recursive: true, force: true }); }
+  try { assert.throws(() => acceptSceneCandidate(acceptanceInput(skipped.root, skipped.runId, scenes[1])), /previous scene|order|CH-001-SC-01-V1/i); }
+  finally { rmSync(skipped.parent, { recursive: true, force: true }); }
 
   const missingHash = setup(scenes[0]);
-  try {
-    assert.throws(() => acceptSceneCandidate({ ...acceptanceInput(missingHash.root, missingHash.runId, scenes[0]), chapterSceneContractHashes: { [scenes[0]]: sceneHash(scenes[0]) } }), /contract hash.*CH-001-SC-02|next scene.*hash/i);
-  } finally { rmSync(missingHash.parent, { recursive: true, force: true }); }
+  try { assert.throws(() => acceptSceneCandidate({ ...acceptanceInput(missingHash.root, missingHash.runId, scenes[0]), chapterSceneContractHashes: { [scenes[0]]: sceneHash(scenes[0]) } }), /contract hash.*CH-001-SC-02|next scene.*hash/i); }
+  finally { rmSync(missingHash.parent, { recursive: true, force: true }); }
 });
