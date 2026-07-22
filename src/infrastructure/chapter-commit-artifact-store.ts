@@ -9,7 +9,7 @@ function requireRunId(runId: string): void {
 }
 
 function requireChapter(chapter: number): void {
-  if (!Number.isInteger(chapter) || chapter < 1) throw new Error("Chapter commit artifact chapter must be a positive integer.");
+  if (!Number.isInteger(chapter) || chapter < 1) throw new Error("Chapter commit artifact requires a positive chapter number.");
 }
 
 export function chapterCommitArtifactPath(root: string, runId: string, chapter: number): string {
