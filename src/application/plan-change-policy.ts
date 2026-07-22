@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { Value } from "@sinclair/typebox/value";
-import { ChapterContractSchema } from "../domain/chapter-contract.js";
+import { ChapterContractSchema, type ChapterContract } from "../domain/chapter-contract.js";
 import { EntityRegistrySchema, type EntityRegistry } from "../domain/entity-registry.js";
 import { KnowledgeLedgerSchema, type KnowledgeLedger } from "../domain/knowledge-ledger.js";
 import {
@@ -12,6 +12,7 @@ import {
 import { ChapterQueueSchema, StoryThreadsSchema, type BookState, type ChapterQueueState, type StoryThreadsState } from "../domain/schemas.js";
 import { StateLedgerSchema, type StateLedger } from "../domain/state-ledger.js";
 import { isEstablishedStoryRecordStatus } from "../domain/story-record-status.js";
+import { normalizeStoryThreads } from "../domain/story-thread-v2.js";
 import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
 import { readText } from "../infrastructure/files.js";
 import type { FileChange } from "../infrastructure/transaction.js";
@@ -82,7 +83,7 @@ function fileMap(files: readonly FileChange[]): Map<string, string> {
 }
 
 function validateFutureContract(path: string, content: string, book: BookState, record: ApprovedPlanChangeRecord): void {
-  const contract = parseYaml(content, ChapterContractSchema, path);
+  const contract = parseYaml<ChapterContract>(content, ChapterContractSchema, path);
   if (contract.chapter <= book.current_chapter) throw new Error(`Plan change may update only a future chapter contract; Chapter ${contract.chapter} is already drafted or current.`);
   if (!record.affected_chapters.includes(contract.chapter)) throw new Error(`Plan-change record does not declare affected Chapter ${contract.chapter}.`);
   if (!record.affected_contract_ids.includes(contract.contract_id)) throw new Error(`Plan-change record does not declare affected contract ${contract.contract_id}.`);
@@ -158,8 +159,8 @@ function validateThreadHistory(root: string, content: string): void {
   const path = "series/story-threads.yaml";
   const currentText = readText(join(root, path));
   if (!currentText) return;
-  const before = parseYaml<StoryThreadsState>(currentText, StoryThreadsSchema, path);
-  const after = parseYaml<StoryThreadsState>(content, StoryThreadsSchema, path);
+  const before = normalizeStoryThreads(parseYaml<StoryThreadsState>(currentText, StoryThreadsSchema, path));
+  const after = normalizeStoryThreads(parseYaml<StoryThreadsState>(content, StoryThreadsSchema, path));
   const beforeById = new Map(before.threads.map((item) => [item.id, item]));
   for (const item of after.threads) {
     const prior = beforeById.get(item.id);
@@ -168,16 +169,28 @@ function validateThreadHistory(root: string, content: string): void {
       continue;
     }
     const protectedBefore = {
-      id: prior.id, type: prior.type, setup: prior.setup, reader_knows: prior.reader_knows,
-      characters_know: prior.characters_know, status: prior.status, intended_payoff: prior.intended_payoff,
+      id: prior.id,
+      type: prior.type,
+      setup: prior.setup,
+      reader_knows: prior.reader_knows,
+      characters_know: prior.characters_know,
+      status: prior.status,
+      intended_payoff: prior.intended_payoff,
       last_advanced_in: prior.last_advanced_in,
-      ...(before.schema_version === "2.0.0" ? { opened_in: prior.opened_in, last_touched_in: prior.last_touched_in } : {}),
+      opened_in: prior.opened_in,
+      last_touched_in: prior.last_touched_in,
     };
     const protectedAfter = {
-      id: item.id, type: item.type, setup: item.setup, reader_knows: item.reader_knows,
-      characters_know: item.characters_know, status: item.status, intended_payoff: item.intended_payoff,
+      id: item.id,
+      type: item.type,
+      setup: item.setup,
+      reader_knows: item.reader_knows,
+      characters_know: item.characters_know,
+      status: item.status,
+      intended_payoff: item.intended_payoff,
       last_advanced_in: item.last_advanced_in,
-      ...(after.schema_version === "2.0.0" ? { opened_in: item.opened_in, last_touched_in: item.last_touched_in } : {}),
+      opened_in: item.opened_in,
+      last_touched_in: item.last_touched_in,
     };
     if (canonical(protectedBefore) !== canonical(protectedAfter)) throw new Error(`Plan change cannot alter accepted history for story thread ${item.id}.`);
   }
