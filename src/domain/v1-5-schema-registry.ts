@@ -4,6 +4,7 @@ import { ChapterDeltaSummarySchema } from "./chapter-delta-summary.js";
 import { EntityRegistrySchema } from "./entity-registry.js";
 import { HistoricalContextSchema, InventionLedgerSchema } from "./historical-fiction.js";
 import { KnowledgeLedgerSchema } from "./knowledge-ledger.js";
+import { ApprovedPlanChangeRecordSchema } from "./plan-change-request.js";
 import { StateLedgerSchema } from "./state-ledger.js";
 import { ThrillerEvidenceLedgerSchema } from "./thriller-evidence.js";
 
@@ -13,6 +14,7 @@ const registry: Array<[RegExp, TSchema]> = [
   [/^books\/book-[0-9]{2}\/thriller-evidence\.yaml$/, ThrillerEvidenceLedgerSchema],
   [/^books\/book-[0-9]{2}\/contracts\/chapters\/CH-[0-9]{3}\.yaml$/, ChapterContractSchema],
   [/^books\/book-[0-9]{2}\/deltas\/CH-[0-9]{3}\.yaml$/, ChapterDeltaSummarySchema],
+  [/^books\/book-[0-9]{2}\/plan-changes\/PC-[0-9]{3}\.yaml$/, ApprovedPlanChangeRecordSchema],
   [/^series\/entity-registry\.yaml$/, EntityRegistrySchema],
   [/^series\/state-ledger\.yaml$/, StateLedgerSchema],
   [/^series\/knowledge-ledger\.yaml$/, KnowledgeLedgerSchema],

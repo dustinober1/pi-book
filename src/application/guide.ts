@@ -5,11 +5,12 @@ import { listChapterFiles, readText } from "../infrastructure/files.js";
 import { readBook, readProject } from "../project/store.js";
 import { hasExecutableContext } from "./context-inspection.js";
 import { gateDetail, gateEvidencePaths } from "./gate-metadata.js";
+import { listPendingPlanChangeRequests } from "./plan-change.js";
 import { getProjectStatus } from "./status.js";
 
 export type GuideActionId =
   | "continue" | "approve" | "request-changes" | "view-evidence" | "repair"
-  | "status" | "budget" | "context" | "readers" | "research" | "premise" | "resume-run" | "pause-run" | "cancel-run"
+  | "status" | "budget" | "context" | "readers" | "research" | "premise" | "plan-change" | "resume-run" | "pause-run" | "cancel-run"
   | "adopt" | "add-book" | "advanced";
 
 export interface GuideAction {
@@ -104,6 +105,14 @@ export function buildGuideScreen(root: string): GuideScreen {
   const manuscriptEmpty = listChapterFiles(join(root, "books", book.book_id)).length === 0;
   if (manuscriptEmpty && ["voice-intake", "series-planning", "book-planning", "chapter-queue"].includes(project.current_stage)) {
     actions.push(action("adopt", "Adopt an existing manuscript", "Preview and map DOCX, EPUB, Markdown, text, or chapter files without changing the source."));
+  }
+  const pendingPlanChanges = listPendingPlanChangeRequests(root);
+  if (pendingPlanChanges.length) {
+    actions.push(action(
+      "plan-change",
+      pendingPlanChanges.length === 1 ? `Review plan change ${pendingPlanChanges[0]!.request_id}` : `Review ${pendingPlanChanges.length} plan changes`,
+      "Inspect evidence-grounded future-plan deviations and approve or reject them through the writer gate.",
+    ));
   }
   if (hasExecutableContext(root)) actions.push(action("context", "Inspect active context", "Show the exact record IDs, inclusion reasons, dependencies, omissions, and token budget for the next executable scene without exposing record payloads."));
   if (readerStage(project.current_stage)) actions.push(action("readers", "Reader evidence", "Prepare isolated reader kits or preview and merge human-response CSVs."));
