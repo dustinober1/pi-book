@@ -6,6 +6,7 @@ const SceneIdSchema = Type.String({ pattern: "^CH-[0-9]{3}-SC-[0-9]{2}-V[0-9]+$"
 
 export const ChapterStitchSceneSchema = Type.Object({
   scene_id: SceneIdSchema,
+  contract_hash: HashSchema,
   draft_attempt: Type.Integer({ minimum: 1 }),
   draft_output_hash: HashSchema,
   acceptance_artifact_hash: HashSchema,
@@ -28,5 +29,4 @@ export const ChapterStitchArtifactSchema = Type.Object({
   next_node: Type.Literal("chapter-validate"),
   created_at: Type.String({ minLength: 1 }),
 }, { additionalProperties: false });
-
 export type ChapterStitchArtifact = Static<typeof ChapterStitchArtifactSchema>;
