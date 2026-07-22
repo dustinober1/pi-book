@@ -1,24 +1,36 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
+import { Value } from "@sinclair/typebox/value";
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
 import type { ChapterStitchArtifact } from "../domain/chapter-stitch-artifact.js";
 import type { ChapterValidationArtifact } from "../domain/chapter-validation-artifact.js";
-import type { ChapterCommitArtifact } from "../domain/chapter-commit-artifact.js";
-import { ChapterCommitArtifactSchema } from "../domain/chapter-commit-artifact.js";
-import { ChapterQueueSchema, type ChapterQueueState } from "../domain/schemas.js";
+import { ChapterCommitArtifactSchema, type ChapterCommitArtifact } from "../domain/chapter-commit-artifact.js";
+import {
+  ChapterQueueSchema,
+  GenreConfigSchema,
+  type BookState,
+  type ChapterQueueState,
+  type GenreConfig,
+  type ProjectState,
+} from "../domain/schemas.js";
 import type { SceneStateDeltaMutation } from "../domain/scene-state-delta-artifact.js";
 import { StateLedgerSchema, type StateLedger } from "../domain/state-ledger.js";
-import { readText } from "../infrastructure/files.js";
-import { Value } from "@sinclair/typebox/value";
+import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
+import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import { readChapterCommitArtifact, writeChapterCommitArtifact } from "../infrastructure/chapter-commit-artifact-store.js";
 import { readChapterExecutionState, writeChapterExecutionState } from "../infrastructure/chapter-execution-store.js";
 import { readChapterStitchArtifact } from "../infrastructure/chapter-stitch-artifact-store.js";
 import { readChapterValidationArtifact } from "../infrastructure/chapter-validation-artifact-store.js";
+import type { FileChange } from "../infrastructure/transaction.js";
 import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
+import { getProfile } from "../profiles/index.js";
 import { readBook, readProject } from "../project/store.js";
+import { actBoundaryFindings, requiredMilestoneGate } from "./act-boundaries.js";
+import { appendMilestoneVoiceAudit } from "./audit-events.js";
 import { transitionChapterExecution } from "./chapter-execution-machine.js";
-import { applyNovelEvent } from "./events.js";
+import { applyGuidedProjectEvent } from "./handoff.js";
+import { compactPacketWindow, packetWindowDecision } from "./packet-window.js";
 import { projectStateHash } from "./project-hash.js";
 import { rebuildStoryRecordIndex, readStoryRecordIndex } from "./rebuild-story-index.js";
 
@@ -45,6 +57,11 @@ interface PreparedCommit {
   validation: ChapterValidationArtifact;
   manuscriptContent: string;
   stateLedgerContent: string | null;
+}
+
+interface InternalCommitEventResult {
+  changed: string[];
+  gitMessage: string | null;
 }
 
 function hashText(value: string): string {
@@ -163,12 +180,16 @@ function requireValidation(root: string, runId: string, chapter: number, stitch:
   return validation;
 }
 
+function readQueue(root: string, bookId: string): ChapterQueueState {
+  const path = `books/${bookId}/chapter-queue.yaml`;
+  const text = readText(join(root, path));
+  if (text === null) throw new Error("Chapter commit requires the active chapter queue.");
+  return parseYaml<ChapterQueueState>(text, ChapterQueueSchema, path);
+}
+
 function manuscriptPath(root: string, chapter: number): string {
   const book = readBook(root);
-  const queueText = readText(join(root, "books", book.book_id, "chapter-queue.yaml"));
-  if (queueText === null) throw new Error("Chapter commit requires the active chapter queue.");
-  const queue = parseYaml<ChapterQueueState>(queueText, ChapterQueueSchema, `books/${book.book_id}/chapter-queue.yaml`);
-  const packet = queue.packets.find((item) => item.chapter === chapter);
+  const packet = readQueue(root, book.book_id).packets.find((item) => item.chapter === chapter);
   if (!packet) throw new Error(`Chapter ${chapter} packet not found for canonical commit.`);
   return `books/${book.book_id}/manuscript/chapters/${String(chapter).padStart(2, "0")}-${slug(packet.title)}.md`;
 }
@@ -191,15 +212,13 @@ function buildPreparation(input: CommitValidatedChapterInput, state: ChapterExec
     const ledgerText = readText(join(input.root, STATE_LEDGER_PATH));
     if (ledgerText === null) throw new Error("Chapter commit mutations require series/state-ledger.yaml.");
     const ledger = parseYaml<StateLedger>(ledgerText, StateLedgerSchema, STATE_LEDGER_PATH);
-    const updated = applyAcceptedStateMutations(ledger, stitch.accepted_mutations, {
+    stateLedgerContent = stringifyYaml(applyAcceptedStateMutations(ledger, stitch.accepted_mutations, {
       runId: input.runId,
       bookId: book.book_id,
       chapter: input.chapter,
-    });
-    stateLedgerContent = stringifyYaml(updated);
+    }));
     stateLedgerHash = hashText(stateLedgerContent);
   }
-  const preparedAt = timestamp(input.now);
   const artifact: ChapterCommitArtifact = {
     schema_version: "1.0.0",
     run_id: input.runId,
@@ -220,11 +239,109 @@ function buildPreparation(input: CommitValidatedChapterInput, state: ChapterExec
     applied_mutations: stitch.accepted_mutations,
     changed_paths: [],
     git_message: null,
-    prepared_at: preparedAt,
+    prepared_at: timestamp(input.now),
     committed_at: null,
   };
   if (!Value.Check(ChapterCommitArtifactSchema, artifact)) throw new Error("Prepared chapter commit artifact failed schema validation.");
   return { artifact, stitch, validation, manuscriptContent: stitch.chapter_text, stateLedgerContent };
+}
+
+function chapterNumber(path: string): number | null {
+  const match = basename(path).match(/^0*(\d+)(?:[-_ .]|$)/);
+  return match ? Number.parseInt(match[1] ?? "", 10) : null;
+}
+
+function projectedWordCount(root: string, bookId: string, changes: readonly FileChange[]): number {
+  const content = new Map<number, string>();
+  for (const path of listChapterFiles(join(root, "books", bookId))) {
+    const number = chapterNumber(path);
+    if (number !== null) content.set(number, readText(path) ?? "");
+  }
+  for (const change of changes) if (change.path.startsWith(`books/${bookId}/manuscript/chapters/`)) {
+    const number = chapterNumber(change.path);
+    if (number !== null) content.set(number, change.content);
+  }
+  return [...content.values()].reduce((sum, text) => sum + countWords(text), 0);
+}
+
+function setChange(changes: FileChange[], path: string, content: string): void {
+  const existing = changes.find((item) => item.path === path);
+  if (existing) existing.content = content;
+  else changes.push({ path, content });
+}
+
+function readPlot(root: string, bookId: string): PlotGridPhase4 {
+  const path = `books/${bookId}/plot-grid.yaml`;
+  const text = readText(join(root, path));
+  if (text === null) throw new Error("Chapter commit requires the approved plot grid.");
+  return parseYaml<PlotGridPhase4>(text, PlotGridPhase4Schema, path);
+}
+
+function validateInternalDraftCommit(root: string, project: ProjectState, book: BookState, queue: ChapterQueueState, plot: PlotGridPhase4, chapter: number): void {
+  if (project.current_stage !== "drafting") throw new Error(`Validated chapter commit is not allowed during ${project.current_stage}.`);
+  const packet = queue.packets.find((item) => item.chapter === chapter);
+  if (!packet) throw new Error(`Chapter ${chapter} packet not found.`);
+  if (packet.status !== "ready") throw new Error(`Chapter ${chapter} packet is ${packet.status}, not ready.`);
+  const genrePath = `books/${book.book_id}/genre.yaml`;
+  const genreText = readText(join(root, genrePath));
+  if (genreText === null) throw new Error("Validated chapter commit requires genre.yaml.");
+  const genre = parseYaml<GenreConfig>(genreText, GenreConfigSchema, genrePath);
+  const findings = [
+    ...getProfile(book.profile).validateGenreConfig(genre),
+    ...getProfile(book.profile).validatePacket(packet),
+    ...actBoundaryFindings(plot).map((item) => ({ severity: item.severity, message: item.message })),
+  ];
+  if (!plot.chapters.some((item) => item.chapter === chapter)) findings.push({ severity: "blocker", message: `Plot grid has no entry for Chapter ${chapter}.` });
+  const expectedGate = requiredMilestoneGate(plot, chapter);
+  if (packet.milestone_gate && packet.milestone_gate !== expectedGate) {
+    findings.push({ severity: "blocker", message: `Chapter ${chapter} packet gate ${packet.milestone_gate} disagrees with plot-derived gate ${expectedGate ?? "none"}.` });
+  }
+  const blockers = findings.filter((item) => item.severity === "blocker");
+  if (blockers.length) throw new Error(`Validated chapter commit failed packet validation:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+}
+
+function applyInternalDraftCommit(root: string, prepared: PreparedCommit): InternalCommitEventResult {
+  const project = structuredClone(readProject(root));
+  const book = structuredClone(readBook(root));
+  if (projectStateHash(root) !== prepared.artifact.project_hash_before) throw new Error("Stale project hash before validated chapter commit.");
+  const queue = readQueue(root, book.book_id);
+  const plot = readPlot(root, book.book_id);
+  validateInternalDraftCommit(root, project, book, queue, plot, prepared.artifact.chapter);
+  const packet = queue.packets.find((item) => item.chapter === prepared.artifact.chapter)!;
+  const changes: FileChange[] = [{ path: prepared.artifact.manuscript_path, content: prepared.manuscriptContent }];
+  if (prepared.stateLedgerContent !== null) changes.push({ path: STATE_LEDGER_PATH, content: prepared.stateLedgerContent });
+
+  packet.status = "drafted";
+  const compacted = compactPacketWindow(queue);
+  setChange(changes, `books/${book.book_id}/chapter-queue.yaml`, stringifyYaml(compacted));
+  appendMilestoneVoiceAudit(root, changes, book, { eventType: "draft-chapter", chapter: prepared.artifact.chapter });
+  book.current_chapter = Math.max(book.current_chapter, prepared.artifact.chapter);
+  book.actual_words = projectedWordCount(root, book.book_id, changes);
+  book.status = "drafting";
+  if (prepared.artifact.chapter === 1 && project.automation.require_first_chapter_approval && project.gates["first-chapter-approval"] !== "approved") {
+    project.gates["first-chapter-approval"] = "pending";
+    project.next_gate = "first-chapter-approval";
+    project.current_stage = "drafting";
+  } else if (requiredMilestoneGate(plot, prepared.artifact.chapter)) {
+    const milestoneGate = requiredMilestoneGate(plot, prepared.artifact.chapter)!;
+    if (!(milestoneGate in project.gates)) throw new Error(`Unknown milestone gate: ${milestoneGate}`);
+    project.gates[milestoneGate] = "pending";
+    project.next_gate = milestoneGate;
+    project.current_stage = "act-review";
+    book.act_checkpoint = milestoneGate;
+  } else {
+    const manuscriptNumbers = new Set(listChapterFiles(join(root, "books", book.book_id)).map(chapterNumber).filter((item): item is number => item !== null));
+    manuscriptNumbers.add(prepared.artifact.chapter);
+    const window = packetWindowDecision(compacted, plot, manuscriptNumbers);
+    project.current_stage = window.allPlannedComplete ? "manuscript-review" : window.needsRefill ? "chapter-queue" : "drafting";
+    project.next_gate = null;
+  }
+  setChange(changes, "PROJECT.yaml", stringifyYaml(project));
+  setChange(changes, `books/${book.book_id}/BOOK.yaml`, stringifyYaml(book));
+  const applied = applyGuidedProjectEvent(root, changes, `Novel Forge: draft-chapter chapter-${prepared.artifact.chapter}`, {
+    lastAction: `draft-chapter chapter ${prepared.artifact.chapter}`,
+  });
+  return { changed: applied.changed, gitMessage: applied.git.message };
 }
 
 function actualHash(root: string, path: string): string | null {
@@ -242,7 +359,7 @@ function finishCommit(
   input: CommitValidatedChapterInput,
   prepared: ChapterCommitArtifact,
   state: ChapterExecutionState,
-  event: { changed: string[]; gitMessage: string | null } | null,
+  event: InternalCommitEventResult | null,
   recovered: boolean,
 ): CommitValidatedChapterResult {
   if (!canonicalFilesMatch(input.root, prepared)) throw new Error("Canonical chapter commit files do not match the prepared journal.");
@@ -256,12 +373,7 @@ function finishCommit(
     }
     completed = transitionChapterExecution(completed, "complete", input.now, completed.current_scene_id ?? undefined);
   }
-  completed = {
-    ...completed,
-    project_hash: currentHash,
-    canon_snapshot_hash: index.manifest.index_hash,
-    updated_at: timestamp(input.now),
-  };
+  completed = { ...completed, project_hash: currentHash, canon_snapshot_hash: index.manifest.index_hash, updated_at: timestamp(input.now) };
   writeChapterExecutionState(input.root, completed);
   const changed = event?.changed ?? [prepared.manuscript_path, ...(prepared.state_ledger_path ? [prepared.state_ledger_path] : [])];
   const committed: ChapterCommitArtifact = {
@@ -281,13 +393,11 @@ function finishCommit(
 export function commitValidatedChapter(input: CommitValidatedChapterInput): CommitValidatedChapterResult {
   const state = requireExecution(input.root, input.runId, input.chapter);
   const existing = readChapterCommitArtifact(input.root, input.runId, input.chapter);
-  if (existing?.status === "committed") {
-    return finishCommit(input, existing, state, null, true);
-  }
+  if (existing?.status === "committed") return finishCommit(input, existing, state, null, true);
   if (existing?.status === "prepared" && canonicalFilesMatch(input.root, existing)) {
     const book = readBook(input.root);
     if (projectStateHash(input.root) === existing.project_hash_before || book.current_chapter < input.chapter) {
-      throw new Error("Prepared chapter files exist without a completed canonical draft event.");
+      throw new Error("Prepared chapter files exist without a completed canonical draft transaction.");
     }
     return finishCommit(input, existing, state, null, true);
   }
@@ -299,19 +409,8 @@ export function commitValidatedChapter(input: CommitValidatedChapterInput): Comm
       || existing.state_ledger_hash !== prepared.artifact.state_ledger_hash) {
       throw new Error("Existing prepared chapter commit no longer matches the active run artifacts.");
     }
-  } else {
-    writeChapterCommitArtifact(input.root, prepared.artifact);
-  }
-  const project = readProject(input.root);
-  const files = [{ path: prepared.artifact.manuscript_path, content: prepared.manuscriptContent }];
-  if (prepared.stateLedgerContent !== null) files.push({ path: STATE_LEDGER_PATH, content: prepared.stateLedgerContent });
-  const event = applyNovelEvent(input.root, {
-    eventType: "draft-chapter",
-    expectedStage: project.current_stage,
-    expectedProjectHash: prepared.artifact.project_hash_before,
-    chapter: input.chapter,
-    files,
-  });
+  } else writeChapterCommitArtifact(input.root, prepared.artifact);
+  const event = applyInternalDraftCommit(input.root, prepared);
   input.onEventApplied?.();
-  return finishCommit(input, prepared.artifact, state, { changed: event.changed, gitMessage: event.gitMessage }, false);
+  return finishCommit(input, prepared.artifact, state, event, false);
 }
