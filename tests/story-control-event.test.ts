@@ -25,14 +25,48 @@ test("series planning may update all canonical story controls in one guarded eve
   const { parent, root } = setup("series-planning");
   try {
     const files = [
-      "series/series-bible.md",
-      "series/series-arc.yaml",
-      "series/canon.yaml",
-      "series/story-threads.yaml",
-      "series/entity-registry.yaml",
-      "series/state-ledger.yaml",
-      "series/knowledge-ledger.yaml",
-    ].map((path) => ({ path, content: text(root, path) }));
+      { path: "series/series-bible.md", content: text(root, "series/series-bible.md") },
+      { path: "series/series-arc.yaml", content: text(root, "series/series-arc.yaml") },
+      { path: "series/canon.yaml", content: text(root, "series/canon.yaml") },
+      { path: "series/story-threads.yaml", content: text(root, "series/story-threads.yaml") },
+      { path: "series/entity-registry.yaml", content: stringifyYaml({
+        schema_version: "1.0.0",
+        entities: [{
+          id: "CHAR-MARA",
+          entity_type: "character",
+          canonical_name: "Mara Vale",
+          aliases: ["Mara"],
+          status: "current-state",
+        }],
+      }) },
+      { path: "series/state-ledger.yaml", content: stringifyYaml({
+        schema_version: "1.0.0",
+        records: [{
+          id: "STATE-MARA-LOCATION",
+          subject_id: "CHAR-MARA",
+          field: "location",
+          value: "LOC-ARCHIVE",
+          status: "current-state",
+          source: "author-interview",
+          introduced_in: "series-plan",
+          updated_in: "series-plan",
+          evidence_ids: [],
+        }],
+      }) },
+      { path: "series/knowledge-ledger.yaml", content: stringifyYaml({
+        schema_version: "1.0.0",
+        records: [{
+          id: "KNOW-MARA-ARCHIVE",
+          knower_id: "CHAR-MARA",
+          fact_id: "FACT-ARCHIVE-EXISTS",
+          knowledge_state: "knows",
+          status: "current-state",
+          source: "author-interview",
+          introduced_in: "series-plan",
+          evidence_ids: [],
+        }],
+      }) },
+    ];
     const result = applyNovelEvent(root, {
       eventType: "series-plan",
       expectedStage: "series-planning",
