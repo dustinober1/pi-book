@@ -105,6 +105,19 @@ test("repair and correction loops remain capped", () => {
   }
 });
 
+test("fixed ceilings cover each tier's declared conditional chapter repair capacity", () => {
+  for (const tier of tiers) {
+    const plan = buildQualityJobPlan({ tier, risk: { key_scene: true, factuality_required: true } });
+    const conditionalChapterJobs = plan.jobs.filter((job) => job.scope === "chapter" && job.kind === "model" && job.conditional);
+    const conditionalCalls = conditionalChapterJobs.reduce((sum, job) => sum + job.maximum_calls, 0);
+    const conditionalTokens = conditionalChapterJobs.reduce((sum, job) => sum + job.maximum_calls * job.estimated_output_tokens, 0);
+    assert.ok(plan.planned_model_calls + conditionalCalls <= plan.limits.maximum_model_calls, `${tier} call ceiling excludes its repair path`);
+    assert.ok(plan.planned_generated_tokens + conditionalTokens <= plan.limits.maximum_generated_tokens, `${tier} token ceiling excludes its repair path`);
+  }
+  const premiumRepair = buildQualityJobPlan({ tier: "premium", risk: { key_scene: true, factuality_required: true } }).jobs.find((job) => job.id === "patch-spans");
+  assert.equal(premiumRepair?.maximum_calls, 3);
+});
+
 test("editorial book review jobs are deferred from the chapter call budget", () => {
   const plan = buildQualityJobPlan({ tier: "editorial", risk: { key_scene: true, factuality_required: true } });
   const bookJobs = plan.jobs.filter((job) => job.scope === "book");
