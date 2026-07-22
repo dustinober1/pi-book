@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { draftStageSpec } from "../src/application/stage-specs/index.js";
+import { sceneExecutionDraftStageSpec } from "../src/application/stage-specs/draft-execution.js";
 import { chapterContractPath } from "../src/domain/chapter-contract.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import { readChapterExecutionState } from "../src/infrastructure/chapter-execution-store.js";
@@ -162,7 +162,7 @@ test("novel_advance_chapter_step reports an active writer gate without preparing
 });
 
 test("draft guidance routes chapter work through the one-step execution tool", () => {
-  const spec = draftStageSpec({
+  const spec = sceneExecutionDraftStageSpec({
     root: "/project",
     bookId: "book-01",
     chapter: 7,
