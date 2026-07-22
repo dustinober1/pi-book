@@ -10,6 +10,7 @@ import type { ModelExecutionProfile } from "../domain/model-execution-profile.js
 import type { ModelJobType } from "../domain/model-job.js";
 import type { SceneContract } from "../domain/scene-contract.js";
 import type { StoryRecordStatus } from "../domain/story-record-status.js";
+import type { StyleCard } from "../domain/style-card.js";
 import {
   StoryRecordIndexManifestSchema,
   StoryRecordIndexRecordSchema,
@@ -42,7 +43,7 @@ export interface BuildActiveContextCapsuleInput {
   optionalRecordIds?: string[];
   openingRules: string[];
   previousTail?: string;
-  styleCard?: string;
+  styleCard?: StyleCard | string;
   closingTask: string[];
   maximumDependencyDepth?: 1 | 2;
 }
@@ -57,6 +58,12 @@ function stableHash(value: unknown): string {
 
 function estimatedTokens(value: unknown): number {
   return Math.max(1, Math.ceil(Buffer.byteLength(JSON.stringify(value), "utf8") / 4));
+}
+
+function normalizedStyleCard(value: StyleCard | string | undefined): StyleCard | string | null {
+  if (value === undefined) return null;
+  if (typeof value === "string") return value.trim() || null;
+  return structuredClone(value);
 }
 
 function assertIndexValid(index: StoryRecordIndex): void {
@@ -117,7 +124,7 @@ function baseEvidenceTokens(input: BuildActiveContextCapsuleInput): number {
     scene_contract: input.sceneContract,
     opening_rules: unique(input.openingRules),
     previous_tail: input.previousTail?.trim() || null,
-    style_card: input.styleCard?.trim() || null,
+    style_card: normalizedStyleCard(input.styleCard),
     closing_task: unique(input.closingTask),
   });
 }
@@ -136,6 +143,8 @@ export function buildActiveContextCapsule(input: BuildActiveContextCapsuleInput)
   assertIndexValid(input.storyIndex);
   const openingRules = unique(input.openingRules);
   const closingTask = unique(input.closingTask);
+  const previousTail = input.previousTail?.trim() || null;
+  const styleCard = normalizedStyleCard(input.styleCard);
   if (!openingRules.length || !closingTask.length) {
     throw new ActiveContextCapsuleError("invalid-capsule", [], "Active context capsules require opening rules and a closing task.");
   }
@@ -228,6 +237,8 @@ export function buildActiveContextCapsule(input: BuildActiveContextCapsuleInput)
     story_index_hash: storyIndexHash,
     record_ids: records.map((record) => record.id),
     opening_rules: openingRules,
+    previous_tail: previousTail,
+    style_card: styleCard,
     closing_task: closingTask,
   };
   const capsule: ActiveContextCapsule = {
@@ -240,8 +251,8 @@ export function buildActiveContextCapsule(input: BuildActiveContextCapsuleInput)
     story_index_hash: storyIndexHash,
     opening_rules: openingRules,
     records,
-    previous_tail: input.previousTail?.trim() || null,
-    style_card: input.styleCard?.trim() || null,
+    previous_tail: previousTail,
+    style_card: styleCard,
     closing_task: closingTask,
     manifest: {
       included_record_ids: records.map((record) => record.id),
