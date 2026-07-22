@@ -155,7 +155,9 @@ function commandContext(root: string, notifications: Array<{ message: string; le
       select: async () => undefined,
       confirm: async () => true,
       editor: async () => undefined,
-      notify(message: string, level?: string) { notifications.push({ message, level }); },
+      notify(message: string, level?: string) {
+        notifications.push({ message, ...(level !== undefined ? { level } : {}) });
+      },
     },
     isIdle: () => true,
   };
