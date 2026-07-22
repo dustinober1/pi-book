@@ -5,6 +5,11 @@ import {
   parseQualityTierId,
   type QualityRunOverride,
 } from "../domain/quality-profile.js";
+import {
+  SCENE_CRITIC_JOB_TYPES,
+  isSceneCriticJobType,
+  type SceneCriticJobType,
+} from "../domain/scene-critic-artifact.js";
 import { parseRuntimeProfileId } from "../domain/runtime-profile.js";
 
 export const allowedUntilTargets = ["voice-approval", "book-plan-approval", "first-chapter-approval", "act-1-review", "midpoint-review", "pre-final-act-review", "manuscript-review", "next-milestone"] as const;
@@ -78,6 +83,56 @@ export function parseDraftOptions(args: string): DraftOptions {
     ...(chapter !== undefined ? { chapter } : {}),
     ...(quality ? { quality } : {}),
     ...(modelExecutionProfile ? { modelExecutionProfile } : {}),
+  };
+}
+
+const CRITIC_ALIASES: Readonly<Record<string, SceneCriticJobType>> = Object.freeze({
+  continuity: "critic-continuity",
+  causality: "critic-causality",
+  "character-intent": "critic-character-intent",
+  character: "critic-character-intent",
+  style: "critic-style",
+  factuality: "critic-factuality",
+});
+
+export interface ChapterStepOptions {
+  chapter?: number;
+  runId?: string;
+  criticJobTypes: SceneCriticJobType[];
+}
+
+function parseCritics(raw: string | undefined): SceneCriticJobType[] {
+  if (raw === undefined || raw.trim().toLocaleLowerCase("en-US") === "all") return [...SCENE_CRITIC_JOB_TYPES];
+  const selected = new Set<SceneCriticJobType>();
+  for (const token of raw.split(",").map((item) => item.trim().toLocaleLowerCase("en-US")).filter(Boolean)) {
+    const resolved = CRITIC_ALIASES[token] ?? (isSceneCriticJobType(token) ? token : undefined);
+    if (!resolved) throw new Error(`Unknown scene critic: ${token}. Use continuity, causality, character-intent, style, factuality, or all.`);
+    selected.add(resolved);
+  }
+  if (!selected.size) throw new Error("--critics requires at least one critic.");
+  return SCENE_CRITIC_JOB_TYPES.filter((jobType) => selected.has(jobType));
+}
+
+export function parseChapterStepOptions(args: string): ChapterStepOptions {
+  const items = tokens(args);
+  const flags = new Set(["--run", "--critics"]);
+  const positional: string[] = [];
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index]!;
+    if (flags.has(item)) { index += 1; continue; }
+    if (!item.startsWith("--")) positional.push(item);
+  }
+  if (positional.length > 1) throw new Error("/novel-chapter-step accepts at most one chapter number.");
+  let chapter: number | undefined;
+  if (positional[0] !== undefined) {
+    chapter = Number.parseInt(positional[0], 10);
+    if (!/^\d+$/.test(positional[0]) || !Number.isInteger(chapter) || chapter < 1) throw new Error("Chapter must be a positive integer.");
+  }
+  const runId = requiredFlagValue(items, "--run");
+  return {
+    ...(chapter !== undefined ? { chapter } : {}),
+    ...(runId !== undefined ? { runId } : {}),
+    criticJobTypes: parseCritics(requiredFlagValue(items, "--critics")),
   };
 }
 
