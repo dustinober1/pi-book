@@ -12,7 +12,7 @@ export const SceneDraftArtifactSchema = Type.Object({
   scene_id: Type.String({ pattern: "^CH-[0-9]{3}-SC-[0-9]{2}-V[0-9]+$" }),
   chapter_contract_id: Type.String({ pattern: "^CH-[0-9]{3}$" }),
   chapter_contract_version: Type.Integer({ minimum: 1 }),
-  job_type: Type.Literal("draft-scene"),
+  job_type: Type.Union([Type.Literal("draft-scene"), Type.Literal("patch-spans")]),
   capsule_id: Type.String({ pattern: "^CAP-[A-F0-9]{16}$" }),
   contract_hash: HashSchema,
   story_index_hash: HashSchema,
