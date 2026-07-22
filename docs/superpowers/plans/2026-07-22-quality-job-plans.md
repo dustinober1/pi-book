@@ -75,7 +75,7 @@
 - [x] **Step 3:** Write the deterministic manifest under `.pi-book/runs/<run-id>/quality-job-plan.json` before inference.
 - [x] **Step 4:** Route candidate, critic, claim-audit, and verification behavior from the plan.
 - [x] **Step 5:** Enforce model-call and generated-token ceilings on every call, including corrections.
-- [ ] **Step 6:** Run focused orchestrator, claim-audit, budget, telemetry, and persistent-run tests.
+- [x] **Step 6:** Run focused orchestrator, claim-audit, budget, telemetry, and persistent-run tests.
 - [x] **Step 7:** Commit the green orchestrator integration.
 
 Implementation note: strict optional-property compatibility now allows provider telemetry to omit `outputTokens` while still treating an omitted value as zero for the bounded plan ledger.

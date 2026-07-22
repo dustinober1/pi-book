@@ -118,6 +118,21 @@ test("fixed ceilings cover each tier's declared conditional chapter repair capac
   assert.equal(premiumRepair?.maximum_calls, 2);
 });
 
+test("fixed ceilings cover declared correction capacity for scheduled and conditional chapter calls", () => {
+  for (const tier of tiers) {
+    const plan = buildQualityJobPlan({ tier, risk: { key_scene: true, factuality_required: true } });
+    const conditionalChapterJobs = plan.jobs.filter((job) => job.scope === "chapter" && job.kind === "model" && job.conditional);
+    const conditionalCalls = conditionalChapterJobs.reduce((sum, job) => sum + job.maximum_calls, 0);
+    const conditionalTokens = conditionalChapterJobs.reduce((sum, job) => sum + job.maximum_calls * job.estimated_output_tokens, 0);
+    const attemptsPerCall = 1 + plan.maximum_correction_attempts;
+    const declaredCalls = (plan.planned_model_calls + conditionalCalls) * attemptsPerCall;
+    const declaredTokens = (plan.planned_generated_tokens + conditionalTokens) * attemptsPerCall;
+
+    assert.ok(declaredCalls <= plan.limits.maximum_model_calls, `${tier} call ceiling excludes its correction capacity`);
+    assert.ok(declaredTokens <= plan.limits.maximum_generated_tokens, `${tier} token ceiling excludes its correction capacity`);
+  }
+});
+
 test("editorial book review jobs are deferred from the chapter call budget", () => {
   const plan = buildQualityJobPlan({ tier: "editorial", risk: { key_scene: true, factuality_required: true } });
   const bookJobs = plan.jobs.filter((job) => job.scope === "book");

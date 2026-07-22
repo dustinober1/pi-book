@@ -284,7 +284,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     cacheName?: string;
   }): Promise<T> => {
     let prompt = spec.prompt;
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    for (let attempt = 0; attempt <= jobPlan.maximum_correction_attempts; attempt += 1) {
       progress(attempt === 0 ? spec.label : `${spec.label} correction`);
       const budget = await resolveWorkerModelBudget({
         worker: input.worker,
@@ -322,7 +322,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
         if (spec.cacheName) writeQualityArtifact(input.root, { runId, chapter, name: spec.cacheName, artifact: parsed });
         return parsed;
       } catch (error) {
-        if (attempt === 1) throw new Error(`${spec.label} failed after one correction attempt: ${errorIssues(error).join("; ")}`);
+        if (attempt === jobPlan.maximum_correction_attempts) throw new Error(`${spec.label} failed after one correction attempt: ${errorIssues(error).join("; ")}`);
         prompt = correctionPrompt({
           metadata: spec.metadata,
           label: spec.label,

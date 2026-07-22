@@ -75,10 +75,10 @@ export interface QualityJobPlan {
 }
 
 const LIMITS: Record<QualityJobPlanTier, QualityJobPlanLimits> = {
-  economy: { maximum_model_calls: 3, maximum_generated_tokens: 8_000 },
-  balanced: { maximum_model_calls: 7, maximum_generated_tokens: 15_000 },
-  premium: { maximum_model_calls: 14, maximum_generated_tokens: 25_000 },
-  editorial: { maximum_model_calls: 22, maximum_generated_tokens: 40_000 },
+  economy: { maximum_model_calls: 6, maximum_generated_tokens: 13_200 },
+  balanced: { maximum_model_calls: 14, maximum_generated_tokens: 30_000 },
+  premium: { maximum_model_calls: 28, maximum_generated_tokens: 50_000 },
+  editorial: { maximum_model_calls: 30, maximum_generated_tokens: 52_400 },
 };
 
 const OUTPUT_TOKENS: Record<QualityJobId, number> = {
@@ -256,6 +256,7 @@ export function buildQualityJobPlan(input: {
   tier: QualityJobPlanTier;
   risk?: QualityJobPlanRisk;
 }): QualityJobPlan {
+  const maximumCorrectionAttempts = 1;
   const risk = input.risk ?? {};
   const candidateCount: 1 | 2 = risk.key_scene && (input.tier === "premium" || input.tier === "editorial") ? 2 : 1;
   const jobs = planJobs(input.tier, risk, candidateCount);
@@ -272,12 +273,26 @@ export function buildQualityJobPlan(input: {
   if (plannedGeneratedTokens > limits.maximum_generated_tokens) {
     throw new Error(`Quality job plan requires ${plannedGeneratedTokens} generated tokens, above the ${limits.maximum_generated_tokens}-token ${input.tier} ceiling.`);
   }
+  const conditionalChapterJobs = jobs.filter((item) => item.scope === "chapter" && item.kind === "model" && item.conditional);
+  const declaredChapterJobs = [...plannedJobs, ...conditionalChapterJobs];
+  const attemptsPerCall = 1 + maximumCorrectionAttempts;
+  const declaredModelCalls = declaredChapterJobs.reduce((sum, item) => sum + item.maximum_calls, 0) * attemptsPerCall;
+  const declaredGeneratedTokens = declaredChapterJobs.reduce(
+    (sum, item) => sum + item.maximum_calls * item.estimated_output_tokens,
+    0,
+  ) * attemptsPerCall;
+  if (declaredModelCalls > limits.maximum_model_calls) {
+    throw new Error(`Quality job plan declares ${declaredModelCalls} model calls including corrections and conditional repairs, above the ${limits.maximum_model_calls}-call ${input.tier} ceiling.`);
+  }
+  if (declaredGeneratedTokens > limits.maximum_generated_tokens) {
+    throw new Error(`Quality job plan declares ${declaredGeneratedTokens} generated tokens including corrections and conditional repairs, above the ${limits.maximum_generated_tokens}-token ${input.tier} ceiling.`);
+  }
   return {
     schema_version: "1.0.0",
     tier: input.tier,
     prompt_mode: "job-specific",
     candidate_count: candidateCount,
-    maximum_correction_attempts: 1,
+    maximum_correction_attempts: maximumCorrectionAttempts,
     maximum_repair_attempts: input.tier === "economy" ? 0 : 2,
     jobs,
     deferred_job_ids: jobs.filter((item) => item.scope !== "chapter").map((item) => item.id),
