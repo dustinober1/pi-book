@@ -76,8 +76,8 @@ export interface QualityJobPlan {
 
 const LIMITS: Record<QualityJobPlanTier, QualityJobPlanLimits> = {
   economy: { maximum_model_calls: 3, maximum_generated_tokens: 8_000 },
-  balanced: { maximum_model_calls: 5, maximum_generated_tokens: 12_000 },
-  premium: { maximum_model_calls: 12, maximum_generated_tokens: 22_000 },
+  balanced: { maximum_model_calls: 7, maximum_generated_tokens: 15_000 },
+  premium: { maximum_model_calls: 14, maximum_generated_tokens: 25_000 },
   editorial: { maximum_model_calls: 22, maximum_generated_tokens: 40_000 },
 };
 
