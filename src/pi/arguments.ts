@@ -101,7 +101,7 @@ export interface ChapterStepOptions {
   criticJobTypes: SceneCriticJobType[];
 }
 
-function parseCritics(raw: string | undefined): SceneCriticJobType[] {
+export function parseSceneCriticSelection(raw: string | undefined): SceneCriticJobType[] {
   if (raw === undefined || raw.trim().toLocaleLowerCase("en-US") === "all") return [...SCENE_CRITIC_JOB_TYPES];
   const selected = new Set<SceneCriticJobType>();
   for (const token of raw.split(",").map((item) => item.trim().toLocaleLowerCase("en-US")).filter(Boolean)) {
@@ -132,7 +132,7 @@ export function parseChapterStepOptions(args: string): ChapterStepOptions {
   return {
     ...(chapter !== undefined ? { chapter } : {}),
     ...(runId !== undefined ? { runId } : {}),
-    criticJobTypes: parseCritics(requiredFlagValue(items, "--critics")),
+    criticJobTypes: parseSceneCriticSelection(requiredFlagValue(items, "--critics")),
   };
 }
 
