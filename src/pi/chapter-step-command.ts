@@ -6,6 +6,7 @@ import type { QualityWorker } from "../domain/quality-worker.js";
 import { requireProjectRoot } from "../project/store.js";
 import { parseChapterStepOptions, parseSceneCriticSelection } from "./arguments.js";
 import { PiPrintWorker } from "./pi-print-worker.js";
+import { registerPlanChangeCommand } from "./plan-change-command.js";
 
 export interface ChapterStepCommandOptions {
   createQualityWorker?: (root: string) => QualityWorker;
@@ -45,6 +46,7 @@ async function runStep(input: RunStepInput) {
 }
 
 export function registerChapterStepCommand(pi: ExtensionAPI, options: ChapterStepCommandOptions = {}): void {
+  registerPlanChangeCommand(pi);
   pi.registerTool({
     name: "novel_advance_chapter_step",
     label: "Novel Forge Advance Chapter Step",
