@@ -28,8 +28,16 @@ export interface CanonicalStoryInputs {
   contracts?: Array<{ path: string; contract: ChapterContract }>;
 }
 
+function finding(severity: CanonicalStoryFinding["severity"], code: string, message: string, recordIds: string[] = []): CanonicalStoryFinding {
+  return { severity, code, message, record_ids: recordIds };
+}
+
 function blocker(code: string, message: string, recordIds: string[] = []): CanonicalStoryFinding {
-  return { severity: "blocker", code, message, record_ids: recordIds };
+  return finding("blocker", code, message, recordIds);
+}
+
+function warning(code: string, message: string, recordIds: string[] = []): CanonicalStoryFinding {
+  return finding("warning", code, message, recordIds);
 }
 
 function expectedContractPath(bookId: string, chapter: number): string {
@@ -83,7 +91,7 @@ export function canonicalStoryFindings(input: CanonicalStoryInputs): CanonicalSt
     const knownFact = canonIds.has(record.fact_id)
       || input.entities.entities.some((item) => item.id === record.fact_id && ["secret", "claim", "event"].includes(item.category));
     if (!knownFact) {
-      findings.push(blocker("unknown-knowledge-fact", `Knowledge record ${record.id} references missing fact ${record.fact_id}.`, [record.id, record.fact_id]));
+      findings.push(warning("unregistered-knowledge-fact", `Knowledge record ${record.id} uses fact ID ${record.fact_id}, which is not yet registered as canon or an entity.`, [record.id, record.fact_id]));
     }
   }
 
@@ -105,9 +113,13 @@ export function canonicalStoryFindings(input: CanonicalStoryInputs): CanonicalSt
     if (contract.small_model_ready && contract.missing_small_model_fields.length > 0) {
       findings.push(blocker("contradictory-small-model-readiness", `Chapter contract ${contract.contract_id} is marked ready but still lists missing fields.`, [contract.contract_id]));
     }
+
+    const enforceExecutableReferences = contract.source_kind === "approved-contract" || contract.small_model_ready;
     if (contract.source_kind === "approved-contract" && contract.required_record_ids.length === 0) {
       findings.push(blocker("missing-required-records", `Approved chapter contract ${contract.contract_id} must declare required record IDs.`, [contract.contract_id]));
     }
+    if (!enforceExecutableReferences) continue;
+
     for (const id of contract.required_record_ids) {
       if (!knownRecordIds.has(id)) findings.push(blocker("missing-required-record", `Chapter contract ${contract.contract_id} references missing required record ${id}.`, [contract.contract_id, id]));
     }
@@ -134,8 +146,8 @@ export function canonicalStoryFindings(input: CanonicalStoryInputs): CanonicalSt
 }
 
 export function assertCanonicalStoryIntegrity(input: CanonicalStoryInputs): void {
-  const blockers = canonicalStoryFindings(input).filter((finding) => finding.severity === "blocker");
+  const blockers = canonicalStoryFindings(input).filter((item) => item.severity === "blocker");
   if (blockers.length) {
-    throw new Error(`Canonical story integrity validation failed:\n${blockers.map((finding) => `- ${finding.message}`).join("\n")}`);
+    throw new Error(`Canonical story integrity validation failed:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
   }
 }
