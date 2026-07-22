@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, linkSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Value } from "@sinclair/typebox/value";
 import {
@@ -41,6 +41,30 @@ export function storeRunReport(root: string, report: RunReport): RunReportStoreR
   } catch {
     if (existsSync(temporary)) rmSync(temporary, { force: true });
     return { ok: false, message: "Unable to write the local run report." };
+  }
+}
+
+export function initializeRunReport(root: string, report: RunReport): RunReportStoreResult {
+  if (!safeRunId(report.runId)) return { ok: false, message: "Unable to write the local run report." };
+  const directory = join(root, ".pi-book", "runs", report.runId);
+  const path = join(directory, "run-report.json");
+  const temporary = join(directory, `.run-report.${process.pid}.${randomUUID()}.tmp`);
+  try {
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(temporary, `${JSON.stringify(report, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+    try {
+      linkSync(temporary, path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+        return { ok: false, message: "Run report already exists." };
+      }
+      throw error;
+    }
+    return { ok: true, path };
+  } catch {
+    return { ok: false, message: "Unable to write the local run report." };
+  } finally {
+    if (existsSync(temporary)) rmSync(temporary, { force: true });
   }
 }
 
@@ -91,6 +115,33 @@ export function appendModelCallReport(root: string, runId: string, call: ModelCa
           modelCalls,
           totals: recomputeTotals(modelCalls),
         };
+    const result = storeRunReport(root, updated);
+    return result.ok ? result : { ok: false, message: "Unable to update the local run report." };
+  } catch {
+    return { ok: false, message: "Unable to update the local run report." };
+  }
+}
+
+export function recordAcceptedProseWords(root: string, runId: string, callId: string, acceptedProseWords: number): RunReportStoreResult {
+  if (!safeRunId(runId) || !callId.trim() || !Number.isInteger(acceptedProseWords) || acceptedProseWords < 0) {
+    return { ok: false, message: "Unable to update the local run report." };
+  }
+  const path = reportPath(root, runId);
+  try {
+    const current = readAppendableReport(path);
+    if (current.schemaVersion !== "3.0.0" || current.runId !== runId) throw new Error("invalid accepted prose target");
+    const index = current.modelCalls.findIndex((item) => item.callId === callId);
+    const target = current.modelCalls[index];
+    if (index < 0 || !target || target.acceptedProseWords !== undefined
+      || (target.outcome !== "accepted" && target.outcome !== "repair-succeeded")) {
+      throw new Error("invalid accepted prose call");
+    }
+    const modelCalls = current.modelCalls.map((call, callIndex) => callIndex === index ? { ...call, acceptedProseWords } : call);
+    const updated: RunReportV3 = {
+      ...current,
+      modelCalls,
+      workflow: summarizeWorkflowTelemetry(modelCalls),
+    };
     const result = storeRunReport(root, updated);
     return result.ok ? result : { ok: false, message: "Unable to update the local run report." };
   } catch {

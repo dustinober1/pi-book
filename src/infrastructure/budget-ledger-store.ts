@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, w
 import { join } from "node:path";
 import { Value } from "@sinclair/typebox/value";
 import { BudgetLedgerSchema, emptyBudgetLedger, type BudgetLedger } from "../application/budget-ledger.js";
-import { RunReportV2Schema, type RunReportV2 } from "../domain/run-report.js";
+import { RunReportV2Schema, RunReportV3Schema, type RunReportV2, type RunReportV3 } from "../domain/run-report.js";
 
 export type BudgetLedgerStoreResult =
   | { ok: true; path: string }
@@ -31,8 +31,10 @@ function reconstructBudgetLedger(root: string): BudgetLedger {
     if (!existsSync(path)) continue;
     try {
       const value = JSON.parse(readFileSync(path, "utf8")) as unknown;
-      if (!Value.Check(RunReportV2Schema, value)) continue;
-      const report = value as RunReportV2;
+      let report: RunReportV2 | RunReportV3;
+      if (Value.Check(RunReportV3Schema, value)) report = value as RunReportV3;
+      else if (Value.Check(RunReportV2Schema, value)) report = value as RunReportV2;
+      else continue;
       for (const call of report.modelCalls) {
         if (call.chapter === undefined) continue;
         ledger.settledCalls.push({

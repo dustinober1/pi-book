@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Static, TSchema } from "@sinclair/typebox";
 import { buildChapterContext } from "../context/context-builder.js";
@@ -29,10 +28,10 @@ import { RUNTIME_PROFILES, type RuntimeProfile, type RuntimeProfileId } from "..
 import { RemarkabilitySchema, type RemarkabilityState } from "../domain/schemas.js";
 import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
 import { BookStrategyPhase5Schema, type BookStrategyPhase5 } from "../domain/v1-3-audit-schemas.js";
-import { readText } from "../infrastructure/files.js";
+import { countWords, readText } from "../infrastructure/files.js";
 import { finalizeQualityCache, writeQualityArtifact, type QualityCacheRetention } from "../infrastructure/quality-cache.js";
 import { writeQualityJobPlanManifest } from "../infrastructure/quality-job-plan-store.js";
-import { appendModelCallReport, storeRunReport } from "../infrastructure/run-report-store.js";
+import { appendModelCallReport, initializeRunReport, recordAcceptedProseWords } from "../infrastructure/run-report-store.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject } from "../project/store.js";
 import {
@@ -78,7 +77,7 @@ import {
   type QualityCriticLane,
   type QualityPassPlan,
 } from "./quality-risk.js";
-import { createRunReportHeader } from "./run-telemetry.js";
+import { createRunReportV3Header } from "./run-telemetry.js";
 import { resolveWorkerModelBudget } from "../pi/quality-worker.js";
 
 export interface RunQualityDraftInput {
@@ -163,10 +162,6 @@ function approvedLearningGuardrail(strategy: BookStrategyPhase5): boolean {
   return (strategy.revision_learning_guardrails ?? []).some((item) => item.status === "approved");
 }
 
-function runReportPath(root: string, runId: string): string {
-  return join(root, ".pi-book", "runs", runId, "run-report.json");
-}
-
 function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && Boolean(item.trim())) : [];
 }
@@ -218,6 +213,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   if (quality.tier === "economy") throw new Error("Economy drafting must use the existing direct prompt workflow.");
 
   const startingProject = readProject(input.root);
+  const modelExecutionProfile = startingProject.runtime?.model_execution_profile ?? "host-default";
   const book = readBook(input.root);
   const context = buildChapterContext(input.root, input.chapter, profile.maxContextChars, profile.graphDepth);
   const chapter = context.packet.chapter;
@@ -267,6 +263,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     claimAudit: qualityJobPlanHas(jobPlan, "critic-factuality"),
   };
   const runId = input.runId ?? `QDR-${randomUUID()}`;
+  const telemetryEnabled = startingProject.runtime?.telemetry ?? true;
   const jobPlanManifestPath = writeQualityJobPlanManifest(input.root, runId, jobPlan);
   const sourceHashes = [...new Set([projectStateHash(input.root), normalizedContentHash(context.text)])];
   const cacheRetention = input.cacheRetention ?? "delete-on-success";
@@ -275,14 +272,16 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   let creationOrder = 0;
   let callOrder = 0;
   let jobPlanUsage = initialQualityJobPlanUsage();
-  const telemetryEnabled = startingProject.runtime?.telemetry ?? true;
-  if (telemetryEnabled && !existsSync(runReportPath(input.root, runId))) {
-    storeRunReport(input.root, createRunReportHeader({
+  let acceptedProseCallId: string | undefined;
+  if (telemetryEnabled) {
+    const stored = initializeRunReport(input.root, createRunReportV3Header({
       runId,
       runtimeProfile: profile.id,
       qualityTier: quality.tier,
+      modelExecutionProfile,
       projectHashBefore: sourceHashes[0]!,
     }));
+    if (!stored.ok) throw new Error(stored.message);
   }
 
   const progress = (name: string) => input.onProgress?.(name);
@@ -303,6 +302,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     pass: QualityWorkerRequest["pass"];
     parse: (text: string) => T;
     cacheName?: string;
+    acceptedProseSource?: boolean;
   }): Promise<T> => {
     let prompt = spec.prompt;
     for (let attempt = 0; attempt <= jobPlan.maximum_correction_attempts; attempt += 1) {
@@ -339,31 +339,58 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
         ...(input.thinking ? { thinking: input.thinking } : {}),
       };
       const result = await input.worker.run(request, input.signal);
-      const usage: ModelCallReport = {
+      const baseUsage: ModelCallReport = {
         ...result.usage,
         jobType: spec.jobId,
         attempt: planAttempt,
       };
-      calls.push(usage);
-      if (telemetryEnabled) appendModelCallReport(input.root, runId, usage);
-      jobPlanUsage = recordQualityJobPlanUsage(jobPlan, jobPlanUsage, {
-        jobId: spec.jobId,
-        attempt: planAttempt,
-        outputTokens: usage.outputTokens,
-      });
+      const publishUsage = (usage: ModelCallReport): void => {
+        if (telemetryEnabled) {
+          const appended = appendModelCallReport(input.root, runId, usage);
+          if (!appended.ok) throw new Error(appended.message);
+        }
+        calls.push(usage);
+      };
       try {
-        const parsed = spec.parse(result.text);
-        if (spec.cacheName) writeQualityArtifact(input.root, { runId, chapter, name: spec.cacheName, artifact: parsed });
-        return parsed;
+        jobPlanUsage = recordQualityJobPlanUsage(jobPlan, jobPlanUsage, {
+          jobId: spec.jobId,
+          attempt: planAttempt,
+          outputTokens: baseUsage.outputTokens,
+        });
       } catch (error) {
-        if (attempt === jobPlan.maximum_correction_attempts) throw new Error(`${spec.label} failed after one correction attempt: ${errorIssues(error).join("; ")}`);
+        publishUsage({ ...baseUsage, outcome: "escalated", escalationCode: "job-budget-exceeded" });
+        throw error;
+      }
+      let parsed: T;
+      try {
+        parsed = spec.parse(result.text);
+      } catch (error) {
+        const correctionExhausted = attempt === jobPlan.maximum_correction_attempts;
+        publishUsage({
+          ...baseUsage,
+          outcome: correctionExhausted ? "escalated" : "rejected",
+          ...(correctionExhausted ? { escalationCode: "schema-failure" } : {}),
+        });
+        if (correctionExhausted) throw new Error(`${spec.label} failed after one correction attempt: ${errorIssues(error).join("; ")}`);
         prompt = correctionPrompt({
           metadata: spec.metadata,
           label: spec.label,
           rejectedOutputHash: normalizedContentHash(result.text),
           issues: errorIssues(error),
         });
+        continue;
       }
+      if (spec.cacheName) {
+        try {
+          writeQualityArtifact(input.root, { runId, chapter, name: spec.cacheName, artifact: parsed });
+        } catch (error) {
+          publishUsage({ ...baseUsage, outcome: "escalated", escalationCode: "artifact-store-failure" });
+          throw error;
+        }
+      }
+      publishUsage({ ...baseUsage, outcome: planAttempt > 1 ? "repair-succeeded" : "accepted" });
+      if (spec.acceptedProseSource) acceptedProseCallId = baseUsage.callId;
+      return parsed;
     }
     throw new Error(`${spec.label} could not be completed.`);
   };
@@ -468,6 +495,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     pass: plan.revisionPasses > 0 ? "revision" : "verification",
     parse: (text) => parseQualityEventOutput(text, { bookId: book.book_id, chapter }),
     cacheName: "event-output",
+    acceptedProseSource: true,
   });
 
   const allowedResearchIds = context.report.included
@@ -566,6 +594,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
         pass: "revision",
         parse: (text) => parseQualityEventOutput(text, { bookId: book.book_id, chapter }),
         cacheName: "claim-repair",
+        acceptedProseSource: true,
       });
       const secondAudit = await auditDraft(eventOutput, 2);
       if (secondAudit.decision.blockers.length > 0 || secondAudit.decision.repairs.length > 0) {
@@ -588,6 +617,17 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
     });
     if (verification.verdict !== "accept") throw new Error(`final-review rejected the quality output with ${verification.findings.length} finding(s).`);
   }
+
+  if (!acceptedProseCallId) throw new Error("Quality drafting completed without an accepted prose source call.");
+  const acceptedProseWords = countWords(manuscriptContent(eventOutput, book.book_id, chapter));
+  const acceptedCallIndex = calls.findIndex((call) => call.callId === acceptedProseCallId);
+  const acceptedCall = calls[acceptedCallIndex];
+  if (acceptedCallIndex < 0 || !acceptedCall) throw new Error("Accepted prose source call is missing from run telemetry.");
+  if (telemetryEnabled) {
+    const recorded = recordAcceptedProseWords(input.root, runId, acceptedProseCallId, acceptedProseWords);
+    if (!recorded.ok) throw new Error(recorded.message);
+  }
+  calls[acceptedCallIndex] = { ...acceptedCall, acceptedProseWords };
 
   progress("guarded event application");
   const currentProject = readProject(input.root);

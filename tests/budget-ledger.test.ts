@@ -11,7 +11,7 @@ import {
   type BudgetLedger,
 } from "../src/application/budget-ledger.js";
 import { readBudgetLedger, updateBudgetLedger } from "../src/infrastructure/budget-ledger-store.js";
-import { createRunReportHeader } from "../src/application/run-telemetry.js";
+import { createRunReportHeader, createRunReportV3Header } from "../src/application/run-telemetry.js";
 import { appendModelCallReport, storeRunReport } from "../src/infrastructure/run-report-store.js";
 
 const limits = {
@@ -90,7 +90,7 @@ test("total and call ceilings cannot be exceeded by multiple live reservations",
   assert.equal(callOverflow.result.reason, "chapter-call-limit");
 });
 
-test("missing local ledgers reconstruct settled calls from valid schema-two reports", () => {
+test("missing local ledgers reconstruct settled calls from valid schema-two and schema-three reports", () => {
   const root = mkdtempSync(join(tmpdir(), "novel-forge-budget-ledger-"));
   try {
     const report = createRunReportHeader({ runId: "RUN-REBUILD", runtimeProfile: "full", qualityTier: "premium", projectHashBefore: "before" });
@@ -99,10 +99,25 @@ test("missing local ledgers reconstruct settled calls from valid schema-two repo
       callId: "CALL-001", stage: "drafting", chapter: 3, pass: "candidate", inputTokens: 120, outputTokens: 80,
       estimated: false, elapsedMs: 1, promptHash: "a".repeat(64), contextHash: "b".repeat(64), outputHash: "c".repeat(64),
     }).ok, true);
+    const v3 = createRunReportV3Header({
+      runId: "RUN-REBUILD-V3",
+      runtimeProfile: "tiny-local",
+      qualityTier: "balanced",
+      modelExecutionProfile: "small-12b-q4",
+      projectHashBefore: "before-v3",
+    });
+    assert.equal(storeRunReport(root, v3).ok, true);
+    assert.equal(appendModelCallReport(root, v3.runId, {
+      callId: "CALL-V3-001", stage: "drafting", chapter: 4, pass: "candidate", jobType: "draft-scene",
+      inputTokens: 300, outputTokens: 200, estimated: false, elapsedMs: 1,
+      promptHash: "d".repeat(64), contextHash: "e".repeat(64), outputHash: "f".repeat(64),
+    }).ok, true);
     const rebuilt = readBudgetLedger(root);
-    assert.equal(rebuilt.settledCalls.length, 1);
+    assert.equal(rebuilt.settledCalls.length, 2);
     assert.equal(rebuilt.settledCalls[0]?.tokens, 200);
     assert.equal(rebuilt.settledCalls[0]?.chapter, 3);
+    assert.equal(rebuilt.settledCalls[1]?.tokens, 500);
+    assert.equal(rebuilt.settledCalls[1]?.chapter, 4);
 
     const result = updateBudgetLedger(root, (current) => ({ ...current, updatedAt: "2026-07-21T14:02:00Z" }));
     assert.equal(result.ok, true);
