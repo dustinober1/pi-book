@@ -159,7 +159,7 @@ export function buildChapterDeltaSummary(input: BuildChapterDeltaSummaryInput): 
     world_state_changes: worldStateChanges,
     character_state_changes: characterStateChanges,
     knowledge_changes: [],
-    relationship_changes: relationshipStateChanges,
+    relationship_changes: relationshipChanges,
     object_transfers_or_destruction: objectTransfersOrDestruction,
     timeline_movement: timelineMovement,
     threads: { opened: [], advanced: [], resolved: [] },
