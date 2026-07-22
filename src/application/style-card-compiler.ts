@@ -5,6 +5,7 @@ import { StyleCardSchema, type StyleCard, type StyleCardExample, type StyleCardS
 import { VoiceGuardrailsSchema, type VoiceGuardrails } from "../domain/v1-3-schemas.js";
 import { readText } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
+import { buildProjectRepetitionMemory } from "./repetition-memory.js";
 
 const VOICE_PROFILE_PATH = "series/voice-profile.md";
 const VOICE_GUARDRAILS_PATH = "series/voice-guardrails.yaml";
@@ -16,6 +17,8 @@ const MAX_RECENT_PATTERNS = 8;
 export interface CompileProjectStyleCardOptions {
   acceptedExamplePaths?: string[];
   recentPatternsToAvoid?: string[];
+  repetitionChapterLimit?: number;
+  includeRepetitionMemory?: boolean;
 }
 
 function hashText(value: string): string {
@@ -37,6 +40,17 @@ function unique(values: readonly string[], maximum = Number.POSITIVE_INFINITY): 
     seen.add(key);
     result.push(value);
     if (result.length >= maximum) break;
+  }
+  return result;
+}
+
+function uniqueSources(values: readonly StyleCardSource[]): StyleCardSource[] {
+  const result: StyleCardSource[] = [];
+  const seen = new Set<string>();
+  for (const source of values) {
+    if (seen.has(source.path)) continue;
+    seen.add(source.path);
+    result.push(source);
   }
   return result;
 }
@@ -147,11 +161,19 @@ export function compileProjectStyleCard(
   if (!activeRules.length) throw new Error(`Style card for ${normalizedPov} has no approved rules.`);
 
   const accepted = unique(options.acceptedExamplePaths ?? [], MAX_EXAMPLES).map((path) => example(root, path));
-  const sourceHashes: StyleCardSource[] = [
+  const repetition = options.includeRepetitionMemory === false
+    ? null
+    : buildProjectRepetitionMemory(root, { recentChapterCount: options.repetitionChapterLimit ?? 3 });
+  const sourceHashes = uniqueSources([
     { path: VOICE_PROFILE_PATH, hash: hashText(profileText) },
     { path: VOICE_GUARDRAILS_PATH, hash: hashText(guardrailText) },
     ...accepted.map((item) => item.source),
-  ];
+    ...(repetition?.source_hashes.map((source) => ({ path: source.path, hash: source.hash })) ?? []),
+  ]);
+  const recentPatterns = unique([
+    ...(options.recentPatternsToAvoid ?? []),
+    ...(repetition?.avoid_list ?? []),
+  ], MAX_RECENT_PATTERNS);
   const withoutId: Omit<StyleCard, "style_id"> = {
     schema_version: "1.0.0",
     pov: normalizedPov,
@@ -165,7 +187,7 @@ export function compileProjectStyleCard(
     voice_markers: voiceMarkers,
     prohibited_habits: prohibitedHabits,
     accepted_examples: accepted.map((item) => item.example),
-    recent_patterns_to_avoid: unique(options.recentPatternsToAvoid ?? [], MAX_RECENT_PATTERNS),
+    recent_patterns_to_avoid: recentPatterns,
     active_rules: activeRules,
   };
   const card: StyleCard = { ...withoutId, style_id: stableCardId(withoutId) };
