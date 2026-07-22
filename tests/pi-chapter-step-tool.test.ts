@@ -172,7 +172,8 @@ test("draft guidance routes chapter work through the one-step execution tool", (
   });
   const rules = spec.toolRules.join("\n");
   assert.match(rules, /novel_advance_chapter_step/);
-  assert.doesNotMatch(rules, /novel_apply_event/);
+  assert.match(rules, /Do not use novel_apply_event/);
+  assert.doesNotMatch(rules, /When .*call .*novel_apply_event|Send event_type=draft-chapter/i);
   assert.match(rules, /same run|run_id/i);
   assert.match(rules, /one persisted stage|one tool call at a time/i);
 });
