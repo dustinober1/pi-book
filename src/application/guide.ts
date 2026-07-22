@@ -3,12 +3,13 @@ import type { Stage } from "../domain/schemas.js";
 import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import { listChapterFiles, readText } from "../infrastructure/files.js";
 import { readBook, readProject } from "../project/store.js";
+import { hasExecutableContext } from "./context-inspection.js";
 import { gateDetail, gateEvidencePaths } from "./gate-metadata.js";
 import { getProjectStatus } from "./status.js";
 
 export type GuideActionId =
   | "continue" | "approve" | "request-changes" | "view-evidence" | "repair"
-  | "status" | "budget" | "readers" | "research" | "premise" | "resume-run" | "pause-run" | "cancel-run"
+  | "status" | "budget" | "context" | "readers" | "research" | "premise" | "resume-run" | "pause-run" | "cancel-run"
   | "adopt" | "add-book" | "advanced";
 
 export interface GuideAction {
@@ -104,6 +105,7 @@ export function buildGuideScreen(root: string): GuideScreen {
   if (manuscriptEmpty && ["voice-intake", "series-planning", "book-planning", "chapter-queue"].includes(project.current_stage)) {
     actions.push(action("adopt", "Adopt an existing manuscript", "Preview and map DOCX, EPUB, Markdown, text, or chapter files without changing the source."));
   }
+  if (hasExecutableContext(root)) actions.push(action("context", "Inspect active context", "Show the exact record IDs, inclusion reasons, dependencies, omissions, and token budget for the next executable scene without exposing record payloads."));
   if (readerStage(project.current_stage)) actions.push(action("readers", "Reader evidence", "Prepare isolated reader kits or preview and merge human-response CSVs."));
   if (project.current_stage !== "complete") actions.push(action("research", "Review voice and research evidence", "Open the local preview-and-apply workspace for influences, anonymous voice calibration, public-market friction, research readiness, and approved learning rules."));
   if (project.current_stage === "book-planning") {
