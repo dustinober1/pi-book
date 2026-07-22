@@ -17,11 +17,11 @@ import { compilePrompt } from "./prompt-compiler.js";
 import { preparePrompt } from "./prepared-prompt.js";
 import { loadProseLintInput, renderReviewLintEvidence, runProseLint } from "./prose-lint/index.js";
 import { resolveRuntimeProfile } from "./runtime-profile-resolver.js";
+import { sceneExecutionDraftStageSpec } from "./stage-specs/draft-execution.js";
 import {
   automationDraftStageSpec,
   bookPlanStageSpec,
   canonLockStageSpec,
-  draftStageSpec,
   packageStageSpec,
   premisePlanStageSpec,
   queueStageSpec,
@@ -36,8 +36,8 @@ import type { StageSpec } from "./stage-specs/types.js";
 function planningIntakeContext(root: string): string {
   const intakeText = readText(join(root, "series", "intake.yaml"));
   const ledgerText = readText(join(root, "series", "decision-ledger.yaml"));
-  const intake = intakeText ? parseYaml<IntakeState>(intakeText, IntakeSchema, "series/intake.yaml") : null;
-  const ledger = ledgerText ? parseYaml<DecisionLedger>(ledgerText, DecisionLedgerSchema, "series/decision-ledger.yaml") : null;
+  const intake = intakeText ? parseYaml<IntakeState>(intakeText, IntakeSchema, "intake.yaml") : null;
+  const ledger = ledgerText ? parseYaml<DecisionLedger>(ledgerText, DecisionLedgerSchema, "decision-ledger.yaml") : null;
   return intakePromptContext(intake, ledger);
 }
 
@@ -142,7 +142,7 @@ export function queuePrompt(root: string, runtimeProfile?: RuntimeProfile): stri
 export function draftPrompt(context: ChapterContext, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(context.root);
   const runtime = runtimeForPrompt(context.root, runtimeProfile);
-  const spec = draftStageSpec({
+  const spec = sceneExecutionDraftStageSpec({
     root: context.root,
     bookId: book.book_id,
     chapter: context.packet.chapter,
@@ -225,13 +225,11 @@ export function canonLockPrompt(root: string, runtimeProfile?: RuntimeProfile): 
 
 export function packagePrompt(root: string, runtimeProfile?: RuntimeProfile): string {
   const book = readBook(root);
-  const existingPackage = readText(join(root, "books", book.book_id, "package.md")) ?? "";
+  const path = join(root, "books", book.book_id, "package.md");
   return renderPrompt(root, packageStageSpec({
     root,
     bookId: book.book_id,
-    existingPackage,
+    existingPackage: readText(path) ?? "",
     projectHash: projectStateHash(root),
   }), runtimeProfile);
 }
-
-export { RUNTIME_PROFILES };
