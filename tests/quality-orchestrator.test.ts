@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { qualityJobPlanLimits } from "../src/application/quality/job-plan.js";
 import { runQualityDraft } from "../src/application/quality-orchestrator.js";
 import type { ModelCallReport } from "../src/domain/run-report.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
@@ -196,7 +197,7 @@ test("two invalid structured attempts stop before canonical mutation", async () 
 test("job-plan generated-token ceiling stops before canonical mutation", async () => {
   const { parent, root } = setup();
   try {
-    const worker = new ScriptedWorker(root, false, 25_001);
+    const worker = new ScriptedWorker(root, false, qualityJobPlanLimits("premium").maximum_generated_tokens + 1);
     await assert.rejects(runQualityDraft({
       root,
       chapter: 1,
