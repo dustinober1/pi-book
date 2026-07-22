@@ -57,8 +57,8 @@ test("quality tiers expose locked orchestration policies", () => {
   assert.deepEqual(QUALITY_TIER_POLICIES, {
     economy: { scenePlan: false, candidates: 1, criticLanes: [], finalReviewer: false, claimAudit: false },
     balanced: { scenePlan: true, candidates: 1, criticLanes: ["combined"], finalReviewer: false, claimAudit: false },
-    premium: { scenePlan: true, candidates: 1, criticLanes: ["continuity", "voice", "causality", "research"], finalReviewer: false, claimAudit: false },
-    editorial: { scenePlan: true, candidates: 1, criticLanes: ["continuity", "voice", "causality", "research"], finalReviewer: true, claimAudit: true },
+    premium: { scenePlan: true, candidates: 1, criticLanes: ["continuity", "causality", "character-intent", "style"], finalReviewer: false, claimAudit: false },
+    editorial: { scenePlan: true, candidates: 1, criticLanes: ["continuity", "causality", "character-intent", "style"], finalReviewer: true, claimAudit: true },
   });
 });
 
