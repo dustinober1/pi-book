@@ -87,7 +87,8 @@ function capsuleInput(root: string, scene: SceneContract, jobType: ModelJobType)
   const project = readProject(root);
   rebuildStoryRecordIndex(root);
   const storyIndex = readStoryRecordIndex(root);
-  const modelProfile = resolveModelExecutionProfile({ project: project.runtime?.model_execution_profile });
+  const configuredModelProfile = project.runtime?.model_execution_profile;
+  const modelProfile = resolveModelExecutionProfile(configuredModelProfile ? { project: configuredModelProfile } : {});
   const styleCard = compileProjectStyleCard(root, scene.pov);
   const capsule = buildActiveContextCapsule({
     storyIndex,
