@@ -117,3 +117,19 @@ test("chapter delta summaries reject mutations without exact manuscript evidence
     createdAt: "2026-07-22T12:00:00.000Z",
   }), /evidence quote.*not found/i);
 });
+
+test("chapter delta summaries reject evidence quotes that match more than one paragraph", () => {
+  assert.throws(() => buildChapterDeltaSummary({
+    runId: "RUN-DELTA-001",
+    bookId: "book-01",
+    chapter: 1,
+    contractHash: "a".repeat(64),
+    manuscriptPath: "books/book-01/manuscript/chapters/01-opening.md",
+    manuscriptText: "Mara reached the terminal.\n\nMara reached the terminal again.",
+    beforeStateLedger: before,
+    afterStateLedger: after,
+    entityRegistry: registry,
+    mutations: [mutations[0]!],
+    createdAt: "2026-07-22T12:00:00.000Z",
+  }), /evidence quote.*more than one paragraph|ambiguous evidence/i);
+});
