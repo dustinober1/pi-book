@@ -38,7 +38,7 @@ function repeatedProse(): string {
   return `${Array.from({ length: 12 }, () => "The panel stayed dark. Mara checked the conduit.").join(" ")} ${Array.from({ length: 20 }, (_, index) => `She counted junction ${index + 1}.`).join(" ")}`;
 }
 
-function capsule(): ActiveContextCapsule {
+function capsule(root: string): ActiveContextCapsule {
   return {
     schema_version: "1.0.0",
     capsule_id: "CAP-3333333333333333",
@@ -66,6 +66,7 @@ function capsule(): ActiveContextCapsule {
     },
     contract_hash: contractHash,
     story_index_hash: storyIndexHash,
+    project_hash: projectStateHash(root),
     opening_rules: ["Change only uniquely anchored spans."],
     records: [],
     previous_tail: null,
@@ -251,7 +252,7 @@ test("bounded exact-anchor repair creates a new scene version and returns to det
     const result = await runSceneSpanRepair({
       root,
       runId,
-      capsule: capsule(),
+      capsule: capsule(root),
       sourceDraftAttempt: 1,
       runtimeProfile: "tiny-local",
       worker,
@@ -292,7 +293,7 @@ test("critic repair findings can drive an exact bounded replacement", async () =
     const result = await runSceneSpanRepair({
       root,
       runId,
-      capsule: capsule(),
+      capsule: capsule(root),
       sourceDraftAttempt: 1,
       runtimeProfile: "tiny-local",
       worker,
@@ -311,7 +312,7 @@ test("ambiguous anchors, excessive edits, and worker failures remain resumable a
       schema_version: "1.0.0",
       operations: [{ operation: "replace", anchor_quote: "The panel stayed dark.", replacement: "The panel remained unlit.", finding_refs: ["deterministic:meta-commentary"] }],
     })));
-    await assert.rejects(() => runSceneSpanRepair({ root: ambiguousSetup.root, runId: ambiguousSetup.runId, capsule: capsule(), sourceDraftAttempt: 1, runtimeProfile: "tiny-local", worker }), /unique|ambiguous|more than once/i);
+    await assert.rejects(() => runSceneSpanRepair({ root: ambiguousSetup.root, runId: ambiguousSetup.runId, capsule: capsule(ambiguousSetup.root), sourceDraftAttempt: 1, runtimeProfile: "tiny-local", worker }), /unique|ambiguous|more than once/i);
     const state = readChapterExecutionState(ambiguousSetup.root, ambiguousSetup.runId)!;
     assert.equal(state.current_node, "span-repair");
     assert.equal(state.attempts[`${sceneId}:span-repair`], 1);
@@ -328,7 +329,7 @@ test("ambiguous anchors, excessive edits, and worker failures remain resumable a
       schema_version: "1.0.0",
       operations: [{ operation: "replace", anchor_quote: anchor, replacement: "x".repeat(700), finding_refs: ["deterministic:meta-commentary"] }],
     })));
-    await assert.rejects(() => runSceneSpanRepair({ root: excessiveSetup.root, runId: excessiveSetup.runId, capsule: capsule(), sourceDraftAttempt: 1, runtimeProfile: "tiny-local", worker }), /bounded|edit volume|replacement/i);
+    await assert.rejects(() => runSceneSpanRepair({ root: excessiveSetup.root, runId: excessiveSetup.runId, capsule: capsule(excessiveSetup.root), sourceDraftAttempt: 1, runtimeProfile: "tiny-local", worker }), /bounded|edit volume|replacement/i);
     assert.equal(readChapterExecutionState(excessiveSetup.root, excessiveSetup.runId)?.current_node, "span-repair");
   } finally {
     rmSync(excessiveSetup.parent, { recursive: true, force: true });
@@ -337,7 +338,7 @@ test("ambiguous anchors, excessive edits, and worker failures remain resumable a
   const failureSetup = setup();
   try {
     const worker = new StubWorker(new Error("patch model unavailable"));
-    await assert.rejects(() => runSceneSpanRepair({ root: failureSetup.root, runId: failureSetup.runId, capsule: capsule(), sourceDraftAttempt: 1, runtimeProfile: "tiny-local", worker }), /patch model unavailable/i);
+    await assert.rejects(() => runSceneSpanRepair({ root: failureSetup.root, runId: failureSetup.runId, capsule: capsule(failureSetup.root), sourceDraftAttempt: 1, runtimeProfile: "tiny-local", worker }), /patch model unavailable/i);
     const state = readChapterExecutionState(failureSetup.root, failureSetup.runId)!;
     assert.equal(state.current_node, "span-repair");
     assert.equal(state.attempts[`${sceneId}:span-repair`], 1);

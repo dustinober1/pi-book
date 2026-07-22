@@ -52,5 +52,7 @@ export function readChapterExecutionState(root: string, runId: string): ChapterE
     throw new Error("Unable to read chapter execution state.", { cause: error });
   }
   if (!Value.Check(ChapterExecutionStateSchema, value)) throw new Error("Stored chapter execution state is invalid.");
-  return value as ChapterExecutionState;
+  const state = value as ChapterExecutionState;
+  if (state.run_id !== runId) throw new Error("Stored chapter execution state run identity does not match its path.");
+  return state;
 }

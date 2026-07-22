@@ -81,6 +81,7 @@ export function buildExecutionContextCapsule(input: BuildExecutionContextCapsule
   const capsule = buildActiveContextCapsule({
     storyIndex,
     sceneContract: scene,
+    projectHash: input.manifest.project_hash,
     modelProfile: modelProfile(input),
     jobType: input.jobType,
     openingRules: [

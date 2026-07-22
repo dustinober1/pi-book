@@ -90,9 +90,11 @@ function capsuleInput(root: string, scene: SceneContract, jobType: ModelJobType)
   const configuredModelProfile = project.runtime?.model_execution_profile;
   const modelProfile = resolveModelExecutionProfile(configuredModelProfile ? { project: configuredModelProfile } : {});
   const styleCard = compileProjectStyleCard(root, scene.pov);
+  const projectHash = projectStateHash(root);
   const capsule = buildActiveContextCapsule({
     storyIndex,
     sceneContract: scene,
+    projectHash,
     modelProfile,
     jobType,
     openingRules: [
@@ -108,7 +110,7 @@ function capsuleInput(root: string, scene: SceneContract, jobType: ModelJobType)
   });
   return {
     capsule,
-    projectHash: projectStateHash(root),
+    projectHash,
     runtimeProfile: project.runtime?.profile ?? "full",
   };
 }

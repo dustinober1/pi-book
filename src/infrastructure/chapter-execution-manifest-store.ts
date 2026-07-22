@@ -51,5 +51,9 @@ export function readChapterExecutionManifest(root: string, runId: string, chapte
     throw new Error("Unable to read chapter execution manifest.", { cause: error });
   }
   if (!Value.Check(ChapterExecutionManifestSchema, value)) throw new Error("Stored chapter execution manifest is invalid.");
-  return value as ChapterExecutionManifest;
+  const manifest = value as ChapterExecutionManifest;
+  if (manifest.run_id !== runId || manifest.chapter !== chapter) {
+    throw new Error("Stored chapter execution manifest identity does not match its path.");
+  }
+  return manifest;
 }

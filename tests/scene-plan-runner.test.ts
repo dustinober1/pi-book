@@ -16,9 +16,10 @@ const contractHash = "a".repeat(64);
 const storyIndexHash = "b".repeat(64);
 const sceneId = "CH-001-SC-01-V1";
 
-function capsule(): ActiveContextCapsule {
+function capsule(root?: string): ActiveContextCapsule {
   return {
     schema_version: "1.0.0", capsule_id: "CAP-5555555555555555", job_type: "plan-scene",
+    ...(root ? { project_hash: projectStateHash(root) } : {}),
     model_execution_profile: "small-12b-q4",
     scene_contract: {
       schema_version: "1.0.0", scene_id: sceneId, chapter_contract_id: "CH-001", chapter_contract_version: 1,
@@ -73,12 +74,12 @@ test("a structured plan preserves exact beat order and advances to scene draftin
   const { parent, root, runId } = setup();
   try {
     const worker = new StubWorker(workerResult(JSON.stringify(validPlan)));
-    const result = await runScenePlanJob({ root, runId, capsule: capsule(), runtimeProfile: "tiny-local", worker, now: "2026-07-22T00:00:00.000Z" });
+    const result = await runScenePlanJob({ root, runId, capsule: capsule(root), runtimeProfile: "tiny-local", worker, now: "2026-07-22T00:00:00.000Z" });
     assert.equal(worker.requests[0]?.jobType, "plan-scene");
     assert.equal(worker.requests[0]?.pass, "plan");
     assert.equal(worker.requests[0]?.sceneId, sceneId);
     assert.equal(result.artifact.plan_attempt, 1);
-    assert.deepEqual(result.artifact.steps.map((item) => item.required_beat), capsule().scene_contract.required_beats);
+    assert.deepEqual(result.artifact.steps.map((item) => item.required_beat), capsule(root).scene_contract.required_beats);
     assert.equal(result.state.current_node, "scene-draft");
     assert.deepEqual(readScenePlanArtifact(root, runId, sceneId, 1), result.artifact);
   } finally { rmSync(parent, { recursive: true, force: true }); }
@@ -88,7 +89,7 @@ test("unknown evidence and reordered beats remain resumable at scene-plan", asyn
   const reordered = setup();
   try {
     const output = { ...validPlan, steps: [...validPlan.steps].reverse() };
-    await assert.rejects(() => runScenePlanJob({ root: reordered.root, runId: reordered.runId, capsule: capsule(), runtimeProfile: "tiny-local", worker: new StubWorker(workerResult(JSON.stringify(output))) }), /required beat.*order|beat sequence/i);
+    await assert.rejects(() => runScenePlanJob({ root: reordered.root, runId: reordered.runId, capsule: capsule(reordered.root), runtimeProfile: "tiny-local", worker: new StubWorker(workerResult(JSON.stringify(output))) }), /required beat.*order|beat sequence/i);
     const state = readChapterExecutionState(reordered.root, reordered.runId)!;
     assert.equal(state.current_node, "scene-plan");
     assert.equal(state.attempts[`${sceneId}:scene-plan`], 1);
@@ -98,7 +99,20 @@ test("unknown evidence and reordered beats remain resumable at scene-plan", asyn
   const unknown = setup();
   try {
     const output = { ...validPlan, evidence_record_ids: ["CAN-UNKNOWN"] };
-    await assert.rejects(() => runScenePlanJob({ root: unknown.root, runId: unknown.runId, capsule: capsule(), runtimeProfile: "tiny-local", worker: new StubWorker(workerResult(JSON.stringify(output))) }), /unknown evidence record|CAN-UNKNOWN/i);
+    await assert.rejects(() => runScenePlanJob({ root: unknown.root, runId: unknown.runId, capsule: capsule(unknown.root), runtimeProfile: "tiny-local", worker: new StubWorker(workerResult(JSON.stringify(output))) }), /unknown evidence record|CAN-UNKNOWN/i);
     assert.equal(readChapterExecutionState(unknown.root, unknown.runId)?.current_node, "scene-plan");
   } finally { rmSync(unknown.parent, { recursive: true, force: true }); }
+});
+
+test("scene planning rejects a capsule bound to a prior project snapshot", async () => {
+  const { parent, root, runId } = setup();
+  try {
+    const worker = new StubWorker(workerResult(JSON.stringify(validPlan)));
+    const staleCapsule = { ...capsule(root), project_hash: "f".repeat(64) };
+    await assert.rejects(
+      () => runScenePlanJob({ root, runId, capsule: staleCapsule, runtimeProfile: "tiny-local", worker }),
+      /capsule.*project hash|project snapshot/i,
+    );
+    assert.equal(worker.requests.length, 0);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
 });

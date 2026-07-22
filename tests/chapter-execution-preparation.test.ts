@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { prepareChapterExecution, rebaseChapterExecution } from "../src/application/chapter-execution-preparation.js";
@@ -8,9 +8,13 @@ import { buildExecutionContextCapsule } from "../src/application/execution-conte
 import { chapterContractPath, type ChapterContract } from "../src/domain/chapter-contract.js";
 import { readChapterExecutionManifest } from "../src/infrastructure/chapter-execution-manifest-store.js";
 import { readChapterExecutionState, writeChapterExecutionState } from "../src/infrastructure/chapter-execution-store.js";
-import { readActiveContextCapsule } from "../src/infrastructure/context-capsule-store.js";
+import { chapterCommitArtifactPath } from "../src/infrastructure/chapter-commit-artifact-store.js";
+import { chapterStitchArtifactPath } from "../src/infrastructure/chapter-stitch-artifact-store.js";
+import { chapterValidationArtifactPath } from "../src/infrastructure/chapter-validation-artifact-store.js";
+import { readActiveContextCapsule, writeActiveContextCapsule } from "../src/infrastructure/context-capsule-store.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readBook, readProject } from "../src/project/store.js";
+import { latestSceneDraftAttempt } from "../src/application/scene-artifact-discovery.js";
 
 function chapterContract(ready = true): ChapterContract {
   return {
@@ -256,6 +260,80 @@ test("rebase refuses to retarget a prepared run to a different active book", () 
     assert.throws(
       () => rebaseChapterExecution({ root, chapter: 1, runId: "RUN-REBASE-004" }),
       /cannot change.*book|prepared book.*changed|identity/i,
+    );
+    assert.equal(readFileSync(first.manifestPath, "utf8"), manifestBytes);
+    assert.equal(readFileSync(first.statePath, "utf8"), stateBytes);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("project-only rebase replaces capsules and retires every reusable execution artifact", () => {
+  const { parent, root } = setup();
+  try {
+    const runId = "RUN-REBASE-005";
+    const first = prepareChapterExecution({ root, chapter: 1, runId, now: "2026-07-22T00:00:00.000Z" });
+    const oldCapsule = buildExecutionContextCapsule({
+      root,
+      manifest: first.manifest,
+      sceneId: first.manifest.scenes[0]!.scene_id,
+      jobType: "plan-scene",
+    }).capsule;
+    writeActiveContextCapsule(root, runId, oldCapsule);
+    const sceneId = first.manifest.scenes[0]!.scene_id;
+    const staleDraft = join(root, ".pi-book", "runs", runId, "scenes", sceneId, "draft-attempt-9.json");
+    mkdirSync(join(root, ".pi-book", "runs", runId, "scenes", sceneId), { recursive: true });
+    writeFileSync(staleDraft, "stale higher attempt\n", "utf8");
+    const lateArtifacts = [
+      chapterStitchArtifactPath(root, runId, 1),
+      chapterValidationArtifactPath(root, runId, 1),
+      chapterCommitArtifactPath(root, runId, 1),
+    ];
+    for (const path of lateArtifacts) writeFileSync(path, `stale ${path.split("/").at(-1)}\n`, "utf8");
+    const budgetLedger = join(root, ".pi-book", "runs", "budget-ledger.json");
+    const runReport = join(root, ".pi-book", "runs", runId, "run-report.json");
+    writeFileSync(budgetLedger, "preserve budget ledger\n", "utf8");
+    writeFileSync(runReport, "preserve run report\n", "utf8");
+
+    const project = readProject(root);
+    writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml({
+      ...project,
+      automation: { ...project.automation, max_chapters_per_run: project.automation.max_chapters_per_run + 1 },
+    }), "utf8");
+
+    const rebased = rebaseChapterExecution({ root, chapter: 1, runId, now: "2026-07-22T00:05:00.000Z" });
+    assert.notEqual(rebased.manifest.project_hash, first.manifest.project_hash);
+    assert.equal(rebased.manifest.story_index_hash, first.manifest.story_index_hash);
+    assert.equal(rebased.manifest.chapter_contract_hash, first.manifest.chapter_contract_hash);
+    assert.notEqual(rebased.capsules[0]!.capsule_id, oldCapsule.capsule_id);
+    assert.equal(rebased.capsules[0]!.project_hash, rebased.manifest.project_hash);
+    assert.deepEqual(
+      readdirSync(join(root, ".pi-book", "runs", runId, "capsules")).sort(),
+      rebased.capsules.map((capsule) => `${capsule.capsule_id}.json`).sort(),
+    );
+    assert.equal(latestSceneDraftAttempt(root, runId, sceneId), null);
+    assert.ok(lateArtifacts.every((path) => !existsSync(path)));
+    assert.equal(readFileSync(budgetLedger, "utf8"), "preserve budget ledger\n");
+    assert.equal(readFileSync(runReport, "utf8"), "preserve run report\n");
+    assert.equal(existsSync(first.manifestPath), true);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("rebase rejects a stored manifest and state whose internal run identity does not match their path", () => {
+  const { parent, root } = setup();
+  try {
+    const runId = "RUN-REBASE-006";
+    const first = prepareChapterExecution({ root, chapter: 1, runId });
+    const manifest = JSON.parse(readFileSync(first.manifestPath, "utf8")) as Record<string, unknown>;
+    const state = JSON.parse(readFileSync(first.statePath, "utf8")) as Record<string, unknown>;
+    manifest.run_id = "RUN-MISPLACED";
+    state.run_id = "RUN-MISPLACED";
+    writeFileSync(first.manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+    writeFileSync(first.statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    const manifestBytes = readFileSync(first.manifestPath, "utf8");
+    const stateBytes = readFileSync(first.statePath, "utf8");
+
+    assert.throws(
+      () => rebaseChapterExecution({ root, chapter: 1, runId }),
+      /run identity|run id|does not match.*path/i,
     );
     assert.equal(readFileSync(first.manifestPath, "utf8"), manifestBytes);
     assert.equal(readFileSync(first.statePath, "utf8"), stateBytes);

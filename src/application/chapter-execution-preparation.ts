@@ -18,11 +18,18 @@ import {
   serializeChapterExecutionState,
   writeChapterExecutionState,
 } from "../infrastructure/chapter-execution-store.js";
+import { chapterCommitArtifactPath } from "../infrastructure/chapter-commit-artifact-store.js";
+import { chapterStitchArtifactPath } from "../infrastructure/chapter-stitch-artifact-store.js";
+import { chapterValidationArtifactPath } from "../infrastructure/chapter-validation-artifact-store.js";
 import {
   activeContextCapsulePath,
   serializeActiveContextCapsule,
 } from "../infrastructure/context-capsule-store.js";
-import { applyTransaction, type TransactionFileChange } from "../infrastructure/transaction.js";
+import {
+  applyTransaction,
+  recoverInterruptedOperationalTransactions,
+  type TransactionFileChange,
+} from "../infrastructure/transaction.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { readBook, readProject } from "../project/store.js";
 import { chapterContractHash, createChapterExecutionState } from "./chapter-execution-machine.js";
@@ -216,6 +223,7 @@ export function prepareChapterExecution(input: PrepareChapterExecutionInput): Pr
   requireChapter(input.chapter);
   const runId = input.runId ?? `CHRUN-${randomUUID()}`;
   requireRunId(runId);
+  recoverInterruptedOperationalTransactions(input.root);
   const expected = compileChapterExecution(input, runId).manifest;
 
   const existingManifest = readChapterExecutionManifest(input.root, runId, input.chapter);
@@ -247,6 +255,7 @@ export function prepareChapterExecution(input: PrepareChapterExecutionInput): Pr
 export function rebaseChapterExecution(input: RebaseChapterExecutionInput): RebaseChapterExecutionResult {
   requireChapter(input.chapter);
   requireRunId(input.runId);
+  recoverInterruptedOperationalTransactions(input.root);
   const previousManifest = readChapterExecutionManifest(input.root, input.runId, input.chapter);
   const previousState = readChapterExecutionState(input.root, input.runId);
   if (!previousManifest || !previousState) {
@@ -268,8 +277,15 @@ export function rebaseChapterExecution(input: RebaseChapterExecutionInput): Reba
     { path: transactionPath(input.root, manifestPath), content: serializeChapterExecutionManifest(manifest) },
     { path: transactionPath(input.root, statePath), content: serializeChapterExecutionState(state) },
   ];
+  const capsuleRoot = transactionPath(input.root, join(input.root, ".pi-book", "runs", input.runId, "capsules"));
   applyTransaction(input.root, changes, {
-    removePaths: [transactionPath(input.root, join(input.root, ".pi-book", "runs", input.runId, "scenes"))],
+    removePaths: [
+      transactionPath(input.root, join(input.root, ".pi-book", "runs", input.runId, "scenes")),
+      transactionPath(input.root, chapterStitchArtifactPath(input.root, input.runId, input.chapter)),
+      transactionPath(input.root, chapterValidationArtifactPath(input.root, input.runId, input.chapter)),
+      transactionPath(input.root, chapterCommitArtifactPath(input.root, input.runId, input.chapter)),
+    ],
+    replacePaths: [capsuleRoot],
   });
   return { manifest, manifestPath, state, statePath, capsules, capsulePaths };
 }

@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { applyTransaction } from "../src/infrastructure/transaction.js";
 
 function temp(): string { return mkdtempSync(join(tmpdir(), "novel-forge-txn-")); }
@@ -76,5 +78,66 @@ test("operational removals reject canonical unsafe duplicate and overlapping pat
     }], {
       removePaths: [".pi-book/runs/RUN-001/scenes"],
     }), /overlap/i);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("a hard process exit after quarantine and partial publication recovers exact prior operational state", () => {
+  const root = temp();
+  try {
+    const runRoot = join(root, ".pi-book", "runs", "RUN-001");
+    const oldScene = join(runRoot, "scenes", "SC-01", "draft.json");
+    const oldCapsule = join(runRoot, "capsules", "CAP-OLD.json");
+    const manifest = join(runRoot, "manifest.json");
+    const state = join(runRoot, "state.json");
+    mkdirSync(join(runRoot, "scenes", "SC-01"), { recursive: true });
+    mkdirSync(join(runRoot, "capsules"), { recursive: true });
+    writeFileSync(oldScene, "prior scene", "utf8");
+    writeFileSync(oldCapsule, "prior capsule", "utf8");
+    writeFileSync(manifest, "prior manifest", "utf8");
+    writeFileSync(state, "prior state", "utf8");
+
+    const moduleUrl = pathToFileURL(join(process.cwd(), "src", "infrastructure", "transaction.ts")).href;
+    const script = [
+      `import { applyTransaction } from ${JSON.stringify(moduleUrl)};`,
+      `applyTransaction(${JSON.stringify(root)}, [`,
+      `{ path: ".pi-book/runs/RUN-001/capsules/CAP-NEW.json", content: "new capsule" },`,
+      `{ path: ".pi-book/runs/RUN-001/manifest.json", content: "new manifest" },`,
+      `{ path: ".pi-book/runs/RUN-001/state.json", content: "new state" }`,
+      `], { removePaths: [".pi-book/runs/RUN-001/scenes"], replacePaths: [".pi-book/runs/RUN-001/capsules"], simulateProcessExitAfter: 4 });`,
+    ].join("\n");
+    const child = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    assert.equal(child.status, 86, child.stderr || child.stdout);
+
+    applyTransaction(root, [{ path: ".pi-book/runs/RUN-001/recovery-proof.json", content: "recovered" }]);
+    assert.equal(readFileSync(oldScene, "utf8"), "prior scene");
+    assert.equal(readFileSync(oldCapsule, "utf8"), "prior capsule");
+    assert.equal(readFileSync(manifest, "utf8"), "prior manifest");
+    assert.equal(readFileSync(state, "utf8"), "prior state");
+    assert.equal(existsSync(join(runRoot, "capsules", "CAP-NEW.json")), false);
+    assert.equal(readFileSync(join(runRoot, "recovery-proof.json"), "utf8"), "recovered");
+    const journalRoot = join(root, ".pi-book", "transactions");
+    assert.ok(!existsSync(journalRoot) || readdirSync(journalRoot).length === 0);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("recovery rejects an untrusted journal that targets a canonical path", () => {
+  const root = temp();
+  try {
+    const canonical = join(root, "PROJECT.yaml");
+    writeFileSync(canonical, "canonical project\n", "utf8");
+    const transactionRoot = join(root, ".pi-book", "transactions", `TXN-${"a".repeat(32)}`);
+    mkdirSync(transactionRoot, { recursive: true });
+    writeFileSync(join(transactionRoot, "journal.json"), `${JSON.stringify({
+      schema_version: "1.0.0",
+      state: "applying",
+      writes: [{ path: "PROJECT.yaml", had_original: true, covered_by_retired: false }],
+      retired: [],
+    }, null, 2)}\n`, "utf8");
+
+    assert.throws(() => applyTransaction(root, []), /journal.*operational|unsafe.*journal|\.pi-book/i);
+    assert.equal(readFileSync(canonical, "utf8"), "canonical project\n");
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
