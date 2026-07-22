@@ -33,9 +33,9 @@
 - Consumes: `buildQualityJobPlan({ tier, risk })`, `runQualityDraft(input)`.
 - Produces: assertions that orchestrator candidate count, critic lanes, factuality, final review, deferred book jobs, runtime ceilings, and manifest output match one plan.
 
-- [ ] **Step 1:** Add failing tests for plan-to-orchestrator mapping and runtime ceiling enforcement.
-- [ ] **Step 2:** Run the focused tests and confirm they fail because the orchestrator does not consume or expose `QualityJobPlan`.
-- [ ] **Step 3:** Commit the RED tests.
+- [x] **Step 1:** Add failing tests for plan-to-orchestrator mapping and runtime ceiling enforcement.
+- [x] **Step 2:** Run the focused tests and confirm they fail because the orchestrator does not consume or expose `QualityJobPlan`.
+- [x] **Step 3:** Commit the RED tests.
 
 ### Task 2: Align executable job IDs with existing quality lanes
 
@@ -48,10 +48,10 @@
 **Interfaces:**
 - Produces: `qualityJobCriticLanes(plan)`, `qualityJobIsScheduled(plan, id)`, and lane support for `character-intent`, `style`, and `factuality` while retaining legacy `voice` and `research` readability.
 
-- [ ] **Step 1:** Run the focused tests and confirm the new lane/job assertions fail.
-- [ ] **Step 2:** Add the minimal lane schema and plan-query helpers.
-- [ ] **Step 3:** Run focused and existing quality-risk/artifact tests.
-- [ ] **Step 4:** Commit the green lane integration.
+- [x] **Step 1:** Run the focused tests and confirm the new lane/job assertions fail.
+- [x] **Step 2:** Add the minimal lane schema and plan-query helpers.
+- [x] **Step 3:** Run focused and existing quality-risk/artifact tests.
+- [x] **Step 4:** Commit the green lane integration.
 
 ### Task 3: Make `runQualityDraft` consume and enforce the job plan
 
@@ -70,13 +70,15 @@
 - Final verification runs only when scheduled.
 - Book-scope and human-scope jobs remain deferred and are returned in the manifest.
 
-- [ ] **Step 1:** Run the focused orchestrator test and confirm the result and call sequence fail.
-- [ ] **Step 2:** Compile one job plan after risk and claim-audit selection.
-- [ ] **Step 3:** Write the deterministic manifest under `.pi-book/runs/<run-id>/quality-job-plan.json` before inference.
-- [ ] **Step 4:** Route candidate, critic, claim-audit, and verification behavior from the plan.
-- [ ] **Step 5:** Enforce model-call and generated-token ceilings on every call, including corrections.
+- [x] **Step 1:** Run the focused orchestrator test and confirm the result and call sequence fail.
+- [x] **Step 2:** Compile one job plan after risk and claim-audit selection.
+- [x] **Step 3:** Write the deterministic manifest under `.pi-book/runs/<run-id>/quality-job-plan.json` before inference.
+- [x] **Step 4:** Route candidate, critic, claim-audit, and verification behavior from the plan.
+- [x] **Step 5:** Enforce model-call and generated-token ceilings on every call, including corrections.
 - [ ] **Step 6:** Run focused orchestrator, claim-audit, budget, telemetry, and persistent-run tests.
-- [ ] **Step 7:** Commit the green orchestrator integration.
+- [x] **Step 7:** Commit the green orchestrator integration.
+
+Implementation note: strict optional-property compatibility now allows provider telemetry to omit `outputTokens` while still treating an omitted value as zero for the bounded plan ledger.
 
 ### Task 4: Release qualification and merge
 
