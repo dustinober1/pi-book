@@ -90,7 +90,7 @@ test("schema three aggregates first-pass acceptance and accepted prose efficienc
     })).ok, true);
     const report = JSON.parse(readFileSync(join(root, ".pi-book", "runs", header.runId, "run-report.json"), "utf8"));
     assert.deepEqual(report.workflow, {
-      jobs: 2,
+      jobs: 1,
       firstPassAccepted: 1,
       repairsAttempted: 1,
       repairsSucceeded: 1,
@@ -136,4 +136,18 @@ test("model-call escalation codes are privacy-safe machine identifiers", () => {
     }),
     modelCalls: [call({ outcome: "escalated", escalationCode: "Schema failure: raw output" })],
   }), false);
+});
+
+test("workflow job counts exclude correction attempts from the first-pass denominator", () => {
+  assert.deepEqual(summarizeWorkflowTelemetry([
+    call({ outcome: "rejected" }),
+    call({ callId: "CALL-002", attempt: 2, outcome: "repair-succeeded", outputHash: "f".repeat(64) }),
+  ]), {
+    jobs: 1,
+    firstPassAccepted: 0,
+    repairsAttempted: 1,
+    repairsSucceeded: 1,
+    acceptedProseWords: 800,
+    acceptedWordsPerGeneratedToken: 0.25,
+  });
 });

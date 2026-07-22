@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildQualityJobPlan, qualityJobPlanLimits } from "../src/application/quality/job-plan.js";
@@ -9,6 +9,7 @@ import { runQualityDraft } from "../src/application/quality-orchestrator.js";
 import type { ModelCallReport } from "../src/domain/run-report.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
+import { countWords } from "../src/infrastructure/files.js";
 import { writeQualityJobPlanManifest } from "../src/infrastructure/quality-job-plan-store.js";
 import { initializeProject, readProject } from "../src/project/store.js";
 import { completePlot, queueFixture } from "./phase4-fixtures.js";
@@ -168,8 +169,10 @@ test("premium drafting consumes one bounded job plan and ends in one guarded cha
     assert.match(synthesis.context ?? "", /CAUSALITY-MARKER/);
     assert.match(synthesis.context ?? "", /CHARACTER-INTENT-MARKER/);
     assert.match(synthesis.context ?? "", /STYLE-MARKER/);
-    assert.equal(existsSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), true);
-    assert.match(readFileSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md"), "utf8"), /Mara pays/);
+    const chapterPath = join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md");
+    assert.equal(existsSync(chapterPath), true);
+    const acceptedChapter = readFileSync(chapterPath, "utf8");
+    assert.match(acceptedChapter, /Mara pays/);
     assert.equal(readProject(root).current_stage, "drafting");
     assert.equal(existsSync(join(root, ".pi-book", "cache", "generation", "QDR-001")), false);
     const report = JSON.parse(readFileSync(join(root, ".pi-book", "runs", "QDR-001", "run-report.json"), "utf8"));
@@ -177,6 +180,12 @@ test("premium drafting consumes one bounded job plan and ends in one guarded cha
     assert.equal(report.modelExecutionProfile, "host-default");
     assert.equal(report.workflow.jobs, 11);
     assert.equal(report.workflow.firstPassAccepted, 11);
+    assert.equal(report.workflow.acceptedProseWords, countWords(acceptedChapter));
+    assert.ok(report.workflow.acceptedWordsPerGeneratedToken > 0);
+    assert.deepEqual(report.modelCalls.filter((call: ModelCallReport) => call.acceptedProseWords !== undefined).map((call: ModelCallReport) => ({
+      jobType: call.jobType,
+      acceptedProseWords: call.acceptedProseWords,
+    })), [{ jobType: "synthesize-event-output", acceptedProseWords: countWords(acceptedChapter) }]);
     assert.equal(report.modelCalls.every((call: ModelCallReport) => call.outcome === "accepted"), true);
   } finally {
     rmSync(parent, { recursive: true, force: true });
@@ -271,8 +280,82 @@ test("two invalid structured attempts stop before canonical mutation", async () 
     ]);
     assert.equal(report.workflow.repairsAttempted, 1);
     assert.equal(report.workflow.repairsSucceeded, 0);
+    assert.equal(report.workflow.jobs, 1);
+    const reportBeforeRetry = readFileSync(join(root, ".pi-book", "runs", "QDR-FAIL", "run-report.json"), "utf8");
+    const retryWorker = new ScriptedWorker(root);
+    await assert.rejects(runQualityDraft({
+      root,
+      chapter: 1,
+      runtimeProfile: "full",
+      qualityConfig: readProject(root).quality!,
+      worker: retryWorker,
+      runId: "QDR-FAIL",
+      cacheRetention: "keep-all",
+    }), /run report.*already exists/i);
+    assert.equal(retryWorker.calls.length, 0);
+    assert.equal(readFileSync(join(root, ".pi-book", "runs", "QDR-FAIL", "run-report.json"), "utf8"), reportBeforeRetry);
     assert.equal(existsSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), false);
     assert.equal(queueFixture().packets[0]?.status, "ready");
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("run-report append failures stop before correction or canonical mutation", async () => {
+  const { parent, root } = setup();
+  try {
+    const worker = new ScriptedWorker(root);
+    const reportPath = join(root, ".pi-book", "runs", "QDR-REPORT-FAIL", "run-report.json");
+    let sabotaged = false;
+    await assert.rejects(runQualityDraft({
+      root,
+      chapter: 1,
+      runtimeProfile: "full",
+      qualityConfig: readProject(root).quality!,
+      worker,
+      runId: "QDR-REPORT-FAIL",
+      cacheRetention: "keep-all",
+      onProgress: () => {
+        if (sabotaged) return;
+        sabotaged = true;
+        rmSync(reportPath);
+        mkdirSync(reportPath);
+      },
+    }), /Unable to update the local run report/i);
+    assert.equal(worker.calls.length, 1);
+    assert.equal(existsSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), false);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("cache-write failures do not consume a model correction or masquerade as schema failures", async () => {
+  const { parent, root } = setup();
+  try {
+    const worker = new ScriptedWorker(root);
+    const cacheRunPath = join(root, ".pi-book", "cache", "generation", "QDR-CACHE-FAIL");
+    let sabotaged = false;
+    await assert.rejects(runQualityDraft({
+      root,
+      chapter: 1,
+      runtimeProfile: "full",
+      qualityConfig: readProject(root).quality!,
+      worker,
+      runId: "QDR-CACHE-FAIL",
+      cacheRetention: "keep-all",
+      onProgress: () => {
+        if (sabotaged) return;
+        sabotaged = true;
+        mkdirSync(join(root, ".pi-book", "cache", "generation"), { recursive: true });
+        writeFileSync(cacheRunPath, "block cache directory", "utf8");
+      },
+    }), /Unable to write quality cache artifact/i);
+    assert.equal(worker.calls.length, 1);
+    const report = JSON.parse(readFileSync(join(root, ".pi-book", "runs", "QDR-CACHE-FAIL", "run-report.json"), "utf8"));
+    assert.equal(report.modelCalls.length, 1);
+    assert.equal(report.modelCalls[0].outcome, "escalated");
+    assert.equal(report.modelCalls[0].escalationCode, "artifact-store-failure");
+    assert.equal(existsSync(join(root, "books", "book-01", "manuscript", "chapters", "01-chapter-1.md")), false);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }

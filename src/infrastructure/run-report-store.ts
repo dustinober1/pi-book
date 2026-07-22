@@ -98,6 +98,33 @@ export function appendModelCallReport(root: string, runId: string, call: ModelCa
   }
 }
 
+export function recordAcceptedProseWords(root: string, runId: string, callId: string, acceptedProseWords: number): RunReportStoreResult {
+  if (!safeRunId(runId) || !callId.trim() || !Number.isInteger(acceptedProseWords) || acceptedProseWords < 0) {
+    return { ok: false, message: "Unable to update the local run report." };
+  }
+  const path = reportPath(root, runId);
+  try {
+    const current = readAppendableReport(path);
+    if (current.schemaVersion !== "3.0.0" || current.runId !== runId) throw new Error("invalid accepted prose target");
+    const index = current.modelCalls.findIndex((item) => item.callId === callId);
+    const target = current.modelCalls[index];
+    if (index < 0 || !target || target.acceptedProseWords !== undefined
+      || (target.outcome !== "accepted" && target.outcome !== "repair-succeeded")) {
+      throw new Error("invalid accepted prose call");
+    }
+    const modelCalls = current.modelCalls.map((call, callIndex) => callIndex === index ? { ...call, acceptedProseWords } : call);
+    const updated: RunReportV3 = {
+      ...current,
+      modelCalls,
+      workflow: summarizeWorkflowTelemetry(modelCalls),
+    };
+    const result = storeRunReport(root, updated);
+    return result.ok ? result : { ok: false, message: "Unable to update the local run report." };
+  } catch {
+    return { ok: false, message: "Unable to update the local run report." };
+  }
+}
+
 export function appendRunBudgetEvent(root: string, runId: string, event: RunBudgetEvent): RunReportStoreResult {
   if (!safeRunId(runId)) return { ok: false, message: "Unable to update the local run report." };
   const path = reportPath(root, runId);

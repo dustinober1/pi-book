@@ -92,10 +92,12 @@ export type WorkflowTelemetry = Static<typeof WorkflowTelemetrySchema>;
 
 export function summarizeWorkflowTelemetry(calls: readonly ModelCallReport[]): WorkflowTelemetry {
   const jobs = calls.filter((call) => call.jobType !== undefined);
-  const acceptedProseWords = jobs.reduce((sum, call) => sum + (call.acceptedProseWords ?? 0), 0);
+  const acceptedProseWords = jobs
+    .filter((call) => call.outcome === "accepted" || call.outcome === "repair-succeeded")
+    .reduce((sum, call) => sum + (call.acceptedProseWords ?? 0), 0);
   const generatedTokens = jobs.reduce((sum, call) => sum + (call.outputTokens ?? 0), 0);
   return {
-    jobs: jobs.length,
+    jobs: jobs.filter((call) => (call.attempt ?? 1) === 1).length,
     firstPassAccepted: jobs.filter((call) => call.outcome === "accepted" && (call.attempt ?? 1) === 1).length,
     repairsAttempted: jobs.filter((call) => call.jobType === "patch-spans" || (call.attempt ?? 1) > 1).length,
     repairsSucceeded: jobs.filter((call) => call.outcome === "repair-succeeded").length,
