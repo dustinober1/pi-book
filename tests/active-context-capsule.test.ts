@@ -19,7 +19,6 @@ function record(input: {
   payload: unknown;
   dependencies?: string[];
   chapter_scope?: number[];
-  introduced_in?: string | null;
 }): StoryRecordIndexRecord {
   return {
     id: input.id,
@@ -28,7 +27,6 @@ function record(input: {
     source_path: input.source_path,
     source_hash: sourceHash,
     version: 1,
-    introduced_in: input.introduced_in ?? null,
     chapter_scope: input.chapter_scope ?? [],
     payload: input.payload,
     dependencies: input.dependencies ?? [],
@@ -37,20 +35,21 @@ function record(input: {
 
 function index(): StoryRecordIndex {
   const records = [
-    record({ id: "CAN-ACCESS", kind: "canon-fact", status: "locked-canon", source_path: "series/canon.yaml", introduced_in: "chapter-00", chapter_scope: [1], payload: { fact: "Mara has archive access." }, dependencies: ["CHAR-MARA"] }),
-    record({ id: "CHAR-MARA", kind: "entity", status: "current-state", source_path: "series/entity-registry.yaml", introduced_in: "series-plan", payload: { display_name: "Mara Vale" } }),
-    record({ id: "STATE-MARA-LOCATION", kind: "state-record", status: "current-state", source_path: "series/state-ledger.yaml", introduced_in: "chapter-01", chapter_scope: [1], payload: { field: "location", value: "LOC-ARCHIVE" }, dependencies: ["CHAR-MARA", "LOC-ARCHIVE"] }),
-    record({ id: "LOC-ARCHIVE", kind: "entity", status: "current-state", source_path: "series/entity-registry.yaml", introduced_in: "series-plan", payload: { display_name: "Central Archive" } }),
-    record({ id: "KNOW-MARA-USER", kind: "knowledge-record", status: "current-state", source_path: "series/knowledge-ledger.yaml", introduced_in: "chapter-01", chapter_scope: [1], payload: { knowledge: "unknown" }, dependencies: ["CHAR-MARA", "FACT-PRIOR-USER"] }),
-    record({ id: "FACT-PRIOR-USER", kind: "canon-fact", status: "accepted-manuscript-fact", source_path: "series/canon.yaml", introduced_in: "chapter-01", chapter_scope: [1], payload: { fact: "Someone accessed the archive earlier." } }),
-    record({ id: "PLAN-MARA-VAULT", kind: "state-record", status: "proposed-plan", source_path: "series/state-ledger.yaml", introduced_in: "chapter-04", chapter_scope: [4], payload: { field: "location", value: "LOC-VAULT" }, dependencies: ["CHAR-MARA"] }),
-    record({ id: "THREAD-ALARM", kind: "story-thread", status: "current-state", source_path: "series/story-threads.yaml", introduced_in: "chapter-01", chapter_scope: [1], payload: { status: "open" }, dependencies: ["CHAR-MARA"] }),
-    record({ id: "CAN-OPTIONAL", kind: "canon-fact", status: "accepted-manuscript-fact", source_path: "series/canon.yaml", introduced_in: "chapter-00", chapter_scope: [1], payload: { fact: "Optional support." } }),
+    record({ id: "CAN-ACCESS", kind: "canon-fact", status: "locked-canon", source_path: "series/canon.yaml", chapter_scope: [1], payload: { fact: "Mara has archive access." }, dependencies: ["CHAR-MARA"] }),
+    record({ id: "CHAR-MARA", kind: "entity", status: "current-state", source_path: "series/entity-registry.yaml", payload: { display_name: "Mara Vale" } }),
+    record({ id: "STATE-MARA-LOCATION", kind: "state", status: "current-state", source_path: "series/state-ledger.yaml", chapter_scope: [1], payload: { field: "location", value: "LOC-ARCHIVE" }, dependencies: ["CHAR-MARA", "LOC-ARCHIVE"] }),
+    record({ id: "LOC-ARCHIVE", kind: "entity", status: "current-state", source_path: "series/entity-registry.yaml", payload: { display_name: "Central Archive" } }),
+    record({ id: "KNOW-MARA-USER", kind: "knowledge", status: "current-state", source_path: "series/knowledge-ledger.yaml", chapter_scope: [1], payload: { knowledge: "unknown" }, dependencies: ["CHAR-MARA", "FACT-PRIOR-USER"] }),
+    record({ id: "FACT-PRIOR-USER", kind: "canon-fact", status: "accepted-manuscript-fact", source_path: "series/canon.yaml", chapter_scope: [1], payload: { fact: "Someone accessed the archive earlier." } }),
+    record({ id: "PLAN-MARA-VAULT", kind: "state", status: "proposed-plan", source_path: "series/state-ledger.yaml", chapter_scope: [4], payload: { field: "location", value: "LOC-VAULT" }, dependencies: ["CHAR-MARA"] }),
+    record({ id: "THREAD-ALARM", kind: "story-thread", status: "current-state", source_path: "series/story-threads.yaml", chapter_scope: [1], payload: { status: "open" }, dependencies: ["CHAR-MARA"] }),
+    record({ id: "CAN-OPTIONAL", kind: "canon-fact", status: "accepted-manuscript-fact", source_path: "series/canon.yaml", chapter_scope: [1], payload: { fact: "Optional support." } }),
   ];
   return {
     records,
     manifest: {
-      sources: [...new Set(records.map((item) => item.source_path))].map((path) => ({ path, hash: sourceHash, version: 1 })),
+      schema_version: "1.0.0",
+      sources: [...new Set(records.map((item) => item.source_path))].sort().map((path) => ({ path, hash: sourceHash })),
       record_count: records.length,
       index_hash: "f".repeat(64),
     },
@@ -126,7 +125,7 @@ test("missing or unsafe explicit records block before inference with exact IDs",
     && error.recordIds.includes("CAN-NOT-FOUND"));
 
   const unsafeIndex = index();
-  unsafeIndex.records.push(record({ id: "STATE-UNRESOLVED", kind: "state-record", status: "unresolved", source_path: "series/state-ledger.yaml", payload: {} }));
+  unsafeIndex.records.push(record({ id: "STATE-UNRESOLVED", kind: "state", status: "unresolved", source_path: "series/state-ledger.yaml", payload: {} }));
   unsafeIndex.manifest.record_count += 1;
   const unsafe = scene();
   unsafe.required_record_ids = ["STATE-UNRESOLVED"];
