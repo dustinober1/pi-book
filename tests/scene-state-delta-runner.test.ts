@@ -42,8 +42,8 @@ function capsule(): ActiveContextCapsule {
       conflict: "The credential is revoked.",
       turn: "Mara finds a maintenance route.",
       required_beats: ["Enter", "Discover revoked access"],
-      active_thread_ids: [],
-      required_record_ids: ["STATE-MARA-LOCATION"],
+      active_thread_ids: ["THREAD-ACCESS"],
+      required_record_ids: ["STATE-MARA-LOCATION", "THREAD-ACCESS"],
       start_state_ids: ["STATE-MARA-LOCATION"],
       expected_state_delta: [{ record_id: "STATE-MARA-LOCATION", field: "location", operation: "set", value: "LOC-TERMINAL" }],
       forbidden_changes: [],
@@ -53,26 +53,24 @@ function capsule(): ActiveContextCapsule {
     },
     contract_hash: contractHash,
     story_index_hash: storyIndexHash,
-    opening_rules: ["Extract only evidence-grounded state changes."],
-    records: [{
-      id: "STATE-MARA-LOCATION",
-      kind: "state",
-      status: "current-state",
-      authority: "established",
-      required: true,
-      reason: "scene start state",
-      source_path: "series/state-ledger.yaml",
-      source_hash: "c".repeat(64),
-      version: 1,
-      payload: { field: "location", value: "LOC-CORRIDOR" },
-      dependencies: ["CHAR-MARA"],
-      estimated_tokens: 20,
-    }],
+    opening_rules: ["Extract only evidence-grounded state and thread changes."],
+    records: [
+      {
+        id: "STATE-MARA-LOCATION", kind: "state", status: "current-state", authority: "established", required: true,
+        reason: "scene start state", source_path: "series/state-ledger.yaml", source_hash: "c".repeat(64), version: 1,
+        payload: { field: "location", value: "LOC-CORRIDOR" }, dependencies: ["CHAR-MARA"], estimated_tokens: 20,
+      },
+      {
+        id: "THREAD-ACCESS", kind: "story-thread", status: "current-state", authority: "established", required: true,
+        reason: "active scene thread", source_path: "series/story-threads.yaml", source_hash: "6".repeat(64), version: 2,
+        payload: { status: "open", setup: "The access record is wrong." }, dependencies: ["CHAR-MARA"], estimated_tokens: 20,
+      },
+    ],
     previous_tail: null,
     style_card: null,
     closing_task: ["Extract the actual state delta for this scene.", "Return one exact JSON object."],
     manifest: {
-      included_record_ids: ["STATE-MARA-LOCATION"], omitted_record_ids: [], missing_required_record_ids: [], unsafe_required_record_ids: [], dependency_edges: [], estimated_evidence_tokens: 150, maximum_evidence_tokens: 4000,
+      included_record_ids: ["STATE-MARA-LOCATION", "THREAD-ACCESS"], omitted_record_ids: [], missing_required_record_ids: [], unsafe_required_record_ids: [], dependency_edges: [], estimated_evidence_tokens: 170, maximum_evidence_tokens: 4000,
     },
   };
 }
@@ -87,7 +85,7 @@ function draft(): SceneDraftArtifact {
     prose, word_count: prose.split(/\s+/).length, output_hash: outputHash,
     usage: {
       callId: "draft", stage: "drafting", chapter: 1, sceneId, attempt: 1, pass: "candidate", jobType: "draft-scene",
-      contractHash, capsuleHash: "d".repeat(64), includedRecordCount: 1, estimated: true, elapsedMs: 1,
+      contractHash, capsuleHash: "d".repeat(64), includedRecordCount: 2, estimated: true, elapsedMs: 1,
       promptHash: "e".repeat(64), contextHash: "f".repeat(64), outputHash,
     },
     created_at: "2026-07-22T00:00:00.000Z",
@@ -139,28 +137,42 @@ class StubWorker implements QualityWorker {
 }
 
 const matchingMutation = { record_id: "STATE-MARA-LOCATION", field: "location", operation: "set", value: "LOC-TERMINAL", evidence_quote: "Mara reached the terminal." } as const;
+const matchingThreadChange = { thread_id: "THREAD-ACCESS", operation: "advanced", description: "Mara confirms the access anomaly remains active.", evidence_quote: "The access light remained dark behind her." } as const;
 
-test("matching evidence-grounded delta routes to scene acceptance", async () => {
+test("matching evidence-grounded state and thread deltas route to scene acceptance", async () => {
   const { parent, root, runId } = setup();
   try {
-    const worker = new StubWorker(workerResult(JSON.stringify({ schema_version: "1.0.0", mutations: [matchingMutation] })));
+    const worker = new StubWorker(workerResult(JSON.stringify({ schema_version: "1.0.0", mutations: [matchingMutation], thread_changes: [matchingThreadChange] })));
     const result = await runSceneStateDeltaExtraction({ root, runId, capsule: capsule(), draftAttempt: 1, runtimeProfile: "tiny-local", worker });
     assert.equal(worker.requests[0]?.jobType, "extract-state-delta");
     assert.ok(worker.requests[0]?.context?.endsWith("EXACT TASK\n- Extract the actual state delta for this scene.\n- Return one exact JSON object."));
     assert.equal(result.artifact.matches_expected, true);
     assert.equal(result.artifact.next_action, "scene-accept");
+    assert.deepEqual(result.artifact.actual_thread_changes, [matchingThreadChange]);
     assert.equal(result.state.current_node, "scene-accept");
     assert.deepEqual(readSceneStateDeltaArtifact(root, runId, sceneId, 1, 1), result.artifact);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
-test("missing expected mutation routes to span repair", async () => {
+test("missing expected mutation routes to span repair while old outputs without thread changes remain compatible", async () => {
   const { parent, root, runId } = setup();
   try {
     const result = await runSceneStateDeltaExtraction({ root, runId, capsule: capsule(), draftAttempt: 1, runtimeProfile: "tiny-local", worker: new StubWorker(workerResult('{"schema_version":"1.0.0","mutations":[]}')) });
     assert.equal(result.artifact.next_action, "span-repair");
+    assert.deepEqual(result.artifact.actual_thread_changes, []);
     assert.ok(result.artifact.mismatches.some((item) => item.code === "missing-expected-mutation"));
     assert.equal(result.state.current_node, "span-repair");
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("uncontracted thread changes block before scene acceptance", async () => {
+  const { parent, root, runId } = setup();
+  try {
+    const threadChange = { ...matchingThreadChange, thread_id: "THREAD-OTHER" };
+    const result = await runSceneStateDeltaExtraction({ root, runId, capsule: capsule(), draftAttempt: 1, runtimeProfile: "tiny-local", worker: new StubWorker(workerResult(JSON.stringify({ schema_version: "1.0.0", mutations: [matchingMutation], thread_changes: [threadChange] }))) });
+    assert.equal(result.artifact.next_action, "blocked");
+    assert.equal(result.state.blocker?.code, "needs-editorial-decision");
+    assert.deepEqual(result.state.blocker?.record_ids, ["THREAD-OTHER"]);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
