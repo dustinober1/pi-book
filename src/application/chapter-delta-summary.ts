@@ -32,7 +32,6 @@ interface ParagraphRecord {
 }
 
 interface GroupedMutation {
-  key: string;
   record: StateRecord;
   afterRecord: StateRecord;
   category: EntityCategory;
@@ -67,6 +66,13 @@ function requireRecord(records: ReadonlyMap<string, StateRecord>, recordId: stri
   return record;
 }
 
+function requireEvidenceParagraph(records: readonly ParagraphRecord[], quote: string): ParagraphRecord {
+  const matches = records.filter((item) => item.text.includes(quote));
+  if (matches.length === 0) throw new Error(`Chapter delta summary evidence quote was not found in the manuscript: ${quote}`);
+  if (matches.length > 1) throw new Error(`Chapter delta summary evidence quote appears in more than one paragraph: ${quote}`);
+  return matches[0]!;
+}
+
 function materialChange(group: GroupedMutation): ChapterMaterialStateChange {
   return {
     record_id: group.record.id,
@@ -94,8 +100,7 @@ export function buildChapterDeltaSummary(input: BuildChapterDeltaSummaryInput): 
   const groups = new Map<string, GroupedMutation>();
 
   input.mutations.forEach((mutation, index) => {
-    const paragraph = paragraphRecords.find((item) => item.text.includes(mutation.evidence_quote));
-    if (!paragraph) throw new Error(`Chapter delta summary evidence quote was not found in the manuscript: ${mutation.evidence_quote}`);
+    const paragraph = requireEvidenceParagraph(paragraphRecords, mutation.evidence_quote);
     const anchor: ManuscriptEvidenceAnchor = {
       id: `CH-${String(input.chapter).padStart(3, "0")}-EV-${String(index + 1).padStart(3, "0")}`,
       paragraph: paragraph.paragraph,
@@ -118,7 +123,6 @@ export function buildChapterDeltaSummary(input: BuildChapterDeltaSummaryInput): 
       existing.evidenceAnchorIds.push(anchor.id);
     } else {
       groups.set(key, {
-        key,
         record: beforeRecord,
         afterRecord,
         category: entity.category,
@@ -155,7 +159,7 @@ export function buildChapterDeltaSummary(input: BuildChapterDeltaSummaryInput): 
     world_state_changes: worldStateChanges,
     character_state_changes: characterStateChanges,
     knowledge_changes: [],
-    relationship_changes: relationshipChanges,
+    relationship_changes: relationshipStateChanges,
     object_transfers_or_destruction: objectTransfersOrDestruction,
     timeline_movement: timelineMovement,
     threads: { opened: [], advanced: [], resolved: [] },
