@@ -432,6 +432,22 @@ function referencedIds(
   return new Set(values.filter((value) => obligations.includes(value)));
 }
 
+function exactIdsInString(text: string, recordIds: readonly string[]): string[] {
+  return recordIds.filter((recordId) => {
+    const escaped = recordId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(?:^|[^A-Za-z0-9._-])${escaped}(?:$|[^A-Za-z0-9._-])`).test(text);
+  });
+}
+
+function stringValues(value: unknown): string[] {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap(stringValues);
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).flatMap(stringValues);
+  }
+  return [];
+}
+
 function derivedStop(jobType: ModelJobType, output: Record<string, unknown>): boolean {
   if (jobType === "verify-chapter") return output.verdict === "reject";
   if (jobType === "critic-continuity") return output.verdict === "block";
@@ -457,10 +473,16 @@ function evaluateCase(
     : new Set(constraints
       .filter((constraint) => includesConstraint(outputText, constraint.text))
       .map((constraint) => constraint.recordId));
+  const forbiddenStringReferences = response?.structuredOutput
+    ? new Set(stringValues(response.structuredOutput)
+      .flatMap((text) => exactIdsInString(text, item.expected.forbidden_record_ids)))
+    : new Set<string>();
   const missingRequiredIds = item.expected.required_record_ids.filter((recordId) => !references.has(recordId));
   const forbiddenUsedIds = item.expected.forbidden_record_ids.filter((recordId) => {
     const constraint = constraints.find((candidate) => candidate.recordId === recordId);
-    return references.has(recordId) || Boolean(constraint && includesConstraint(outputText, constraint.text));
+    return references.has(recordId)
+      || forbiddenStringReferences.has(recordId)
+      || Boolean(constraint && includesConstraint(outputText, constraint.text));
   });
   const stop = response?.structuredOutput ? derivedStop(item.job_type, response.structuredOutput) : false;
   const correctStop = response !== null && stop === item.expected.must_stop;
@@ -486,19 +508,16 @@ function opaqueSampleId(seed: string, caseId: string): string {
   return `GQ-${sha256(`${seed}\0${caseId}`).slice(0, 16).toUpperCase()}`;
 }
 
-function schemaInstruction(jobType: ModelJobType): string {
-  const names: Partial<Record<ModelJobType, string>> = {
-    "compile-chapter-contract": "ChapterContractSchema",
-    "compile-scene-contract": "SceneContractSchema",
-    "plan-scene": "ScenePlanOutputSchema",
-    "extract-state-delta": "SceneStateDeltaOutputSchema",
-    "extract-factual-claims": "ClaimExtractionArtifactSchema",
-    "critic-continuity": "SceneCriticOutputSchema",
-    "patch-spans": "ScenePatchOutputSchema",
-    "synthesize-event-output": "QualityEventOutputSchema",
-    "verify-chapter": "QualityVerificationOutputSchema",
-  };
-  return `The structured_output value must satisfy the exact ${names[jobType]} contract.`;
+function schemaInstruction(item: GemmaQualificationCase): string {
+  const schema = structuredSchema(item.job_type);
+  if (!schema) throw new Error(`Gemma qualification has no concrete output contract for ${item.job_type}.`);
+  return [
+    "The structured_output value must satisfy this concrete JSON Schema:",
+    stableJson(schema),
+    ...(item.job_type === "verify-chapter"
+      ? [`Semantic constraint: chapter must equal ${item.expected.chapter}.`]
+      : []),
+  ].join("\n");
 }
 
 function initialPrompt(item: GemmaQualificationCase): string {
@@ -507,7 +526,7 @@ function initialPrompt(item: GemmaQualificationCase): string {
     item.prompt,
     "Return exactly one JSON object and no surrounding text.",
     item.expected.valid_structured_output
-      ? `The envelope must have exactly one key named structured_output. ${schemaInstruction(item.job_type)}`
+      ? `The envelope must have exactly one key named structured_output.\n${schemaInstruction(item)}`
       : "The envelope must have exactly one key named prose with a nonblank string value.",
     "Use governing records and never use forbidden records. Do not add detached self-ratings or record lists.",
   ].join("\n");

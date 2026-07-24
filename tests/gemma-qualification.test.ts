@@ -252,6 +252,168 @@ test("only genuine production authority bindings satisfy required-record obligat
   }
 });
 
+test("validated structured output detects exact forbidden IDs in any nested string without substring false positives", async () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-gemma-forbidden-strings-"));
+  try {
+    const criticCase = (id: string): GemmaQualificationCase => qualificationCase(id, {
+      job_type: "critic-continuity",
+      expected: {
+        valid_structured_output: true,
+        required_record_ids: [],
+        forbidden_record_ids: [`FORBIDDEN-${id}`],
+        must_stop: false,
+      },
+    });
+    const criticResponse = (evidence_quote: string): string => JSON.stringify({
+      structured_output: {
+        schema_version: "1.0.0",
+        verdict: "repair",
+        findings: [{
+          severity: "high",
+          category: "continuity",
+          evidence_quote,
+          required_change: "Repair the continuity issue.",
+        }],
+      },
+    });
+    const cases = [
+      qualificationCase("a-anchor"),
+      criticCase("b-exact"),
+      criticCase("c-substring"),
+      qualificationCase("z-stop", {
+        job_type: "verify-chapter",
+        expected: {
+          valid_structured_output: true,
+          required_record_ids: [],
+          forbidden_record_ids: ["FORBIDDEN-z-stop"],
+          must_stop: true,
+          chapter: 1,
+        },
+      }),
+    ];
+    const result = await runGemmaQualification(baseInput(join(parent, "run"), cases, new ScriptedWorker([
+      planResponse("a-anchor"),
+      criticResponse("The output cites FORBIDDEN-b-exact as evidence."),
+      criticResponse("The token prefixFORBIDDEN-c-substringsuffix is not an exact record ID."),
+      verificationResponse("z-stop", "reject"),
+    ])));
+    assert.equal(result.report.required_record_rate, 1);
+    assert.equal(result.report.forbidden_record_uses, 1);
+    assert.equal(result.report.severe_failure_count, 1);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("every shipped inference attempt carries a concrete bounded output contract", async () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-gemma-prompt-contracts-"));
+  try {
+    const assets = loadGemmaQualificationAssets(process.cwd());
+    const requests: QualityWorkerRequest[] = [];
+    const worker: Pick<QualityWorker, "run"> = {
+      async run(request) {
+        requests.push(request);
+        return {
+          text: request.jobType === "draft-scene" && request.callId.endsWith("-A2")
+            ? JSON.stringify({ prose: "Nia recognizes her father's watch but does not touch it." })
+            : "{}",
+          usage: {
+            callId: request.callId,
+            stage: request.stage,
+            pass: request.pass,
+            estimated: true,
+            elapsedMs: 1,
+            promptHash: "a".repeat(64),
+            contextHash: "b".repeat(64),
+            outputHash: "c".repeat(64),
+          },
+        };
+      },
+    };
+    await runGemmaQualification({
+      cases: assets.cases,
+      fingerprint,
+      provider: fingerprint.provider,
+      model: fingerprint.model,
+      seed: "fixed-seed",
+      worker,
+      outputRoot: join(parent, "run"),
+      fixtureSources: assets.fixtureSources,
+      rubric: assets.rubric,
+    });
+    const requiredKeys: Readonly<Record<string, readonly string[]>> = {
+      "compile-scene-contract": ["scene_id", "required_beats", "target_words", "required_record_ids"],
+      "plan-scene": ["steps", "turn_execution", "evidence_record_ids"],
+      "extract-state-delta": ["mutations", "thread_changes", "record_id"],
+      "extract-factual-claims": ["artifact_type", "claims", "research_ids", "invention_ids"],
+      "critic-continuity": ["verdict", "findings", "evidence_quote"],
+      "patch-spans": ["operations", "anchor_quote", "finding_refs"],
+      "verify-chapter": ["chapter", "verdict", "findings", "required_change"],
+    };
+    for (const request of requests) {
+      assert.ok(request.jobType, "qualification requests require an explicit job type");
+      const jobType = request.jobType;
+      const estimatedInstructionTokens = Math.ceil(Buffer.byteLength(request.prompt, "utf8") / 3) + 64;
+      assert.ok(estimatedInstructionTokens <= 1_000, `${jobType} exceeded its 1000-token instruction budget`);
+      assert.doesNotMatch(request.prompt, /RECORD [A-Za-z0-9]/);
+      if (jobType === "draft-scene") {
+        assert.match(request.prompt, /exactly one key named prose with a nonblank string value/i);
+        continue;
+      }
+      assert.match(request.prompt, /concrete JSON Schema/i);
+      assert.match(request.prompt, /"type":"object"/);
+      assert.match(request.prompt, /"additionalProperties":false/);
+      for (const key of requiredKeys[jobType] ?? []) {
+        assert.ok(request.prompt.includes(`"${key}"`), `${jobType} prompt omitted ${key}`);
+      }
+      if (jobType === "verify-chapter") {
+        assert.match(request.prompt, /chapter must equal 1/i);
+      }
+    }
+    for (const jobType of [...Object.keys(requiredKeys), "draft-scene"]) {
+      const attempts = requests.filter((request) => request.jobType === jobType);
+      const shippedCaseCount = assets.cases.filter((item) => item.job_type === jobType).length;
+      assert.equal(
+        attempts.length,
+        shippedCaseCount * 2,
+        `${jobType} must receive the contract on initial and correction attempts`,
+      );
+      for (let index = 1; index < attempts.length; index += 2) {
+        assert.match(attempts[index]!.prompt, /single allowed correction attempt/i);
+      }
+    }
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("shipped stop fixtures are neutral while trusted evidence still yields the expected stop posture", async () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-gemma-neutral-stop-"));
+  try {
+    const assets = loadGemmaQualificationAssets(process.cwd());
+    const verificationCases = assets.cases.filter((item) => item.job_type === "verify-chapter");
+    assert.equal(verificationCases.length, 2);
+    for (const item of verificationCases) {
+      assert.doesNotMatch(
+        `${item.prompt}\n${item.context}`,
+        /\b(?:accept|reject|pass|block|stop|escalat\w*|continue)\b/i,
+      );
+    }
+    const plan = assets.cases.find((item) => item.id === "structured-plan-scene");
+    assert.ok(plan);
+    const cases = [...verificationCases, plan];
+    const result = await runGemmaQualification(baseInput(join(parent, "run"), cases, new ScriptedWorker([
+      verificationResponse("authority-ignore-superseded", "accept"),
+      verificationResponse("authority-stop-on-conflict", "reject"),
+      planResponse("structured-plan-scene", ["REC-PLAN-001"]),
+    ])));
+    assert.equal(result.report.correct_stop_rate, 1);
+    assert.equal(result.report.severe_failure_count, 0);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
 test("qualification rejects cases that do not come from the exact frozen fixture sources", async () => {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-gemma-source-unity-"));
   try {
