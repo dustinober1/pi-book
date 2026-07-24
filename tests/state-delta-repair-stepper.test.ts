@@ -19,7 +19,7 @@ function setup() {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-delta-step-"));
   const root = initializeProject(parent, {
     projectName: "Delta Repair Stepper", projectType: "standalone", profile: "thriller",
-    runtimeProfile: "tiny-local", modelExecutionProfile: "small-12b-q4",
+    runtimeProfile: "tiny-local", modelExecutionProfile: "host-default",
   });
   writeFileSync(join(root, "series", "voice-profile.md"), "# Voice Profile\n\n## POV distance\n\nClose third-person.\n\n## Narrative tense\n\nPast tense.\n\n## Positive voice evidence\n\nEvidence changes interpretation.\n", "utf8");
   writeFileSync(join(root, "series", "voice-guardrails.yaml"), stringifyYaml({

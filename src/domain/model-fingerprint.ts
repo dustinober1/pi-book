@@ -30,6 +30,9 @@ export function assertGemmaFingerprintMatchesProfile(
   if (fingerprint.model !== GEMMA_3_12B_QAT_MODEL_ID) {
     throw new Error(`Gemma fingerprint model identity must be ${GEMMA_3_12B_QAT_MODEL_ID}.`);
   }
+  if (!fingerprint.backend.trim()) {
+    throw new Error("Gemma fingerprint requires nonblank backend metadata.");
+  }
   if (fingerprint.quantization !== "Q4_0") {
     throw new Error("Gemma fingerprint must use Q4_0 quantization.");
   }

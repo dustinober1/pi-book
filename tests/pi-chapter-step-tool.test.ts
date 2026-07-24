@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sceneExecutionDraftStageSpec } from "../src/application/stage-specs/draft-execution.js";
 import { chapterContractPath } from "../src/domain/chapter-contract.js";
-import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
+import type { QualityModelCapacity, QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import { readChapterExecutionState } from "../src/infrastructure/chapter-execution-store.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { registerNovelForgeWithRecalibration } from "../src/pi/recalibration-extension.js";
@@ -72,7 +72,7 @@ function setup() {
     projectType: "standalone",
     profile: "thriller",
     runtimeProfile: "tiny-local",
-    modelExecutionProfile: "small-12b-q4",
+    modelExecutionProfile: "host-default",
   });
   const project = readProject(root);
   project.current_stage = "drafting";
@@ -94,7 +94,18 @@ class NoopWorker implements QualityWorker {
     this.requests.push(request);
     throw new Error("the first deterministic steps must not call a model");
   }
-  async resolveModelCapacity() { return null; }
+  async resolveModelCapacity(): Promise<QualityModelCapacity | null> { return null; }
+}
+
+class ExactGemmaWithoutMetadataWorker extends NoopWorker {
+  override async resolveModelCapacity() {
+    return {
+      provider: "local",
+      model: "google/gemma-3-12b-it-qat-q4_0-gguf",
+      contextWindowTokens: 16_384,
+      maxOutputTokens: 4_096,
+    };
+  }
 }
 
 function registeredTool(worker: QualityWorker) {
@@ -157,6 +168,30 @@ test("novel_advance_chapter_step reports an active writer gate without preparing
     assert.equal(result.details.error !== undefined, true);
     assert.equal(readChapterExecutionState(root, runId), null);
   } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("novel_advance_chapter_step blocks an exact Gemma run before creating execution artifacts", async () => {
+  const { parent, root } = setup();
+  const previousProvider = process.env.NOVEL_FORGE_QUALITY_PROVIDER;
+  const previousModel = process.env.NOVEL_FORGE_QUALITY_MODEL;
+  try {
+    const project = readProject(root);
+    project.runtime!.model_execution_profile = "gemma-3-12b-it-qat-q4_0";
+    writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
+    process.env.NOVEL_FORGE_QUALITY_PROVIDER = "local";
+    process.env.NOVEL_FORGE_QUALITY_MODEL = "google/gemma-3-12b-it-qat-q4_0-gguf";
+
+    const tool = registeredTool(new ExactGemmaWithoutMetadataWorker());
+    const result = await tool.execute("tool-gemma", { project_root: root, chapter: 1 }, undefined, undefined, { cwd: root });
+    assert.match(result.content[0].text, /Gemma model metadata requires a backend/i);
+    assert.equal(readChapterExecutionState(root, runId), null);
+  } finally {
+    if (previousProvider === undefined) delete process.env.NOVEL_FORGE_QUALITY_PROVIDER;
+    else process.env.NOVEL_FORGE_QUALITY_PROVIDER = previousProvider;
+    if (previousModel === undefined) delete process.env.NOVEL_FORGE_QUALITY_MODEL;
+    else process.env.NOVEL_FORGE_QUALITY_MODEL = previousModel;
     rmSync(parent, { recursive: true, force: true });
   }
 });

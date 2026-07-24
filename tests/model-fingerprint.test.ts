@@ -58,3 +58,19 @@ test("fingerprint rejects a Gemma target with the wrong model identity", () => {
     quantization: "Q4_0",
   }, MODEL_EXECUTION_PROFILES["gemma-3-12b-it-qat-q4_0"]), /model identity/i);
 });
+
+test("fingerprint rejects missing Gemma backend metadata", () => {
+  assert.throws(() => assertGemmaFingerprintMatchesProfile({
+    schema_version: "1.0.0",
+    profile_id: "gemma-3-12b-it-qat-q4_0",
+    provider: "local",
+    model: "google/gemma-3-12b-it-qat-q4_0-gguf",
+    backend: "",
+    backend_version: null,
+    quantization: "Q4_0",
+    context_window_tokens: 16_384,
+    maximum_output_tokens: 4_096,
+    chat_template_hash: null,
+    model_file_hash: null,
+  }, MODEL_EXECUTION_PROFILES["gemma-3-12b-it-qat-q4_0"]), /backend/i);
+});

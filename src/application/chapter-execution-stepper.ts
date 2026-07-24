@@ -7,6 +7,7 @@ import {
   type SceneCriticJobType,
 } from "../domain/scene-critic-artifact.js";
 import { readChapterExecutionState, writeChapterExecutionState } from "../infrastructure/chapter-execution-store.js";
+import { readChapterExecutionManifest } from "../infrastructure/chapter-execution-manifest-store.js";
 import { readSceneCriticArtifact } from "../infrastructure/scene-critic-artifact-store.js";
 import { readSceneCriticSummaryArtifact } from "../infrastructure/scene-critic-summary-store.js";
 import { readSceneDraftArtifact } from "../infrastructure/scene-draft-artifact-store.js";
@@ -18,6 +19,8 @@ import {
 import { commitValidatedChapter } from "./chapter-commit.js";
 import { transitionChapterExecution } from "./chapter-execution-machine.js";
 import { prepareChapterExecution } from "./chapter-execution-preparation.js";
+import { qualifyGemmaModelForRun } from "./model-fingerprint.js";
+import { resolveModelExecutionProfile } from "./model-execution-profile-resolver.js";
 import { stitchAcceptedChapter } from "./chapter-stitch.js";
 import { validateStitchedChapter } from "./chapter-validation.js";
 import { validateSceneDraft } from "./deterministic-scene-validator.js";
@@ -28,6 +31,7 @@ import { runSceneDraftJob } from "./scene-draft-runner.js";
 import { runScenePlanJob } from "./scene-plan-runner.js";
 import { runSceneSpanRepair } from "./scene-span-repair-runner.js";
 import { runSceneStateDeltaExtraction } from "./scene-state-delta-runner.js";
+import { readProject } from "../project/store.js";
 
 export type ChapterExecutionStepAction =
   | "prepared"
@@ -134,10 +138,22 @@ function sceneContractHashes(manifest: ReturnType<typeof prepareChapterExecution
 export async function advanceChapterExecutionStep(
   input: AdvanceChapterExecutionStepInput,
 ): Promise<AdvanceChapterExecutionStepResult> {
+  const existingManifest = readChapterExecutionManifest(input.root, input.runId, input.chapter);
+  const project = readProject(input.root);
+  const executionProfile = resolveModelExecutionProfile({
+    ...(project.runtime?.model_execution_profile ? { project: project.runtime.model_execution_profile } : {}),
+  });
+  const modelFingerprint = existingManifest ? null : await qualifyGemmaModelForRun({
+    worker: input.worker,
+    profile: executionProfile,
+    ...(input.model ? { selection: { ...(input.provider ? { provider: input.provider } : {}), model: input.model } } : {}),
+    ...(input.signal ? { signal: input.signal } : {}),
+  });
   const prepared = prepareChapterExecution({
     root: input.root,
     chapter: input.chapter,
     runId: input.runId,
+    ...(modelFingerprint ? { modelFingerprint } : {}),
     ...(input.now ? { now: input.now } : {}),
   });
   if (!prepared.alreadyPrepared) return { action: "prepared", state: prepared.state };
@@ -145,6 +161,15 @@ export async function advanceChapterExecutionStep(
   const state = readChapterExecutionState(input.root, input.runId);
   if (!state) throw new Error(`Chapter execution state disappeared for ${input.runId}.`);
   if (state.status !== "active") return { action: state.status === "completed" ? "complete" : "stopped", state };
+
+  if (["scene-plan", "scene-draft", "critic-review", "span-repair", "state-delta"].includes(state.current_node)) {
+    await qualifyGemmaModelForRun({
+      worker: input.worker,
+      profile: executionProfile,
+      ...(input.model ? { selection: { ...(input.provider ? { provider: input.provider } : {}), model: input.model } } : {}),
+      ...(input.signal ? { signal: input.signal } : {}),
+    });
+  }
 
   if (state.current_node === "contract-compile") {
     return { action: "chapter-contract-compiled", state: writeTransition(input.root, state, "scene-contract-compile", input.now) };

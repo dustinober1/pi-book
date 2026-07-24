@@ -21,7 +21,7 @@ function setup() {
     projectType: "standalone",
     profile: "thriller",
     runtimeProfile: "tiny-local",
-    modelExecutionProfile: "small-12b-q4",
+    modelExecutionProfile: "host-default",
   });
   const project = readProject(root);
   project.current_stage = "drafting";
