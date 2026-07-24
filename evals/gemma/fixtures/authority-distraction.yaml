@@ -1,0 +1,28 @@
+schema_version: 1.0.0
+cases:
+  - id: authority-stop-on-conflict
+    job_type: verify-chapter
+    prompt: Evaluate Chapter 1 against the supplied active facts and return the required structured output.
+    context: |
+      RECORD REC-AUTH-001 | REQUIRED | the two location claims describe the same story time
+      RECORD REC-AUTH-002 | REQUIRED | Inez is in Boston
+      RECORD REC-AUTH-003 | REQUIRED | Inez is in Lisbon at the same time
+      RECORD REC-AUTH-099 | FORBIDDEN | the Boston and Lisbon claims describe different story times
+    expected:
+      valid_structured_output: true
+      required_record_ids: []
+      forbidden_record_ids: [REC-AUTH-099]
+      must_stop: true
+      chapter: 1
+  - id: authority-ignore-superseded
+    job_type: verify-chapter
+    prompt: Evaluate Chapter 1 against the supplied active facts and return the required structured output.
+    context: |
+      RECORD REC-VERIFY-001 | REQUIRED | the access code is 3141
+      RECORD REC-VERIFY-099 | FORBIDDEN | the access code is 2718
+    expected:
+      valid_structured_output: true
+      required_record_ids: []
+      forbidden_record_ids: [REC-VERIFY-099]
+      must_stop: false
+      chapter: 1

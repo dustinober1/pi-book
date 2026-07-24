@@ -1,0 +1,13 @@
+schema_version: 1.0.0
+cases:
+  - id: prose-dramatized-scene
+    job_type: draft-scene
+    prompt: Dramatize the beat as concise prose that includes the governing constraint and excludes the forbidden outcome.
+    context: |
+      RECORD REC-PROSE-001 | REQUIRED | Nia recognizes her father's watch but does not touch it
+      RECORD REC-PROSE-099 | FORBIDDEN | Nia steals the watch immediately
+    expected:
+      valid_structured_output: false
+      required_record_ids: [REC-PROSE-001]
+      forbidden_record_ids: [REC-PROSE-099]
+      must_stop: false

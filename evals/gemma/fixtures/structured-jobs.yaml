@@ -1,0 +1,68 @@
+schema_version: 1.0.0
+cases:
+  - id: structured-compile-scene
+    job_type: compile-scene-contract
+    prompt: Compile a complete SceneContractSchema object and place REC-SCENE-001 in required_record_ids.
+    context: |
+      RECORD REC-SCENE-001 | REQUIRED | the scene occurs at the east gate before dawn
+      RECORD REC-SCENE-099 | FORBIDDEN | the scene occurs at the west gate at noon
+    expected:
+      valid_structured_output: true
+      required_record_ids: [REC-SCENE-001]
+      forbidden_record_ids: [REC-SCENE-099]
+      must_stop: false
+  - id: structured-plan-scene
+    job_type: plan-scene
+    prompt: Return a complete ScenePlanOutputSchema object with REC-PLAN-001 in evidence_record_ids.
+    context: |
+      RECORD REC-PLAN-001 | REQUIRED | Mara retrieves the ledger
+      RECORD REC-PLAN-099 | FORBIDDEN | Mara burns the ledger
+    expected:
+      valid_structured_output: true
+      required_record_ids: [REC-PLAN-001]
+      forbidden_record_ids: [REC-PLAN-099]
+      must_stop: false
+  - id: structured-state-delta
+    job_type: extract-state-delta
+    prompt: Return a complete SceneStateDeltaOutputSchema object whose mutation binds REC-STATE-001.
+    context: |
+      RECORD REC-STATE-001 | REQUIRED | the sealed door is opened in this scene
+      RECORD REC-STATE-099 | FORBIDDEN | the door remains sealed
+    expected:
+      valid_structured_output: true
+      required_record_ids: [REC-STATE-001]
+      forbidden_record_ids: [REC-STATE-099]
+      must_stop: false
+  - id: structured-factual-claims
+    job_type: extract-factual-claims
+    prompt: Return a complete ClaimExtractionArtifactSchema object whose claim binds RES-001 in research_ids.
+    context: |
+      RECORD RES-001 | REQUIRED | the train arrived at 06:40
+      RECORD RES-099 | FORBIDDEN | the train arrived at 07:10
+    expected:
+      valid_structured_output: true
+      required_record_ids: [RES-001]
+      forbidden_record_ids: [RES-099]
+      must_stop: false
+  - id: structured-continuity-critic
+    job_type: critic-continuity
+    prompt: Return a complete SceneCriticOutputSchema object that evaluates the supplied continuity facts.
+    context: |
+      RECORD REC-CONT-001 | REQUIRED | Jo's left wrist is injured
+      RECORD REC-CONT-099 | FORBIDDEN | Jo's right wrist is injured
+    expected:
+      valid_structured_output: true
+      required_record_ids: []
+      forbidden_record_ids: [REC-CONT-099]
+      must_stop: false
+  - id: structured-patch-spans
+    job_type: patch-spans
+    prompt: Return a complete ScenePatchOutputSchema object that applies only the requested local repair.
+    context: |
+      RECORD REC-PATCH-001 | REQUIRED | only paragraph three may change
+      RECORD REC-PATCH-099 | FORBIDDEN | the whole scene may be rewritten
+    expected:
+      valid_structured_output: true
+      required_record_ids: []
+      forbidden_record_ids: [REC-PATCH-099]
+      must_stop: false

@@ -20,7 +20,7 @@ interface Fixture {
 }
 
 const root = resolve(process.cwd(), "evals");
-const reservedDirectories = new Set(["rubrics", "v1-3-release", "journeys", "quality"]);
+const reservedDirectories = new Set(["rubrics", "v1-3-release", "journeys", "quality", "gemma"]);
 const names = readdirSync(root, { withFileTypes: true })
   .filter((entry) => entry.isDirectory() && !reservedDirectories.has(entry.name))
   .map((entry) => entry.name)

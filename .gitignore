@@ -9,4 +9,5 @@ scripts/.novel-forge-test-*
 .pi-book/index/
 .pi-book/transactions/
 evals/quality/runs/
+evals/gemma/runs/
 .worktrees/
