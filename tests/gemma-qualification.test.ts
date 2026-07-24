@@ -305,6 +305,37 @@ test("validated structured output detects exact forbidden IDs in any nested stri
   }
 });
 
+test("validated shipped prose detects an exact forbidden ID without substring false positives", async () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-gemma-prose-forbidden-id-"));
+  try {
+    const assets = loadGemmaQualificationAssets(process.cwd());
+    const prose = assets.cases.find((item) => item.id === "prose-dramatized-scene");
+    const plan = assets.cases.find((item) => item.id === "structured-plan-scene");
+    const stop = assets.cases.find((item) => item.id === "authority-stop-on-conflict");
+    assert.ok(prose);
+    assert.ok(plan);
+    assert.ok(stop);
+    const lookalike: GemmaQualificationCase = {
+      ...prose,
+      id: "prose-dramatized-scene-lookalike",
+    };
+    const governingProse = "Nia recognizes her father's watch but does not touch it.";
+    const cases = [prose, lookalike, plan, stop];
+    const result = await runGemmaQualification(baseInput(join(parent, "run"), cases, new ScriptedWorker([
+      verificationResponse("authority-stop-on-conflict", "reject"),
+      JSON.stringify({ prose: `${governingProse} The margin names REC-PROSE-099 as a record.` }),
+      JSON.stringify({ prose: `${governingProse} The token prefixREC-PROSE-099suffix is only a lookalike.` }),
+      planResponse("structured-plan-scene", ["REC-PLAN-001"]),
+    ])));
+    assert.equal(result.report.required_record_rate, 1);
+    assert.equal(result.report.forbidden_record_uses, 1);
+    assert.equal(result.report.correct_stop_rate, 1);
+    assert.equal(result.report.severe_failure_count, 1);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
 test("every shipped inference attempt carries a concrete bounded output contract", async () => {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-gemma-prompt-contracts-"));
   try {

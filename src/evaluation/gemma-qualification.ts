@@ -473,10 +473,13 @@ function evaluateCase(
     : new Set(constraints
       .filter((constraint) => includesConstraint(outputText, constraint.text))
       .map((constraint) => constraint.recordId));
-  const forbiddenStringReferences = response?.structuredOutput
-    ? new Set(stringValues(response.structuredOutput)
-      .flatMap((text) => exactIdsInString(text, item.expected.forbidden_record_ids)))
-    : new Set<string>();
+  const forbiddenStrings = response?.structuredOutput
+    ? stringValues(response.structuredOutput)
+    : response?.prose
+      ? [response.prose]
+      : [];
+  const forbiddenStringReferences = new Set(forbiddenStrings
+    .flatMap((text) => exactIdsInString(text, item.expected.forbidden_record_ids)));
   const missingRequiredIds = item.expected.required_record_ids.filter((recordId) => !references.has(recordId));
   const forbiddenUsedIds = item.expected.forbidden_record_ids.filter((recordId) => {
     const constraint = constraints.find((candidate) => candidate.recordId === recordId);
