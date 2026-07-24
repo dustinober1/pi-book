@@ -78,6 +78,8 @@ import {
   type QualityPassPlan,
 } from "./quality-risk.js";
 import { createRunReportV3Header } from "./run-telemetry.js";
+import { qualifyGemmaModelForRun } from "./model-fingerprint.js";
+import { resolveModelExecutionProfile } from "./model-execution-profile-resolver.js";
 import { resolveWorkerModelBudget } from "../pi/quality-worker.js";
 
 export interface RunQualityDraftInput {
@@ -213,7 +215,16 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
   if (quality.tier === "economy") throw new Error("Economy drafting must use the existing direct prompt workflow.");
 
   const startingProject = readProject(input.root);
-  const modelExecutionProfile = startingProject.runtime?.model_execution_profile ?? "host-default";
+  const executionProfile = resolveModelExecutionProfile({
+    ...(startingProject.runtime?.model_execution_profile ? { project: startingProject.runtime.model_execution_profile } : {}),
+  });
+  await qualifyGemmaModelForRun({
+    worker: input.worker,
+    profile: executionProfile,
+    ...(input.model ? { selection: { ...(input.provider ? { provider: input.provider } : {}), model: input.model } } : {}),
+    ...(input.signal ? { signal: input.signal } : {}),
+  });
+  const modelExecutionProfile = executionProfile.id;
   const book = readBook(input.root);
   const context = buildChapterContext(input.root, input.chapter, profile.maxContextChars, profile.graphDepth);
   const chapter = context.packet.chapter;

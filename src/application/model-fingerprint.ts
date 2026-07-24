@@ -4,7 +4,7 @@ import {
   type ModelFingerprint,
 } from "../domain/model-fingerprint.js";
 import type { ModelExecutionProfile } from "../domain/model-execution-profile.js";
-import type { QualityModelCapacity } from "../domain/quality-worker.js";
+import type { QualityModelCapacity, QualityModelSelection, QualityWorker } from "../domain/quality-worker.js";
 
 function optionalMetadata(value: string | undefined): string | null {
   const trimmed = value?.trim();
@@ -38,4 +38,19 @@ export function normalizeModelFingerprint(
   };
   assertGemmaFingerprintMatchesProfile(fingerprint, profile);
   return fingerprint;
+}
+
+export async function qualifyGemmaModelForRun(input: {
+  worker: QualityWorker;
+  profile: ModelExecutionProfile;
+  selection?: QualityModelSelection;
+  signal?: AbortSignal;
+}): Promise<ModelFingerprint | null> {
+  if (input.profile.id !== GEMMA_3_12B_QAT_PROFILE_ID) return null;
+  if (!input.selection) {
+    throw new Error("Exact Gemma execution requires an explicit model selection for fingerprint qualification.");
+  }
+  const capacity = await input.worker.resolveModelCapacity(input.selection, input.signal);
+  if (!capacity) throw new Error("Gemma model metadata was unavailable for fingerprint qualification.");
+  return normalizeModelFingerprint(capacity, input.profile);
 }

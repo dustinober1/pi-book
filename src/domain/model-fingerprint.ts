@@ -1,6 +1,7 @@
 import type { ModelExecutionProfile } from "./model-execution-profile.js";
 
 export const GEMMA_3_12B_QAT_PROFILE_ID = "gemma-3-12b-it-qat-q4_0" as const;
+export const GEMMA_3_12B_QAT_MODEL_ID = "google/gemma-3-12b-it-qat-q4_0-gguf" as const;
 
 export interface ModelFingerprint {
   schema_version: "1.0.0";
@@ -25,6 +26,9 @@ export function assertGemmaFingerprintMatchesProfile(
   }
   if (fingerprint.profile_id !== profile.id) {
     throw new Error("Gemma fingerprint profile ID does not match the execution profile.");
+  }
+  if (fingerprint.model !== GEMMA_3_12B_QAT_MODEL_ID) {
+    throw new Error(`Gemma fingerprint model identity must be ${GEMMA_3_12B_QAT_MODEL_ID}.`);
   }
   if (fingerprint.quantization !== "Q4_0") {
     throw new Error("Gemma fingerprint must use Q4_0 quantization.");
