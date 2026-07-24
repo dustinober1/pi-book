@@ -5,6 +5,7 @@ import type { ActiveContextCapsule } from "../domain/active-context-capsule.js";
 import type { StateMutation } from "../domain/chapter-contract.js";
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
 import {
+  modelExecutionProfileIdsMatch,
   MODEL_EXECUTION_PROFILES,
   type ModelExecutionProfile,
 } from "../domain/model-execution-profile.js";
@@ -229,7 +230,7 @@ export async function runSceneStateDeltaExtraction(
   const draft = requireDraft(input, state);
   const runtime = RUNTIME_PROFILES[input.runtimeProfile];
   const modelProfile = resolveModelProfile(input.capsule, input.customModelProfile);
-  if (modelProfile.id !== input.capsule.model_execution_profile) {
+  if (!modelExecutionProfileIdsMatch(modelProfile.id, input.capsule.model_execution_profile)) {
     throw new Error(`Model profile ${modelProfile.id} does not match capsule profile ${input.capsule.model_execution_profile}.`);
   }
 

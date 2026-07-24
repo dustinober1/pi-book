@@ -1,4 +1,5 @@
 import {
+  canonicalModelExecutionProfileId,
   MODEL_EXECUTION_PROFILES,
   parseModelExecutionProfileId,
   type ModelExecutionProfile,
@@ -19,5 +20,7 @@ export function resolveModelExecutionProfile(input: ResolveModelExecutionProfile
     }
     return input.custom;
   }
-  return MODEL_EXECUTION_PROFILES[id];
+  const canonicalId = canonicalModelExecutionProfileId(id);
+  if (canonicalId === "custom") throw new Error("The custom model execution profile requires a validated custom profile definition.");
+  return MODEL_EXECUTION_PROFILES[canonicalId];
 }

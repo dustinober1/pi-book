@@ -1,7 +1,8 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { GEMMA_3_12B_QAT_PROFILE_ID } from "./model-fingerprint.js";
 import { MODEL_JOB_TYPES, type ModelJobType } from "./model-job.js";
 
-export const MODEL_EXECUTION_PROFILE_IDS = ["host-default", "small-12b-q4", "custom"] as const;
+export const MODEL_EXECUTION_PROFILE_IDS = ["host-default", GEMMA_3_12B_QAT_PROFILE_ID, "small-12b-q4", "custom"] as const;
 export const ModelExecutionProfileIdSchema = Type.Union(MODEL_EXECUTION_PROFILE_IDS.map((value) => Type.Literal(value)));
 export type ModelExecutionProfileId = Static<typeof ModelExecutionProfileIdSchema>;
 
@@ -51,8 +52,8 @@ function structuredBudget(evidence = 4_000, output = 1_000): JobBudgetPolicy {
 
 function structuredDecoding(output = 1_000): DecodingPolicy {
   return {
-    temperature: 0.1,
-    topP: 0.3,
+    temperature: 0.05,
+    topP: 0.2,
     maximumOutputTokens: output,
     thinking: "off",
   };
@@ -115,7 +116,27 @@ const smallDecoding = jobRecord<DecodingPolicy>((jobType) => {
   }
 });
 
-export const MODEL_EXECUTION_PROFILES: Readonly<Record<"host-default" | "small-12b-q4", ModelExecutionProfile>> = Object.freeze({
+const gemma3_12bQatProfile: ModelExecutionProfile = Object.freeze({
+  schema_version: "1.0.0",
+  id: GEMMA_3_12B_QAT_PROFILE_ID,
+  display_name: "Gemma 3 12B IT QAT Q4_0",
+  reliable_context_tokens: 16_384,
+  maximum_output_tokens: 4_096,
+  preferred_scene_words: Object.freeze({ minimum: 700, maximum: 1_100 }),
+  capabilities: Object.freeze({ json_schema: false, grammar: true, tool_calls: false }),
+  job_budgets: Object.freeze(smallBudgets),
+  decoding: Object.freeze(smallDecoding),
+});
+
+export const MODEL_EXECUTION_PROFILE_DEPRECATION_ADVISORIES: Readonly<Partial<Record<ModelExecutionProfileId, string>>> = Object.freeze({
+  "small-12b-q4": `The small-12b-q4 profile is deprecated; use ${GEMMA_3_12B_QAT_PROFILE_ID}.`,
+});
+
+export function modelExecutionProfileDeprecationAdvisory(id: ModelExecutionProfileId): string | null {
+  return MODEL_EXECUTION_PROFILE_DEPRECATION_ADVISORIES[id] ?? null;
+}
+
+export const MODEL_EXECUTION_PROFILES: Readonly<Record<"host-default" | typeof GEMMA_3_12B_QAT_PROFILE_ID | "small-12b-q4", ModelExecutionProfile>> = Object.freeze({
   "host-default": Object.freeze({
     schema_version: "1.0.0",
     id: "host-default",
@@ -127,18 +148,17 @@ export const MODEL_EXECUTION_PROFILES: Readonly<Record<"host-default" | "small-1
     job_budgets: Object.freeze(hostBudgets),
     decoding: Object.freeze(hostDecoding),
   }),
-  "small-12b-q4": Object.freeze({
-    schema_version: "1.0.0",
-    id: "small-12b-q4",
-    display_name: "Small 12B 4-bit model",
-    reliable_context_tokens: 16_384,
-    maximum_output_tokens: 4_096,
-    preferred_scene_words: Object.freeze({ minimum: 700, maximum: 1_200 }),
-    capabilities: Object.freeze({ json_schema: false, grammar: true, tool_calls: false }),
-    job_budgets: Object.freeze(smallBudgets),
-    decoding: Object.freeze(smallDecoding),
-  }),
+  [GEMMA_3_12B_QAT_PROFILE_ID]: gemma3_12bQatProfile,
+  "small-12b-q4": gemma3_12bQatProfile,
 });
+
+export function canonicalModelExecutionProfileId(id: ModelExecutionProfileId): ModelExecutionProfileId {
+  return id === "small-12b-q4" ? GEMMA_3_12B_QAT_PROFILE_ID : id;
+}
+
+export function modelExecutionProfileIdsMatch(left: ModelExecutionProfileId, right: ModelExecutionProfileId): boolean {
+  return canonicalModelExecutionProfileId(left) === canonicalModelExecutionProfileId(right);
+}
 
 export function parseModelExecutionProfileId(value: unknown): ModelExecutionProfileId {
   if (typeof value === "string" && (MODEL_EXECUTION_PROFILE_IDS as readonly string[]).includes(value)) {

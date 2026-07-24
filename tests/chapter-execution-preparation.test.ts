@@ -64,7 +64,7 @@ test("preparation compiles deterministic scene hashes and persists dual contract
     assert.notEqual(result.manifest.chapter_contract_hash, result.manifest.scenes[0]?.contract_hash);
     assert.notEqual(result.manifest.scenes[0]?.contract_hash, result.manifest.scenes[1]?.contract_hash);
     assert.equal(result.manifest.runtime_profile, "tiny-local");
-    assert.equal(result.manifest.model_execution_profile, "small-12b-q4");
+    assert.equal(result.manifest.model_execution_profile, "gemma-3-12b-it-qat-q4_0");
     assert.equal(result.state.current_node, "contract-compile");
     assert.equal(result.state.current_scene_id, "CH-001-SC-01-V1");
     assert.equal(result.state.contract_hash, result.manifest.scenes[0]?.contract_hash);

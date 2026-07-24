@@ -3,7 +3,7 @@ import { Value } from "@sinclair/typebox/value";
 import { renderActiveContextCapsule } from "../context/active-context-renderer.js";
 import type { ActiveContextCapsule } from "../domain/active-context-capsule.js";
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
-import { MODEL_EXECUTION_PROFILES, type ModelExecutionProfile } from "../domain/model-execution-profile.js";
+import { modelExecutionProfileIdsMatch, MODEL_EXECUTION_PROFILES, type ModelExecutionProfile } from "../domain/model-execution-profile.js";
 import type { QualityThinkingLevel, QualityWorker, QualityWorkerRequest } from "../domain/quality-worker.js";
 import { ModelCallReportSchema, type ModelCallReport } from "../domain/run-report.js";
 import { RUNTIME_PROFILES, type RuntimeProfileId } from "../domain/runtime-profile.js";
@@ -95,7 +95,7 @@ export async function runScenePlanJob(input: RunScenePlanJobInput): Promise<RunS
   const state = requireState(input);
   const runtime = RUNTIME_PROFILES[input.runtimeProfile];
   const modelProfile = resolveModelProfile(input.capsule, input.customModelProfile);
-  if (modelProfile.id !== input.capsule.model_execution_profile) {
+  if (!modelExecutionProfileIdsMatch(modelProfile.id, input.capsule.model_execution_profile)) {
     throw new Error(`Model profile ${modelProfile.id} does not match capsule profile ${input.capsule.model_execution_profile}.`);
   }
   const sceneId = input.capsule.scene_contract.scene_id;
