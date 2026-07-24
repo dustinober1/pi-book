@@ -10,6 +10,8 @@ import {
 } from "../src/application/chapter-execution-machine.js";
 import { projectStateHash } from "../src/application/project-hash.js";
 import { runSceneSpanRepair } from "../src/application/scene-span-repair-runner.js";
+import { estimateModelTokens } from "../src/application/model-token-estimator.js";
+import { MODEL_EXECUTION_PROFILES } from "../src/domain/model-execution-profile.js";
 import type { ActiveContextCapsule } from "../src/domain/active-context-capsule.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import type { SceneCriticArtifact } from "../src/domain/scene-critic-artifact.js";
@@ -267,6 +269,10 @@ test("bounded exact-anchor repair creates a new scene version and returns to det
     assert.ok((request.context?.indexOf("REPAIR FINDINGS") ?? -1) < (request.context?.indexOf("EXACT TASK") ?? -1));
     assert.ok(request.context?.endsWith("EXACT TASK\n- Repair only the listed findings.\n- Return one exact JSON patch object."));
     assert.equal(result.patch.patch_attempt, 1);
+    const policy = MODEL_EXECUTION_PROFILES["small-12b-q4"].token_estimation;
+    assert.equal(result.patch.usage.estimatedInstructionTokens, estimateModelTokens(result.request.prompt, policy));
+    assert.equal(result.patch.usage.estimatedEvidenceTokens, estimateModelTokens(result.request.context ?? "", policy));
+    assert.ok((result.patch.usage.totalReservedTokens ?? 0) > (result.patch.usage.estimatedInstructionTokens ?? 0) + (result.patch.usage.estimatedEvidenceTokens ?? 0));
     assert.equal(result.repairedDraft.attempt, 2);
     assert.equal(result.repairedDraft.job_type, "patch-spans");
     assert.doesNotMatch(result.repairedDraft.prose, /Here is the scene/);

@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { projectStateHash } from "../src/application/project-hash.js";
 import { createChapterExecutionState, transitionChapterExecution } from "../src/application/chapter-execution-machine.js";
 import { runSceneDraftJob } from "../src/application/scene-draft-runner.js";
+import { estimateModelTokens } from "../src/application/model-token-estimator.js";
+import { MODEL_EXECUTION_PROFILES } from "../src/domain/model-execution-profile.js";
 import type { ActiveContextCapsule } from "../src/domain/active-context-capsule.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import type { ScenePlanArtifact } from "../src/domain/scene-plan-artifact.js";
@@ -104,6 +106,10 @@ test("one draft-scene job consumes one plan, stores one artifact, and advances o
     assert.equal(result.artifact.scene_id, sceneId);
     assert.equal(result.artifact.attempt, 1);
     assert.equal(result.artifact.prose, sceneProse);
+    const policy = MODEL_EXECUTION_PROFILES["small-12b-q4"].token_estimation;
+    assert.equal(result.artifact.usage.estimatedInstructionTokens, estimateModelTokens(result.request.prompt, policy));
+    assert.equal(result.artifact.usage.estimatedEvidenceTokens, estimateModelTokens(result.request.context ?? "", policy));
+    assert.ok((result.artifact.usage.totalReservedTokens ?? 0) > (result.artifact.usage.estimatedInstructionTokens ?? 0) + (result.artifact.usage.estimatedEvidenceTokens ?? 0));
     assert.equal(result.state.current_node, "deterministic-validation");
     assert.deepEqual(readSceneDraftArtifact(root, runId, sceneId, 1), result.artifact);
   } finally { rmSync(parent, { recursive: true, force: true }); }

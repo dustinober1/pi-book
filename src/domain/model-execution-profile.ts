@@ -21,12 +21,20 @@ export interface JobBudgetPolicy {
   safetyMarginTokens: number;
 }
 
+export interface TokenEstimationPolicy {
+  id: string;
+  utf8_bytes_per_token: number;
+  fixed_envelope_tokens: number;
+  maximum_observed_underestimate_ratio: number;
+}
+
 export interface ModelExecutionProfile {
   schema_version: "1.0.0";
   id: ModelExecutionProfileId;
   display_name: string;
   reliable_context_tokens: number;
   maximum_output_tokens: number;
+  token_estimation: TokenEstimationPolicy;
   preferred_scene_words: { minimum: number; maximum: number };
   capabilities: {
     json_schema: boolean;
@@ -122,6 +130,12 @@ const gemma3_12bQatProfile: ModelExecutionProfile = Object.freeze({
   display_name: "Gemma 3 12B IT QAT Q4_0",
   reliable_context_tokens: 16_384,
   maximum_output_tokens: 4_096,
+  token_estimation: Object.freeze({
+    id: "gemma-3-12b-it-qat-q4_0-v1",
+    utf8_bytes_per_token: 3,
+    fixed_envelope_tokens: 64,
+    maximum_observed_underestimate_ratio: 1.10,
+  }),
   preferred_scene_words: Object.freeze({ minimum: 700, maximum: 1_100 }),
   capabilities: Object.freeze({ json_schema: false, grammar: true, tool_calls: false }),
   job_budgets: Object.freeze(smallBudgets),
@@ -143,6 +157,12 @@ export const MODEL_EXECUTION_PROFILES: Readonly<Record<"host-default" | typeof G
     display_name: "Host default model",
     reliable_context_tokens: 128_000,
     maximum_output_tokens: 32_000,
+    token_estimation: Object.freeze({
+      id: "host-default-v1",
+      utf8_bytes_per_token: 4,
+      fixed_envelope_tokens: 0,
+      maximum_observed_underestimate_ratio: 1.10,
+    }),
     preferred_scene_words: Object.freeze({ minimum: 1_000, maximum: 2_500 }),
     capabilities: Object.freeze({ json_schema: true, grammar: true, tool_calls: true }),
     job_budgets: Object.freeze(hostBudgets),

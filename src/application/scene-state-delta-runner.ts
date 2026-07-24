@@ -29,6 +29,7 @@ import { readSceneValidationArtifact } from "../infrastructure/scene-validation-
 import { blockChapterExecution, recordChapterExecutionAttempt, transitionChapterExecution } from "./chapter-execution-machine.js";
 import { projectStateHash } from "./project-hash.js";
 import { parseStructuredQualityArtifact } from "./quality-output.js";
+import { assertModelJobFits, recordModelTokenCalibration } from "./model-token-estimator.js";
 
 export interface RunSceneStateDeltaExtractionInput {
   root: string;
@@ -244,11 +245,14 @@ export async function runSceneStateDeltaExtraction(
   const prompt = deltaPrompt();
   if (context.length > runtime.maxContextChars) throw new Error("Rendered state-delta context exceeds the runtime profile before inference.");
   if (prompt.length > runtime.maxPromptChars) throw new Error("State-delta prompt exceeds the runtime profile before inference.");
-  const budget = modelProfile.job_budgets["extract-state-delta"];
-  const estimatedEvidenceTokens = Math.max(1, Math.ceil(Buffer.byteLength(context, "utf8") / 4));
-  if (estimatedEvidenceTokens > budget.maximumEvidenceTokens) {
-    throw new Error(`State-delta context needs approximately ${estimatedEvidenceTokens} evidence tokens, above the ${budget.maximumEvidenceTokens}-token budget.`);
-  }
+  const tokenCounts = assertModelJobFits({
+    root: input.root,
+    runId: input.runId,
+    instruction: prompt,
+    evidence: context,
+    profile: modelProfile,
+    jobType: "extract-state-delta",
+  });
 
   const callId = `${input.runId}-${sceneId}-STATE-DELTA-${extractionAttempt}`;
   const request: QualityWorkerRequest = {
@@ -268,6 +272,14 @@ export async function runSceneStateDeltaExtraction(
     ...(input.thinking ? { thinking: input.thinking } : {}),
   };
   const result = await input.worker.run(request, input.signal);
+  const tokenCalibration = recordModelTokenCalibration({
+    root: input.root,
+    runId: input.runId,
+    callId,
+    profile: modelProfile,
+    counts: tokenCounts,
+    ...(result.usage.inputTokens !== undefined ? { actualInputTokens: result.usage.inputTokens } : {}),
+  });
   const output = validateOutput(
     parseStructuredQualityArtifact(result.text, SceneStateDeltaOutputSchema, "scene state-delta output"),
     draft,
@@ -292,6 +304,7 @@ export async function runSceneStateDeltaExtraction(
   const capsuleHash = stableHash(input.capsule);
   const usage: ModelCallReport = {
     ...result.usage,
+    ...tokenCalibration,
     callId,
     stage: "drafting",
     chapter: state.chapter,
