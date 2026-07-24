@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { stringify as stringifyYaml } from "yaml";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import type {
   GemmaQualificationCase,
@@ -38,9 +39,6 @@ const fingerprint = {
   model_file_hash: "model-hash",
 } as const;
 
-const sources: readonly GemmaQualificationSource[] = [
-  { path: "fixtures/test.yaml", content: "schema_version: 1.0.0\ncases: frozen\n" },
-];
 const rubric = {
   path: "rubrics/prose-review.md",
   version: "1.0.0",
@@ -96,6 +94,13 @@ function verificationResponse(id: string, verdict: "accept" | "reject"): string 
   });
 }
 
+function fixtureSources(cases: readonly GemmaQualificationCase[]): readonly GemmaQualificationSource[] {
+  return [{
+    path: "fixtures/test.yaml",
+    content: stringifyYaml({ schema_version: "1.0.0", cases }),
+  }];
+}
+
 class ScriptedWorker implements Pick<QualityWorker, "run"> {
   readonly requests: QualityWorkerRequest[] = [];
   readonly #responses: Array<string | Error>;
@@ -138,7 +143,7 @@ function baseInput(
     seed: "fixed-seed",
     worker,
     outputRoot,
-    fixtureSources: sources,
+    fixtureSources: fixtureSources(cases),
     rubric,
   };
 }
@@ -151,9 +156,10 @@ test("trusted job validators derive structured validity, authority use, stop beh
         job_type: "verify-chapter",
         expected: {
           valid_structured_output: true,
-          required_record_ids: ["REQ-z-stop"],
+          required_record_ids: [],
           forbidden_record_ids: ["FORBIDDEN-z-stop"],
           must_stop: true,
+          chapter: 1,
         },
       }),
       qualificationCase("a-plan"),
@@ -171,10 +177,155 @@ test("trusted job validators derive structured validity, authority use, stop beh
     ));
     assert.equal(result.report.first_pass_structured_rate, 0.5);
     assert.equal(result.report.corrected_structured_rate, 0.5);
-    assert.equal(result.report.required_record_rate, 0.5);
+    assert.equal(result.report.required_record_rate, 0);
     assert.equal(result.report.correct_stop_rate, 0.5);
     assert.equal(result.report.severe_failure_count, 1);
     assert.equal(evaluateGemmaQualificationPromotion(result.report).qualified, false);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("only genuine production authority bindings satisfy required-record obligations", async () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-gemma-authority-fields-"));
+  try {
+    const cases = [
+      qualificationCase("a-anchor"),
+      qualificationCase("b-delta", { job_type: "extract-state-delta" }),
+      qualificationCase("c-critic", { job_type: "critic-continuity" }),
+      qualificationCase("d-patch", { job_type: "patch-spans" }),
+      qualificationCase("z-stop", {
+        job_type: "verify-chapter",
+        expected: {
+          valid_structured_output: true,
+          required_record_ids: [],
+          forbidden_record_ids: ["FORBIDDEN-z-stop"],
+          must_stop: true,
+          chapter: 1,
+        },
+      }),
+    ];
+    const worker = new ScriptedWorker([
+      planResponse("a-anchor"),
+      JSON.stringify({
+        structured_output: {
+          schema_version: "1.0.0",
+          mutations: [],
+          thread_changes: [{
+            thread_id: "REQ-b-delta",
+            operation: "advanced",
+            description: "The thread advances.",
+            evidence_quote: "A quoted change.",
+          }],
+        },
+      }),
+      JSON.stringify({
+        structured_output: {
+          schema_version: "1.0.0",
+          verdict: "repair",
+          findings: [{
+            severity: "high",
+            category: "continuity",
+            evidence_quote: "REQ-c-critic",
+            required_change: "Repair the continuity issue.",
+          }],
+        },
+      }),
+      JSON.stringify({
+        structured_output: {
+          schema_version: "1.0.0",
+          operations: [{
+            operation: "replace",
+            anchor_quote: "old text",
+            replacement: "new text",
+            finding_refs: ["REQ-d-patch"],
+          }],
+        },
+      }),
+      verificationResponse("z-stop", "reject"),
+    ]);
+    const result = await runGemmaQualification(baseInput(join(parent, "run"), cases, worker));
+    assert.equal(result.report.required_record_rate, 0.25);
+    assert.equal(result.report.severe_failure_count, 3);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("qualification rejects cases that do not come from the exact frozen fixture sources", async () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-gemma-source-unity-"));
+  try {
+    const suiteA = [
+      qualificationCase("a-plan"),
+      qualificationCase("z-stop", {
+        job_type: "verify-chapter",
+        expected: {
+          valid_structured_output: true,
+          required_record_ids: [],
+          forbidden_record_ids: ["FORBIDDEN-z-stop"],
+          must_stop: true,
+          chapter: 1,
+        },
+      }),
+    ];
+    const suiteB = [
+      qualificationCase("b-plan"),
+      qualificationCase("z-stop", {
+        job_type: "verify-chapter",
+        expected: {
+          valid_structured_output: true,
+          required_record_ids: [],
+          forbidden_record_ids: ["FORBIDDEN-z-stop"],
+          must_stop: true,
+          chapter: 1,
+        },
+      }),
+    ];
+    const worker = new ScriptedWorker([]);
+    await assert.rejects(
+      runGemmaQualification({
+        ...baseInput(join(parent, "run"), suiteB, worker),
+        fixtureSources: fixtureSources(suiteA),
+      }),
+      /cases.*frozen fixture sources|fixture sources.*cases/i,
+    );
+    assert.equal(worker.requests.length, 0);
+    assert.equal(readdirSync(parent).length, 0);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("verify-chapter uses production chapter-target semantic validation", async () => {
+  const parent = mkdtempSync(join(tmpdir(), "novel-forge-gemma-verification-chapter-"));
+  try {
+    const cases = [
+      qualificationCase("a-plan"),
+      qualificationCase("z-stop", {
+        job_type: "verify-chapter",
+        expected: {
+          valid_structured_output: true,
+          required_record_ids: [],
+          forbidden_record_ids: ["FORBIDDEN-z-stop"],
+          must_stop: true,
+          chapter: 1,
+        },
+      }),
+    ];
+    const wrongChapter = JSON.stringify({
+      structured_output: {
+        schema_version: "1.0.0",
+        chapter: 2,
+        verdict: "reject",
+        findings: [{ evidence: "Wrong target.", required_change: "Target the expected chapter." }],
+      },
+    });
+    const worker = new ScriptedWorker([planResponse("a-plan"), wrongChapter, wrongChapter]);
+    const result = await runGemmaQualification(baseInput(join(parent, "run"), cases, worker));
+    assert.equal(worker.requests.length, 3);
+    assert.equal(result.report.first_pass_structured_rate, 0.5);
+    assert.equal(result.report.corrected_structured_rate, 0.5);
+    assert.equal(result.report.severe_failure_count, 1);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
@@ -188,9 +339,10 @@ test("scripted qualification is deterministic, corrects once, and keeps labels s
         job_type: "verify-chapter",
         expected: {
           valid_structured_output: true,
-          required_record_ids: ["REQ-z-stop"],
+          required_record_ids: [],
           forbidden_record_ids: ["FORBIDDEN-z-stop"],
           must_stop: true,
+          chapter: 1,
         },
       }),
       qualificationCase("m-prose", {
@@ -249,11 +401,14 @@ test("scripted qualification is deterministic, corrects once, and keeps labels s
     assert.match(labels, /m-prose/);
     assert.doesNotMatch(labels, /governing fact|discarded outcome|PRIVATE_PROMPT/);
 
-    const repeat = await runGemmaQualification(baseInput(
-      join(parent, "run-b"),
-      [...cases].reverse(),
-      new ScriptedWorker(scripted),
-    ));
+    const repeat = await runGemmaQualification({
+      ...baseInput(
+        join(parent, "run-b"),
+        [...cases].reverse(),
+        new ScriptedWorker(scripted),
+      ),
+      fixtureSources: fixtureSources(cases),
+    });
     assert.deepEqual(repeat.report, result.report);
     assert.equal(readFileSync(repeat.paths.reviewKit, "utf8"), review);
     assert.equal(readFileSync(repeat.paths.labelSeal, "utf8"), labels);
@@ -281,9 +436,10 @@ test("severe failures are evaluator-derived for missing, forbidden, stop, and de
         job_type: "verify-chapter",
         expected: {
           valid_structured_output: true,
-          required_record_ids: ["REQ-d-stop"],
+          required_record_ids: [],
           forbidden_record_ids: ["FORBIDDEN-d-stop"],
           must_stop: true,
+          chapter: 1,
         },
       }),
     ];
@@ -294,7 +450,7 @@ test("severe failures are evaluator-derived for missing, forbidden, stop, and de
       verificationResponse("d-stop", "accept"),
     ])));
     assert.equal(result.report.severe_failure_count, 4);
-    assert.equal(result.report.required_record_rate, 0.75);
+    assert.equal(result.report.required_record_rate, 2 / 3);
     assert.equal(result.report.forbidden_record_uses, 2);
     assert.equal(result.report.correct_stop_rate, 0.75);
   } finally {
@@ -313,6 +469,7 @@ test("qualification reserves and publishes the artifact set transactionally with
         required_record_ids: ["REQ-stop"],
         forbidden_record_ids: ["FORBIDDEN-stop"],
         must_stop: true,
+        chapter: 1,
       },
     });
     let release!: () => void;
@@ -361,16 +518,18 @@ test("provenance binds frozen fixtures, rubric/version, seed, evaluator revision
         required_record_ids: ["REQ-stop"],
         forbidden_record_ids: ["FORBIDDEN-stop"],
         must_stop: true,
+        chapter: 1,
       },
     });
+    const exactFixture = fixtureSources([stopCase])[0]!.content;
     const run = async (name: string, fixtureContent: string, rubricContent: string) => runGemmaQualification({
       ...baseInput(join(parent, name), [stopCase], new ScriptedWorker([verificationResponse("stop", "reject")])),
       fixtureSources: [{ path: "fixture.yaml", content: fixtureContent }],
       rubric: { ...rubric, content: rubricContent },
     });
-    const baseline = await run("baseline", "fixture-a", rubric.content);
-    const changedFixture = await run("fixture", "fixture-b", rubric.content);
-    const changedRubric = await run("rubric", "fixture-a", `${rubric.content}\nchanged`);
+    const baseline = await run("baseline", exactFixture, rubric.content);
+    const changedFixture = await run("fixture", `${exactFixture}\n# byte-level fixture revision\n`, rubric.content);
+    const changedRubric = await run("rubric", exactFixture, `${rubric.content}\nchanged`);
     assert.notEqual(baseline.report.report_hash, changedFixture.report.report_hash);
     assert.notEqual(baseline.report.report_hash, changedRubric.report.report_hash);
     assert.deepEqual(
@@ -413,6 +572,7 @@ test("empty structured, required-record, and stop/escalation denominators reject
         required_record_ids: [],
         forbidden_record_ids: [],
         must_stop: true,
+        chapter: 1,
       },
     });
     const noStop = qualificationCase("plan");
@@ -491,6 +651,26 @@ test("verified promotion accepts exact boundaries and rejects all six adjacent f
   );
 });
 
+test("malformed nested report metadata produces sanitized qualification validation errors", () => {
+  const assertSanitized = (report: unknown): void => {
+    assert.throws(
+      () => assertGemmaQualificationPromotion(report as GemmaQualificationReport),
+      (error: unknown) => error instanceof Error
+        && !(error instanceof TypeError)
+        && /Gemma qualification/i.test(error.message),
+    );
+  };
+  assertSanitized({ ...sealedReport(), fingerprint: null });
+  assertSanitized({ ...sealedReport(), fingerprint: 42 });
+  assertSanitized({ ...sealedReport(), provenance: null });
+  assertSanitized({ ...sealedReport(), provenance: "invalid" });
+  assertSanitized({ ...sealedReport(), fingerprint: { ...fingerprint, provider: 42 } });
+  assertSanitized({
+    ...sealedReport(),
+    provenance: { ...sealedReport().provenance, rubric_version: 42 },
+  });
+});
+
 test("shipped fixtures, rubric, package entries, and strict CLI loaders are exercised without inference", () => {
   const assets = loadGemmaQualificationAssets(process.cwd());
   assert.equal(assets.fixtureSources.length, 3);
@@ -545,6 +725,7 @@ test("fixture parser strictly rejects unknown root, case, and expected keys", ()
     "      required_record_ids: [REQ-strict]",
     "      forbidden_record_ids: [FORBIDDEN-strict]",
     "      must_stop: true",
+    "      chapter: 1",
   ].join("\n");
   assert.equal(parseGemmaQualificationFixture(base, "strict.yaml").length, 1);
   assert.throws(() => parseGemmaQualificationFixture(`${base}\nunknown_root: true\n`, "strict.yaml"), /unknown.*root/i);

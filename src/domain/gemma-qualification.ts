@@ -14,6 +14,7 @@ export interface GemmaQualificationCase {
     required_record_ids: string[];
     forbidden_record_ids: string[];
     must_stop: boolean;
+    chapter?: number;
   };
 }
 
@@ -81,6 +82,9 @@ function assertExactKeys(value: object, allowedKeys: readonly string[], label: s
 }
 
 export function assertGemmaQualificationReportIntegrity(report: GemmaQualificationReport): void {
+  if (!report || typeof report !== "object" || Array.isArray(report)) {
+    throw new Error("Gemma qualification report must be an object.");
+  }
   assertExactKeys(report, [
     "schema_version",
     "fingerprint",
@@ -98,10 +102,11 @@ export function assertGemmaQualificationReportIntegrity(report: GemmaQualificati
   if (!Number.isInteger(report.case_count) || report.case_count < 1) {
     throw new Error("Gemma qualification report case count must be a positive integer.");
   }
-  if (report.fingerprint.schema_version !== "1.0.0" || !report.fingerprint.provider.trim()) {
+  const fingerprint = report.fingerprint;
+  if (!fingerprint || typeof fingerprint !== "object" || Array.isArray(fingerprint)) {
     throw new Error("Gemma qualification report fingerprint metadata is invalid.");
   }
-  assertExactKeys(report.fingerprint, [
+  assertExactKeys(fingerprint, [
     "schema_version",
     "profile_id",
     "provider",
@@ -114,12 +119,37 @@ export function assertGemmaQualificationReportIntegrity(report: GemmaQualificati
     "chat_template_hash",
     "model_file_hash",
   ], "report fingerprint");
+  const nullableNonblank = (value: unknown): boolean => value === null
+    || (typeof value === "string" && Boolean(value.trim()));
+  if (
+    fingerprint.schema_version !== "1.0.0"
+    || typeof fingerprint.profile_id !== "string"
+    || typeof fingerprint.provider !== "string"
+    || !fingerprint.provider.trim()
+    || typeof fingerprint.model !== "string"
+    || !fingerprint.model.trim()
+    || typeof fingerprint.backend !== "string"
+    || !fingerprint.backend.trim()
+    || !nullableNonblank(fingerprint.backend_version)
+    || fingerprint.quantization !== "Q4_0"
+    || !Number.isInteger(fingerprint.context_window_tokens)
+    || fingerprint.context_window_tokens < 1
+    || !Number.isInteger(fingerprint.maximum_output_tokens)
+    || fingerprint.maximum_output_tokens < 1
+    || !nullableNonblank(fingerprint.chat_template_hash)
+    || !nullableNonblank(fingerprint.model_file_hash)
+  ) {
+    throw new Error("Gemma qualification report fingerprint metadata is invalid.");
+  }
   assertGemmaFingerprintMatchesProfile(
-    report.fingerprint,
+    fingerprint,
     MODEL_EXECUTION_PROFILES["gemma-3-12b-it-qat-q4_0"],
   );
   const provenance = report.provenance;
-  if (!provenance || provenance.evaluator_revision !== "2.0.0") {
+  if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
+    throw new Error("Gemma qualification report provenance must be an object.");
+  }
+  if (provenance.evaluator_revision !== "2.0.0") {
     throw new Error("Gemma qualification evaluator revision must be 2.0.0.");
   }
   assertExactKeys(provenance, [
@@ -135,9 +165,11 @@ export function assertGemmaQualificationReportIntegrity(report: GemmaQualificati
     ["rubric hash", provenance.rubric_hash],
     ["seed hash", provenance.seed_hash],
   ] as const) {
-    if (!hash.test(value)) throw new Error(`Gemma qualification ${label} is invalid.`);
+    if (typeof value !== "string" || !hash.test(value)) throw new Error(`Gemma qualification ${label} is invalid.`);
   }
-  if (!provenance.rubric_version.trim()) throw new Error("Gemma qualification rubric version must be nonblank.");
+  if (typeof provenance.rubric_version !== "string" || !provenance.rubric_version.trim()) {
+    throw new Error("Gemma qualification rubric version must be nonblank.");
+  }
   assertRate(report.first_pass_structured_rate, "first-pass structured rate");
   assertRate(report.corrected_structured_rate, "corrected structured rate");
   assertRate(report.required_record_rate, "required-record rate");
@@ -148,7 +180,7 @@ export function assertGemmaQualificationReportIntegrity(report: GemmaQualificati
   if (!Number.isInteger(report.severe_failure_count) || report.severe_failure_count < 0) {
     throw new Error("Gemma qualification severe failure count must be a nonnegative integer.");
   }
-  if (!hash.test(report.report_hash)
+  if (typeof report.report_hash !== "string" || !hash.test(report.report_hash)
     || report.report_hash !== computeGemmaQualificationReportHash((({ report_hash: _, ...unsigned }) => unsigned)(report))) {
     throw new Error("Gemma qualification report hash integrity check failed.");
   }

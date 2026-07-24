@@ -46,23 +46,23 @@ cases:
       must_stop: false
   - id: structured-continuity-critic
     job_type: critic-continuity
-    prompt: Return a complete SceneCriticOutputSchema object and bind REC-CONT-001 in a finding evidence_quote.
+    prompt: Return a complete SceneCriticOutputSchema object that evaluates the supplied continuity facts.
     context: |
       RECORD REC-CONT-001 | REQUIRED | Jo's left wrist is injured
       RECORD REC-CONT-099 | FORBIDDEN | Jo's right wrist is injured
     expected:
       valid_structured_output: true
-      required_record_ids: [REC-CONT-001]
+      required_record_ids: []
       forbidden_record_ids: [REC-CONT-099]
       must_stop: false
   - id: structured-patch-spans
     job_type: patch-spans
-    prompt: Return a complete ScenePatchOutputSchema object and bind REC-PATCH-001 in finding_refs.
+    prompt: Return a complete ScenePatchOutputSchema object that applies only the requested local repair.
     context: |
       RECORD REC-PATCH-001 | REQUIRED | only paragraph three may change
       RECORD REC-PATCH-099 | FORBIDDEN | the whole scene may be rewritten
     expected:
       valid_structured_output: true
-      required_record_ids: [REC-PATCH-001]
+      required_record_ids: []
       forbidden_record_ids: [REC-PATCH-099]
       must_stop: false

@@ -33,6 +33,7 @@ import { ScenePatchOutputSchema } from "../domain/scene-patch-artifact.js";
 import { ScenePlanOutputSchema } from "../domain/scene-plan-artifact.js";
 import { SceneStateDeltaOutputSchema } from "../domain/scene-state-delta-artifact.js";
 import {
+  parseQualityVerificationOutput,
   QualityEventOutputSchema,
   QualityVerificationOutputSchema,
 } from "../application/quality-output.js";
@@ -125,8 +126,13 @@ function ratio(numerator: number, denominator: number): number {
   return numerator / denominator;
 }
 
-function exactKeys(value: Record<string, unknown>, expected: readonly string[], label: string): void {
-  const allowed = new Set(expected);
+function exactKeys(
+  value: Record<string, unknown>,
+  expected: readonly string[],
+  label: string,
+  optional: readonly string[] = [],
+): void {
+  const allowed = new Set([...expected, ...optional]);
   const unknown = Object.keys(value).filter((key) => !allowed.has(key));
   if (unknown.length) throw new Error(`${label} has unknown keys: ${unknown.join(", ")}.`);
   const missing = expected.filter((key) => !(key in value));
@@ -165,9 +171,20 @@ export function parseGemmaQualificationFixture(text: string, label: string): Gem
       expected,
       ["valid_structured_output", "required_record_ids", "forbidden_record_ids", "must_stop"],
       `${label} case ${item.id} expected`,
+      ["chapter"],
     );
     if (typeof expected.valid_structured_output !== "boolean" || typeof expected.must_stop !== "boolean") {
       throw new Error(`${label} case ${item.id} has invalid expected booleans.`);
+    }
+    if (expected.chapter !== undefined
+      && (!Number.isInteger(expected.chapter) || Number(expected.chapter) < 1)) {
+      throw new Error(`${label} case ${item.id} expected chapter must be a positive integer.`);
+    }
+    if (item.job_type === "verify-chapter" && expected.chapter === undefined) {
+      throw new Error(`${label} case ${item.id} expected chapter is required for verify-chapter.`);
+    }
+    if (item.job_type !== "verify-chapter" && expected.chapter !== undefined) {
+      throw new Error(`${label} case ${item.id} expected chapter is only valid for verify-chapter.`);
     }
     return {
       id: item.id,
@@ -179,6 +196,7 @@ export function parseGemmaQualificationFixture(text: string, label: string): Gem
         required_record_ids: stringArray(expected.required_record_ids, `${label} case ${item.id} required_record_ids`),
         forbidden_record_ids: stringArray(expected.forbidden_record_ids, `${label} case ${item.id} forbidden_record_ids`),
         must_stop: expected.must_stop,
+        ...(expected.chapter === undefined ? {} : { chapter: Number(expected.chapter) }),
       },
     };
   });
@@ -333,6 +351,13 @@ function validateCases(cases: readonly GemmaQualificationCase[]): Array<{ item: 
     if (item.expected.required_record_ids.some((recordId) => forbidden.has(recordId))) {
       throw new Error(`Gemma qualification case ${item.id} cannot require and forbid the same record.`);
     }
+    if (item.job_type === "verify-chapter"
+      && (!Number.isInteger(item.expected.chapter) || Number(item.expected.chapter) < 1)) {
+      throw new Error(`Gemma qualification case ${item.id} requires a positive expected chapter.`);
+    }
+    if (item.job_type !== "verify-chapter" && item.expected.chapter !== undefined) {
+      throw new Error(`Gemma qualification case ${item.id} may specify an expected chapter only for verify-chapter.`);
+    }
   }
   if (!ordered.some((item) => item.expected.valid_structured_output)) {
     throw new Error("Gemma qualification requires at least one structured gate case.");
@@ -359,17 +384,21 @@ function parseResponse(text: string, item: GemmaQualificationCase): Qualificatio
     if (Object.keys(object).length !== 1 || !("structured_output" in object)) return null;
     const schema = structuredSchema(item.job_type);
     if (!schema || !Value.Check(schema, object.structured_output)) return null;
+    if (item.job_type === "verify-chapter") {
+      try {
+        parseQualityVerificationOutput(
+          JSON.stringify(object.structured_output),
+          item.expected.chapter!,
+          `Gemma qualification case ${item.id} verification output`,
+        );
+      } catch {
+        return null;
+      }
+    }
     return { structuredOutput: object.structured_output as Record<string, unknown> };
   }
   if (Object.keys(object).length !== 1 || typeof object.prose !== "string" || !object.prose.trim()) return null;
   return { prose: object.prose };
-}
-
-function IDsInText(text: string, obligations: readonly string[]): string[] {
-  return obligations.filter((recordId) => {
-    const escaped = recordId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`(?:^|[^A-Za-z0-9._-])${escaped}(?:$|[^A-Za-z0-9._-])`).test(text);
-  });
 }
 
 function referencedIds(
@@ -388,25 +417,16 @@ function referencedIds(
       values = object.evidence_record_ids;
       break;
     case "extract-state-delta":
-      values = [
-        ...object.mutations.map((item: any) => item.record_id),
-        ...(object.thread_changes ?? []).map((item: any) => item.thread_id),
-      ];
+      values = object.mutations.map((item: any) => item.record_id);
       break;
     case "extract-factual-claims":
       values = object.claims.flatMap((claim: any) => [...claim.research_ids, ...claim.invention_ids]);
       break;
     case "critic-continuity":
-      values = object.findings.flatMap((finding: any) => IDsInText(finding.evidence_quote, obligations));
-      break;
     case "patch-spans":
-      values = object.operations.flatMap((operation: any) => operation.finding_refs);
-      break;
     case "synthesize-event-output":
-      values = IDsInText(object.summary, obligations);
-      break;
     case "verify-chapter":
-      values = object.findings.flatMap((finding: any) => IDsInText(finding.evidence, obligations));
+      values = [];
       break;
   }
   return new Set(values.filter((value) => obligations.includes(value)));
@@ -729,8 +749,17 @@ export async function runGemmaQualification(input: {
 }): Promise<GemmaQualificationResult> {
   if (!input.seed.trim()) throw new Error("Gemma qualification requires a nonblank seed.");
   assertFingerprintBinding(input);
-  const cases = validateCases(input.cases);
   const reportProvenance = provenance(input);
+  const frozenCases = input.fixtureSources.flatMap(
+    (source) => parseGemmaQualificationFixture(source.content, source.path),
+  );
+  const canonicalCases = (cases: readonly GemmaQualificationCase[]): string => stableJson(
+    [...cases].sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0),
+  );
+  if (canonicalCases(input.cases) !== canonicalCases(frozenCases)) {
+    throw new Error("Gemma qualification cases must exactly match the parsed frozen fixture sources.");
+  }
+  const cases = validateCases(frozenCases);
   const reservation = reserveArtifactSet(input.outputRoot);
   try {
     const results: CaseResult[] = [];
