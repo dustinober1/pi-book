@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -297,8 +297,10 @@ test("a fresh process recovers an orphaned reclaim claim left by a dead claimant
 test("a live reclaim claimant is preserved even after its lease expires", async () => {
   const root = mkdtempSync(join(tmpdir(), "novel-forge-token-estimator-live-claim-"));
   const runId = "RUN-LIVE-RECLAIM-CLAIM";
+  const lock = join(root, ".pi-book", "runs", runId, ".token-estimator-report.lock");
+  const releasedLock = `${lock}.released-by-test`;
+  let pending: Promise<void> | undefined;
   try {
-    const lock = join(root, ".pi-book", "runs", runId, ".token-estimator-report.lock");
     const lockOwnerToken = "b".repeat(32);
     mkdirSync(lock, { recursive: true });
     writeFileSync(join(lock, "owner.json"), `${JSON.stringify({
@@ -317,7 +319,7 @@ test("a live reclaim claimant is preserved even after its lease expires", async 
     })}\n`, "utf8");
 
     let settled = false;
-    const pending = appendCalibrationInChild(
+    pending = appendCalibrationInChild(
       root,
       runId,
       "CALL-LIVE-CLAIM-WAITED",
@@ -327,12 +329,22 @@ test("a live reclaim claimant is preserved even after its lease expires", async 
     ).finally(() => { settled = true; });
     await new Promise((resolve) => setTimeout(resolve, 250));
     assert.equal(settled, false);
-    rmSync(lock, { recursive: true });
+    renameSync(lock, releasedLock);
     await pending;
     assert.deepEqual(readTokenEstimatorRunReport(root, runId)?.calibrations.map((item) => item.callId), [
       "CALL-LIVE-CLAIM-WAITED",
     ]);
   } finally {
+    if (pending) {
+      if (existsSync(lock)) {
+        try {
+          renameSync(lock, releasedLock);
+        } catch {
+          // Awaiting the bounded child below prevents post-test activity even if fixture release fails.
+        }
+      }
+      await pending.catch(() => undefined);
+    }
     rmSync(root, { recursive: true, force: true });
   }
 });
