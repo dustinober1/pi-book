@@ -29,7 +29,7 @@ import { readSceneValidationArtifact } from "../infrastructure/scene-validation-
 import { blockChapterExecution, recordChapterExecutionAttempt, transitionChapterExecution } from "./chapter-execution-machine.js";
 import { projectStateHash } from "./project-hash.js";
 import { parseStructuredQualityArtifact } from "./quality-output.js";
-import { assertModelJobFits, recordModelTokenCalibration } from "./model-token-estimator.js";
+import { actualInputTokensForCalibration, assertModelJobFits, recordModelTokenCalibration } from "./model-token-estimator.js";
 
 export interface RunSceneStateDeltaExtractionInput {
   root: string;
@@ -272,13 +272,14 @@ export async function runSceneStateDeltaExtraction(
     ...(input.thinking ? { thinking: input.thinking } : {}),
   };
   const result = await input.worker.run(request, input.signal);
+  const actualInputTokens = actualInputTokensForCalibration(result.usage);
   const tokenCalibration = recordModelTokenCalibration({
     root: input.root,
     runId: input.runId,
     callId,
     profile: modelProfile,
     counts: tokenCounts,
-    ...(result.usage.inputTokens !== undefined && !result.usage.estimated ? { actualInputTokens: result.usage.inputTokens } : {}),
+    ...(actualInputTokens !== undefined ? { actualInputTokens } : {}),
   });
   const output = validateOutput(
     parseStructuredQualityArtifact(result.text, SceneStateDeltaOutputSchema, "scene state-delta output"),

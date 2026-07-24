@@ -220,6 +220,67 @@ test("fallback estimated input usage neither calibrates nor triggers underflow",
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
+test("actual input calibrates when only output usage is estimated", async () => {
+  const { parent, root, runId } = setup();
+  try {
+    const mixed = workerResult(JSON.stringify({
+      schema_version: "1.0.0",
+      mutations: [matchingMutation],
+      thread_changes: [matchingThreadChange],
+    }));
+    mixed.usage = {
+      ...mixed.usage,
+      inputTokens: 650,
+      inputTokensEstimated: false,
+      outputTokensEstimated: true,
+      estimated: true,
+    };
+    const result = await runSceneStateDeltaExtraction({
+      root,
+      runId,
+      capsule: capsule(root),
+      draftAttempt: 1,
+      runtimeProfile: "tiny-local",
+      worker: new StubWorker(mixed),
+    });
+    assert.ok((result.artifact.usage.inputTokenEstimateRatio ?? 0) > 0);
+    const report = JSON.parse(readFileSync(
+      join(root, ".pi-book", "runs", runId, "token-estimator-report.json"),
+      "utf8",
+    )) as { calibrations: Array<Record<string, unknown>> };
+    assert.equal(report.calibrations[0]?.actualInputTokens, 650);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("estimated input does not calibrate when output usage is actual", async () => {
+  const { parent, root, runId } = setup();
+  try {
+    const mixed = workerResult(JSON.stringify({
+      schema_version: "1.0.0",
+      mutations: [matchingMutation],
+      thread_changes: [matchingThreadChange],
+    }));
+    mixed.usage = {
+      ...mixed.usage,
+      inputTokens: 10_000,
+      outputTokens: 400,
+      inputTokensEstimated: true,
+      outputTokensEstimated: false,
+      estimated: true,
+    };
+    const result = await runSceneStateDeltaExtraction({
+      root,
+      runId,
+      capsule: capsule(root),
+      draftAttempt: 1,
+      runtimeProfile: "tiny-local",
+      worker: new StubWorker(mixed),
+    });
+    assert.equal(result.artifact.usage.inputTokenEstimateRatio, undefined);
+    assert.equal(result.artifact.usage.escalationCode, undefined);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
 test("missing expected mutation routes to span repair while old outputs without thread changes remain compatible", async () => {
   const { parent, root, runId } = setup();
   try {

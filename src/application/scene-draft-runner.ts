@@ -14,7 +14,7 @@ import { writeSceneDraftArtifact } from "../infrastructure/scene-draft-artifact-
 import { readScenePlanArtifact } from "../infrastructure/scene-plan-artifact-store.js";
 import { recordChapterExecutionAttempt, transitionChapterExecution } from "./chapter-execution-machine.js";
 import { projectStateHash } from "./project-hash.js";
-import { assertModelJobFits, recordModelTokenCalibration } from "./model-token-estimator.js";
+import { actualInputTokensForCalibration, assertModelJobFits, recordModelTokenCalibration } from "./model-token-estimator.js";
 
 export interface RunSceneDraftJobInput {
   root: string;
@@ -122,7 +122,8 @@ export async function runSceneDraftJob(input: RunSceneDraftJobInput): Promise<Ru
   const callId = `${input.runId}-${sceneId}-DRAFT-${attempt}`;
   const request: QualityWorkerRequest = { callId, stage: "drafting", chapter: state.chapter, sceneId, attempt, pass: "candidate", jobType: "draft-scene", prompt, context, decoding: modelProfile.decoding["draft-scene"], timeoutMs: 10 * 60_000, ...(input.provider ? { provider: input.provider } : {}), ...(input.model ? { model: input.model } : {}), ...(input.thinking ? { thinking: input.thinking } : {}) };
   const result = await input.worker.run(request, input.signal);
-  const tokenCalibration = recordModelTokenCalibration({ root: input.root, runId: input.runId, callId, profile: modelProfile, counts: tokenCounts, ...(result.usage.inputTokens !== undefined && !result.usage.estimated ? { actualInputTokens: result.usage.inputTokens } : {}) });
+  const actualInputTokens = actualInputTokensForCalibration(result.usage);
+  const tokenCalibration = recordModelTokenCalibration({ root: input.root, runId: input.runId, callId, profile: modelProfile, counts: tokenCounts, ...(actualInputTokens !== undefined ? { actualInputTokens } : {}) });
   const validated = validatedProse(result.text, input.capsule);
   const outputHash = hashText(validated.prose);
   const capsuleHash = stableHash(input.capsule);

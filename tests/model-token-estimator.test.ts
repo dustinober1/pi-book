@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -171,6 +171,67 @@ test("concurrent calibration appends preserve every call and the underflow latch
     const report = readTokenEstimatorRunReport(root, runId);
     assert.deepEqual(report?.calibrations.map((item) => item.callId).sort(), [...callIds].sort());
     assert.equal(report?.calibrations.some((item) => item.escalationCode === "token-estimator-underflow"), true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("two fresh processes safely reclaim a dead expired owner without losing underflow", async () => {
+  const root = mkdtempSync(join(tmpdir(), "novel-forge-token-estimator-stale-"));
+  const runId = "RUN-STALE-LOCK";
+  try {
+    const directory = join(root, ".pi-book", "runs", runId);
+    const lock = join(directory, ".token-estimator-report.lock");
+    const releaseAt = Date.now() + 1_000;
+    await appendCalibrationInChild(root, runId, "CALL-UNDERFLOW", Date.now(), true);
+    mkdirSync(lock);
+    writeFileSync(join(lock, "owner.json"), `${JSON.stringify({
+      pid: 2_147_483_647,
+      token: "d".repeat(32),
+      acquiredAtMs: 0,
+      leaseExpiresAtMs: 1,
+    })}\n`, "utf8");
+
+    await Promise.all([
+      appendCalibrationInChild(root, runId, "CALL-RECOVERY-1", releaseAt, false),
+      appendCalibrationInChild(root, runId, "CALL-RECOVERY-2", releaseAt, false),
+    ]);
+
+    const report = readTokenEstimatorRunReport(root, runId);
+    assert.deepEqual(report?.calibrations.map((item) => item.callId).sort(), [
+      "CALL-RECOVERY-1",
+      "CALL-RECOVERY-2",
+      "CALL-UNDERFLOW",
+    ]);
+    assert.equal(report?.calibrations.some((item) => item.escalationCode === "token-estimator-underflow"), true);
+    assert.equal(existsSync(lock), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("an expired lease owned by a live process is not reclaimed", async () => {
+  const root = mkdtempSync(join(tmpdir(), "novel-forge-token-estimator-live-lock-"));
+  const runId = "RUN-LIVE-LOCK";
+  try {
+    const directory = join(root, ".pi-book", "runs", runId);
+    const lock = join(directory, ".token-estimator-report.lock");
+    mkdirSync(lock, { recursive: true });
+    writeFileSync(join(lock, "owner.json"), `${JSON.stringify({
+      pid: process.pid,
+      token: "a".repeat(32),
+      acquiredAtMs: 0,
+      leaseExpiresAtMs: 1,
+    })}\n`, "utf8");
+
+    let settled = false;
+    const pending = appendCalibrationInChild(root, runId, "CALL-WAITED", Date.now(), false)
+      .finally(() => { settled = true; });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    assert.equal(settled, false);
+    rmSync(lock, { recursive: true });
+    await pending;
+    assert.deepEqual(readTokenEstimatorRunReport(root, runId)?.calibrations.map((item) => item.callId), ["CALL-WAITED"]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

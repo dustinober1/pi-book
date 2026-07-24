@@ -19,6 +19,18 @@ interface TokenEstimatorRunReport {
   calibrations: TokenEstimatorCalibrationRecord[];
 }
 
+interface ReportLockOwner {
+  pid: number;
+  token: string;
+  acquiredAtMs: number;
+  leaseExpiresAtMs: number;
+}
+
+const LOCK_LEASE_MS = 30_000;
+const OWNER_TOKEN = /^[a-f0-9]{32}$/;
+
+class MissingReportLockOwnerError extends Error {}
+
 function safeRunId(runId: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(runId);
 }
@@ -27,22 +39,165 @@ function reportPath(root: string, runId: string): string {
   return join(root, ".pi-book", "runs", runId, "token-estimator-report.json");
 }
 
-function acquireReportLock(directory: string): string {
+function lockConflict(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code;
+  return code === "EEXIST" || code === "ENOTEMPTY" || code === "EISDIR";
+}
+
+function processIsLive(pid: number): boolean {
+  if (pid === process.pid) return true;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ESRCH") return false;
+    if (code === "EPERM") return true;
+    throw error;
+  }
+}
+
+function parseLockOwner(value: unknown): ReportLockOwner {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Token estimator report lock owner is invalid.");
+  }
+  const owner = value as Record<string, unknown>;
+  const keys = Object.keys(owner).sort();
+  if (keys.join(",") !== "acquiredAtMs,leaseExpiresAtMs,pid,token"
+    || !Number.isSafeInteger(owner.pid)
+    || Number(owner.pid) <= 0
+    || typeof owner.token !== "string"
+    || !OWNER_TOKEN.test(owner.token)
+    || !Number.isSafeInteger(owner.acquiredAtMs)
+    || Number(owner.acquiredAtMs) < 0
+    || !Number.isSafeInteger(owner.leaseExpiresAtMs)
+    || Number(owner.leaseExpiresAtMs) <= Number(owner.acquiredAtMs)) {
+    throw new Error("Token estimator report lock owner is invalid.");
+  }
+  return {
+    pid: Number(owner.pid),
+    token: owner.token,
+    acquiredAtMs: Number(owner.acquiredAtMs),
+    leaseExpiresAtMs: Number(owner.leaseExpiresAtMs),
+  };
+}
+
+function readLockOwner(path: string): ReportLockOwner {
+  let serialized: string;
+  try {
+    serialized = readFileSync(join(path, "owner.json"), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new MissingReportLockOwnerError("Token estimator report lock owner is unavailable.");
+    }
+    throw new Error("Token estimator report lock owner is unreadable.");
+  }
+  try {
+    return parseLockOwner(JSON.parse(serialized) as unknown);
+  } catch {
+    throw new Error("Token estimator report lock owner is unreadable.");
+  }
+}
+
+function sameOwner(left: ReportLockOwner, right: ReportLockOwner): boolean {
+  return left.pid === right.pid
+    && left.token === right.token
+    && left.acquiredAtMs === right.acquiredAtMs
+    && left.leaseExpiresAtMs === right.leaseExpiresAtMs;
+}
+
+function acquireReportLock(directory: string): ReportLockOwner {
   const lock = join(directory, ".token-estimator-report.lock");
   const sleeper = new Int32Array(new SharedArrayBuffer(4));
   const deadline = Date.now() + 10_000;
   mkdirSync(directory, { recursive: true });
-  for (;;) {
-    try {
-      mkdirSync(lock);
-      return lock;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST" || Date.now() >= deadline) {
-        throw new Error("Unable to record token estimator run telemetry.");
+  const acquiredAtMs = Date.now();
+  const owner: ReportLockOwner = {
+    pid: process.pid,
+    token: randomUUID().replace(/-/g, ""),
+    acquiredAtMs,
+    leaseExpiresAtMs: acquiredAtMs + LOCK_LEASE_MS,
+  };
+  const candidate = join(directory, `.token-estimator-report-lock-candidate-${owner.token}`);
+  mkdirSync(candidate);
+  writeFileSync(join(candidate, "owner.json"), `${JSON.stringify(owner, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+  try {
+    for (;;) {
+      try {
+        renameSync(candidate, lock);
+        return owner;
+      } catch (error) {
+        if (!lockConflict(error)) {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT" && !existsSync(lock)) continue;
+          throw new Error("Unable to record token estimator run telemetry.");
+        }
       }
+      let current: ReportLockOwner;
+      try {
+        current = readLockOwner(lock);
+      } catch (error) {
+        if (error instanceof MissingReportLockOwnerError) continue;
+        if (!existsSync(lock)) continue;
+        throw error;
+      }
+      if (!processIsLive(current.pid) && Date.now() >= current.leaseExpiresAtMs) {
+        const claim = join(lock, `.reclaim-${current.token}`);
+        try {
+          writeFileSync(claim, owner.token, { encoding: "utf8", flag: "wx" });
+        } catch (error) {
+          const code = (error as NodeJS.ErrnoException).code;
+          if (code === "EEXIST" || code === "ENOENT") continue;
+          throw new Error("Unable to record token estimator run telemetry.");
+        }
+        let displacedLock = false;
+        try {
+          const claimed = readLockOwner(lock);
+          if (!sameOwner(claimed, current)
+            || processIsLive(claimed.pid)
+            || Date.now() < claimed.leaseExpiresAtMs) {
+            continue;
+          }
+          const stale = join(directory, `.token-estimator-report-stale-lock-${current.token}-${owner.token}`);
+          try {
+            renameSync(lock, stale);
+            displacedLock = true;
+          } catch (error) {
+            const code = (error as NodeJS.ErrnoException).code;
+            if (code === "ENOENT" || lockConflict(error)) continue;
+            throw new Error("Unable to record token estimator run telemetry.");
+          }
+          const displaced = readLockOwner(stale);
+          if (!sameOwner(displaced, current)) {
+            throw new Error("Token estimator report lock changed during stale-owner recovery.");
+          }
+          rmSync(stale, { recursive: true, force: true });
+          continue;
+        } finally {
+          if (!displacedLock) rmSync(claim, { force: true });
+        }
+      }
+      if (Date.now() >= deadline) throw new Error("Unable to record token estimator run telemetry.");
       Atomics.wait(sleeper, 0, 0, 10);
     }
+  } catch (error) {
+    rmSync(candidate, { recursive: true, force: true });
+    throw error;
   }
+}
+
+function releaseReportLock(directory: string, owner: ReportLockOwner): void {
+  const lock = join(directory, ".token-estimator-report.lock");
+  const current = readLockOwner(lock);
+  if (!sameOwner(current, owner)) {
+    throw new Error("Token estimator report lock changed before release.");
+  }
+  const released = join(directory, `.token-estimator-report-released-lock-${owner.token}`);
+  renameSync(lock, released);
+  const displaced = readLockOwner(released);
+  if (!sameOwner(displaced, owner)) {
+    throw new Error("Token estimator report lock changed during release.");
+  }
+  rmSync(released, { recursive: true, force: true });
 }
 
 function nonnegativeInteger(value: unknown): value is number {
@@ -110,7 +265,7 @@ export function appendTokenEstimatorCalibration(
     throw new Error("Unable to record token estimator run telemetry.");
   }
   const directory = join(root, ".pi-book", "runs", runId);
-  const lock = acquireReportLock(directory);
+  const owner = acquireReportLock(directory);
   try {
     const current = readTokenEstimatorRunReport(root, runId) ?? {
       schemaVersion: "1.0.0",
@@ -137,6 +292,6 @@ export function appendTokenEstimatorCalibration(
       if (existsSync(temporary)) rmSync(temporary, { force: true });
     }
   } finally {
-    rmSync(lock, { recursive: true, force: true });
+    releaseReportLock(directory, owner);
   }
 }

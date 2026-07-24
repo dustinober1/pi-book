@@ -33,7 +33,7 @@ import { readSceneValidationArtifact } from "../infrastructure/scene-validation-
 import { recordChapterExecutionAttempt, transitionChapterExecution } from "./chapter-execution-machine.js";
 import { projectStateHash } from "./project-hash.js";
 import { parseStructuredQualityArtifact } from "./quality-output.js";
-import { assertModelJobFits, recordModelTokenCalibration } from "./model-token-estimator.js";
+import { actualInputTokensForCalibration, assertModelJobFits, recordModelTokenCalibration } from "./model-token-estimator.js";
 
 interface RepairFinding {
   ref: string;
@@ -360,13 +360,14 @@ export async function runSceneSpanRepair(input: RunSceneSpanRepairInput): Promis
     ...(input.thinking ? { thinking: input.thinking } : {}),
   };
   const result = await input.worker.run(request, input.signal);
+  const actualInputTokens = actualInputTokensForCalibration(result.usage);
   const tokenCalibration = recordModelTokenCalibration({
     root: input.root,
     runId: input.runId,
     callId,
     profile: modelProfile,
     counts: tokenCounts,
-    ...(result.usage.inputTokens !== undefined && !result.usage.estimated ? { actualInputTokens: result.usage.inputTokens } : {}),
+    ...(actualInputTokens !== undefined ? { actualInputTokens } : {}),
   });
   const output = parseStructuredQualityArtifact(result.text, ScenePatchOutputSchema, "scene span patch output");
   const applied = validateAndApplyPatches(

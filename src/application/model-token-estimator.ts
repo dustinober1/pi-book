@@ -3,6 +3,7 @@ import type {
   TokenEstimationPolicy,
 } from "../domain/model-execution-profile.js";
 import type { ModelJobType } from "../domain/model-job.js";
+import type { ModelCallReport } from "../domain/run-report.js";
 import {
   appendTokenEstimatorCalibration,
   readTokenEstimatorRunReport,
@@ -46,6 +47,14 @@ export function estimateModelTokens(text: string, policy: TokenEstimationPolicy)
   const bytesPerToken = positiveFinite(policy.utf8_bytes_per_token, "UTF-8 bytes per token");
   const envelope = nonnegativeInteger(policy.fixed_envelope_tokens, "Fixed token envelope");
   return Math.ceil(Buffer.byteLength(text, "utf8") / bytesPerToken) + envelope;
+}
+
+export function actualInputTokensForCalibration(
+  usage: Pick<ModelCallReport, "estimated" | "inputTokens" | "inputTokensEstimated">,
+): number | undefined {
+  if (usage.inputTokens === undefined) return undefined;
+  const inputWasEstimated = usage.inputTokensEstimated ?? usage.estimated;
+  return inputWasEstimated ? undefined : usage.inputTokens;
 }
 
 export function assertModelJobFits(input: {
