@@ -2,10 +2,10 @@ schema_version: 1.0.0
 cases:
   - id: structured-compile-scene
     job_type: compile-scene-contract
-    prompt: Compile the supplied scene facts into a compact scene contract.
+    prompt: Compile a complete SceneContractSchema object and place REC-SCENE-001 in required_record_ids.
     context: |
-      REC-SCENE-001 is authoritative: the scene occurs at the east gate before dawn.
-      REC-SCENE-099 is explicitly superseded.
+      RECORD REC-SCENE-001 | REQUIRED | the scene occurs at the east gate before dawn
+      RECORD REC-SCENE-099 | FORBIDDEN | the scene occurs at the west gate at noon
     expected:
       valid_structured_output: true
       required_record_ids: [REC-SCENE-001]
@@ -13,10 +13,10 @@ cases:
       must_stop: false
   - id: structured-plan-scene
     job_type: plan-scene
-    prompt: Plan the next scene using only active authoritative records.
+    prompt: Return a complete ScenePlanOutputSchema object with REC-PLAN-001 in evidence_record_ids.
     context: |
-      REC-PLAN-001 is active and requires Mara to retrieve the ledger.
-      REC-PLAN-099 is a discarded alternate in which Mara burns it.
+      RECORD REC-PLAN-001 | REQUIRED | Mara retrieves the ledger
+      RECORD REC-PLAN-099 | FORBIDDEN | Mara burns the ledger
     expected:
       valid_structured_output: true
       required_record_ids: [REC-PLAN-001]
@@ -24,10 +24,10 @@ cases:
       must_stop: false
   - id: structured-state-delta
     job_type: extract-state-delta
-    prompt: Extract only state changes supported by the supplied scene evidence.
+    prompt: Return a complete SceneStateDeltaOutputSchema object whose mutation binds REC-STATE-001.
     context: |
-      REC-STATE-001 is the governing record. The sealed door is opened in this scene.
-      REC-STATE-099 is a rejected note claiming the door remains sealed.
+      RECORD REC-STATE-001 | REQUIRED | the sealed door is opened in this scene
+      RECORD REC-STATE-099 | FORBIDDEN | the door remains sealed
     expected:
       valid_structured_output: true
       required_record_ids: [REC-STATE-001]
@@ -35,21 +35,21 @@ cases:
       must_stop: false
   - id: structured-factual-claims
     job_type: extract-factual-claims
-    prompt: Extract factual claims and cite the active evidence record.
+    prompt: Return a complete ClaimExtractionArtifactSchema object whose claim binds RES-001 in research_ids.
     context: |
-      REC-FACT-001 states that the train arrived at 06:40.
-      REC-FACT-099 is an unverified guess that it arrived at 07:10.
+      RECORD RES-001 | REQUIRED | the train arrived at 06:40
+      RECORD RES-099 | FORBIDDEN | the train arrived at 07:10
     expected:
       valid_structured_output: true
-      required_record_ids: [REC-FACT-001]
-      forbidden_record_ids: [REC-FACT-099]
+      required_record_ids: [RES-001]
+      forbidden_record_ids: [RES-099]
       must_stop: false
   - id: structured-continuity-critic
     job_type: critic-continuity
-    prompt: Identify continuity problems using the active record.
+    prompt: Return a complete SceneCriticOutputSchema object and bind REC-CONT-001 in a finding evidence_quote.
     context: |
-      REC-CONT-001 establishes that Jo's left wrist is injured.
-      REC-CONT-099 is a stale draft note that says the right wrist is injured.
+      RECORD REC-CONT-001 | REQUIRED | Jo's left wrist is injured
+      RECORD REC-CONT-099 | FORBIDDEN | Jo's right wrist is injured
     expected:
       valid_structured_output: true
       required_record_ids: [REC-CONT-001]
@@ -57,10 +57,10 @@ cases:
       must_stop: false
   - id: structured-patch-spans
     job_type: patch-spans
-    prompt: Return a bounded patch plan for the identified span.
+    prompt: Return a complete ScenePatchOutputSchema object and bind REC-PATCH-001 in finding_refs.
     context: |
-      REC-PATCH-001 authorizes changing only paragraph three.
-      REC-PATCH-099 is an unauthorized request to rewrite the whole scene.
+      RECORD REC-PATCH-001 | REQUIRED | only paragraph three may change
+      RECORD REC-PATCH-099 | FORBIDDEN | the whole scene may be rewritten
     expected:
       valid_structured_output: true
       required_record_ids: [REC-PATCH-001]

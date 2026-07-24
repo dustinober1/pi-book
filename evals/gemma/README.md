@@ -15,11 +15,20 @@ NOVEL_FORGE_RUN_GEMMA_QUALIFICATION=1 npm run eval:gemma -- \
   --seed qualification-01
 ```
 
-Runs are written atomically beneath the ignored `evals/gemma/runs/` directory. The
-machine report contains only aggregate rates, counts, the exact fingerprint, and a
-report hash. Generated prose is written only to the blinded review kit. The separate
-label seal maps opaque sample IDs to fixture labels and should not be given to reviewers
-until their reviews are complete. None of these artifacts is canonical story authority.
+Runs are exclusively reserved and published as one atomic artifact set beneath the
+ignored `evals/gemma/runs/` directory. The machine report contains only aggregate
+rates, counts, the exact fingerprint, cryptographic provenance hashes, and a verified
+report hash. Provenance binds the frozen fixture bytes, rubric bytes and version, seed,
+and evaluator revision without copying those private inputs into the report.
+
+Generated prose is written only to the blinded review kit beside anonymized governing
+constraints needed to score fidelity and contradictions. The separate label seal maps
+opaque sample IDs to case and job labels and should not be given to reviewers until
+their reviews are complete. None of these artifacts is canonical story authority.
+
+Structured outputs are checked against the real schema for their fixture job. Record
+use, stop/escalation behavior, contradictions, and severe failures are derived by the
+trusted evaluator rather than accepted from model self-ratings.
 
 The command exits nonzero if configuration is incomplete, inference fails, or any
 promotion gate fails. Ordinary tests and CI use a scripted worker and never run a model.

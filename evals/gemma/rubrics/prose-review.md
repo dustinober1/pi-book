@@ -1,3 +1,4 @@
+<!-- gemma-prose-rubric-version: 1.0.0 -->
 # Blinded Gemma prose review rubric
 
 Review only the opaque samples in `gemma-prose-review-kit.md`. Do not open the label
