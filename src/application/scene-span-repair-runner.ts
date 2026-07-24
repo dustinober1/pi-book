@@ -366,7 +366,7 @@ export async function runSceneSpanRepair(input: RunSceneSpanRepairInput): Promis
     callId,
     profile: modelProfile,
     counts: tokenCounts,
-    ...(result.usage.inputTokens !== undefined ? { actualInputTokens: result.usage.inputTokens } : {}),
+    ...(result.usage.inputTokens !== undefined && !result.usage.estimated ? { actualInputTokens: result.usage.inputTokens } : {}),
   });
   const output = parseStructuredQualityArtifact(result.text, ScenePatchOutputSchema, "scene span patch output");
   const applied = validateAndApplyPatches(

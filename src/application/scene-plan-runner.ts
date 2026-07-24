@@ -132,7 +132,7 @@ export async function runScenePlanJob(input: RunScenePlanJobInput): Promise<RunS
     callId,
     profile: modelProfile,
     counts: tokenCounts,
-    ...(result.usage.inputTokens !== undefined ? { actualInputTokens: result.usage.inputTokens } : {}),
+    ...(result.usage.inputTokens !== undefined && !result.usage.estimated ? { actualInputTokens: result.usage.inputTokens } : {}),
   });
   const output = validatePlan(parseStructuredQualityArtifact(result.text, ScenePlanOutputSchema, "scene plan output"), input.capsule);
   const outputHash = hashText(result.text.trim());

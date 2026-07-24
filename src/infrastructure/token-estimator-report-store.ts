@@ -27,6 +27,24 @@ function reportPath(root: string, runId: string): string {
   return join(root, ".pi-book", "runs", runId, "token-estimator-report.json");
 }
 
+function acquireReportLock(directory: string): string {
+  const lock = join(directory, ".token-estimator-report.lock");
+  const sleeper = new Int32Array(new SharedArrayBuffer(4));
+  const deadline = Date.now() + 10_000;
+  mkdirSync(directory, { recursive: true });
+  for (;;) {
+    try {
+      mkdirSync(lock);
+      return lock;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST" || Date.now() >= deadline) {
+        throw new Error("Unable to record token estimator run telemetry.");
+      }
+      Atomics.wait(sleeper, 0, 0, 10);
+    }
+  }
+}
+
 function nonnegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
@@ -91,30 +109,34 @@ export function appendTokenEstimatorCalibration(
   if (!safeRunId(runId) || !calibrationValid(calibration)) {
     throw new Error("Unable to record token estimator run telemetry.");
   }
-  const current = readTokenEstimatorRunReport(root, runId) ?? {
-    schemaVersion: "1.0.0",
-    runId,
-    calibrations: [],
-  };
-  const existing = current.calibrations.find((item) => item.callId === calibration.callId);
-  if (existing) {
-    if (JSON.stringify(existing) === JSON.stringify(calibration)) return;
-    throw new Error("Unable to record token estimator run telemetry.");
-  }
-  const updated: TokenEstimatorRunReport = {
-    ...current,
-    calibrations: [...current.calibrations, calibration],
-  };
   const directory = join(root, ".pi-book", "runs", runId);
-  const path = reportPath(root, runId);
-  const temporary = join(directory, `.token-estimator-report.${process.pid}.${randomUUID()}.tmp`);
+  const lock = acquireReportLock(directory);
   try {
-    mkdirSync(directory, { recursive: true });
-    writeFileSync(temporary, `${JSON.stringify(updated, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
-    renameSync(temporary, path);
-  } catch {
-    throw new Error("Unable to record token estimator run telemetry.");
+    const current = readTokenEstimatorRunReport(root, runId) ?? {
+      schemaVersion: "1.0.0",
+      runId,
+      calibrations: [],
+    };
+    const existing = current.calibrations.find((item) => item.callId === calibration.callId);
+    if (existing) {
+      if (JSON.stringify(existing) === JSON.stringify(calibration)) return;
+      throw new Error("Unable to record token estimator run telemetry.");
+    }
+    const updated: TokenEstimatorRunReport = {
+      ...current,
+      calibrations: [...current.calibrations, calibration],
+    };
+    const path = reportPath(root, runId);
+    const temporary = join(directory, `.token-estimator-report.${process.pid}.${randomUUID()}.tmp`);
+    try {
+      writeFileSync(temporary, `${JSON.stringify(updated, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+      renameSync(temporary, path);
+    } catch {
+      throw new Error("Unable to record token estimator run telemetry.");
+    } finally {
+      if (existsSync(temporary)) rmSync(temporary, { force: true });
+    }
   } finally {
-    if (existsSync(temporary)) rmSync(temporary, { force: true });
+    rmSync(lock, { recursive: true, force: true });
   }
 }

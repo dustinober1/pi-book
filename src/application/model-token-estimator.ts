@@ -126,5 +126,8 @@ export function recordModelTokenCalibration(input: {
       ...(telemetry.escalationCode !== undefined ? { escalationCode: telemetry.escalationCode } : {}),
     });
   }
+  if (telemetry.escalationCode === "token-estimator-underflow") {
+    throw new Error(`Run ${input.runId} stopped after a token estimator underflow.`);
+  }
   return telemetry;
 }

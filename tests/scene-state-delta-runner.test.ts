@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createChapterExecutionState, transitionChapterExecution } from "../src/application/chapter-execution-machine.js";
@@ -158,6 +158,65 @@ test("matching evidence-grounded state and thread deltas route to scene acceptan
     assert.deepEqual(result.artifact.actual_thread_changes, [matchingThreadChange]);
     assert.equal(result.state.current_node, "scene-accept");
     assert.deepEqual(readSceneStateDeltaArtifact(root, runId, sceneId, 1, 1), result.artifact);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("actual token underflow is recorded but discards state-delta output before acceptance", async () => {
+  const { parent, root, runId } = setup();
+  try {
+    const result = workerResult(JSON.stringify({
+      schema_version: "1.0.0",
+      mutations: [matchingMutation],
+      thread_changes: [matchingThreadChange],
+    }));
+    result.usage = { ...result.usage, inputTokens: 10_000, estimated: false };
+    await assert.rejects(
+      () => runSceneStateDeltaExtraction({
+        root,
+        runId,
+        capsule: capsule(root),
+        draftAttempt: 1,
+        runtimeProfile: "tiny-local",
+        worker: new StubWorker(result),
+      }),
+      /token estimator underflow/i,
+    );
+    const state = readChapterExecutionState(root, runId)!;
+    assert.equal(state.current_node, "state-delta");
+    assert.equal(state.attempts[`${sceneId}:state-delta`], 1);
+    assert.equal(readSceneStateDeltaArtifact(root, runId, sceneId, 1, 1), null);
+    const reportText = readFileSync(join(root, ".pi-book", "runs", runId, "token-estimator-report.json"), "utf8");
+    assert.match(reportText, /"escalationCode": "token-estimator-underflow"/);
+    assert.equal(reportText.includes("Mara reached the terminal."), false);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("fallback estimated input usage neither calibrates nor triggers underflow", async () => {
+  const { parent, root, runId } = setup();
+  try {
+    const fallback = workerResult(JSON.stringify({
+      schema_version: "1.0.0",
+      mutations: [matchingMutation],
+      thread_changes: [matchingThreadChange],
+    }));
+    fallback.usage = { ...fallback.usage, inputTokens: 10_000, estimated: true };
+    const result = await runSceneStateDeltaExtraction({
+      root,
+      runId,
+      capsule: capsule(root),
+      draftAttempt: 1,
+      runtimeProfile: "tiny-local",
+      worker: new StubWorker(fallback),
+    });
+    assert.equal(result.artifact.usage.inputTokenEstimateRatio, undefined);
+    assert.equal(result.artifact.usage.escalationCode, undefined);
+    const report = JSON.parse(readFileSync(
+      join(root, ".pi-book", "runs", runId, "token-estimator-report.json"),
+      "utf8",
+    )) as { calibrations: Array<Record<string, unknown>> };
+    assert.equal(report.calibrations[0]?.actualInputTokens, undefined);
+    assert.equal(report.calibrations[0]?.inputTokenEstimateRatio, undefined);
+    assert.equal(report.calibrations[0]?.escalationCode, undefined);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 

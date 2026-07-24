@@ -278,7 +278,7 @@ export async function runSceneStateDeltaExtraction(
     callId,
     profile: modelProfile,
     counts: tokenCounts,
-    ...(result.usage.inputTokens !== undefined ? { actualInputTokens: result.usage.inputTokens } : {}),
+    ...(result.usage.inputTokens !== undefined && !result.usage.estimated ? { actualInputTokens: result.usage.inputTokens } : {}),
   });
   const output = validateOutput(
     parseStructuredQualityArtifact(result.text, SceneStateDeltaOutputSchema, "scene state-delta output"),

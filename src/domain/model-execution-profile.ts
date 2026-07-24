@@ -99,7 +99,7 @@ const smallBudgets = jobRecord<JobBudgetPolicy>((jobType) => {
     case "extract-state-delta":
       return structuredBudget(4_000, 900);
     default:
-      return structuredBudget(5_000, 900);
+      return structuredBudget(5_000, 1_000);
   }
 });
 

@@ -53,4 +53,5 @@ test("small-12b-q4 compatibility alias has bounded Gemma scene and structured jo
   assert.deepEqual(profile.preferred_scene_words, { minimum: 700, maximum: 1100 });
   assert.ok(profile.job_budgets["draft-scene"].reservedOutputTokens > profile.job_budgets["extract-state-delta"].reservedOutputTokens);
   assert.ok(profile.decoding["draft-scene"].temperature > profile.decoding["extract-state-delta"].temperature);
+  assert.ok(profile.job_budgets["critic-continuity"].reservedOutputTokens >= profile.decoding["critic-continuity"].maximumOutputTokens);
 });
