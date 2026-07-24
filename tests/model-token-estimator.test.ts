@@ -18,6 +18,7 @@ function appendCalibrationInChild(
   callId: string,
   releaseAt: number,
   underflow: boolean,
+  timeoutMs = 15_000,
 ): Promise<void> {
   const script = [
     'import { appendTokenEstimatorCalibration } from "./src/infrastructure/token-estimator-report-store.js";',
@@ -36,9 +37,26 @@ function appendCalibrationInChild(
       root, runId, callId, String(releaseAt), String(underflow),
     ], { cwd: process.cwd(), stdio: ["ignore", "ignore", "pipe"] });
     let stderr = "";
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.kill("SIGKILL");
+      reject(new Error(`child timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
     child.stderr.setEncoding("utf8").on("data", (chunk) => { stderr += chunk; });
-    child.on("error", reject);
-    child.on("close", (code) => code === 0 ? resolve() : reject(new Error(stderr || `child exited ${code}`)));
+    child.on("error", (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.on("close", (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      code === 0 ? resolve() : reject(new Error(stderr || `child exited ${code}`));
+    });
   });
 }
 
@@ -232,6 +250,126 @@ test("an expired lease owned by a live process is not reclaimed", async () => {
     rmSync(lock, { recursive: true });
     await pending;
     assert.deepEqual(readTokenEstimatorRunReport(root, runId)?.calibrations.map((item) => item.callId), ["CALL-WAITED"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a fresh process recovers an orphaned reclaim claim left by a dead claimant", async () => {
+  const root = mkdtempSync(join(tmpdir(), "novel-forge-token-estimator-orphan-claim-"));
+  const runId = "RUN-ORPHANED-RECLAIM-CLAIM";
+  try {
+    const lock = join(root, ".pi-book", "runs", runId, ".token-estimator-report.lock");
+    const lockOwnerToken = "b".repeat(32);
+    mkdirSync(lock, { recursive: true });
+    writeFileSync(join(lock, "owner.json"), `${JSON.stringify({
+      pid: 2_147_483_647,
+      token: lockOwnerToken,
+      acquiredAtMs: 0,
+      leaseExpiresAtMs: 1,
+    })}\n`, "utf8");
+    writeFileSync(join(lock, `.reclaim-${lockOwnerToken}`), `${JSON.stringify({
+      pid: 2_147_483_647,
+      token: "c".repeat(32),
+      acquiredAtMs: 0,
+      leaseExpiresAtMs: 1,
+    })}\n`, "utf8");
+    const reclaim = join(lock, `.reclaim-v2-${lockOwnerToken}`);
+    mkdirSync(reclaim);
+    writeFileSync(join(reclaim, "owner.json"), `${JSON.stringify({
+      pid: 2_147_483_647,
+      token: "e".repeat(32),
+      acquiredAtMs: 0,
+      leaseExpiresAtMs: 1,
+    })}\n`, "utf8");
+
+    await appendCalibrationInChild(root, runId, "CALL-ORPHAN-RECOVERED", Date.now(), false, 3_000);
+
+    assert.deepEqual(readTokenEstimatorRunReport(root, runId)?.calibrations.map((item) => item.callId), [
+      "CALL-ORPHAN-RECOVERED",
+    ]);
+    assert.equal(existsSync(lock), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a live reclaim claimant is preserved even after its lease expires", async () => {
+  const root = mkdtempSync(join(tmpdir(), "novel-forge-token-estimator-live-claim-"));
+  const runId = "RUN-LIVE-RECLAIM-CLAIM";
+  try {
+    const lock = join(root, ".pi-book", "runs", runId, ".token-estimator-report.lock");
+    const lockOwnerToken = "b".repeat(32);
+    mkdirSync(lock, { recursive: true });
+    writeFileSync(join(lock, "owner.json"), `${JSON.stringify({
+      pid: 2_147_483_647,
+      token: lockOwnerToken,
+      acquiredAtMs: 0,
+      leaseExpiresAtMs: 1,
+    })}\n`, "utf8");
+    const reclaim = join(lock, `.reclaim-v2-${lockOwnerToken}`);
+    mkdirSync(reclaim);
+    writeFileSync(join(reclaim, "owner.json"), `${JSON.stringify({
+      pid: process.pid,
+      token: "f".repeat(32),
+      acquiredAtMs: 0,
+      leaseExpiresAtMs: 1,
+    })}\n`, "utf8");
+
+    let settled = false;
+    const pending = appendCalibrationInChild(
+      root,
+      runId,
+      "CALL-LIVE-CLAIM-WAITED",
+      Date.now(),
+      false,
+      3_000,
+    ).finally(() => { settled = true; });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    assert.equal(settled, false);
+    rmSync(lock, { recursive: true });
+    await pending;
+    assert.deepEqual(readTokenEstimatorRunReport(root, runId)?.calibrations.map((item) => item.callId), [
+      "CALL-LIVE-CLAIM-WAITED",
+    ]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a fresh process recovers an old lock with missing owner metadata", async () => {
+  const root = mkdtempSync(join(tmpdir(), "novel-forge-token-estimator-malformed-lock-"));
+  const runId = "RUN-MISSING-LOCK-OWNER";
+  try {
+    const lock = join(root, ".pi-book", "runs", runId, ".token-estimator-report.lock");
+    mkdirSync(lock, { recursive: true });
+    writeFileSync(join(lock, "legacy.lock"), "orphaned\n", "utf8");
+
+    await appendCalibrationInChild(root, runId, "CALL-MISSING-OWNER", Date.now(), false, 3_000);
+
+    assert.deepEqual(readTokenEstimatorRunReport(root, runId)?.calibrations.map((record) => record.callId), [
+      "CALL-MISSING-OWNER",
+    ]);
+    assert.equal(existsSync(lock), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a fresh process recovers an old lock with partial owner metadata", async () => {
+  const root = mkdtempSync(join(tmpdir(), "novel-forge-token-estimator-malformed-lock-"));
+  const runId = "RUN-PARTIAL-LOCK-OWNER";
+  try {
+    const lock = join(root, ".pi-book", "runs", runId, ".token-estimator-report.lock");
+    mkdirSync(lock, { recursive: true });
+    writeFileSync(join(lock, "owner.json"), '{"pid":2147483647', "utf8");
+
+    await appendCalibrationInChild(root, runId, "CALL-PARTIAL-OWNER", Date.now(), false, 3_000);
+
+    assert.deepEqual(readTokenEstimatorRunReport(root, runId)?.calibrations.map((record) => record.callId), [
+      "CALL-PARTIAL-OWNER",
+    ]);
+    assert.equal(existsSync(lock), false);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
