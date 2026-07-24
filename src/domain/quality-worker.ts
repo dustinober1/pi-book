@@ -31,6 +31,11 @@ export interface QualityModelCapacity {
   model: string;
   contextWindowTokens: number;
   maxOutputTokens: number;
+  backend?: string;
+  backendVersion?: string;
+  quantization?: string;
+  chatTemplateHash?: string;
+  modelFileHash?: string;
 }
 
 export interface QualityWorkerResult {

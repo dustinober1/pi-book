@@ -29,7 +29,7 @@ function setup() {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-full-stepper-"));
   const root = initializeProject(parent, {
     projectName: "Full Execution Stepper", projectType: "standalone", profile: "thriller",
-    runtimeProfile: "tiny-local", modelExecutionProfile: "small-12b-q4",
+    runtimeProfile: "tiny-local", modelExecutionProfile: "host-default",
   });
   const project = readProject(root);
   project.current_stage = "drafting";

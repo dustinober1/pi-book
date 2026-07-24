@@ -119,6 +119,44 @@ class ScriptedWorker implements QualityWorker {
   }
 }
 
+class ExactGemmaWithoutFingerprintWorker extends ScriptedWorker {
+  override async resolveModelCapacity() {
+    return {
+      provider: "local",
+      model: "google/gemma-3-12b-it-qat-q4_0-gguf",
+      contextWindowTokens: 16_384,
+      maxOutputTokens: 4_096,
+    };
+  }
+}
+
+test("an exact Gemma quality run requires normalized matching fingerprint metadata before it starts", async () => {
+  const { parent, root } = setup();
+  try {
+    const project = readProject(root);
+    project.runtime!.model_execution_profile = "gemma-3-12b-it-qat-q4_0";
+    writeFileSync(join(root, "PROJECT.yaml"), stringifyYaml(project), "utf8");
+    const worker = new ExactGemmaWithoutFingerprintWorker(root);
+
+    await assert.rejects(runQualityDraft({
+      root,
+      chapter: 1,
+      runtimeProfile: "full",
+      qualityConfig: project.quality!,
+      worker,
+      provider: "local",
+      model: "google/gemma-3-12b-it-qat-q4_0-gguf",
+      runId: "QDR-GEMMA-FINGERPRINT",
+    }), /Gemma model metadata requires a backend/i);
+
+    assert.deepEqual(worker.calls, []);
+    assert.equal(existsSync(join(root, ".pi-book", "runs", "QDR-GEMMA-FINGERPRINT", "run-report.json")), false);
+    assert.equal(existsSync(join(root, ".pi-book", "runs", "QDR-GEMMA-FINGERPRINT", "quality-job-plan.json")), false);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
 test("premium drafting consumes one bounded job plan and ends in one guarded chapter event", async () => {
   const { parent, root } = setup();
   try {

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { Value } from "@sinclair/typebox/value";
 import type { ActiveContextCapsule } from "../domain/active-context-capsule.js";
+import { modelExecutionProfileIdsMatch } from "../domain/model-execution-profile.js";
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
 import {
   SceneValidationArtifactSchema,
@@ -75,7 +76,7 @@ function requireDraft(input: ValidateSceneDraftInput, state: ChapterExecutionSta
   if (draft.capsule_id !== input.capsule.capsule_id) issues.push("capsule ID");
   if (draft.contract_hash !== input.capsule.contract_hash) issues.push("contract hash");
   if (draft.story_index_hash !== input.capsule.story_index_hash) issues.push("story index hash");
-  if (draft.model_execution_profile !== input.capsule.model_execution_profile) issues.push("model execution profile");
+  if (!modelExecutionProfileIdsMatch(draft.model_execution_profile, input.capsule.model_execution_profile)) issues.push("model execution profile");
   if (draft.attempt !== input.attempt) issues.push("attempt");
   const outputHash = hashText(draft.prose);
   if (draft.output_hash !== outputHash) issues.push("output hash");

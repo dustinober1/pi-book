@@ -4,6 +4,7 @@ import type { ActiveContextCapsule } from "../domain/active-context-capsule.js";
 import { ChapterContractSchema, chapterContractPath, type ChapterContract } from "../domain/chapter-contract.js";
 import type { ChapterExecutionManifest } from "../domain/chapter-execution-manifest.js";
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
+import { assertGemmaFingerprintMatchesProfile, GEMMA_3_12B_QAT_PROFILE_ID, type ModelFingerprint } from "../domain/model-fingerprint.js";
 import type { SceneContract } from "../domain/scene-contract.js";
 import { readText } from "../infrastructure/files.js";
 import {
@@ -35,6 +36,7 @@ import { readBook, readProject } from "../project/store.js";
 import { chapterContractHash, createChapterExecutionState } from "./chapter-execution-machine.js";
 import { compileSceneContracts } from "./contracts/scene-contract-compiler.js";
 import { buildExecutionContextCapsule } from "./execution-context-capsule.js";
+import { canonicalModelExecutionProfileId, MODEL_EXECUTION_PROFILES } from "../domain/model-execution-profile.js";
 import { resolveModelExecutionProfile } from "./model-execution-profile-resolver.js";
 import { projectStateHash } from "./project-hash.js";
 import { rebuildStoryRecordIndex, readStoryRecordIndex } from "./rebuild-story-index.js";
@@ -44,6 +46,7 @@ export interface PrepareChapterExecutionInput {
   chapter: number;
   runId?: string;
   now?: string;
+  modelFingerprint?: ModelFingerprint;
 }
 
 export interface PrepareChapterExecutionResult {
@@ -102,8 +105,8 @@ function sceneEntries(scenes: readonly SceneContract[]): ChapterExecutionManifes
 }
 
 function immutableManifest(manifest: ChapterExecutionManifest): Omit<ChapterExecutionManifest, "created_at"> {
-  const { created_at: _createdAt, ...immutable } = manifest;
-  return immutable;
+  const { created_at: _createdAt, model_execution_profile, ...immutable } = manifest;
+  return { ...immutable, model_execution_profile: canonicalModelExecutionProfileId(model_execution_profile) };
 }
 
 function assertManifestMatches(existing: ChapterExecutionManifest, expected: ChapterExecutionManifest): void {
@@ -118,7 +121,7 @@ function assertManifestMatches(existing: ChapterExecutionManifest, expected: Cha
   if (existing.project_hash !== expected.project_hash) throw new Error("Prepared run project hash changed.");
   if (existing.story_index_hash !== expected.story_index_hash) throw new Error("Prepared run story index changed.");
   if (existing.runtime_profile !== expected.runtime_profile
-    || existing.model_execution_profile !== expected.model_execution_profile) {
+    || canonicalModelExecutionProfileId(existing.model_execution_profile) !== canonicalModelExecutionProfileId(expected.model_execution_profile)) {
     throw new Error("Prepared run execution profile changed.");
   }
   if (JSON.stringify(immutableManifest(existing)) !== JSON.stringify(immutableManifest(expected))) {
@@ -239,6 +242,11 @@ export function prepareChapterExecution(input: PrepareChapterExecutionInput): Pr
       statePath: chapterExecutionStatePath(input.root, runId),
       alreadyPrepared: true,
     };
+  }
+
+  if (expected.model_execution_profile === GEMMA_3_12B_QAT_PROFILE_ID) {
+    if (!input.modelFingerprint) throw new Error("New exact Gemma preparation requires a qualified Gemma fingerprint.");
+    assertGemmaFingerprintMatchesProfile(input.modelFingerprint, MODEL_EXECUTION_PROFILES[GEMMA_3_12B_QAT_PROFILE_ID]);
   }
 
   const manifest = existingManifest ?? { ...expected, created_at: existingState?.updated_at ?? expected.created_at };

@@ -135,8 +135,9 @@ export class PiPrintWorker implements QualityWorker {
         "metadata",
       );
       const capacity = parsePiModelList(result.stdout, provider, model);
-      this.#capacityCache.set(key, capacity);
-      return capacity;
+      const metadata = capacity ? Object.freeze({ ...capacity }) : null;
+      this.#capacityCache.set(key, metadata);
+      return metadata;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (/unavailable|aborted/i.test(message)) throw error;

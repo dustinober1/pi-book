@@ -1,12 +1,14 @@
 import { createHash } from "node:crypto";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createChapterExecutionState, transitionChapterExecution } from "../src/application/chapter-execution-machine.js";
 import { projectStateHash } from "../src/application/project-hash.js";
 import { runSceneStateDeltaExtraction } from "../src/application/scene-state-delta-runner.js";
+import { estimateModelTokens } from "../src/application/model-token-estimator.js";
+import { MODEL_EXECUTION_PROFILES } from "../src/domain/model-execution-profile.js";
 import type { ActiveContextCapsule } from "../src/domain/active-context-capsule.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import type { SceneCriticSummaryArtifact } from "../src/domain/scene-critic-artifact.js";
@@ -148,10 +150,134 @@ test("matching evidence-grounded state and thread deltas route to scene acceptan
     assert.equal(worker.requests[0]?.jobType, "extract-state-delta");
     assert.ok(worker.requests[0]?.context?.endsWith("EXACT TASK\n- Extract the actual state delta for this scene.\n- Return one exact JSON object."));
     assert.equal(result.artifact.matches_expected, true);
+    const policy = MODEL_EXECUTION_PROFILES["small-12b-q4"].token_estimation;
+    assert.equal(result.artifact.usage.estimatedInstructionTokens, estimateModelTokens(result.request.prompt, policy));
+    assert.equal(result.artifact.usage.estimatedEvidenceTokens, estimateModelTokens(result.request.context ?? "", policy));
+    assert.ok((result.artifact.usage.totalReservedTokens ?? 0) > (result.artifact.usage.estimatedInstructionTokens ?? 0) + (result.artifact.usage.estimatedEvidenceTokens ?? 0));
     assert.equal(result.artifact.next_action, "scene-accept");
     assert.deepEqual(result.artifact.actual_thread_changes, [matchingThreadChange]);
     assert.equal(result.state.current_node, "scene-accept");
     assert.deepEqual(readSceneStateDeltaArtifact(root, runId, sceneId, 1, 1), result.artifact);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("actual token underflow is recorded but discards state-delta output before acceptance", async () => {
+  const { parent, root, runId } = setup();
+  try {
+    const result = workerResult(JSON.stringify({
+      schema_version: "1.0.0",
+      mutations: [matchingMutation],
+      thread_changes: [matchingThreadChange],
+    }));
+    result.usage = { ...result.usage, inputTokens: 10_000, estimated: false };
+    await assert.rejects(
+      () => runSceneStateDeltaExtraction({
+        root,
+        runId,
+        capsule: capsule(root),
+        draftAttempt: 1,
+        runtimeProfile: "tiny-local",
+        worker: new StubWorker(result),
+      }),
+      /token estimator underflow/i,
+    );
+    const state = readChapterExecutionState(root, runId)!;
+    assert.equal(state.current_node, "state-delta");
+    assert.equal(state.attempts[`${sceneId}:state-delta`], 1);
+    assert.equal(readSceneStateDeltaArtifact(root, runId, sceneId, 1, 1), null);
+    const reportText = readFileSync(join(root, ".pi-book", "runs", runId, "token-estimator-report.json"), "utf8");
+    assert.match(reportText, /"escalationCode": "token-estimator-underflow"/);
+    assert.equal(reportText.includes("Mara reached the terminal."), false);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("fallback estimated input usage neither calibrates nor triggers underflow", async () => {
+  const { parent, root, runId } = setup();
+  try {
+    const fallback = workerResult(JSON.stringify({
+      schema_version: "1.0.0",
+      mutations: [matchingMutation],
+      thread_changes: [matchingThreadChange],
+    }));
+    fallback.usage = { ...fallback.usage, inputTokens: 10_000, estimated: true };
+    const result = await runSceneStateDeltaExtraction({
+      root,
+      runId,
+      capsule: capsule(root),
+      draftAttempt: 1,
+      runtimeProfile: "tiny-local",
+      worker: new StubWorker(fallback),
+    });
+    assert.equal(result.artifact.usage.inputTokenEstimateRatio, undefined);
+    assert.equal(result.artifact.usage.escalationCode, undefined);
+    const report = JSON.parse(readFileSync(
+      join(root, ".pi-book", "runs", runId, "token-estimator-report.json"),
+      "utf8",
+    )) as { calibrations: Array<Record<string, unknown>> };
+    assert.equal(report.calibrations[0]?.actualInputTokens, undefined);
+    assert.equal(report.calibrations[0]?.inputTokenEstimateRatio, undefined);
+    assert.equal(report.calibrations[0]?.escalationCode, undefined);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("actual input calibrates when only output usage is estimated", async () => {
+  const { parent, root, runId } = setup();
+  try {
+    const mixed = workerResult(JSON.stringify({
+      schema_version: "1.0.0",
+      mutations: [matchingMutation],
+      thread_changes: [matchingThreadChange],
+    }));
+    mixed.usage = {
+      ...mixed.usage,
+      inputTokens: 650,
+      inputTokensEstimated: false,
+      outputTokensEstimated: true,
+      estimated: true,
+    };
+    const result = await runSceneStateDeltaExtraction({
+      root,
+      runId,
+      capsule: capsule(root),
+      draftAttempt: 1,
+      runtimeProfile: "tiny-local",
+      worker: new StubWorker(mixed),
+    });
+    assert.ok((result.artifact.usage.inputTokenEstimateRatio ?? 0) > 0);
+    const report = JSON.parse(readFileSync(
+      join(root, ".pi-book", "runs", runId, "token-estimator-report.json"),
+      "utf8",
+    )) as { calibrations: Array<Record<string, unknown>> };
+    assert.equal(report.calibrations[0]?.actualInputTokens, 650);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("estimated input does not calibrate when output usage is actual", async () => {
+  const { parent, root, runId } = setup();
+  try {
+    const mixed = workerResult(JSON.stringify({
+      schema_version: "1.0.0",
+      mutations: [matchingMutation],
+      thread_changes: [matchingThreadChange],
+    }));
+    mixed.usage = {
+      ...mixed.usage,
+      inputTokens: 10_000,
+      outputTokens: 400,
+      inputTokensEstimated: true,
+      outputTokensEstimated: false,
+      estimated: true,
+    };
+    const result = await runSceneStateDeltaExtraction({
+      root,
+      runId,
+      capsule: capsule(root),
+      draftAttempt: 1,
+      runtimeProfile: "tiny-local",
+      worker: new StubWorker(mixed),
+    });
+    assert.equal(result.artifact.usage.inputTokenEstimateRatio, undefined);
+    assert.equal(result.artifact.usage.escalationCode, undefined);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 

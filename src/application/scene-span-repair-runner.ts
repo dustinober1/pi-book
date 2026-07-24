@@ -4,6 +4,7 @@ import { renderActiveContextCapsule } from "../context/active-context-renderer.j
 import type { ActiveContextCapsule } from "../domain/active-context-capsule.js";
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
 import {
+  modelExecutionProfileIdsMatch,
   MODEL_EXECUTION_PROFILES,
   type ModelExecutionProfile,
 } from "../domain/model-execution-profile.js";
@@ -32,6 +33,7 @@ import { readSceneValidationArtifact } from "../infrastructure/scene-validation-
 import { recordChapterExecutionAttempt, transitionChapterExecution } from "./chapter-execution-machine.js";
 import { projectStateHash } from "./project-hash.js";
 import { parseStructuredQualityArtifact } from "./quality-output.js";
+import { actualInputTokensForCalibration, assertModelJobFits, recordModelTokenCalibration } from "./model-token-estimator.js";
 
 interface RepairFinding {
   ref: string;
@@ -317,7 +319,7 @@ export async function runSceneSpanRepair(input: RunSceneSpanRepairInput): Promis
   const findings = activeRepairFindings(input, sourceDraft);
   const runtime = RUNTIME_PROFILES[input.runtimeProfile];
   const modelProfile = resolveModelProfile(input.capsule, input.customModelProfile);
-  if (modelProfile.id !== input.capsule.model_execution_profile) {
+  if (!modelExecutionProfileIdsMatch(modelProfile.id, input.capsule.model_execution_profile)) {
     throw new Error(`Model profile ${modelProfile.id} does not match capsule profile ${input.capsule.model_execution_profile}.`);
   }
 
@@ -331,11 +333,14 @@ export async function runSceneSpanRepair(input: RunSceneSpanRepairInput): Promis
   const prompt = patchPrompt();
   if (context.length > runtime.maxContextChars) throw new Error("Rendered scene repair context exceeds the runtime profile before inference.");
   if (prompt.length > runtime.maxPromptChars) throw new Error("Scene repair prompt exceeds the runtime profile before inference.");
-  const budget = modelProfile.job_budgets["patch-spans"];
-  const estimatedEvidenceTokens = Math.max(1, Math.ceil(Buffer.byteLength(context, "utf8") / 4));
-  if (estimatedEvidenceTokens > budget.maximumEvidenceTokens) {
-    throw new Error(`Scene repair context needs approximately ${estimatedEvidenceTokens} evidence tokens, above the ${budget.maximumEvidenceTokens}-token budget.`);
-  }
+  const tokenCounts = assertModelJobFits({
+    root: input.root,
+    runId: input.runId,
+    instruction: prompt,
+    evidence: context,
+    profile: modelProfile,
+    jobType: "patch-spans",
+  });
 
   const callId = `${input.runId}-${sceneId}-PATCH-${patchAttempt}`;
   const request: QualityWorkerRequest = {
@@ -355,6 +360,15 @@ export async function runSceneSpanRepair(input: RunSceneSpanRepairInput): Promis
     ...(input.thinking ? { thinking: input.thinking } : {}),
   };
   const result = await input.worker.run(request, input.signal);
+  const actualInputTokens = actualInputTokensForCalibration(result.usage);
+  const tokenCalibration = recordModelTokenCalibration({
+    root: input.root,
+    runId: input.runId,
+    callId,
+    profile: modelProfile,
+    counts: tokenCounts,
+    ...(actualInputTokens !== undefined ? { actualInputTokens } : {}),
+  });
   const output = parseStructuredQualityArtifact(result.text, ScenePatchOutputSchema, "scene span patch output");
   const applied = validateAndApplyPatches(
     sourceDraft.prose,
@@ -368,6 +382,7 @@ export async function runSceneSpanRepair(input: RunSceneSpanRepairInput): Promis
   const capsuleHash = stableHash(input.capsule);
   const patchUsage: ModelCallReport = {
     ...result.usage,
+    ...tokenCalibration,
     callId,
     stage: "drafting",
     chapter: state.chapter,

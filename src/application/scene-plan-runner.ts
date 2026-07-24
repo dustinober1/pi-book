@@ -3,7 +3,7 @@ import { Value } from "@sinclair/typebox/value";
 import { renderActiveContextCapsule } from "../context/active-context-renderer.js";
 import type { ActiveContextCapsule } from "../domain/active-context-capsule.js";
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
-import { MODEL_EXECUTION_PROFILES, type ModelExecutionProfile } from "../domain/model-execution-profile.js";
+import { modelExecutionProfileIdsMatch, MODEL_EXECUTION_PROFILES, type ModelExecutionProfile } from "../domain/model-execution-profile.js";
 import type { QualityThinkingLevel, QualityWorker, QualityWorkerRequest } from "../domain/quality-worker.js";
 import { ModelCallReportSchema, type ModelCallReport } from "../domain/run-report.js";
 import { RUNTIME_PROFILES, type RuntimeProfileId } from "../domain/runtime-profile.js";
@@ -13,6 +13,7 @@ import { writeScenePlanArtifact } from "../infrastructure/scene-plan-artifact-st
 import { recordChapterExecutionAttempt, transitionChapterExecution } from "./chapter-execution-machine.js";
 import { projectStateHash } from "./project-hash.js";
 import { parseStructuredQualityArtifact } from "./quality-output.js";
+import { actualInputTokensForCalibration, assertModelJobFits, recordModelTokenCalibration } from "./model-token-estimator.js";
 
 export interface RunScenePlanJobInput {
   root: string;
@@ -95,7 +96,7 @@ export async function runScenePlanJob(input: RunScenePlanJobInput): Promise<RunS
   const state = requireState(input);
   const runtime = RUNTIME_PROFILES[input.runtimeProfile];
   const modelProfile = resolveModelProfile(input.capsule, input.customModelProfile);
-  if (modelProfile.id !== input.capsule.model_execution_profile) {
+  if (!modelExecutionProfileIdsMatch(modelProfile.id, input.capsule.model_execution_profile)) {
     throw new Error(`Model profile ${modelProfile.id} does not match capsule profile ${input.capsule.model_execution_profile}.`);
   }
   const sceneId = input.capsule.scene_contract.scene_id;
@@ -108,11 +109,14 @@ export async function runScenePlanJob(input: RunScenePlanJobInput): Promise<RunS
   const instructions = prompt();
   if (context.length > runtime.maxContextChars) throw new Error("Rendered scene-plan context exceeds the runtime profile before inference.");
   if (instructions.length > runtime.maxPromptChars) throw new Error("Scene-plan prompt exceeds the runtime profile before inference.");
-  const budget = modelProfile.job_budgets["plan-scene"];
-  const evidenceTokens = Math.max(1, Math.ceil(Buffer.byteLength(context, "utf8") / 4));
-  if (evidenceTokens > budget.maximumEvidenceTokens) {
-    throw new Error(`Scene-plan context needs approximately ${evidenceTokens} evidence tokens, above the ${budget.maximumEvidenceTokens}-token budget.`);
-  }
+  const tokenCounts = assertModelJobFits({
+    root: input.root,
+    runId: input.runId,
+    instruction: instructions,
+    evidence: context,
+    profile: modelProfile,
+    jobType: "plan-scene",
+  });
 
   const callId = `${input.runId}-${sceneId}-PLAN-${attempt}`;
   const request: QualityWorkerRequest = {
@@ -122,11 +126,20 @@ export async function runScenePlanJob(input: RunScenePlanJobInput): Promise<RunS
     ...(input.thinking ? { thinking: input.thinking } : {}),
   };
   const result = await input.worker.run(request, input.signal);
+  const actualInputTokens = actualInputTokensForCalibration(result.usage);
+  const tokenCalibration = recordModelTokenCalibration({
+    root: input.root,
+    runId: input.runId,
+    callId,
+    profile: modelProfile,
+    counts: tokenCounts,
+    ...(actualInputTokens !== undefined ? { actualInputTokens } : {}),
+  });
   const output = validatePlan(parseStructuredQualityArtifact(result.text, ScenePlanOutputSchema, "scene plan output"), input.capsule);
   const outputHash = hashText(result.text.trim());
   const capsuleHash = stableHash(input.capsule);
   const usage: ModelCallReport = {
-    ...result.usage, callId, stage: "drafting", chapter: state.chapter, sceneId, attempt, pass: "plan", jobType: "plan-scene",
+    ...result.usage, ...tokenCalibration, callId, stage: "drafting", chapter: state.chapter, sceneId, attempt, pass: "plan", jobType: "plan-scene",
     contractHash: input.capsule.contract_hash, capsuleHash, includedRecordCount: input.capsule.records.length,
     promptHash: hashText(instructions), contextHash: hashText(context), outputHash,
   };

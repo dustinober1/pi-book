@@ -14,7 +14,7 @@ test("legacy projects resolve to host-default without a stored model profile", (
   assert.equal(resolveModelExecutionProfile({}).id, "host-default");
 });
 
-test("small-12b-q4 is opt-in and separate from runtime and quality profiles", () => {
+test("small-12b-q4 remains an opt-in compatibility alias separate from runtime and quality profiles", () => {
   const files = projectTemplateFiles({
     projectName: "Small Model",
     projectType: "standalone",
@@ -26,7 +26,7 @@ test("small-12b-q4 is opt-in and separate from runtime and quality profiles", ()
   assert.equal(project.runtime?.profile, "tiny-local");
   assert.equal(project.runtime?.model_execution_profile, "small-12b-q4");
   assert.equal(project.quality?.tier, "economy");
-  assert.equal(resolveModelExecutionProfile({ project: project.runtime?.model_execution_profile }).id, "small-12b-q4");
+  assert.equal(resolveModelExecutionProfile({ project: project.runtime?.model_execution_profile }).id, "gemma-3-12b-it-qat-q4_0");
   assert.deepEqual(parseRunOptions("--model-profile small-12b-q4"), {
     modelExecutionProfile: "small-12b-q4",
     resume: false,
@@ -48,9 +48,10 @@ test("run override wins and unknown model profiles fail before inference", () =>
   assert.throws(() => parseRunOptions("--resume --model-profile small-12b-q4"), /cannot be combined|run-control/i);
 });
 
-test("small-12b-q4 has bounded scene and structured job policies", () => {
+test("small-12b-q4 compatibility alias has bounded Gemma scene and structured job policies", () => {
   const profile = MODEL_EXECUTION_PROFILES["small-12b-q4"];
-  assert.deepEqual(profile.preferred_scene_words, { minimum: 700, maximum: 1200 });
+  assert.deepEqual(profile.preferred_scene_words, { minimum: 700, maximum: 1100 });
   assert.ok(profile.job_budgets["draft-scene"].reservedOutputTokens > profile.job_budgets["extract-state-delta"].reservedOutputTokens);
   assert.ok(profile.decoding["draft-scene"].temperature > profile.decoding["extract-state-delta"].temperature);
+  assert.ok(profile.job_budgets["critic-continuity"].reservedOutputTokens >= profile.decoding["critic-continuity"].maximumOutputTokens);
 });

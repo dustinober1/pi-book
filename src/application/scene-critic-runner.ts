@@ -4,6 +4,7 @@ import { renderActiveContextCapsule } from "../context/active-context-renderer.j
 import type { ActiveContextCapsule } from "../domain/active-context-capsule.js";
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
 import {
+  modelExecutionProfileIdsMatch,
   MODEL_EXECUTION_PROFILES,
   type ModelExecutionProfile,
 } from "../domain/model-execution-profile.js";
@@ -25,6 +26,7 @@ import { readSceneValidationArtifact } from "../infrastructure/scene-validation-
 import { parseStructuredQualityArtifact } from "./quality-output.js";
 import { recordChapterExecutionAttempt } from "./chapter-execution-machine.js";
 import { projectStateHash } from "./project-hash.js";
+import { actualInputTokensForCalibration, assertModelJobFits, recordModelTokenCalibration } from "./model-token-estimator.js";
 
 export interface RunSceneCriticJobInput {
   root: string;
@@ -148,7 +150,7 @@ export async function runSceneCriticJob(input: RunSceneCriticJobInput): Promise<
   if (!isSceneCriticJobType(jobType)) throw new Error(`Unsupported scene critic job type ${jobType}.`);
   const runtime = RUNTIME_PROFILES[input.runtimeProfile];
   const modelProfile = resolveModelProfile(input.capsule, input.customModelProfile);
-  if (modelProfile.id !== input.capsule.model_execution_profile) {
+  if (!modelExecutionProfileIdsMatch(modelProfile.id, input.capsule.model_execution_profile)) {
     throw new Error(`Model profile ${modelProfile.id} does not match capsule profile ${input.capsule.model_execution_profile}.`);
   }
 
@@ -162,11 +164,14 @@ export async function runSceneCriticJob(input: RunSceneCriticJobInput): Promise<
   const prompt = criticPrompt(jobType);
   if (context.length > runtime.maxContextChars) throw new Error("Rendered scene critic context exceeds the runtime profile before inference.");
   if (prompt.length > runtime.maxPromptChars) throw new Error("Scene critic prompt exceeds the runtime profile before inference.");
-  const jobBudget = modelProfile.job_budgets[jobType];
-  const estimatedEvidenceTokens = Math.max(1, Math.ceil(Buffer.byteLength(context, "utf8") / 4));
-  if (estimatedEvidenceTokens > jobBudget.maximumEvidenceTokens) {
-    throw new Error(`Scene critic context needs approximately ${estimatedEvidenceTokens} evidence tokens, above the ${jobBudget.maximumEvidenceTokens}-token budget.`);
-  }
+  const tokenCounts = assertModelJobFits({
+    root: input.root,
+    runId: input.runId,
+    instruction: prompt,
+    evidence: context,
+    profile: modelProfile,
+    jobType,
+  });
 
   const callId = `${input.runId}-${sceneId}-${jobType.toUpperCase()}-${criticAttempt}`;
   const request: QualityWorkerRequest = {
@@ -186,12 +191,22 @@ export async function runSceneCriticJob(input: RunSceneCriticJobInput): Promise<
     ...(input.thinking ? { thinking: input.thinking } : {}),
   };
   const result = await input.worker.run(request, input.signal);
+  const actualInputTokens = actualInputTokensForCalibration(result.usage);
+  const tokenCalibration = recordModelTokenCalibration({
+    root: input.root,
+    runId: input.runId,
+    callId,
+    profile: modelProfile,
+    counts: tokenCounts,
+    ...(actualInputTokens !== undefined ? { actualInputTokens } : {}),
+  });
   const parsed = parseStructuredQualityArtifact(result.text, SceneCriticOutputSchema, `${jobType} output`);
   const output = validatedOutput(parsed, draft);
   const outputHash = hashText(result.text.trim());
   const capsuleHash = stableHash(input.capsule);
   const usage: ModelCallReport = {
     ...result.usage,
+    ...tokenCalibration,
     callId,
     stage: "drafting",
     chapter: state.chapter,

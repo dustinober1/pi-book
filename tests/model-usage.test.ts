@@ -116,6 +116,38 @@ test("missing provider usage falls back to bounded estimates without inventing c
   assert.equal(result.estimated, true);
 });
 
+test("actual input with missing output preserves per-field provenance for calibration", () => {
+  const result = normalizeModelUsage({ input_tokens: 1_200 }, {
+    callId: "CALL-MIXED-ACTUAL-INPUT",
+    stage: "drafting",
+    pass: "candidate",
+    prompt: "prompt",
+    context: "context",
+    output: "output",
+    elapsedMs: 1,
+  });
+  assert.equal(result.inputTokens, 1_200);
+  assert.equal(result.inputTokensEstimated, false);
+  assert.equal(result.outputTokensEstimated, true);
+  assert.equal(result.estimated, true);
+});
+
+test("missing input with actual output marks only input usage as estimated", () => {
+  const result = normalizeModelUsage({ output_tokens: 400 }, {
+    callId: "CALL-MIXED-ESTIMATED-INPUT",
+    stage: "drafting",
+    pass: "candidate",
+    prompt: "prompt",
+    context: "context",
+    output: "output",
+    elapsedMs: 1,
+  });
+  assert.equal(result.outputTokens, 400);
+  assert.equal(result.inputTokensEstimated, true);
+  assert.equal(result.outputTokensEstimated, false);
+  assert.equal(result.estimated, true);
+});
+
 test("content hashing normalizes line endings but not substantive text", () => {
   assert.equal(normalizedContentHash("a\r\nb\r\n"), normalizedContentHash("a\nb\n"));
   assert.notEqual(normalizedContentHash("a\nb\n"), normalizedContentHash("a\nc\n"));

@@ -4,6 +4,7 @@ import {
   ActiveContextCapsuleError,
   buildActiveContextCapsule,
 } from "../src/context/active-context-capsule.js";
+import { estimateModelTokens } from "../src/application/model-token-estimator.js";
 import { MODEL_EXECUTION_PROFILES, type ModelExecutionProfile } from "../src/domain/model-execution-profile.js";
 import type { SceneContract } from "../src/domain/scene-contract.js";
 import type { StoryRecordIndex, StoryRecordIndexRecord, StoryRecordKind } from "../src/context/story-record-index.js";
@@ -107,6 +108,11 @@ test("capsule selection closes explicit dependencies and labels authority", () =
   assert.equal(first.records.find((item) => item.id === "CAN-ACCESS")?.authority, "established");
   assert.equal(first.records.find((item) => item.id === "PLAN-MARA-VAULT")?.authority, "proposal");
   assert.equal(first.records.find((item) => item.id === "KNOW-MARA-USER")?.required, true);
+  const firstRecord = first.records[0]!;
+  assert.equal(firstRecord.estimated_tokens, estimateModelTokens(
+    JSON.stringify({ ...firstRecord, estimated_tokens: 1 }),
+    MODEL_EXECUTION_PROFILES["small-12b-q4"].token_estimation,
+  ));
   assert.ok(first.manifest.estimated_evidence_tokens <= first.manifest.maximum_evidence_tokens);
 });
 

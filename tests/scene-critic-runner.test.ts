@@ -10,6 +10,8 @@ import {
 } from "../src/application/chapter-execution-machine.js";
 import { projectStateHash } from "../src/application/project-hash.js";
 import { runSceneCriticJob } from "../src/application/scene-critic-runner.js";
+import { estimateModelTokens } from "../src/application/model-token-estimator.js";
+import { MODEL_EXECUTION_PROFILES } from "../src/domain/model-execution-profile.js";
 import type { ActiveContextCapsule } from "../src/domain/active-context-capsule.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import type { SceneDraftArtifact } from "../src/domain/scene-draft-artifact.js";
@@ -213,6 +215,10 @@ test("one critic job reviews one concern and stores an independent artifact", as
     assert.ok((request.context?.indexOf("SCENE CANDIDATE") ?? -1) < (request.context?.indexOf("EXACT TASK") ?? -1));
     assert.ok(request.context?.endsWith("EXACT TASK\n- Review only critic-continuity.\n- Return one exact JSON object."));
     assert.equal(result.artifact.verdict, "pass");
+    const policy = MODEL_EXECUTION_PROFILES["small-12b-q4"].token_estimation;
+    assert.equal(result.artifact.usage.estimatedInstructionTokens, estimateModelTokens(result.request.prompt, policy));
+    assert.equal(result.artifact.usage.estimatedEvidenceTokens, estimateModelTokens(result.request.context ?? "", policy));
+    assert.ok((result.artifact.usage.totalReservedTokens ?? 0) > (result.artifact.usage.estimatedInstructionTokens ?? 0) + (result.artifact.usage.estimatedEvidenceTokens ?? 0));
     assert.equal(result.state.current_node, "critic-review");
     assert.deepEqual(readSceneCriticArtifact(root, runId, sceneId, "critic-continuity", 1), result.artifact);
   } finally {

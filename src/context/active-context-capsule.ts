@@ -11,6 +11,7 @@ import type { ModelJobType } from "../domain/model-job.js";
 import type { SceneContract } from "../domain/scene-contract.js";
 import type { StoryRecordStatus } from "../domain/story-record-status.js";
 import type { StyleCard } from "../domain/style-card.js";
+import { estimateModelTokens } from "../application/model-token-estimator.js";
 import {
   StoryRecordIndexManifestSchema,
   StoryRecordIndexRecordSchema,
@@ -57,10 +58,6 @@ function stableHash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
 }
 
-function estimatedTokens(value: unknown): number {
-  return Math.max(1, Math.ceil(Buffer.byteLength(JSON.stringify(value), "utf8") / 4));
-}
-
 function normalizedStyleCard(value: StyleCard | string | undefined): StyleCard | string | null {
   if (value === undefined) return null;
   if (typeof value === "string") return value.trim() || null;
@@ -100,7 +97,12 @@ function authority(status: StoryRecordStatus): ContextAuthority | null {
   }
 }
 
-function activeRecord(record: StoryRecordIndexRecord, required: boolean, reason: string): ActiveContextRecord {
+function activeRecord(
+  record: StoryRecordIndexRecord,
+  required: boolean,
+  reason: string,
+  profile: ModelExecutionProfile,
+): ActiveContextRecord {
   const recordAuthority = authority(record.status);
   if (!recordAuthority) throw new Error(`Unsafe story record ${record.id} cannot become active context.`);
   const base = {
@@ -117,17 +119,20 @@ function activeRecord(record: StoryRecordIndexRecord, required: boolean, reason:
     dependencies: [...record.dependencies].sort(),
     estimated_tokens: 1,
   } satisfies ActiveContextRecord;
-  return { ...base, estimated_tokens: estimatedTokens(base) };
+  return {
+    ...base,
+    estimated_tokens: estimateModelTokens(JSON.stringify(base), profile.token_estimation),
+  };
 }
 
 function baseEvidenceTokens(input: BuildActiveContextCapsuleInput): number {
-  return estimatedTokens({
+  return estimateModelTokens(JSON.stringify({
     scene_contract: input.sceneContract,
     opening_rules: unique(input.openingRules),
     previous_tail: input.previousTail?.trim() || null,
     style_card: normalizedStyleCard(input.styleCard),
     closing_task: unique(input.closingTask),
-  });
+  }), input.modelProfile.token_estimation);
 }
 
 function explicitSeedIds(scene: SceneContract): string[] {
@@ -198,7 +203,12 @@ export function buildActiveContextCapsule(input: BuildActiveContextCapsuleInput)
       `Required records are unresolved or deprecated: ${unsafe.join(", ")}.`,
     );
   }
-  const requiredRecords = requiredIds.map((id) => activeRecord(byId.get(id)!, true, requiredReasons.get(id)!));
+  const requiredRecords = requiredIds.map((id) => activeRecord(
+    byId.get(id)!,
+    true,
+    requiredReasons.get(id)!,
+    input.modelProfile,
+  ));
   const baseTokens = baseEvidenceTokens(input);
   const requiredTokens = requiredRecords.reduce((sum, record) => sum + record.estimated_tokens, baseTokens);
   if (requiredTokens > maximumEvidenceTokens) {
@@ -219,7 +229,7 @@ export function buildActiveContextCapsule(input: BuildActiveContextCapsuleInput)
       omitted.push(id);
       continue;
     }
-    const candidate = activeRecord(record, false, "optional supporting record");
+    const candidate = activeRecord(record, false, "optional supporting record", input.modelProfile);
     if (usedTokens + candidate.estimated_tokens > maximumEvidenceTokens) {
       omitted.push(id);
       continue;

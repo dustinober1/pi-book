@@ -11,6 +11,7 @@ import {
   summarizeWorkflowTelemetry,
 } from "../src/application/run-telemetry.js";
 import {
+  ModelCallReportSchema,
   RunReportSchema,
   RunReportV2Schema,
   RunReportV3Schema,
@@ -162,6 +163,18 @@ test("model-call escalation codes are privacy-safe machine identifiers", () => {
     }),
     modelCalls: [call({ outcome: "escalated", escalationCode: "Schema failure: raw output" })],
   }), false);
+});
+
+test("model-call reports accept numeric token calibration without prompt or prose", () => {
+  const calibrated = call({
+    estimatedInstructionTokens: 100,
+    estimatedEvidenceTokens: 900,
+    totalReservedTokens: 4_112,
+    inputTokenEstimateRatio: 1.05,
+  });
+  assert.equal(Value.Check(ModelCallReportSchema, calibrated), true);
+  assert.equal(JSON.stringify(calibrated).includes("RAW-PROMPT"), false);
+  assert.equal(JSON.stringify(calibrated).includes("RAW-PROSE"), false);
 });
 
 test("workflow job counts exclude correction attempts from the first-pass denominator", () => {
