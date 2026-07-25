@@ -1,24 +1,24 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v1.7.0
+## Current verified release: v1.7.1
 
-Novel Forge 1.7.0 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 1.7.1 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.7.0
+pi install git:github.com/dustinober1/pi-book@v1.7.1
 ```
 
 For one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v1.7.0
+pi -e git:github.com/dustinober1/pi-book@v1.7.1
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.7.0 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.7.1 release commit.
 
-## 1.7.0 release record
+## 1.7.1 release record
 
-- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.7.0.
+- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.7.1.
 - [x] Existing projects without quality state resolve to economy behavior.
 - [x] Balanced, premium, and editorial drafting use isolated Pi workers and preserve one final guarded event as canonical authority.
 - [x] Token and call budgets reserve before inference and settle afterward.
@@ -26,9 +26,10 @@ Use a copied or backed-up manuscript for the first pilot. Install the tag rather
 - [x] High-risk research uses bounded evidence anchors; unsupported high-risk chapter claims stop before canonical mutation.
 - [x] Eligible factual repairs are limited to one targeted pass followed by re-extraction and re-audit.
 - [x] Paid cost-versus-quality evaluation requires explicit opt-in and never runs in normal CI.
+- [x] The release workflow reads the package version at run time instead of a hardcoded per-tag workflow file.
 - [x] Node 22.19.0 and Node 24 pass type, unit, integration, end-to-end, evaluation, benchmark, release, and package checks.
 
-Maintained release notes are in `docs/releases/v1.7.0.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
+Maintained release notes are in `docs/releases/v1.7.1.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
 
 ## Verify the current development tree
 

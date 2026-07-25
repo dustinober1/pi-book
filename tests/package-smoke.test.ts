@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-test("the packed extension imports, registers, and contains the 1.7 release surface", async () => {
+test("the packed extension imports, registers, and contains the 1.7.1 release surface", async () => {
   const temp = mkdtempSync(join(tmpdir(), "novel-forge-pack-"));
   try {
     const json = execFileSync("npm", ["pack", "--json", "--pack-destination", temp], { cwd: process.cwd() }).toString();
@@ -38,10 +38,10 @@ test("the packed extension imports, registers, and contains the 1.7 release surf
     assert.match(proseOutput, /mechanics\/doubled-word/);
     assert.match(legacyOutput, /^# Novel Forge copy-mechanics audit$/m);
     assert.match(legacyOutput, /mechanics\/doubled-word/);
-    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.7.0");
+    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "1.7.1");
     for (const asset of [
       "README.md", "SKILL.md", "CHANGELOG.md", "RELEASE.md",
-      "docs/quality-and-cost.md", "docs/grounded-accuracy.md", "docs/releases/v1.7.0.md",
+      "docs/quality-and-cost.md", "docs/grounded-accuracy.md", "docs/releases/v1.7.1.md",
       "evals/quality/fixtures/thriller-key-scene.yaml", "evals/quality/rubrics/automated-diagnostic.md",
       "wizard/index.html", "wizard/app.js", "wizard/styles.css",
       "src/domain/quality-profile.ts", "src/application/budget-status.ts", "src/application/quality-run.ts",

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.1 — Release Workflow Consolidation
+
+### Fixed
+
+- Replaced five hardcoded per-version release workflows with one `release.yml` that reads the package version at run time, so cutting a future release no longer requires adding a new CI workflow file.
+
+### Compatibility and boundaries
+
+- No manuscript text, project schema, workflow state, evidence content, or runtime behavior changes.
+
 ## 1.7.0 — Quality Orchestration and Grounded Accuracy
 
 ### Added
