@@ -1,22 +1,22 @@
-name: Release Novel Forge v1.6.2
+name: Release Novel Forge
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - package.json
       - package-lock.json
       - src/application/version-core.ts
-      - docs/releases/v1.6.2.md
-      - scripts/verify-v1-6-2-release.ts
-      - .github/workflows/release-v1-6-2.yml
-  workflow_dispatch:
+      - docs/releases/*.md
+      - .github/workflows/release.yml
 
 permissions:
   contents: read
 
 jobs:
   verify:
+    name: release verify (${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -31,7 +31,6 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-      - run: test "$(node -p "require('./package.json').version")" = "1.6.2"
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -47,29 +46,37 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
       - run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
       - id: tag
-        shell: bash
         run: |
-          if git ls-remote --exit-code --tags origin refs/tags/v1.6.2 >/dev/null 2>&1; then
+          if git ls-remote --exit-code --tags origin "refs/tags/v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-      - if: steps.tag.outputs.exists == 'false'
+      - name: Create tag
+        if: steps.tag.outputs.exists == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a v1.6.2 "$GITHUB_SHA" -m "Novel Forge v1.6.2"
-          git push origin refs/tags/v1.6.2
-      - if: steps.tag.outputs.exists == 'false'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create v1.6.2 --verify-tag --title "Novel Forge v1.6.2" --notes-file docs/releases/v1.6.2.md
-      - if: steps.tag.outputs.exists == 'true'
-        run: echo "v1.6.2 already exists; no duplicate release was created."
+          git tag -a "v${{ steps.version.outputs.version }}" "$GITHUB_SHA" -m "Novel Forge v${{ steps.version.outputs.version }}"
+          git push origin "refs/tags/v${{ steps.version.outputs.version }}"
+      - name: Publish GitHub release
+        if: steps.tag.outputs.exists == 'false'
+        run: |
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --verify-tag \
+            --title "Novel Forge v${{ steps.version.outputs.version }}" \
+            --notes-file "docs/releases/v${{ steps.version.outputs.version }}.md"
+      - name: Skip duplicate release
+        if: steps.tag.outputs.exists == 'true'
+        run: echo "v${{ steps.version.outputs.version }} already exists; no duplicate release was created."
