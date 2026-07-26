@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.4 — Registered Source Provenance Guidance
+
+### Fixed
+
+- `SKILL.md` now states explicitly that every `source_ids` entry on a historical chronology, constraint, or knowledge-boundary item must be the `id` of a source actually registered in `research/source-register.yaml`, never a raw file path or in-project document name such as `series/series-bible.md`. It also states the concrete fix: register a source entry (with a stable `SRC-NNN`-style `id` and a `location` naming the document), submit `research/source-register.yaml` alongside `historical-context.yaml` in the same `book-plan` event, and reference the registered `id`.
+
+### Compatibility and boundaries
+
+- No project schema, workflow state, or evidence content changes. Existing projects remain compatible.
+
 ## 1.7.3 — Decision-Ledger Event Boundary Guidance
 
 ### Fixed
