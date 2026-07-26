@@ -155,7 +155,7 @@ export function canRetryEvent(detail: EventRejectionDetail, previousRetries: num
 
 export function rejectionInstruction(detail: EventRejectionDetail, previousRetries = 0): string {
   if (canRetryEvent(detail, previousRetries)) {
-    return "Correct only the rejected payload and resubmit once. Do not change accepted project state or unrelated files.";
+    return "Fix every problem listed above, then resubmit the complete required file set for this event once with those corrections applied. An event is validated as a whole set, so omitting a file that was already correct is itself a rejection. Do not change accepted project state or unrelated files.";
   }
   if (detail.retryable) {
     return "Stop: the one permitted corrected retry has been used. Surface the blocker for review.";

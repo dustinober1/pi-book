@@ -38,7 +38,7 @@ test("reference failures are retryable once without requiring reload", () => {
   assert.equal(value.detail.requiresReload, false);
   assert.equal(canRetryEvent(value.detail, 0), true);
   assert.equal(canRetryEvent(value.detail, 1), false);
-  assert.match(rejectionInstruction(value.detail, 0), /correct only the rejected payload/i);
+  assert.match(rejectionInstruction(value.detail, 0), /resubmit the complete required file set/i);
   assert.match(rejectionInstruction(value.detail, 0), /once/i);
   assert.match(rejectionInstruction(value.detail, 1), /stop/i);
 });

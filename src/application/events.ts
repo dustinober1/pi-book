@@ -46,6 +46,7 @@ import { packetReferenceFindings } from "./integrity.js";
 import { projectStateHash } from "./project-hash.js";
 import { premiseLabFindings } from "./premise-lab.js";
 import { normalizeEventRejection } from "./event-rejection.js";
+import { ValidationAggregator } from "./validation-aggregate.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 import { readerFrictionFindings } from "./review-observations.js";
 import { researchEvidenceFindings } from "./research-evidence.js";
@@ -153,6 +154,27 @@ function missingRequiredPaths(files: FileChange[], requiredPaths: string[]): str
   return requiredPaths.filter((path) => !submitted.has(path));
 }
 
+/**
+ * A book-plan event replaces the whole plan, so every file below must be present
+ * on every submission — including a corrected retry that fixes only one of them.
+ */
+export function requiredBookPlanPaths(book: Pick<BookState, "book_id" | "profile">): string[] {
+  const paths = [
+    `books/${book.book_id}/book-bible.md`,
+    `books/${book.book_id}/plot-grid.yaml`,
+    `books/${book.book_id}/remarkability.yaml`,
+    `books/${book.book_id}/research-ledger.yaml`,
+    `books/${book.book_id}/book-strategy.yaml`,
+  ];
+  if (book.profile === "historical-fiction") {
+    paths.push(
+      `books/${book.book_id}/historical-context.yaml`,
+      `books/${book.book_id}/invention-ledger.yaml`,
+    );
+  }
+  return paths;
+}
+
 function validateResearchAndFriction(root: string, files: FileChange[], book: BookState, eventType: NovelEventType): void {
   const base = `books/${book.book_id}`;
   const paths = new Set(files.map((file) => normalized(file.path)));
@@ -172,7 +194,7 @@ function validateResearchAndFriction(root: string, files: FileChange[], book: Bo
   if (blockers.length) throw new Error(`Research and reader-friction validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
 }
 
-function validateFiles(root: string, input: NovelEventInput, project: ProjectState, book: BookState): void {
+function validateFiles(root: string, input: NovelEventInput, project: ProjectState, book: BookState, findings: ValidationAggregator): void {
   if (!eventStages[input.eventType].includes(project.current_stage)) throw new Error(`${input.eventType} is not allowed during ${project.current_stage}.`);
   if (input.expectedStage !== project.current_stage) throw new Error(`Stale event stage: expected ${input.expectedStage}, current ${project.current_stage}.`);
   if (input.expectedProjectHash !== projectStateHash(root)) throw new Error("Stale project hash; reload state before applying this event.");
@@ -200,15 +222,17 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     package: /package\.md$/,
   };
   const pattern = required[input.eventType];
-  if (pattern && !input.files.some((file) => pattern.test(file.path))) throw new Error(`${input.eventType} event is missing its required output file.`);
+  if (pattern && !input.files.some((file) => pattern.test(file.path))) {
+    findings.add(`${input.eventType} event is missing its required output file.`);
+  }
   if (input.eventType === "plan-change") {
-    validatePlanChangeEvent({
+    findings.run(() => validatePlanChangeEvent({
       root,
       files: input.files,
       book,
       expectedProjectHash: input.expectedProjectHash,
       ...(input.planChangeApproval ? { approval: input.planChangeApproval } : {}),
-    });
+    }));
   }
   if (input.eventType === "voice-profile") {
     const missing = missingRequiredPaths(input.files, [
@@ -217,7 +241,7 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
       "series/voice-guardrails.yaml",
       "series/voice-experiments/index.yaml",
     ]);
-    if (missing.length) throw new Error(`voice-profile event is missing required output: ${missing.join(", ")}`);
+    if (missing.length) findings.add(`voice-profile event is missing required output: ${missing.join(", ")}`);
   }
   if (input.eventType === "series-plan") {
     const missing = missingRequiredPaths(input.files, [
@@ -226,54 +250,49 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
       "series/canon.yaml",
       "series/story-threads.yaml",
     ]);
-    if (missing.length) throw new Error(`series-plan event is missing required output: ${missing.join(", ")}`);
+    if (missing.length) findings.add(`series-plan event is missing required output: ${missing.join(", ")}`);
   }
   if (input.eventType === "book-plan") {
-    const requiredBookPlan = [
-      `books/${book.book_id}/book-bible.md`,
-      `books/${book.book_id}/plot-grid.yaml`,
-      `books/${book.book_id}/remarkability.yaml`,
-      `books/${book.book_id}/research-ledger.yaml`,
-      `books/${book.book_id}/book-strategy.yaml`,
-    ];
-    if (book.profile === "historical-fiction") {
-      requiredBookPlan.push(
-        `books/${book.book_id}/historical-context.yaml`,
-        `books/${book.book_id}/invention-ledger.yaml`,
-      );
-    }
-    const missing = missingRequiredPaths(input.files, requiredBookPlan);
-    if (missing.length) throw new Error(`book-plan event is missing required output: ${missing.join(", ")}`);
-    const remarkability = parseOverlay<RemarkabilityState>(root, input.files, `books/${book.book_id}/remarkability.yaml`, RemarkabilitySchema);
-    const blockers = remarkabilityFindings(remarkability).filter((finding) => finding.severity === "blocker");
-    if (blockers.length) throw new Error(`Remarkability validation blocked book-plan:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+    const missing = missingRequiredPaths(input.files, requiredBookPlanPaths(book));
+    if (missing.length) findings.add(`book-plan event is missing required output: ${missing.join(", ")}`);
+    findings.run(() => {
+      const remarkability = parseOverlay<RemarkabilityState>(root, input.files, `books/${book.book_id}/remarkability.yaml`, RemarkabilitySchema);
+      const blockers = remarkabilityFindings(remarkability).filter((finding) => finding.severity === "blocker");
+      if (blockers.length) throw new Error(`Remarkability validation blocked book-plan:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+    });
   }
   if (input.eventType === "reader-test") {
-    const experiments = parseOverlay<ReaderExperimentsState>(root, input.files, `books/${book.book_id}/reader-experiments.yaml`, ReaderExperimentsSchema);
-    const blockers = readerExperimentFindings(experiments).filter((finding) => finding.severity === "blocker");
-    if (blockers.length) throw new Error(`Reader-evidence validation blocked reader-test:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+    findings.run(() => {
+      const experiments = parseOverlay<ReaderExperimentsState>(root, input.files, `books/${book.book_id}/reader-experiments.yaml`, ReaderExperimentsSchema);
+      const blockers = readerExperimentFindings(experiments).filter((finding) => finding.severity === "blocker");
+      if (blockers.length) throw new Error(`Reader-evidence validation blocked reader-test:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+    });
   }
   if (input.eventType === "book-plan" || input.eventType === "research-update") {
-    validateResearchAndFriction(root, input.files, book, input.eventType);
-    validateRevisionLearning(root, input.files, book);
+    findings.run(() => validateResearchAndFriction(root, input.files, book, input.eventType));
+    findings.run(() => validateRevisionLearning(root, input.files, book));
   }
   if (input.eventType === "research-update" && book.profile === "historical-fiction") {
-    validateHistoricalIntegrity(root, input.files, book);
+    findings.run(() => validateHistoricalIntegrity(root, input.files, book));
   }
   if (input.eventType === "premise-update" || (input.eventType === "book-plan" && overlay(root, input.files, `books/${book.book_id}/premise-lab.yaml`))) {
-    const lab = parseOverlay<PremiseLab>(root, input.files, `books/${book.book_id}/premise-lab.yaml`, PremiseLabSchema);
-    const ledger = parseOverlay<DecisionLedger>(root, input.files, "series/decision-ledger.yaml", DecisionLedgerSchema);
-    const blockers = premiseLabFindings(lab, ledger).filter((finding) => finding.severity === "blocker");
-    if (input.eventType === "book-plan" && lab.variants.length > 0 && (!lab.selected_variant_id || !lab.selection_decision_id)) {
-      blockers.push({ severity: "blocker", code: "unselected-premise", message: "A rebuilt book plan requires an explicitly selected premise variant." });
-    }
-    if (blockers.length) throw new Error(`Premise validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+    findings.run(() => {
+      const lab = parseOverlay<PremiseLab>(root, input.files, `books/${book.book_id}/premise-lab.yaml`, PremiseLabSchema);
+      const ledger = parseOverlay<DecisionLedger>(root, input.files, "series/decision-ledger.yaml", DecisionLedgerSchema);
+      const blockers = premiseLabFindings(lab, ledger).filter((finding) => finding.severity === "blocker");
+      if (input.eventType === "book-plan" && lab.variants.length > 0 && (!lab.selected_variant_id || !lab.selection_decision_id)) {
+        blockers.push({ severity: "blocker", code: "unselected-premise", message: "A rebuilt book plan requires an explicitly selected premise variant." });
+      }
+      if (blockers.length) throw new Error(`Premise validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+    });
   }
   if (input.eventType === "intake-update") {
-    const intake = parseOverlay<IntakeState>(root, input.files, "series/intake.yaml", IntakeSchema);
-    const ledger = parseOverlay<DecisionLedger>(root, input.files, "series/decision-ledger.yaml", DecisionLedgerSchema);
-    const blockers = intakeDecisionFindings(intake, ledger).filter((finding) => finding.severity === "blocker");
-    if (blockers.length) throw new Error(`Intake and decision ledger validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+    findings.run(() => {
+      const intake = parseOverlay<IntakeState>(root, input.files, "series/intake.yaml", IntakeSchema);
+      const ledger = parseOverlay<DecisionLedger>(root, input.files, "series/decision-ledger.yaml", DecisionLedgerSchema);
+      const blockers = intakeDecisionFindings(intake, ledger).filter((finding) => finding.severity === "blocker");
+      if (blockers.length) throw new Error(`Intake and decision ledger validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+    });
   }
 }
 
@@ -313,12 +332,18 @@ function projectedWordCount(root: string, bookId: string, changes: FileChange[])
   return [...content.values()].reduce((sum, text) => sum + countWords(text), 0);
 }
 
-function validateArchitecture(root: string, files: FileChange[], book: BookState, event: NovelEventType, chapter?: number): { queue: ChapterQueueState; plot: PlotGridPhase4 } {
+function validateArchitecture(root: string, files: FileChange[], book: BookState, event: NovelEventType, collector: ValidationAggregator, chapter?: number): { queue: ChapterQueueState; plot: PlotGridPhase4 } | undefined {
   const bookRoot = `books/${book.book_id}`;
   const profile = getProfile(book.profile);
-  const genre = parseOverlay<GenreConfig>(root, files, `${bookRoot}/genre.yaml`, GenreConfigSchema);
-  const plot = parseOverlay<PlotGridPhase4>(root, files, `${bookRoot}/plot-grid.yaml`, PlotGridPhase4Schema);
-  const queue = parseOverlay<ChapterQueueState>(root, files, `${bookRoot}/chapter-queue.yaml`, ChapterQueueSchema);
+  const parsed = collector.run(() => ({
+    genre: parseOverlay<GenreConfig>(root, files, `${bookRoot}/genre.yaml`, GenreConfigSchema),
+    plot: parseOverlay<PlotGridPhase4>(root, files, `${bookRoot}/plot-grid.yaml`, PlotGridPhase4Schema),
+    queue: parseOverlay<ChapterQueueState>(root, files, `${bookRoot}/chapter-queue.yaml`, ChapterQueueSchema),
+  }));
+  // Every later architecture check reads these three files; without them there is
+  // nothing further to report beyond the parse failure already collected.
+  if (!parsed) return undefined;
+  const { genre, plot, queue } = parsed;
   const findings = [
     ...profile.validateGenreConfig(genre),
     ...actBoundaryFindings(plot).map((finding) => ({ severity: finding.severity, category: "act-boundary", message: finding.message } as const)),
@@ -335,28 +360,34 @@ function validateArchitecture(root: string, files: FileChange[], book: BookState
     }
   }
   const blockers = findings.filter((finding) => finding.severity === "blocker");
-  if (blockers.length) throw new Error(`Profile validation blocked ${event}:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+  if (blockers.length) collector.add(`Profile validation blocked ${event}:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
 
   if (packets.length) {
-    const canon = parseOverlay<CanonState>(root, files, "series/canon.yaml", CanonSchema);
-    const threads = parseOverlay<StoryThreadsState>(root, files, "series/story-threads.yaml", StoryThreadsSchema);
-    const sources = parseOverlay<SourceRegisterV13>(root, files, "research/source-register.yaml", SourceRegisterV13Schema);
-    const research = parseOverlay<ResearchLedger>(root, files, `${bookRoot}/research-ledger.yaml`, ResearchLedgerSchema);
-    const referenceBlockers = packets.flatMap((packet) => packetReferenceFindings(packet, canon, threads, sources, plot, research)).filter((finding) => finding.severity === "blocker");
-    if (referenceBlockers.length) throw new Error(`Reference validation blocked ${event}:\n${referenceBlockers.map((item) => `- ${item.message}`).join("\n")}`);
+    collector.run(() => {
+      const canon = parseOverlay<CanonState>(root, files, "series/canon.yaml", CanonSchema);
+      const threads = parseOverlay<StoryThreadsState>(root, files, "series/story-threads.yaml", StoryThreadsSchema);
+      const sources = parseOverlay<SourceRegisterV13>(root, files, "research/source-register.yaml", SourceRegisterV13Schema);
+      const research = parseOverlay<ResearchLedger>(root, files, `${bookRoot}/research-ledger.yaml`, ResearchLedgerSchema);
+      const referenceBlockers = packets.flatMap((packet) => packetReferenceFindings(packet, canon, threads, sources, plot, research)).filter((finding) => finding.severity === "blocker");
+      if (referenceBlockers.length) throw new Error(`Reference validation blocked ${event}:\n${referenceBlockers.map((item) => `- ${item.message}`).join("\n")}`);
+    });
   }
 
-  if (book.profile === "historical-fiction") validateHistoricalIntegrity(root, files, book);
+  if (book.profile === "historical-fiction") collector.run(() => validateHistoricalIntegrity(root, files, book));
 
   if (event === "book-plan" || event === "chapter-queue") {
-    const drafted = new Set(listChapterFiles(join(root, "books", book.book_id)).map(chapterNumber).filter((item): item is number => item !== null));
-    const windowBlockers = packetWindowFindings(queue, plot, drafted).filter((finding) => finding.severity === "blocker");
-    if (windowBlockers.length) throw new Error(`Packet-window validation blocked ${event}:\n${windowBlockers.map((item) => `- ${item.message}`).join("\n")}`);
+    collector.run(() => {
+      const drafted = new Set(listChapterFiles(join(root, "books", book.book_id)).map(chapterNumber).filter((item): item is number => item !== null));
+      const windowBlockers = packetWindowFindings(queue, plot, drafted).filter((finding) => finding.severity === "blocker");
+      if (windowBlockers.length) throw new Error(`Packet-window validation blocked ${event}:\n${windowBlockers.map((item) => `- ${item.message}`).join("\n")}`);
+    });
   }
   if (event === "book-plan") {
-    const strategy = parseOverlay<BookStrategyPhase5>(root, files, `${bookRoot}/book-strategy.yaml`, BookStrategyPhase5Schema);
-    const planBlockers = bookPlanFindings({ strategy, plot, queue }).filter((finding) => finding.severity === "blocker");
-    if (planBlockers.length) throw new Error(`Book strategy validation blocked book-plan:\n${planBlockers.map((item) => `- ${item.message}`).join("\n")}`);
+    collector.run(() => {
+      const strategy = parseOverlay<BookStrategyPhase5>(root, files, `${bookRoot}/book-strategy.yaml`, BookStrategyPhase5Schema);
+      const planBlockers = bookPlanFindings({ strategy, plot, queue }).filter((finding) => finding.severity === "blocker");
+      if (planBlockers.length) throw new Error(`Book strategy validation blocked book-plan:\n${planBlockers.map((item) => `- ${item.message}`).join("\n")}`);
+    });
   }
   return { queue, plot };
 }
@@ -364,11 +395,16 @@ function validateArchitecture(root: string, files: FileChange[], book: BookState
 function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEventResult {
   const project = structuredClone(readProject(root));
   const book = structuredClone(readBook(root));
-  validateFiles(root, input, project, book);
+  const findings = new ValidationAggregator();
+  validateFiles(root, input, project, book, findings);
   const changes = input.files.map((file) => ({ path: normalized(file.path), content: file.content }));
   let queue: ChapterQueueState | null = null;
   let plot: PlotGridPhase4 | null = null;
-  if (["book-plan", "chapter-queue", "draft-chapter"].includes(input.eventType)) ({ queue, plot } = validateArchitecture(root, changes, book, input.eventType, input.chapter));
+  if (["book-plan", "chapter-queue", "draft-chapter"].includes(input.eventType)) {
+    const architecture = validateArchitecture(root, changes, book, input.eventType, findings, input.chapter);
+    if (architecture) ({ queue, plot } = architecture);
+  }
+  findings.throwIfAny();
 
   switch (input.eventType) {
     case "voice-profile":

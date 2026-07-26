@@ -57,6 +57,32 @@ For a `historical-fiction` book, `research-update` may also update that book's `
 
 Trusted internal application services may use the same transaction engine for binary adopted assets and generated DOCX, EPUB, and XLSX files. Do not expose binary writes through the model-facing tool.
 
+An event is validated as a complete set, not file by file. Submit every required output for the event type on the first attempt, and submit the complete set again on a corrected retry — omitting a file that was already accepted is itself a rejection. The required sets are:
+
+```text
+voice-profile:  series/voice-profile.md
+                series/taste-profile.yaml
+                series/voice-guardrails.yaml
+                series/voice-experiments/index.yaml
+
+series-plan:    series/series-bible.md
+                series/series-arc.yaml
+                series/canon.yaml
+                series/story-threads.yaml
+
+book-plan:      books/<book-id>/book-bible.md
+                books/<book-id>/plot-grid.yaml
+                books/<book-id>/remarkability.yaml
+                books/<book-id>/research-ledger.yaml
+                books/<book-id>/book-strategy.yaml
+                books/<book-id>/historical-context.yaml   (historical-fiction only)
+                books/<book-id>/invention-ledger.yaml     (historical-fiction only)
+```
+
+A `book-plan` also validates `genre.yaml`, `chapter-queue.yaml`, `series/canon.yaml`, `series/story-threads.yaml`, and `research/source-register.yaml` through the on-disk state, so submit any of those you changed in the same event.
+
+A rejection lists every problem the validator found across all layers — required outputs, YAML and schema shape, profile packet fields, cross-artifact references, and domain integrity — not just the first one. Fix all listed problems in one pass before resubmitting; the retry budget is one corrected resubmission.
+
 Because each guarded file is hand-authored YAML text, not structured data the tool serializes for you, two mistakes cause an avoidable rejection and burn the one permitted retry:
 
 - Any scalar string value containing `: ` (a colon followed by a space) must be quoted, or the YAML parser reads it as a nested mapping and rejects the whole file. Prefer quoting any prose field (`description`, titles, hooks) that may contain a colon, dash-colon, or time-like text.

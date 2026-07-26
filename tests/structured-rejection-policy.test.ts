@@ -26,7 +26,7 @@ test("schema and reference failures permit one corrected resubmission only", () 
     const first = rejectionRunDecision(detail(code, true), 0);
     assert.equal(first.action, "repair-rejection");
     assert.match(first.message, /once/i);
-    assert.match(first.message, /correct only the rejected payload/i);
+    assert.match(first.message, /resubmit the complete required file set/i);
 
     const second = rejectionRunDecision(detail(code, true), 1);
     assert.equal(second.action, "blocked");

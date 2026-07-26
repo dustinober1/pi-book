@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.8.0 — Aggregated Event Validation
+
+### Fixed
+
+- A rejected `novel_apply_event` now reports every validation problem it found across all layers — required output files, YAML and schema shape, profile packet fields, cross-artifact references, remarkability, book strategy, packet windows, and historical integrity — in one numbered rejection, instead of throwing at the first failing layer. A submission with a single problem reads exactly as it did before.
+- The retryable rejection instruction no longer says "Correct only the rejected payload and resubmit once", which contradicted the rule that an event is validated as a complete file set and caused `missing its required output file` rejections. It now says to resubmit the complete required file set with every listed problem corrected.
+- `SKILL.md` now lists the required output set for `voice-profile`, `series-plan`, and `book-plan` events — including the two extra files a `historical-fiction` book plan must carry — and states that rejections are aggregated.
+
+### Compatibility and boundaries
+
+- Validation strictness is unchanged: the same events are accepted and rejected as before. Wrong-stage, stale-stage, stale-hash, duplicate-path, and allowlist failures still stop immediately rather than aggregating. No project schema, workflow state, or evidence content changes. Existing projects remain compatible.
+
 ## 1.7.4 — Registered Source Provenance Guidance
 
 ### Fixed

@@ -1,24 +1,29 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v1.7.4
+## Current verified release: v1.8.0
 
-Novel Forge 1.7.4 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 1.8.0 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.7.4
+pi install git:github.com/dustinober1/pi-book@v1.8.0
 ```
 
 For one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v1.7.4
+pi -e git:github.com/dustinober1/pi-book@v1.8.0
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.7.4 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.8.0 release commit.
 
-## 1.7.4 release record
+## 1.8.0 release record
 
-- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.7.4.
+- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.8.0.
+- [x] A rejected event reports every validation problem across all layers in one numbered rejection; a single problem still reads as one plain message.
+- [x] Structural pre-checks — wrong stage, stale stage, stale project hash, duplicate path, allowlist violation — still stop immediately instead of aggregating.
+- [x] The retryable rejection instruction requires resubmitting the complete required file set, not only the corrected payload.
+- [x] `SKILL.md` lists the required output set for `voice-profile`, `series-plan`, and `book-plan`, including the historical-fiction additions.
+- [x] Validation strictness is unchanged: the same events are accepted and rejected as before.
 - [x] `SKILL.md` states explicitly that `series/decision-ledger.yaml` is never an allowed file for a `book-plan` event, and that decision-ledger evidence must go through its own prior `intake-update` (or historical-fiction `research-update`) event.
 - [x] `SKILL.md` requires quoting YAML scalars containing `: ` and using only schema-exact field names for guarded event payloads.
 - [x] The `remarkability.yaml` template documents the exact allowed keys for `signature_moments`, `productive_disagreements`, and `recurring_motifs`.
@@ -32,7 +37,7 @@ Use a copied or backed-up manuscript for the first pilot. Install the tag rather
 - [x] The release workflow reads the package version at run time instead of a hardcoded per-tag workflow file.
 - [x] Node 22.19.0 and Node 24 pass type, unit, integration, end-to-end, evaluation, benchmark, release, and package checks.
 
-Maintained release notes are in `docs/releases/v1.7.4.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
+Maintained release notes are in `docs/releases/v1.8.0.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
 
 ## Verify the current development tree
 

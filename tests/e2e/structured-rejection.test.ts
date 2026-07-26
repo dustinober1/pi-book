@@ -156,7 +156,7 @@ test("novel_apply_event returns concise text plus the structured rejection detai
     }, new AbortController().signal, undefined, { cwd: root });
 
     assert.match(result.content[0].text, /Novel Forge event rejected/);
-    assert.match(result.content[0].text, /resubmit once/i);
+    assert.match(result.content[0].text, /resubmit the complete required file set/i);
     assert.equal(result.details.rejection.code, "schema-validation");
     assert.equal(result.details.rejection.retryable, true);
     assert.deepEqual(result.details.rejection.invalidPaths, ["books/book-01/book-strategy.yaml"]);

@@ -12,8 +12,8 @@ test("new projects use the 1.7 contract and retain canonical 1.2 metadata files"
   const parent = temp();
   try {
     const root = initializeProject(parent, { projectName: "V17", projectType: "standalone", profile: "thriller" });
-    assert.equal(NOVEL_FORGE_VERSION, "1.7.4");
-    assert.equal(readProject(root).novel_forge_version, "1.7.4");
+    assert.equal(NOVEL_FORGE_VERSION, "1.8.0");
+    assert.equal(readProject(root).novel_forge_version, "1.8.0");
     assert.equal(existsSync(join(root, "books/book-01/publishing.yaml")), true);
     assert.equal(existsSync(join(root, "books/book-01/marketing.yaml")), true);
     assert.equal(existsSync(join(root, "books/book-01/reader-kits/index.yaml")), true);
@@ -27,7 +27,7 @@ test("1.2 projects warn while newer projects block", () => {
     const project = readProject(root);
     const project12 = { ...project, novel_forge_version: "1.2.0" };
     assert.ok(versionFindings(project12).some((finding) => finding.severity === "warning" && /older/i.test(finding.message)));
-    const project18 = { ...project, novel_forge_version: "1.8.0" };
-    assert.ok(versionFindings(project18).some((finding) => finding.severity === "blocker" && /newer/i.test(finding.message)));
+    const projectNewer = { ...project, novel_forge_version: "1.9.0" };
+    assert.ok(versionFindings(projectNewer).some((finding) => finding.severity === "blocker" && /newer/i.test(finding.message)));
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
