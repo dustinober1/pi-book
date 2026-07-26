@@ -57,6 +57,11 @@ For a `historical-fiction` book, `research-update` may also update that book's `
 
 Trusted internal application services may use the same transaction engine for binary adopted assets and generated DOCX, EPUB, and XLSX files. Do not expose binary writes through the model-facing tool.
 
+Because each guarded file is hand-authored YAML text, not structured data the tool serializes for you, two mistakes cause an avoidable rejection and burn the one permitted retry:
+
+- Any scalar string value containing `: ` (a colon followed by a space) must be quoted, or the YAML parser reads it as a nested mapping and rejects the whole file. Prefer quoting any prose field (`description`, titles, hooks) that may contain a colon, dash-colon, or time-like text.
+- Use only the exact field names defined by that file's schema for every object, including nested array items (for example `signature_moments`, `productive_disagreements`, `recurring_motifs` in `remarkability.yaml`). Do not add descriptive extra keys such as `notes`, `sensory_note`, or `resolution_note` even when they feel useful; unlisted keys fail schema validation as additional properties. Check the relevant `Type.Object(...)` schema in `src/domain/schemas.ts` (or the matching `v1-3-*`/`historical-fiction` schema module) before writing a nested object you have not written before.
+
 ## Author taste and research foundation
 
 New projects use:

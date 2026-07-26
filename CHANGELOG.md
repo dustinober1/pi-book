@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.7.2 — Guarded YAML Authoring Guidance
+
+### Fixed
+
+- `SKILL.md` now requires quoting any YAML scalar containing `: ` before submitting a guarded event, and requires using only the exact schema field names for nested objects, so a hand-authored payload cannot silently fail YAML parsing or schema validation.
+- The `remarkability.yaml` template documents the exact allowed keys for `signature_moments`, `productive_disagreements`, and `recurring_motifs`, so the model has a concrete shape to copy instead of inventing extra fields that fail schema validation as additional properties.
+
+### Compatibility and boundaries
+
+- No project schema, workflow state, or evidence content changes. Existing projects remain compatible.
+
 ## 1.7.1 — Release Workflow Consolidation
 
 ### Fixed
