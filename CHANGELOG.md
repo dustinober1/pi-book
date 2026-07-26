@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.3 — Decision-Ledger Event Boundary Guidance
+
+### Fixed
+
+- `SKILL.md` now states explicitly that `series/decision-ledger.yaml` is never an allowed file for a `book-plan` event, even when the plan resolves author decisions as part of its reasoning. Decision-ledger evidence must go through its own prior `intake-update` (or, for a `historical-fiction` book, `research-update`) event, not be bundled into the `book-plan` file set.
+
+### Compatibility and boundaries
+
+- No project schema, workflow state, or evidence content changes. Existing projects remain compatible.
+
 ## 1.7.2 — Guarded YAML Authoring Guidance
 
 ### Fixed

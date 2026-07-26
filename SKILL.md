@@ -174,6 +174,8 @@ Never promote an inferred intake value to confirmed project truth. Store inferen
 
 Voice and book planning may use only unreplaced writer decisions as settled input. Inferred assumptions may appear only under an unresolved heading with explicit not-confirmed language. Write intake evidence through `intake-update`; never write manuscript, project/book state, gates, reader evidence, publishing, marketing, package output, `STATUS.md`, or `HANDOFF.md` through that event.
 
+`series/decision-ledger.yaml` is never an allowed file for a `book-plan` event, even when the plan resolves author decisions (such as the four primary author decisions) as part of its reasoning. Submit any new or updated decision-ledger entry through its own prior `intake-update` (or, for a `historical-fiction` book, `research-update`) event before or alongside the `book-plan` submission; do not bundle it into the `book-plan` file set.
+
 ## Guided research wizard
 
 `/novel-wizard research` is an optional loopback-only review surface. `/novel` remains the normal interface and may offer **Review voice and research evidence** as a non-primary action.

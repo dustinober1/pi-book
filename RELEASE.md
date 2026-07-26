@@ -1,24 +1,25 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v1.7.2
+## Current verified release: v1.7.3
 
-Novel Forge 1.7.2 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 1.7.3 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.7.2
+pi install git:github.com/dustinober1/pi-book@v1.7.3
 ```
 
 For one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v1.7.2
+pi -e git:github.com/dustinober1/pi-book@v1.7.3
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.7.2 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.7.3 release commit.
 
-## 1.7.2 release record
+## 1.7.3 release record
 
-- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.7.2.
+- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.7.3.
+- [x] `SKILL.md` states explicitly that `series/decision-ledger.yaml` is never an allowed file for a `book-plan` event, and that decision-ledger evidence must go through its own prior `intake-update` (or historical-fiction `research-update`) event.
 - [x] `SKILL.md` requires quoting YAML scalars containing `: ` and using only schema-exact field names for guarded event payloads.
 - [x] The `remarkability.yaml` template documents the exact allowed keys for `signature_moments`, `productive_disagreements`, and `recurring_motifs`.
 - [x] Existing projects without quality state resolve to economy behavior.
@@ -31,7 +32,7 @@ Use a copied or backed-up manuscript for the first pilot. Install the tag rather
 - [x] The release workflow reads the package version at run time instead of a hardcoded per-tag workflow file.
 - [x] Node 22.19.0 and Node 24 pass type, unit, integration, end-to-end, evaluation, benchmark, release, and package checks.
 
-Maintained release notes are in `docs/releases/v1.7.2.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
+Maintained release notes are in `docs/releases/v1.7.3.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
 
 ## Verify the current development tree
 
