@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.1.0 — Relationship Inheritance and Ending-Contract Evidence
+
+### Added
+
+- Next-book inheritance now surfaces locked `series/canon.yaml` relationships (state, trust, public/private status, unresolved items) alongside canon facts and threads, and lets the writer select which carry into the new book's `inherited-context.yaml` via `inheritedRelationshipIds`. Previously only flat canon facts and story threads were inheritable; a couple's relationship state had to be manually re-derived for every subsequent book in a series. The browser next-book wizard exposes the same selection.
+- Romantasy's declared `ending_contract` (hea / hfn / series-progress / tragic-by-design) is now backed by evidence. `book-strategy.yaml` gains a `delivered_ending` field, writable through the existing `research-update` event at manuscript-review or packaging stage. A new blocking `ending-contract` packaging checklist item requires a delivered ending to be recorded and requires it to match the declared contract; a mismatch names both values. This does not read the manuscript automatically — matching the project's existing boundary that automated checks are not human reader judgment — it only makes sure the promise-vs-delivery question is answered and checked deterministically before packaging.
+
+### Compatibility and boundaries
+
+- `inherited_relationship_ids` is optional on `InheritedContext`, so `inherited-context.yaml` files written by prior versions remain readable.
+- The `ending-contract` checklist item only applies to `romantasy` books; thriller and historical-fiction packaging are unaffected.
+- No existing event type, gate, or schema field was removed or narrowed.
+
 ## 2.0.1 — Novel-Start Project Discovery Fix
 
 ### Fixed

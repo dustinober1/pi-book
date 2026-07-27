@@ -185,14 +185,17 @@ export const CanonFactSchema = Type.Object({
 });
 export type CanonFact = Static<typeof CanonFactSchema>;
 
+export const CanonRelationshipSchema = Type.Object({
+  id: Type.String(), characters: Type.Array(Type.String(), { minItems: 2 }), state: Type.String(), trust: Type.String(),
+  public_status: Type.String(), private_status: Type.String(), unresolved: Type.Array(Type.String()),
+  status: Type.Union([Type.Literal("locked"), Type.Literal("provisional")]),
+});
+export type CanonRelationship = Static<typeof CanonRelationshipSchema>;
+
 export const CanonSchema = Type.Object({
   schema_version: Type.Literal("1.0.0"),
   facts: Type.Array(CanonFactSchema),
-  relationships: Type.Array(Type.Object({
-    id: Type.String(), characters: Type.Array(Type.String(), { minItems: 2 }), state: Type.String(), trust: Type.String(),
-    public_status: Type.String(), private_status: Type.String(), unresolved: Type.Array(Type.String()),
-    status: Type.Union([Type.Literal("locked"), Type.Literal("provisional")]),
-  })),
+  relationships: Type.Array(CanonRelationshipSchema),
 });
 export type CanonState = Static<typeof CanonSchema>;
 

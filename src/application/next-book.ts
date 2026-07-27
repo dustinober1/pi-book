@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { CanonSchema, SeriesArcSchema, StoryThreadsSchema, isProfileId, type CanonFact, type CanonState, type ProfileId, type SeriesArcState, type StoryThread, type StoryThreadsState } from "../domain/schemas.js";
+import { CanonSchema, SeriesArcSchema, StoryThreadsSchema, isProfileId, type CanonFact, type CanonRelationship, type CanonState, type ProfileId, type SeriesArcState, type StoryThread, type StoryThreadsState } from "../domain/schemas.js";
 import type { InheritedContext } from "../domain/v1-2-schemas.js";
 import { readText } from "../infrastructure/files.js";
 import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
@@ -19,6 +19,7 @@ export interface NextBookInheritanceProposal {
   profile: ProfileId;
   targetWords: number;
   canon: CanonFact[];
+  relationships: CanonRelationship[];
   openThreads: StoryThread[];
   readerFindings: string[];
   seriesRole: string;
@@ -31,6 +32,7 @@ export interface NextBookDecision {
   profile: ProfileId;
   targetWords: number;
   protagonist: string;
+  inheritedRelationshipIds?: string[];
   continuingThreadIds: string[];
   deferredThreadIds: string[];
   inheritedCanonIds: string[];
@@ -84,6 +86,7 @@ export function buildNextBookInheritanceProposal(root: string): NextBookInherita
     profile: project.default_profile,
     targetWords: book.target_words,
     canon: canon.facts.filter((fact) => fact.status === "locked"),
+    relationships: canon.relationships.filter((relationship) => relationship.status === "locked"),
     openThreads: threads.threads.filter((thread) => ["planned", "open", "advanced"].includes(thread.status)),
     readerFindings: readerFindings(root, book.book_id),
     seriesRole: current?.role ?? "continue the established series promise",
@@ -110,11 +113,14 @@ export function createNextBookFromDecision(root: string, input: NextBookDecision
   const threadState = readState<StoryThreadsState>(root, "series/story-threads.yaml", StoryThreadsSchema);
   const arcState = readState<SeriesArcState>(root, "series/series-arc.yaml", SeriesArcSchema);
   const inheritedCanonIds = unique(input.inheritedCanonIds, "Inherited canon IDs");
+  const inheritedRelationshipIds = unique(input.inheritedRelationshipIds ?? [], "Inherited relationship IDs");
   const continuingThreadIds = unique(input.continuingThreadIds, "Continuing thread IDs");
   const deferredThreadIds = unique(input.deferredThreadIds, "Deferred thread IDs");
   const canonIds = new Set(canonState.value.facts.filter((fact) => fact.status === "locked").map((fact) => fact.id));
+  const relationshipIds = new Set(canonState.value.relationships.filter((relationship) => relationship.status === "locked").map((relationship) => relationship.id));
   const availableThreadIds = new Set(threadState.value.threads.filter((thread) => ["planned", "open", "advanced"].includes(thread.status)).map((thread) => thread.id));
   for (const id of inheritedCanonIds) if (!canonIds.has(id)) throw new Error(`Inherited canon ID is not locked and available: ${id}`);
+  for (const id of inheritedRelationshipIds) if (!relationshipIds.has(id)) throw new Error(`Inherited relationship ID is not locked and available: ${id}`);
   for (const id of [...continuingThreadIds, ...deferredThreadIds]) if (!availableThreadIds.has(id)) throw new Error(`Inherited thread ID is not open and available: ${id}`);
   const overlap = continuingThreadIds.filter((id) => deferredThreadIds.includes(id));
   if (overlap.length) throw new Error(`Threads cannot be both continuing and deferred: ${overlap.join(", ")}`);
@@ -133,6 +139,7 @@ export function createNextBookFromDecision(root: string, input: NextBookDecision
     series_role: input.role.trim(),
     protagonist: input.protagonist.trim(),
     inherited_canon_ids: inheritedCanonIds,
+    inherited_relationship_ids: inheritedRelationshipIds,
     continuing_thread_ids: continuingThreadIds,
     deferred_thread_ids: deferredThreadIds,
     optional_context: unique(input.optionalContext, "Optional context"),
@@ -147,6 +154,7 @@ export function createNextBookFromDecision(root: string, input: NextBookDecision
     },
   };
   const selectedCanon = canonState.value.facts.filter((fact) => inheritedCanonIds.includes(fact.id));
+  const selectedRelationships = canonState.value.relationships.filter((relationship) => inheritedRelationshipIds.includes(relationship.id));
   const selectedThreads = threadState.value.threads.filter((thread) => continuingThreadIds.includes(thread.id) || deferredThreadIds.includes(thread.id));
   const report = [
     "# Next-Book Inheritance Report",
@@ -162,6 +170,12 @@ export function createNextBookFromDecision(root: string, input: NextBookDecision
     "## Accepted inherited canon",
     "",
     ...(selectedCanon.length ? selectedCanon.map((fact) => `- ${fact.id}: ${fact.fact}`) : ["- None selected."]),
+    "",
+    "## Continuing relationships",
+    "",
+    ...(selectedRelationships.length
+      ? selectedRelationships.map((relationship) => `- ${relationship.id} (${relationship.characters.join(" & ")}): state=${relationship.state}, trust=${relationship.trust}, public=${relationship.public_status}, private=${relationship.private_status}${relationship.unresolved.length ? `, unresolved: ${relationship.unresolved.join("; ")}` : ""}`)
+      : ["- None selected."]),
     "",
     "## Continuing threads",
     "",

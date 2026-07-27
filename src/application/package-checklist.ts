@@ -6,6 +6,7 @@ import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-
 import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
 import { DecisionLedgerSchema, type DecisionLedger } from "../domain/v1-4-schemas.js";
 import { HistoricalContextSchema, InventionLedgerSchema, type HistoricalContext, type InventionLedger } from "../domain/historical-fiction.js";
+import { BookStrategyPhase5Schema, type BookStrategyPhase5 } from "../domain/v1-3-audit-schemas.js";
 import { listChapterFiles, readText } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { openBlockingTickets } from "../review/review.js";
@@ -13,11 +14,12 @@ import { readBook, readProject, readTickets } from "../project/store.js";
 import { readReaderExperiment, readReaderIndex } from "./readers/store.js";
 import { marketingMetadataFindings, publishingMetadataFindings, readMarketingMetadata, readPublishingMetadata } from "./packaging/metadata.js";
 import { historicalIntegrityFindings } from "./historical-integrity.js";
+import { endingContractFindings } from "./ending-contract.js";
 
 export type PackagingChecklistId =
   | "manuscript" | "manuscript-approval" | "canon-lock" | "blocking-tickets" | "reader-claims"
   | "publishing-metadata" | "marketing-metadata" | "assets" | "audiobook" | "export-readiness" | "package-artifact"
-  | "historical-disclosure";
+  | "historical-disclosure" | "ending-contract";
 
 export interface PackagingChecklistItem {
   id: PackagingChecklistId;
@@ -121,6 +123,36 @@ function historicalDisclosureItem(root: string, bookId: string): PackagingCheckl
   }
 }
 
+function endingContractItem(root: string, bookId: string): PackagingChecklistItem {
+  const base = `books/${bookId}`;
+  try {
+    const genre = parseYaml<GenreConfig>(readText(join(root, `${base}/genre.yaml`)) ?? "", GenreConfigSchema, `${base}/genre.yaml`);
+    const strategyText = readText(join(root, `${base}/book-strategy.yaml`));
+    if (!strategyText) throw new Error(`${base}/book-strategy.yaml is required.`);
+    const strategy = parseYaml<BookStrategyPhase5>(strategyText, BookStrategyPhase5Schema, `${base}/book-strategy.yaml`);
+    const findings = endingContractFindings(genre, strategy);
+    return item(
+      "ending-contract",
+      "Ending-contract match",
+      findings.length === 0,
+      true,
+      findings.length ? findings.map((finding) => finding.message).join(" ") : `The delivered ending matches the declared "${genre.settings.ending_contract}" contract.`,
+      [`${base}/genre.yaml`, `${base}/book-strategy.yaml`],
+      "Record the delivered ending in book-strategy.yaml through a research-update event, or revise the ending or declared contract before packaging.",
+    );
+  } catch (error) {
+    return item(
+      "ending-contract",
+      "Ending-contract match",
+      false,
+      true,
+      error instanceof Error ? error.message : "Ending-contract evidence is unavailable.",
+      [`${base}/genre.yaml`, `${base}/book-strategy.yaml`],
+      "Restore and validate genre.yaml and book-strategy.yaml before packaging.",
+    );
+  }
+}
+
 export function buildPackagingChecklist(root: string): PackagingChecklist {
   const project = readProject(root);
   const book = readBook(root);
@@ -174,6 +206,7 @@ export function buildPackagingChecklist(root: string): PackagingChecklist {
     item("export-readiness", "Export engine readiness", manuscript.complete && publishingComplete, true, manuscript.complete && publishingComplete ? "Required manuscript and metadata inputs are ready for DOCX, EPUB, Markdown, CSV, and XLSX generation." : "Export inputs remain incomplete.", [`${base}/manuscript/`, `${base}/publishing.yaml`], "Resolve manuscript and publishing metadata blockers."),
     item("package-artifact", "Editorial package", existsSync(manifestPath) || packageText.length > 40, false, existsSync(manifestPath) ? "A v1.2 package manifest exists." : packageText.length > 40 ? "The legacy package artifact contains substantive material." : "The packaging workflow will create the production package.", [`${base}/exports/package-manifest.yaml`, `${base}/package.md`], "Generate or regenerate the complete author package."),
     ...(book.profile === "historical-fiction" ? [historicalDisclosureItem(root, book.book_id)] : []),
+    ...(book.profile === "romantasy" ? [endingContractItem(root, book.book_id)] : []),
   ];
   const ready = items.filter((check) => check.blocking).every((check) => check.complete);
   return { ready, items, summary: ready ? "Packaging prerequisites are satisfied." : "Resolve incomplete blocking checklist items before final package approval." };

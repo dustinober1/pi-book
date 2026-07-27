@@ -17,7 +17,11 @@ function lockBook(root: string): void {
   book.canon_locked = true;
   book.status = "locked";
   writeFileSync(bookPath, stringifyYaml(book), "utf8");
-  const canon: CanonState = { schema_version: "1.0.0", facts: [{ id: "FACT-001", category: "institution", subject: "Argus", fact: "Argus does not become sentient.", source: "book-01", status: "locked", introduced_in: "book-01" }], relationships: [] };
+  const canon: CanonState = {
+    schema_version: "1.0.0",
+    facts: [{ id: "FACT-001", category: "institution", subject: "Argus", fact: "Argus does not become sentient.", source: "book-01", status: "locked", introduced_in: "book-01" }],
+    relationships: [{ id: "REL-001", characters: ["Julie O'Donnell", "Mark Reyes"], state: "reconciled", trust: "rebuilt", public_status: "engaged", private_status: "committed", unresolved: ["Mark's transfer request"], status: "locked" }],
+  };
   writeFileSync(join(root, "series/canon.yaml"), stringifyYaml(canon), "utf8");
   const threads: StoryThreadsState = { schema_version: "1.0.0", threads: [{ id: "THREAD-001", type: "conspiracy", setup: "Who authorized the clean signal?", reader_knows: "The authority chain is incomplete.", characters_know: {}, status: "open", intended_payoff: null, last_advanced_in: "book-01" }] };
   writeFileSync(join(root, "series/story-threads.yaml"), stringifyYaml(threads), "utf8");
@@ -31,8 +35,59 @@ test("next-book proposal previews inherited canon and unresolved threads", () =>
     const proposal = buildNextBookInheritanceProposal(root);
     assert.equal(proposal.bookId, "book-02");
     assert.ok(proposal.canon.some((fact) => fact.id === "FACT-001"));
+    assert.ok(proposal.relationships.some((relationship) => relationship.id === "REL-001"));
     assert.ok(proposal.openThreads.some((thread) => thread.id === "THREAD-001"));
     assert.equal(proposal.previousTitle, "The Clean Signal");
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("next-book creation carries forward locked relationship state", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Series", projectType: "planned-series", profile: "romantasy" });
+    lockBook(root);
+    const result = createNextBookFromDecision(root, {
+      title: "The Older Signature",
+      role: "deepen the established relationship under new pressure",
+      relationship: "direct-continuation",
+      profile: "romantasy",
+      targetWords: 95000,
+      protagonist: "Julie O'Donnell",
+      continuingThreadIds: ["THREAD-001"],
+      deferredThreadIds: [],
+      inheritedCanonIds: ["FACT-001"],
+      inheritedRelationshipIds: ["REL-001"],
+      immutableFacts: ["Argus does not become sentient."],
+      optionalContext: [],
+      excludedContext: [],
+    });
+    const inherited = parseYaml<InheritedContext>(readFileSync(join(root, `books/${result.bookId}/inherited-context.yaml`), "utf8"), InheritedContextSchema, "inherited-context.yaml");
+    assert.deepEqual(inherited.inherited_relationship_ids, ["REL-001"]);
+    const report = readFileSync(join(root, `books/${result.bookId}/inheritance-report.md`), "utf8");
+    assert.match(report, /REL-001 \(Julie O'Donnell & Mark Reyes\): state=reconciled, trust=rebuilt/);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("next-book creation rejects an unlocked or unknown relationship ID", () => {
+  const parent = temp();
+  try {
+    const root = initializeProject(parent, { projectName: "Series", projectType: "planned-series", profile: "romantasy" });
+    lockBook(root);
+    assert.throws(() => createNextBookFromDecision(root, {
+      title: "The Older Signature",
+      role: "deepen the established relationship under new pressure",
+      relationship: "direct-continuation",
+      profile: "romantasy",
+      targetWords: 95000,
+      protagonist: "Julie O'Donnell",
+      continuingThreadIds: [],
+      deferredThreadIds: [],
+      inheritedCanonIds: [],
+      inheritedRelationshipIds: ["REL-999"],
+      immutableFacts: [],
+      optionalContext: [],
+      excludedContext: [],
+    }), /Inherited relationship ID is not locked and available: REL-999/);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 

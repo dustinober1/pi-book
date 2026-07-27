@@ -262,6 +262,13 @@ export const BookStrategySchema = Type.Object({
     id: Type.String(), rule: Type.String(), source_cluster_ids: StringListSchema,
     status: Type.Union([Type.Literal("proposed"), Type.Literal("approved"), Type.Literal("rejected")]),
   }, { additionalProperties: false })),
+  delivered_ending: Type.Union([
+    Type.Object({
+      disposition: Type.Union([Type.Literal("hea"), Type.Literal("hfn"), Type.Literal("series-progress"), Type.Literal("tragic-by-design"), Type.Literal("unresolved")]),
+      note: Type.String(),
+    }, { additionalProperties: false }),
+    Type.Null(),
+  ]),
 }, { additionalProperties: false });
 export type BookStrategy = Static<typeof BookStrategySchema>;
 
@@ -299,6 +306,7 @@ export function defaultBookStrategy(): BookStrategy {
     reader_friction: { observations: [], clusters: [], accepted_tradeoffs: [] },
     originality: { risks: [], mitigations: [] },
     review_derived_guardrails: [],
+    delivered_ending: null,
   };
 }
 export function defaultVoiceAudits(): VoiceAudits { return { schema_version: "1.0.0", audits: [] }; }

@@ -144,6 +144,7 @@ export const InheritedContextSchema = Type.Object({
   series_role: Type.String(),
   protagonist: Type.String(),
   inherited_canon_ids: StringListSchema,
+  inherited_relationship_ids: Type.Optional(StringListSchema),
   continuing_thread_ids: StringListSchema,
   deferred_thread_ids: StringListSchema,
   optional_context: StringListSchema,
