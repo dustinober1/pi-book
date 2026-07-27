@@ -163,7 +163,7 @@ export async function startWizardSession(options: WizardSessionOptions): Promise
       throw statusError(404, "Wizard endpoint not found.");
     } catch (error) {
       if (error instanceof NovelEventRejection) {
-        const statusCode = error.detail.code === "schema-validation" || error.detail.code === "reference-validation"
+        const statusCode = error.detail.code === "schema-validation" || error.detail.code === "reference-validation" || error.detail.code === "payload-validation"
           ? 422
           : error.detail.code === "allowlist-violation"
             ? 403

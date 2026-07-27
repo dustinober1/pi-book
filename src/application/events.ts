@@ -45,7 +45,7 @@ import { applyGuidedProjectEvent } from "./handoff.js";
 import { packetReferenceFindings } from "./integrity.js";
 import { projectStateHash } from "./project-hash.js";
 import { premiseLabFindings } from "./premise-lab.js";
-import { normalizeEventRejection } from "./event-rejection.js";
+import { normalizeEventRejection, type EventRejectionDetail } from "./event-rejection.js";
 import { ValidationAggregator } from "./validation-aggregate.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 import { readerFrictionFindings } from "./review-observations.js";
@@ -351,7 +351,14 @@ function validateArchitecture(root: string, files: FileChange[], book: BookState
   ];
   const packets = chapter ? queue.packets.filter((packet) => packet.chapter === chapter) : event === "book-plan" || event === "chapter-queue" ? queue.packets.filter((packet) => packet.status === "ready") : [];
   for (const packet of packets) {
-    findings.push(...profile.validatePacket(packet));
+    // Profile validators see one packet at a time and cannot name the chapter,
+    // so an author agent reading a multi-packet rejection cannot tell which
+    // chapters are broken. Attribute each finding here instead.
+    findings.push(...profile.validatePacket(packet).map((finding) => (
+      finding.message.includes(`Chapter ${packet.chapter}`)
+        ? finding
+        : { ...finding, message: `Chapter ${packet.chapter}: ${finding.message}` }
+    )));
     const expectedGate = requiredMilestoneGate(plot, packet.chapter);
     if (packet.milestone_gate && packet.milestone_gate !== expectedGate) {
       findings.push({ severity: "blocker", category: "act-boundary", message: `Chapter ${packet.chapter} packet gate ${packet.milestone_gate} disagrees with plot-derived gate ${expectedGate ?? "none"}.` });
@@ -392,7 +399,19 @@ function validateArchitecture(root: string, files: FileChange[], book: BookState
   return { queue, plot };
 }
 
-function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEventResult {
+interface ValidatedEvent {
+  project: ProjectState;
+  book: BookState;
+  changes: FileChange[];
+  queue: ChapterQueueState | null;
+  plot: PlotGridPhase4 | null;
+}
+
+/**
+ * Runs the complete validation pass without writing anything, so the same
+ * contract can back both a real apply and a dry run.
+ */
+function runEventValidation(root: string, input: NovelEventInput): ValidatedEvent {
   const project = structuredClone(readProject(root));
   const book = structuredClone(readBook(root));
   const findings = new ValidationAggregator();
@@ -405,6 +424,52 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
     if (architecture) ({ queue, plot } = architecture);
   }
   findings.throwIfAny();
+  return { project, book, changes, queue, plot };
+}
+
+export interface NovelEventValidation {
+  valid: boolean;
+  eventType: NovelEventType;
+  submittedPaths: string[];
+  missingRequiredPaths: string[];
+  rejection: EventRejectionDetail | null;
+}
+
+/**
+ * Validates a proposed event and reports the result instead of applying it.
+ * A dry run writes nothing, creates no Git checkpoint, and never advances a
+ * stage or gate, so an author agent can converge on a valid payload without
+ * spending its bounded retry on the real transaction.
+ */
+export function validateNovelEvent(root: string, input: NovelEventInput): NovelEventValidation {
+  const submittedPaths = input.files.map((file) => normalized(file.path));
+  let missing: string[] = [];
+  try {
+    const book = readBook(root);
+    if (input.eventType === "book-plan") missing = missingRequiredPaths(input.files.map((file) => ({ ...file, path: normalized(file.path) })), requiredBookPlanPaths(book));
+  } catch {
+    // A project that cannot be read is reported through the rejection below.
+  }
+  try {
+    runEventValidation(root, input);
+    return { valid: true, eventType: input.eventType, submittedPaths, missingRequiredPaths: missing, rejection: null };
+  } catch (error) {
+    let currentStage = String(input.expectedStage || "unknown");
+    let currentProjectHash = String(input.expectedProjectHash || "unknown");
+    try {
+      currentStage = readProject(root).current_stage;
+      currentProjectHash = projectStateHash(root);
+    } catch {
+      // The normalizer classifies project-read failures without exposing paths.
+    }
+    const rejection = normalizeEventRejection(error, { root, currentStage, currentProjectHash });
+    return { valid: false, eventType: input.eventType, submittedPaths, missingRequiredPaths: missing, rejection: rejection.detail };
+  }
+}
+
+function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEventResult {
+  const { project, book, changes, queue: validatedQueue, plot } = runEventValidation(root, input);
+  let queue = validatedQueue;
 
   switch (input.eventType) {
     case "voice-profile":

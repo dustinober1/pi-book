@@ -1,6 +1,7 @@
 export type EventRejectionCode =
   | "schema-validation"
   | "reference-validation"
+  | "payload-validation"
   | "wrong-stage"
   | "stale-stage"
   | "stale-project-hash"
@@ -50,6 +51,22 @@ interface Policy {
 }
 
 const FILESYSTEM_CODES = new Set(["ENOENT", "EACCES", "EPERM", "ENOSPC", "EROFS", "EMFILE", "ENFILE", "EIO"]);
+
+/**
+ * Blocker families that are corrected entirely inside the submitted files.
+ * They carry the same retry policy as schema and reference failures.
+ */
+const PAYLOAD_BLOCKERS = [
+  "profile validation blocked",
+  "remarkability validation blocked",
+  "reader-evidence validation blocked",
+  "book strategy validation blocked",
+  "packet-window validation blocked",
+  "research and reader-friction validation blocked",
+  "is missing required output",
+  "is missing its required output file",
+  "validation problems must all be fixed",
+];
 
 function rawMessage(error: unknown): string {
   if (error instanceof Error) return error.message || "Novel Forge rejected the operation for an unknown reason.";
@@ -103,6 +120,10 @@ function classify(error: unknown, message: string): EventRejectionCode {
   if (lower.includes(" is not allowed for ") || lower.includes("duplicate event path")) return "allowlist-violation";
   if (lower.includes("not valid yaml") || lower.includes("schema validation") || lower.includes("schema-validation") || lower.includes("does not match schema") || lower.includes("decision ledger validation") || lower.includes("premise validation")) return "schema-validation";
   if (lower.includes("reference validation") || lower.includes("missing canon reference") || lower.includes("missing research reference") || lower.includes("reference is missing")) return "reference-validation";
+  // Every blocker below is fixed by rewriting the submitted payload, exactly
+  // like a schema or reference failure. Leaving them unclassified told the
+  // author agent to stop and surface a blocker it could have corrected itself.
+  if (PAYLOAD_BLOCKERS.some((phrase) => lower.includes(phrase))) return "payload-validation";
   if ((lower.includes("gate") || lower.includes("approval")) && (lower.includes("must be") || lower.includes("requires") || lower.includes("human"))) return "human-gate-required";
   if (lower.includes("integrity")) return "integrity-failure";
   if (filesystemFailure(error, lower)) return "filesystem-failure";
@@ -110,7 +131,7 @@ function classify(error: unknown, message: string): EventRejectionCode {
 }
 
 function policy(code: EventRejectionCode): Policy {
-  if (code === "schema-validation" || code === "reference-validation") return { retryable: true, requiresReload: false };
+  if (code === "schema-validation" || code === "reference-validation" || code === "payload-validation") return { retryable: true, requiresReload: false };
   if (code === "stale-stage" || code === "stale-project-hash") return { retryable: false, requiresReload: true };
   return { retryable: false, requiresReload: false };
 }
@@ -124,6 +145,9 @@ function issueFor(code: EventRejectionCode, path: string): EventRejectionIssue {
   }
   if (code === "reference-validation") {
     return { path, expected: "an existing allowed canon, thread, source, or research reference", received: "missing or invalid reference" };
+  }
+  if (code === "payload-validation") {
+    return { path, expected: "submitted files that satisfy the event's required outputs and domain contract", received: "incomplete or contract-violating submitted data" };
   }
   return { path, expected: "a valid event input", received: "rejected input" };
 }

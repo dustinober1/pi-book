@@ -57,6 +57,8 @@ For a `historical-fiction` book, `research-update` may also update that book's `
 
 Trusted internal application services may use the same transaction engine for binary adopted assets and generated DOCX, EPUB, and XLSX files. Do not expose binary writes through the model-facing tool.
 
+Call `novel_validate_event` before `novel_apply_event` for any multi-file event, especially `book-plan`. It runs the identical contract — required outputs, YAML and schema shape, profile packet fields, cross-artifact references, and domain integrity — but writes nothing, creates no Git checkpoint, advances no stage or gate, and consumes no retry budget. Iterate against it until it reports no problems, then apply the same files once.
+
 An event is validated as a complete set, not file by file. Submit every required output for the event type on the first attempt, and submit the complete set again on a corrected retry — omitting a file that was already accepted is itself a rejection. The required sets are:
 
 ```text

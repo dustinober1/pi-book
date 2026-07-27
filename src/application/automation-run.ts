@@ -154,7 +154,7 @@ export function recordAutomationRejection(
     return result;
   }
 
-  const boundedRetry = detail.retryable && (detail.code === "schema-validation" || detail.code === "reference-validation");
+  const boundedRetry = detail.retryable && (detail.code === "schema-validation" || detail.code === "reference-validation" || detail.code === "payload-validation");
   if (boundedRetry) {
     const count = (updated.retryCounts[eventKey] ?? 0) + 1;
     updated.retryCounts[eventKey] = count;

@@ -1,24 +1,28 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v1.8.0
+## Current verified release: v1.9.0
 
-Novel Forge 1.8.0 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 1.9.0 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.8.0
+pi install git:github.com/dustinober1/pi-book@v1.9.0
 ```
 
 For one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v1.8.0
+pi -e git:github.com/dustinober1/pi-book@v1.9.0
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.8.0 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.9.0 release commit.
 
-## 1.8.0 release record
+## 1.9.0 release record
 
-- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.8.0.
+- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.9.0.
+- [x] `novel_validate_event` runs the complete event contract without writing, checkpointing, advancing a stage or gate, or consuming retry budget.
+- [x] Schema failures report real instance paths, expand unions against the closest matching shape, and list allowed values for literal unions.
+- [x] Profile packet findings name the chapter they came from.
+- [x] Profile, remarkability, reader-evidence, book-strategy, packet-window, research-friction, and missing-output blockers classify as retryable `payload-validation` instead of stopping automatic work.
 - [x] A rejected event reports every validation problem across all layers in one numbered rejection; a single problem still reads as one plain message.
 - [x] Structural pre-checks — wrong stage, stale stage, stale project hash, duplicate path, allowlist violation — still stop immediately instead of aggregating.
 - [x] The retryable rejection instruction requires resubmitting the complete required file set, not only the corrected payload.
@@ -37,7 +41,7 @@ Use a copied or backed-up manuscript for the first pilot. Install the tag rather
 - [x] The release workflow reads the package version at run time instead of a hardcoded per-tag workflow file.
 - [x] Node 22.19.0 and Node 24 pass type, unit, integration, end-to-end, evaluation, benchmark, release, and package checks.
 
-Maintained release notes are in `docs/releases/v1.8.0.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
+Maintained release notes are in `docs/releases/v1.9.0.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
 
 ## Verify the current development tree
 

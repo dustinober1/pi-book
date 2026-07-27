@@ -12,8 +12,9 @@ function eventToolRules(input: EventRuleInput): string[] {
     "Do not write project files directly.",
     `When the content is ready, call the novel_apply_event tool with event_type ${input.eventType}, expected_stage ${input.expectedStage}, expected_project_hash ${input.projectHash}, and only the allowed changed files.`,
     input.extra ?? "",
+    "Call novel_validate_event with the same arguments first: it runs the identical contract, writes nothing, and consumes no retry budget. Iterate until it reports no problems, then apply once.",
     "The tool validates schemas, references, state transitions, file allowlists, stale writes, and commits the complete workflow event.",
-    "If the tool returns a structured rejection code, correct only schema-validation or reference-validation payloads and resubmit once.",
+    "A rejection reports every problem it found, not just the first. If the structured rejection code is retryable (schema-validation, reference-validation, or payload-validation), fix every listed problem and resubmit the complete required file set once.",
     "For stale-stage or stale-project-hash, reload canonical state and rebuild the proposal.",
     "For all other rejection codes, stop automatic work and surface the failure.",
   ].filter(Boolean);
@@ -266,7 +267,7 @@ export function draftStageSpec(input: DraftStageInput): StageSpec {
       "Use one guarded novel_apply_event; never write project files directly.",
       `Send event_type=draft-chapter, expected_stage=drafting, expected_project_hash=${input.projectHash}, chapter=${input.chapter}, and only allowed files.`,
       "Tool validation of schemas, references, stage, allowlists, stale state, and atomic commit is authoritative.",
-      "Retry once only for schema-validation or reference-validation. Reload for stale-stage or stale-project-hash; stop on any other rejection.",
+      "Retry once only for schema-validation, reference-validation, or payload-validation. Reload for stale-stage or stale-project-hash; stop on any other rejection.",
     ],
   };
 }

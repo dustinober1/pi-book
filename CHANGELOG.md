@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.9.0 — Actionable Rejections and Dry-Run Validation
+
+### Added
+
+- `novel_validate_event` validates a proposed event against the identical contract without applying it: no writes, no Git checkpoint, no stage or gate change, and no retry budget consumed. `SKILL.md` and the generated stage prompts direct agents to converge with it before calling `novel_apply_event`.
+
+### Fixed
+
+- Schema failures now report real instance paths and expand a failed union against the closest-matching variant, so the message names concrete fields instead of `Expected union value` at the union's own path. A union of literals lists its allowed values, and output is deduplicated and capped with a remainder count.
+- Profile packet findings name the chapter they came from, instead of repeating identical unattributed lines once per packet.
+- Profile, remarkability, reader-evidence, book-strategy, packet-window, research-and-friction, and missing-required-output blockers classify as the new retryable `payload-validation` code instead of falling through to `unknown` and instructing the agent to stop automatic work.
+
+### Compatibility and boundaries
+
+- Validation strictness is unchanged: the same events are accepted and rejected as before. No project schema, workflow state, or evidence content changes. Existing projects remain compatible.
+
 ## 1.8.0 — Aggregated Event Validation
 
 ### Fixed

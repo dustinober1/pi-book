@@ -1,5 +1,6 @@
 import { Type, type Static, type TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
+import { schemaErrorLines } from "./schema-errors.js";
 import { StoryThreadsV2Schema } from "./story-thread-v2.js";
 
 export const PROFILE_IDS = ["thriller", "romantasy", "historical-fiction"] as const;
@@ -278,6 +279,5 @@ const schemaByPath: Array<[RegExp, TSchema]> = [
 export function schemaForPath(path: string): TSchema | null { return schemaByPath.find(([pattern]) => pattern.test(path))?.[1] ?? null; }
 export function assertSchema<T>(schema: TSchema, value: unknown, label: string): asserts value is T {
   if (Value.Check(schema, value)) return;
-  const errors = [...Value.Errors(schema, value)].slice(0, 8).map((error) => `${error.path || "/"}: ${error.message}`);
-  throw new Error(`${label} failed schema validation:\n${errors.join("\n")}`);
+  throw new Error(`${label} failed schema validation:\n${schemaErrorLines(schema, value).join("\n")}`);
 }

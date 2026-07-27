@@ -58,7 +58,9 @@ test("all event prompts include the structured one-retry policy", () => {
     const prompt = queuePrompt(root);
     assert.match(prompt, /structured rejection code/i);
     assert.match(prompt, /schema-validation.*reference-validation/is);
-    assert.match(prompt, /resubmit once/i);
+    assert.match(prompt, /resubmit the complete required file set once/i);
+    assert.match(prompt, /novel_validate_event/);
+    assert.match(prompt, /reports every problem it found/i);
     assert.match(prompt, /stale-stage.*stale-project-hash/is);
     assert.match(prompt, /reload canonical state/i);
     assert.match(prompt, /all other rejection codes.*stop/i);

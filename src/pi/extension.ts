@@ -6,7 +6,7 @@ import { bootstrapProjectFromBrief } from "../application/brief-bootstrap.js";
 import { renderBudgetStatus } from "../application/budget-status.js";
 import { inspectActiveContext, inspectNextActiveContext, renderContextInspection } from "../application/context-inspection.js";
 import { normalizeEventRejection, rejectionInstruction } from "../application/event-rejection.js";
-import { applyNovelEvent, projectStateHash, type NovelEventType } from "../application/events.js";
+import { applyNovelEvent, projectStateHash, validateNovelEvent, type NovelEventType } from "../application/events.js";
 import { gateDetail } from "../application/gate-metadata.js";
 import { buildGuideScreen, type GuideActionId } from "../application/guide.js";
 import { refreshGuidance } from "../application/handoff.js";
@@ -199,7 +199,52 @@ async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): 
   }
 }
 
+const eventTypeSchema = Type.Union([
+  Type.Literal("voice-profile"), Type.Literal("series-plan"), Type.Literal("book-plan"),
+  Type.Literal("chapter-queue"), Type.Literal("draft-chapter"), Type.Literal("review"),
+  Type.Literal("reader-test"), Type.Literal("research-update"), Type.Literal("revise"), Type.Literal("canon-lock"), Type.Literal("package"),
+]);
+
 export function registerNovelForge(pi: ExtensionAPI): void {
+  pi.registerTool({
+    name: "novel_validate_event",
+    label: "Novel Forge Validate Event",
+    description: "Validate a proposed Novel Forge event without applying it. Runs the same required-output, schema, profile, reference, and integrity checks as novel_apply_event, writes nothing, creates no Git checkpoint, advances no stage or gate, and consumes no retry budget.",
+    promptSnippet: "Check the prepared Novel Forge files against the guarded event contract without applying them.",
+    promptGuidelines: ["Use novel_validate_event to converge on a valid payload before calling novel_apply_event, especially for a large multi-file event such as book-plan. It reports every problem at once and changes nothing."],
+    parameters: Type.Object({
+      project_root: Type.Optional(Type.String()),
+      event_type: eventTypeSchema,
+      expected_stage: Type.String(),
+      expected_project_hash: Type.String(),
+      chapter: Type.Optional(Type.Number()),
+      scope: Type.Optional(Type.String()),
+      files: Type.Array(Type.Object({ path: Type.String(), content: Type.String() })),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      try {
+        const root = requireProjectRoot(params.project_root || ctx.cwd);
+        const result = validateNovelEvent(root, {
+          eventType: params.event_type as NovelEventType,
+          expectedStage: params.expected_stage as Stage,
+          expectedProjectHash: params.expected_project_hash,
+          files: params.files.map((file) => ({ path: file.path, content: file.content })),
+          ...(params.chapter !== undefined ? { chapter: params.chapter } : {}),
+          ...(params.scope ? { scope: params.scope } : {}),
+        });
+        if (result.valid) {
+          const text = `Validated ${params.event_type}: no problems found. Nothing was applied — call novel_apply_event with the same files to apply it.\nChecked: ${result.submittedPaths.join(", ")}`;
+          return { content: [{ type: "text", text }], details: result };
+        }
+        const missing = result.missingRequiredPaths.length ? `\nMissing required outputs: ${result.missingRequiredPaths.join(", ")}` : "";
+        const text = `Validation found problems (nothing was applied): ${result.rejection?.message ?? "unknown rejection"}${missing}\nFix every problem above and validate again before applying.`;
+        return { content: [{ type: "text", text }], details: result };
+      } catch (error) {
+        return { content: [{ type: "text", text: errorText(error) }], details: { error: errorText(error) } };
+      }
+    },
+  });
+
   pi.registerTool({
     name: "novel_apply_event",
     label: "Novel Forge Apply Event",
@@ -208,11 +253,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     promptGuidelines: ["Use novel_apply_event for Novel Forge planning, drafting, review, reader evidence, research evidence, revision, canon lock, and packaging changes. Never write Novel Forge state files directly."],
     parameters: Type.Object({
       project_root: Type.Optional(Type.String()),
-      event_type: Type.Union([
-        Type.Literal("voice-profile"), Type.Literal("series-plan"), Type.Literal("book-plan"),
-        Type.Literal("chapter-queue"), Type.Literal("draft-chapter"), Type.Literal("review"),
-        Type.Literal("reader-test"), Type.Literal("research-update"), Type.Literal("revise"), Type.Literal("canon-lock"), Type.Literal("package"),
-      ]),
+      event_type: eventTypeSchema,
       expected_stage: Type.String(),
       expected_project_hash: Type.String(),
       chapter: Type.Optional(Type.Number()),
