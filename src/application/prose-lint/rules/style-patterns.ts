@@ -1,5 +1,6 @@
 import { extractVoiceMetrics } from "../../voice-audit.js";
 import { compareDeterministicText } from "../order.js";
+import { ABSOLUTE_BAND_MINIMUM_WORDS, bandBreach, bandMessage } from "../reference-bands.js";
 import type { LintFinding, LintRule, ManuscriptDocument, ProseLintInput } from "../types.js";
 
 const VERSION = "1.0.0";
@@ -264,8 +265,41 @@ function ruleFor(definition: PatternDefinition): LintRule {
       const text = corpusMetricText(input.documents);
       const corpus = definition.metric?.(text) ?? occurrenceMetric(input, occurrences);
       const baseline = input.baselineMetrics?.[definition.baselineKey];
+      const totalWords = input.documents.reduce((sum, document) => sum + document.wordCount, 0);
       let evidence: LintFinding["evidence"];
       let findingLocation: PatternOccurrence | undefined;
+
+      // An absolute band is the stronger claim — it holds whether or not the rest
+      // of the manuscript agrees — so it is evaluated before either relative test.
+      // Without it a uniformly generated manuscript matches its own baseline and
+      // its own corpus, and every rule below goes silent.
+      const breach = totalWords >= ABSOLUTE_BAND_MINIMUM_WORDS
+        ? bandBreach(definition.baselineKey, corpus.rate)
+        : null;
+      if (breach !== null) {
+        const location = occurrences[0] ?? input.documents.map(firstProseOccurrence).find((item) => item !== undefined);
+        if (location !== undefined) {
+          return [{
+            ruleId: this.id,
+            ruleVersion: VERSION,
+            class: "style-pattern",
+            confidence: "review",
+            location: { path: location.document.path, line: location.line },
+            excerpt: location.excerpt,
+            message: bandMessage(breach),
+            evidence: {
+              count: corpus.count,
+              currentRate: corpus.rate,
+              referenceLimit: breach.limit,
+              referenceKind: breach.kind,
+              baselineMetric: definition.baselineKey,
+              scopeWords: totalWords,
+              minimumWords: ABSOLUTE_BAND_MINIMUM_WORDS,
+            },
+            reviewAction: "Compare against the published-fiction reference band in manuscript context. A deliberate voice choice may sit outside the band; an unexamined habit usually should not.",
+          }];
+        }
+      }
 
       if (baseline !== undefined) {
         const baselineRate = definition.baselineKey.endsWith("_ratio") ? baseline * 1_000 : baseline;
@@ -283,7 +317,6 @@ function ruleFor(definition: PatternDefinition): LintRule {
           minimumRatio: 1.5,
         };
       } else {
-        const totalWords = input.documents.reduce((sum, document) => sum + document.wordCount, 0);
         if (totalWords < MINIMUM_WORDS || corpus.count < MINIMUM_MATCHES) return [];
         const corpusConcentrationRate = ratePerThousand(corpus.count, totalWords);
         const local = input.documents.map((document) => {

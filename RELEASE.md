@@ -1,24 +1,43 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v1.10.0
+## Current verified release: v2.0.0
 
-Novel Forge 1.10.0 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 2.0.0 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.10.0
+pi install git:github.com/dustinober1/pi-book@v2.0.0
 ```
 
 For one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v1.10.0
+pi -e git:github.com/dustinober1/pi-book@v2.0.0
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.10.0 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 2.0.0 release commit.
+
+## 2.0.0 release record
+
+- [x] Package metadata, package lock, runtime version, and new-project metadata report 2.0.0.
+- [x] A `chapter-queue` event compiles a chapter contract skeleton for every ready packet, leaving the four judgement fields empty and named in `missing_small_model_fields`.
+- [x] An authored chapter contract, on disk or submitted with the event, is never overwritten by a skeleton.
+- [x] A `chapter-queue` event reports which ready packets still lack an executable contract, in both a dry run and a real apply.
+- [x] Style-pattern rules evaluate absolute published-fiction reference bands before either relative comparison, and a band breach reports its limit, direction, and scope word count.
+- [x] A single chapter with no accepted baseline and no sibling documents is still measured, and a scope below the minimum word count is not.
+- [x] Every `draft-chapter` event lints the submitted text — not the copy on disk — and returns findings as advisories.
+- [x] A `draft-chapter` event reports when no accepted voice baseline exists, so disabled rules are distinguishable from silence.
+- [x] Dialogue is measured per named speaker, and indistinguishable pairs are reported only when sentence length, contraction rate, question rate, word length, and vocabulary range all agree.
+- [x] A speaker below the sample floor is never characterised, and prose with no attributed dialogue never throws.
+- [x] A book plan whose chapters all carry the same `target_words` is rejected and the message names the 85%–110% draft band.
+- [x] Low chapter-length variance, periodic POV rotation, dominant causality, and repeated ending beats apply as advisories.
+- [x] A `package` event without a recorded human reader response is rejected as `human-gate-required` and is not retryable.
+- [x] Thin and delayed-response reader limitations apply as advisories rather than rejections.
+- [x] No style finding claims authorship detection; every one carries `review` confidence and a manuscript-context review action.
+- [x] `SKILL.md` documents the reference bands, character voice, structural rhythm, the reader checkpoint, and the contract-skeleton workflow.
 
 ## 1.10.0 release record
 
-- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.10.0.
+- [x] Package metadata, package lock, runtime version, and new-project metadata reported 1.10.0 at that release.
 - [x] A `draft-chapter` event measures the submitted chapter against its packet `target_words`: silent inside 85%–110%, advisory outside it, rejected below 60% or above 150%.
 - [x] Every event checks its submitted paths against Git and rejects a path holding uncommitted changes that differ from the submission.
 - [x] A submitted path written out of band with matching content applies with an advisory rather than a rejection.
@@ -53,7 +72,7 @@ Use a copied or backed-up manuscript for the first pilot. Install the tag rather
 - [x] The release workflow reads the package version at run time instead of a hardcoded per-tag workflow file.
 - [x] Node 22.19.0 and Node 24 pass type, unit, integration, end-to-end, evaluation, benchmark, release, and package checks.
 
-Maintained release notes are in `docs/releases/v1.10.0.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
+Maintained release notes are in `docs/releases/v2.0.0.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
 
 ## Verify the current development tree
 

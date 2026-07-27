@@ -6,6 +6,7 @@ import {
 import type { BookStrategyPhase5 } from "../domain/v1-3-audit-schemas.js";
 import { renderApprovedLearningGuardrails } from "./revision-learning.js";
 import { readerFrictionFindings } from "./review-observations.js";
+import { structuralRhythmFindings } from "./structural-rhythm.js";
 
 export interface BookPlanFinding {
   severity: "blocker" | "warning";
@@ -86,6 +87,7 @@ export function bookPlanFindings(input: { strategy: BookStrategyPhase5; plot: Pl
     if (check.status !== "accepted-tradeoff" && check.tradeoff_id !== null) findings.push({ severity: "warning", code: "unused-stress-tradeoff", message: `${id} records tradeoff ${check.tradeoff_id} without accepted-tradeoff status.` });
   }
   findings.push(...consequenceFindings(plot), ...sceneRepetitionFindings(queue), ...readerFrictionFindings(strategy));
+  findings.push(...structuralRhythmFindings(queue, plot));
   return findings;
 }
 

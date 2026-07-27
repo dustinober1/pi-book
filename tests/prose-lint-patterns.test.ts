@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   defaultProseLintRules,
+  dialogueVoiceRule,
   normalizeDocument,
   repetitionRules,
   runProseLint,
@@ -267,9 +268,23 @@ test("style rules report concentrated patterns only with a sufficient corpus and
   ]) assert.ok(ids.has(id), `missing ${id}`);
 
   assert.ok(result.findings.every((item) => item.confidence === "review"));
-  assert.ok(result.findings.every((item) => Number(item.evidence.count) >= 4));
-  assert.ok(result.findings.every((item) => Number(item.evidence.localRate) >= Number(item.evidence.corpusRate) * 2));
   assert.ok(result.findings.every((item) => !/AI[- ]written|AI probability/i.test(item.message)));
+
+  // A style finding is either an absolute reference-band breach or a relative
+  // concentration finding, never both. Each kind carries its own evidence.
+  const band = result.findings.filter((item) => item.evidence.referenceLimit !== undefined);
+  const concentration = result.findings.filter((item) => item.evidence.referenceLimit === undefined);
+  assert.equal(band.length + concentration.length, result.findings.length);
+
+  assert.ok(concentration.every((item) => Number(item.evidence.count) >= 4));
+  assert.ok(concentration.every((item) => Number(item.evidence.localRate) >= Number(item.evidence.corpusRate) * 2));
+
+  assert.ok(band.every((item) => Number(item.evidence.scopeWords) >= 1_000));
+  assert.ok(band.every((item) => item.evidence.referenceKind === "above-ceiling" || item.evidence.referenceKind === "below-floor"));
+  assert.ok(band.every((item) => item.evidence.referenceKind === "above-ceiling"
+    ? Number(item.evidence.currentRate) > Number(item.evidence.referenceLimit)
+    : Number(item.evidence.currentRate) < Number(item.evidence.referenceLimit)));
+
   assert.deepEqual(lint(fixture, stylePatternRules), result);
 
   const tooSmall = lint(styleFixture().slice(0, 4), stylePatternRules);
@@ -331,8 +346,13 @@ test("baseline fragment metrics preserve unterminated normalized sentences befor
   assert.equal(finding.excerpt, "Too soon");
 });
 
-test("the default registry preserves mechanical, repetition, then style rule order", () => {
+test("the default registry preserves mechanical, repetition, style, then dialogue rule order", () => {
   assert.ok(defaultProseLintRules.length > repetitionRules.length + stylePatternRules.length);
   assert.equal(defaultProseLintRules.findIndex((rule) => rule.id === repetitionRules[0]?.id) > 0, true);
-  assert.equal(defaultProseLintRules.at(-1)?.id, stylePatternRules.at(-1)?.id);
+
+  const lastStyle = defaultProseLintRules.findIndex((rule) => rule.id === stylePatternRules.at(-1)?.id);
+  const dialogue = defaultProseLintRules.findIndex((rule) => rule.id === dialogueVoiceRule.id);
+  assert.ok(lastStyle > 0);
+  assert.equal(dialogue, lastStyle + 1);
+  assert.equal(defaultProseLintRules.at(-1)?.id, dialogueVoiceRule.id);
 });

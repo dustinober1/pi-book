@@ -122,6 +122,10 @@ function classify(error: unknown, message: string): EventRejectionCode {
   if (lower.includes(" is not allowed for ") || lower.includes("duplicate event path")) return "allowlist-violation";
   if (lower.includes("not valid yaml") || lower.includes("schema validation") || lower.includes("schema-validation") || lower.includes("does not match schema") || lower.includes("decision ledger validation") || lower.includes("premise validation")) return "schema-validation";
   if (lower.includes("reference validation") || lower.includes("missing canon reference") || lower.includes("missing research reference") || lower.includes("reference is missing")) return "reference-validation";
+  // Missing human reader evidence is not a payload defect and cannot be fixed by
+  // resubmitting: it needs a person to read the book. Classify it as the human
+  // gate it is, so an author agent stops rather than retrying.
+  if (lower.includes("reader-checkpoint validation blocked")) return "human-gate-required";
   // Every blocker below is fixed by rewriting the submitted payload, exactly
   // like a schema or reference failure. Leaving them unclassified told the
   // author agent to stop and surface a blocker it could have corrected itself.

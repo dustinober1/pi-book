@@ -7,6 +7,8 @@ export interface SceneExecutionDraftStageInput {
   estimatedTokens: number;
   excluded: readonly string[];
   projectHash: string;
+  /** Patterns the manuscript has already formed, from repetition memory. */
+  repetitionConstraints?: readonly string[];
 }
 
 export function sceneExecutionDraftStageSpec(input: SceneExecutionDraftStageInput): StageSpec {
@@ -37,6 +39,7 @@ export function sceneExecutionDraftStageSpec(input: SceneExecutionDraftStageInpu
       "Do not bypass repair, validation, scene order, or writer approval boundaries.",
       "Do not turn audit metrics into prose quotas or mechanical style targets.",
       "Do not chase AI-detector patterns, mechanically restate the hook, manufacture quotable lines, or pad to target length.",
+      ...(input.repetitionConstraints ?? []),
     ],
     outputs: [
       "one novel_advance_chapter_step result per tool call",

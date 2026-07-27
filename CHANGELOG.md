@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.0.0 — Making the Quality Path the Default Path
+
+Novel Forge already contained three subsystems for catching prose that reads as generated — prose-lint's sixteen style-tell rules, repetition memory feeding the style card and context capsule, and the five scene critics. All three were well built, and none could be reached from the path an agent actually took. Guarded scene execution required an executable chapter contract; when `contracts/chapters/` was empty an agent listed it, found nothing, and fell back to a plain `draft-chapter` event, disabling all three at once. This release is mostly wiring, plus the checks that wiring made possible.
+
+### Changed
+
+- A `chapter-queue` event now compiles a chapter contract skeleton for every ready packet, so the contracts directory is never empty and an empty listing is never a reason to skip the guarded path. The skeleton carries only what the packet determines; `start_state_ids`, `required_end_state`, `forbidden_changes`, and `knowledge_boundary_ids` are deliberately left empty and named in `missing_small_model_fields`, because generating plausible values would make guarded execution appear available while running against a hollow contract. An authored contract, on disk or submitted with the event, is never overwritten.
+- Style-pattern rules are now measured against a shipped table of absolute published-fiction reference bands. Every rule was previously relative — compared either to an accepted author baseline or to the rest of the corpus — and both comparisons go quiet on a manuscript that is uniformly AI-flavored. `defaultVoiceGuardrails()` ships a null baseline, so on any project that never accepted one the stronger branch was silently disabled and reported nothing. Absolute bands also make single-chapter linting possible, since the corpus-concentration fallback needs several documents to mean anything.
+- A book plan whose chapters all carry the same `target_words` is now **rejected**. This corrects a tension introduced in 1.10.0: holding a draft to 85%–110% of its packet target is right, but if every packet carries the same target the band enforces metronomic pacing. Variance has to live in the plan.
+- A `package` event now **requires** at least one recorded human reader response. The rejection carries `human-gate-required` and is not retryable. The bar is that evidence exists, not that it is favourable — a `rejected` verdict is still real reader evidence, and whether to publish anyway is the writer's decision.
+
+### Added
+
+- Deterministic prose lint runs on every `draft-chapter` event, against the submitted text rather than the copy on disk, reported through the 1.10.0 advisory channel. The first style signal previously arrived at act review, five to eight chapters after the voice had set.
+- Per-character dialogue differentiation. Dialogue is attributed to named speakers and each speaker measured on sentence length, contraction rate, question rate, word length and vocabulary range; adequately-sampled pairs that cannot be told apart are reported. Every measure must agree before a finding is produced, so one shared trait is never enough. Nothing in the project previously examined character voice as distinct from narrator voice.
+- Structural rhythm advisories for low chapter-length variance, perfectly periodic POV rotation, one causal joint dominating the plot, and repeated chapter-ending beats. Book-plan warnings previously had no delivery path and were discarded.
+- Repetition-memory constraints are carried into the drafting prompt, so the drafter knows which patterns the manuscript has already formed.
+- A `draft-chapter` event reports when no accepted voice baseline exists, so silence and "the strongest rules were disabled" are no longer indistinguishable.
+- `SKILL.md` documents the reference bands, character-voice measurement, structural rhythm checks, the reader checkpoint, and the contract-skeleton workflow.
+
+### Compatibility and boundaries
+
+- Two new classes of event are rejected where they previously applied: a book plan with entirely uniform chapter targets, and a `package` event with no human reader evidence. This is why the release is a major version.
+- Every style finding is review evidence, not authorship detection. The tool never claims a passage was machine-written, and a deliberate voice choice can legitimately sit outside a band. The band values are calibration defaults chosen to sit clear of ordinary stylistic range, not quotas to optimise against.
+- No project schema, workflow state, or evidence content changed. Contract skeletons are additive and existing projects remain compatible.
+
 ## 1.10.0 — Chapter Length and Working-Tree Enforcement
 
 ### Changed

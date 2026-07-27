@@ -49,6 +49,10 @@ import { premiseLabFindings } from "./premise-lab.js";
 import { normalizeEventRejection, type EventRejectionDetail } from "./event-rejection.js";
 import { ValidationAggregator } from "./validation-aggregate.js";
 import { draftLengthFinding } from "./draft-length.js";
+import { draftLintReport } from "./draft-lint.js";
+import { appendChapterContractSkeletons, chapterContractReadinessAdvisories } from "./chapter-contract-skeletons.js";
+import { structuralRhythmFindings } from "./structural-rhythm.js";
+import { packageReaderCheckpointFindings } from "./reader-checkpoint.js";
 import { outOfBandWriteFindings } from "./working-tree-guard.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 import { readerFrictionFindings } from "./review-observations.js";
@@ -294,6 +298,11 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
       if (blockers.length) throw new Error(`Reader-evidence validation blocked reader-test:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
     });
   }
+  if (input.eventType === "package") {
+    const checkpoint = packageReaderCheckpointFindings(root, book.book_id);
+    const blockers = checkpoint.filter((finding) => finding.severity === "blocker");
+    if (blockers.length) findings.add(`Reader-checkpoint validation blocked package:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+  }
   if (input.eventType === "book-plan" || input.eventType === "research-update") {
     findings.run(() => validateResearchAndFriction(root, input.files, book, input.eventType));
     findings.run(() => validateRevisionLearning(root, input.files, book));
@@ -488,6 +497,24 @@ function runEventValidation(root: string, input: NovelEventInput): ValidatedEven
     // The disclosure has to come from the path the agent cannot avoid.
     const skipped = guardedExecutionSkipReason(root, book.book_id, input.chapter);
     if (skipped) advisories.push(skipped);
+    // Style-tell rules previously could not run until act review, several
+    // chapters after the voice had set. Lint the submitted text here instead.
+    if (draft) advisories.push(...draftLintReport(root, input.chapter, draft.path, draft.content).advisories);
+  }
+  if (input.eventType === "chapter-queue" && queue) {
+    advisories.push(...chapterContractReadinessAdvisories(root, changes, book.book_id, queue));
+  }
+  if (input.eventType === "package") {
+    for (const finding of packageReaderCheckpointFindings(root, book.book_id)) {
+      if (finding.severity === "warning") advisories.push(finding.message);
+    }
+  }
+  // Book-plan blockers throw through bookPlanFindings; its warnings had no
+  // delivery path at all and were simply discarded.
+  if (input.eventType === "book-plan" && queue && plot) {
+    for (const finding of structuralRhythmFindings(queue, plot)) {
+      if (finding.severity === "warning") advisories.push(finding.message);
+    }
   }
 
   findings.throwIfAny();
@@ -556,6 +583,9 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
       project.current_stage = "drafting";
       project.next_gate = null;
       book.status = "drafting";
+      // A ready packet with no contract file is what makes the guarded path look
+      // unavailable. Compile the derivable part so the directory is never empty.
+      if (queue) appendChapterContractSkeletons(root, changes, book.book_id, queue);
       break;
     case "draft-chapter": {
       if (!input.chapter || !queue || !plot) throw new Error("draft-chapter requires a chapter number and valid queue.");

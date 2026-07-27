@@ -202,13 +202,27 @@ The read-only `npm run audit:prose -- <project-root>` command provides determini
 
 A drafted chapter is submitted as event content, never written to the project root first. Its path must be `books/<book-id>/manuscript/chapters/<file>.md`, and the file name must **begin with the chapter number** followed by a separator — `001-the-midnight-hatch.md` or `001.md`. The leading number must equal the event's `chapter`. A name that merely contains the word "chapter", such as `chapter-001.md`, does not match and is rejected.
 
-Prefer `novel_advance_chapter_step` over composing a whole chapter yourself: it runs bounded context, isolated model jobs, critics, repair, and ordered acceptance. It requires an executable chapter contract at `books/<book-id>/contracts/chapters/CH-NNN.yaml` with `small_model_ready: true`. That contract is authored, not generated — `start_state_ids`, `required_end_state`, `forbidden_changes`, and `knowledge_boundary_ids` carry decisions no compiler can infer from the packet — and its path is allowlisted for `chapter-queue` events.
+Prefer `novel_advance_chapter_step` over composing a whole chapter yourself: it runs bounded context, isolated model jobs, critics, repair, and ordered acceptance. It requires an executable chapter contract at `books/<book-id>/contracts/chapters/CH-NNN.yaml` with `small_model_ready: true`.
+
+A `chapter-queue` event now compiles a contract skeleton for every ready packet, so that directory is never empty and an empty listing is never a reason to skip the guarded path. The skeleton carries only what the packet determines. The four fields that require judgement — `start_state_ids`, `required_end_state`, `forbidden_changes`, `knowledge_boundary_ids` — are deliberately left empty and listed in `missing_small_model_fields`, because inventing them would make guarded execution appear available while running against a hollow contract. Complete them in a `chapter-queue` event, which allowlists that path, then set `small_model_ready: true` with an empty `missing_small_model_fields`. The event reports which contracts still need completion.
 
 If no executable contract exists, you may draft the chapter with a `draft-chapter` event, but say plainly in your summary that the chapter was drafted without guarded scene execution, so the writer knows critics and repair did not run. Never silently substitute hand-drafting for the guarded path. Both `novel_validate_event` and `novel_apply_event` return this disclosure as an advisory on every `draft-chapter` event that skips guarded execution; repeat it to the writer rather than dropping it.
 
 ### Chapter length
 
 A draft is measured against its packet's `target_words`. Between 85% and 110% of target it passes silently. Outside that band the event still applies but returns an advisory you must report to the writer. Below 60% or above 150% the event is **rejected**: at that distance the draft is not the chapter the packet describes. Write the chapter the packet plans, or change `target_words` through a `plan-change` event if the plan is what is wrong — do not quietly deliver a chapter at a fraction of its planned length.
+
+### Deterministic prose lint
+
+Every `draft-chapter` event lints the submitted chapter before it applies, and returns what it finds as advisories. The rules cover mechanical defects, style tells measured against absolute published-fiction reference bands (em-dash density, `not X but Y`, three-part cadence, aphoristic paragraph closes, filter words, essayistic transitions, sentence-length uniformity), and per-character dialogue differentiation.
+
+These are **review evidence, not authorship detection**, and the tool never claims a passage was machine-written. A deliberate voice choice can legitimately sit outside a band. Report the findings and your reading of them; do not rewrite prose mechanically to move a number, and never treat a band as a quota.
+
+Lint runs against the text you submit, not the copy on disk. If no accepted voice baseline exists at `series/voice-guardrails.yaml`, the event says so: only the absolute bands applied, and voice-drift rules could not run. Silence and "the strongest rules were disabled" are different facts — report which one you got.
+
+### Character voice
+
+Dialogue is measured per speaker. When two adequately-sampled characters cannot be told apart by sentence length, contraction rate, question rate, word length, and vocabulary range, the event reports the pair. Characters who share one register read as a single writing voice wearing different names. A deliberate pairing is legitimate; say which it is rather than dropping the finding.
 
 ### Advisories
 
@@ -272,7 +286,17 @@ Before mutation, preview structure, order, numbers, titles, word counts, assets,
 
 Reject unsafe archives, symlinks, encryption, path traversal, XML external declarations, remote resources, excessive size/count/media, suspicious compression, empty sources, unsupported types, and occupied destinations. Apply chapters, assets, reports, metadata candidates, counts, status, handoff, and checkpoint atomically.
 
+## Structural rhythm
+
+A book plan is checked for metronomic structure before approval. Chapter drafts are held to 85%–110% of their packet target, so a plan whose chapters all carry the **same** `target_words` enforces uniform pacing on the finished book — that is **rejected**. Vary targets so the plan reflects the story's shape: a chapter that turns quickly should be shorter than one carrying a sustained set piece.
+
+Low-but-nonzero length variance, a perfectly periodic POV rotation, one causal joint covering most chapters, and repeated chapter-ending beats are reported as advisories rather than rejections. Structural monotony is not a formatting defect; it is what makes a competent book feel manufactured.
+
 ## Reader evidence
+
+A `package` event **requires** that at least one human has responded to a reader experiment. Deterministic lint, critics, and audits describe a manuscript; they are not readers, and no automated check in this project can tell you whether the book works. This rejection carries `human-gate-required` and is not retryable — do not resubmit it. Collect real responses through the reader-kit workflow and record them with a `reader-test` event.
+
+The bar is that evidence exists, not that it is favourable: a `rejected` verdict is still real reader evidence, and whether to publish anyway is the writer's decision. Thin evidence (fewer responses than the experiment's own minimum) and missing delayed responses apply as advisories — report those limitations rather than describing a book as reader-validated.
 
 Store each experiment under `reader-kits/RE-NNN/`. Predeclare target segment, exact sample, variant/blind design, questionnaire version, immediate/delayed minimums, and delay.
 

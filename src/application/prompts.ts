@@ -12,6 +12,7 @@ import { regressionChecklist } from "../review/review.js";
 import { packetWindowDecision } from "./packet-window.js";
 import { selectedPremiseContext } from "./premise-lab.js";
 import { intakePromptContext } from "./intake.js";
+import { draftRepetitionConstraints } from "./draft-context.js";
 import { projectStateHash } from "./events.js";
 import { compilePrompt } from "./prompt-compiler.js";
 import { preparePrompt } from "./prepared-prompt.js";
@@ -149,6 +150,7 @@ export function draftPrompt(context: ChapterContext, runtimeProfile?: RuntimePro
     estimatedTokens: context.report.estimatedTokens,
     excluded: context.report.excluded,
     projectHash: projectStateHash(context.root),
+    repetitionConstraints: draftRepetitionConstraints(context.root),
   });
   return preparePrompt(spec, context.text, runtime).text;
 }
