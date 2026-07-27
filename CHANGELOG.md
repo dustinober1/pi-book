@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.9.1 — Drafting Boundary and Path Diagnostics
+
+### Fixed
+
+- A rejected `draft-chapter` or `revise` manuscript path now states the required directory and the file naming rule: the file name must begin with the chapter number (`001-the-midnight-hatch.md`), not merely contain the word "chapter". `SKILL.md` documents the same rule.
+- `SKILL.md` now forbids creating, moving, renaming, or deleting any file inside the project root by any means other than a guarded event, keeps in-progress prose outside the project root, and states that a rejection never licenses rearranging the working tree.
+- `SKILL.md` no longer directs agents to read the implementation source, which may be a different version than the one installed; it points to the installed skill, the project's files, and `novel_validate_event`.
+- A missing or non-executable chapter contract now explains that the contract is authored rather than generated, which fields it needs, that `chapter-queue` allowlists its path, and that `draft-chapter` is the interim path — with an explicit requirement to disclose that guarded scene execution did not run.
+- `novel_advance_chapter_step` enumerates its `critics` values instead of accepting any string.
+- `SKILL.md` lists `payload-validation` among the retryable rejection codes, matching the v1.9.0 runtime.
+
+### Compatibility and boundaries
+
+- Validation strictness is unchanged; only diagnosis and guidance changed. No project schema, workflow state, or evidence content changes. Existing projects remain compatible.
+
 ## 1.9.0 — Actionable Rejections and Dry-Run Validation
 
 ### Added

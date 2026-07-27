@@ -62,7 +62,16 @@ export function registerChapterStepCommand(pi: ExtensionAPI, options: ChapterSte
       project_root: Type.Optional(Type.String()),
       chapter: Type.Optional(Type.Integer({ minimum: 1 })),
       run_id: Type.Optional(Type.String({ minLength: 1 })),
-      critics: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1, uniqueItems: true })),
+      // Enumerated so a wrong value — a genre profile, for instance — is
+      // impossible to send rather than rejected after the call.
+      critics: Type.Optional(Type.Array(Type.Union([
+        Type.Literal("continuity"),
+        Type.Literal("causality"),
+        Type.Literal("character-intent"),
+        Type.Literal("style"),
+        Type.Literal("factuality"),
+        Type.Literal("all"),
+      ]), { minItems: 1, uniqueItems: true })),
     }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       try {

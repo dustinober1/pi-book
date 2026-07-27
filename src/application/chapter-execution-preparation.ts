@@ -89,13 +89,23 @@ function stableHash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
 }
 
+/**
+ * The chapter contract is authored, not derived: its executable fields carry
+ * decisions no compiler can infer from the packet. Saying only that the file
+ * is required led an author agent to abandon guarded chapter execution and
+ * hand-draft the chapter instead, silently skipping critics and repair — so
+ * both failures below state how to produce the contract and what to do
+ * meanwhile.
+ */
+const CONTRACT_REMEDY = "This contract is authored, not generated. Submit it in a chapter-queue event, which allowlists that path, filling start_state_ids, required_end_state, forbidden_changes, and knowledge_boundary_ids, then set small_model_ready: true with an empty missing_small_model_fields. Until an executable contract exists, draft this chapter with a draft-chapter event instead of novel_advance_chapter_step, and say plainly that the chapter was drafted without guarded scene execution.";
+
 function readContract(root: string, bookId: string, chapter: number): ChapterContract {
   const path = chapterContractPath(bookId, chapter);
   const text = readText(join(root, path));
-  if (text === null) throw new Error(`Chapter execution preparation requires ${path}.`);
+  if (text === null) throw new Error(`Chapter execution preparation requires ${path}, which does not exist. ${CONTRACT_REMEDY}`);
   const contract = parseYaml<ChapterContract>(text, ChapterContractSchema, path);
   if (!contract.small_model_ready) {
-    throw new Error(`Chapter contract ${contract.contract_id} is not small-model ready: ${contract.missing_small_model_fields.join(", ") || "missing executable fields"}.`);
+    throw new Error(`Chapter contract ${contract.contract_id} is not small-model ready: ${contract.missing_small_model_fields.join(", ") || "missing executable fields"}. ${CONTRACT_REMEDY}`);
   }
   return contract;
 }

@@ -1,24 +1,29 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v1.9.0
+## Current verified release: v1.9.1
 
-Novel Forge 1.9.0 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 1.9.1 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.9.0
+pi install git:github.com/dustinober1/pi-book@v1.9.1
 ```
 
 For one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v1.9.0
+pi -e git:github.com/dustinober1/pi-book@v1.9.1
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.9.0 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.9.1 release commit.
 
-## 1.9.0 release record
+## 1.9.1 release record
 
-- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.9.0.
+- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.9.1.
+- [x] `SKILL.md` forbids creating, moving, renaming, or deleting any file inside the project root by any means other than a guarded event.
+- [x] `SKILL.md` directs agents to the installed skill and `novel_validate_event` instead of the implementation source.
+- [x] A rejected manuscript path states the required directory and the leading-chapter-number file naming rule.
+- [x] A missing or non-executable chapter contract explains how to author one and what to do meanwhile.
+- [x] `novel_advance_chapter_step` enumerates its critics so an invalid critic cannot be sent.
 - [x] `novel_validate_event` runs the complete event contract without writing, checkpointing, advancing a stage or gate, or consuming retry budget.
 - [x] Schema failures report real instance paths, expand unions against the closest matching shape, and list allowed values for literal unions.
 - [x] Profile packet findings name the chapter they came from.
@@ -41,7 +46,7 @@ Use a copied or backed-up manuscript for the first pilot. Install the tag rather
 - [x] The release workflow reads the package version at run time instead of a hardcoded per-tag workflow file.
 - [x] Node 22.19.0 and Node 24 pass type, unit, integration, end-to-end, evaluation, benchmark, release, and package checks.
 
-Maintained release notes are in `docs/releases/v1.9.0.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
+Maintained release notes are in `docs/releases/v1.9.1.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
 
 ## Verify the current development tree
 

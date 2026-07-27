@@ -133,6 +133,27 @@ function allowedPath(event: NovelEventType, path: string, bookId: string, profil
   return false;
 }
 
+/**
+ * A manuscript chapter file is matched by a leading chapter number in its
+ * basename, not by the word "chapter", so the natural-looking
+ * `chapter-001.md` is rejected. Saying only "is not allowed" leaves an author
+ * agent guessing at a naming rule it cannot see, so name the rule here.
+ */
+function disallowedPathHint(event: NovelEventType, path: string, bookId: string, chapter?: number): string {
+  if (!["draft-chapter", "revise"].includes(event)) return "";
+  const chapterRoot = `books/${bookId}/manuscript/chapters/`;
+  const candidate = normalized(path);
+  // Only a submission that was plausibly meant to be manuscript prose gets the
+  // naming rule; an unrelated control path would just be misdirected by it.
+  if (!candidate.startsWith(`books/${bookId}/manuscript/`) && !candidate.toLowerCase().endsWith(".md")) return "";
+  const number = chapter ?? chapterNumber(path);
+  const example = number === null || number === undefined ? "001" : String(number).padStart(3, "0");
+  if (!candidate.startsWith(chapterRoot)) {
+    return ` A ${event} manuscript file must live in ${chapterRoot} and its file name must begin with the chapter number, for example ${chapterRoot}${example}-a-short-slug.md.`;
+  }
+  return ` A manuscript chapter file name must begin with the chapter number followed by a separator, for example ${example}-a-short-slug.md. The word "chapter" in the name is not a substitute: chapter-${example}.md does not match${chapter === undefined ? "" : `, and the leading number must equal the submitted chapter ${chapter}`}.`;
+}
+
 function overlay(root: string, files: FileChange[], path: string): string | null {
   return files.find((file) => normalized(file.path) === path)?.content ?? readText(join(root, path));
 }
@@ -207,7 +228,9 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
     file.path = normalized(file.path);
     if (seen.has(file.path)) throw new Error(`Duplicate event path: ${file.path}`);
     seen.add(file.path);
-    if (!allowedPath(input.eventType, file.path, book.book_id, book.profile, input.chapter)) throw new Error(`${file.path} is not allowed for ${input.eventType}.`);
+    if (!allowedPath(input.eventType, file.path, book.book_id, book.profile, input.chapter)) {
+      throw new Error(`${file.path} is not allowed for ${input.eventType}.${disallowedPathHint(input.eventType, file.path, book.book_id, input.chapter)}`);
+    }
   }
   const required: Partial<Record<NovelEventType, RegExp>> = {
     "voice-profile": /series\/voice-profile\.md$/,

@@ -49,6 +49,10 @@ The primary author-facing files are `STATUS.md`, `HANDOFF.md`, and the active bo
 
 For model-authored voice, series plan, book plan, chapter queue, drafting, review, reader testing, research evidence, revision, canon lock, and package state transitions, call `novel_apply_event`. Do not edit `PROJECT.yaml`, `BOOK.yaml`, `STATUS.md`, or `HANDOFF.md` directly.
 
+**Never create, move, rename, or delete any file inside the project root by any other means.** This covers every path under it — manuscript prose, control YAML, and directories — and every mechanism: a file-write tool, `mv`, `cp`, `rm`, `mkdir`, a shell redirect, or an editor. The project root is transactional state, not a scratch directory: every byte that belongs there arrives as `files` on an event so it is validated, committed, and revertable. Prose you are still composing lives in your own context or under a temporary directory outside the project root, and reaches the project only as event content. A rejected event means the payload was wrong; it never means rearrange the working tree until the check passes. `rm -rf` inside the project root can destroy untracked work permanently and is never a valid response to a rejection.
+
+Read the installed skill and the project's own files to understand the contract. Do not go looking for the implementation's source — a checkout elsewhere on the machine can be a different version than the one running, so anything inferred from it may be wrong. When a rule is unclear, call `novel_validate_event`: it reports the real contract as enforced by the version actually installed.
+
 Use event type `research-update` only for its allowlisted taste, voice-guardrail, voice-experiment, research-ledger, book-strategy, voice-audit, and source-register evidence. It is state-neutral: it must not write manuscript prose, advance stage, alter gates or approvals, or change book status.
 
 For a `historical-fiction` book, `research-update` may also update that book's `historical-context.yaml`, `invention-ledger.yaml`, and the exact associated writer decision in `series/decision-ledger.yaml`. It remains state-neutral and must satisfy the complete cross-artifact historical integrity contract atomically.
@@ -88,7 +92,7 @@ A rejection lists every problem the validator found across all layers — requir
 Because each guarded file is hand-authored YAML text, not structured data the tool serializes for you, two mistakes cause an avoidable rejection and burn the one permitted retry:
 
 - Any scalar string value containing `: ` (a colon followed by a space) must be quoted, or the YAML parser reads it as a nested mapping and rejects the whole file. Prefer quoting any prose field (`description`, titles, hooks) that may contain a colon, dash-colon, or time-like text.
-- Use only the exact field names defined by that file's schema for every object, including nested array items (for example `signature_moments`, `productive_disagreements`, `recurring_motifs` in `remarkability.yaml`). Do not add descriptive extra keys such as `notes`, `sensory_note`, or `resolution_note` even when they feel useful; unlisted keys fail schema validation as additional properties. Check the relevant `Type.Object(...)` schema in `src/domain/schemas.ts` (or the matching `v1-3-*`/`historical-fiction` schema module) before writing a nested object you have not written before.
+- Use only the exact field names defined by that file's schema for every object, including nested array items (for example `signature_moments`, `productive_disagreements`, `recurring_motifs` in `remarkability.yaml`). Do not add descriptive extra keys such as `notes`, `sensory_note`, or `resolution_note` even when they feel useful; unlisted keys fail schema validation as additional properties. Before writing a nested object you have not written before, copy the shape from the same file's existing entries and confirm it with `novel_validate_event`, which names the exact offending path and property.
 
 ## Author taste and research foundation
 
@@ -192,9 +196,19 @@ Use stable recurrence pattern IDs only for genuinely repeated problems. A patter
 The read-only `npm run audit:voice -- <project-root>` command may print diagnostics but must not mutate project state or replace guarded workflow events.
 The read-only `npm run audit:prose -- <project-root>` command provides deterministic manuscript signals. Treat findings as review evidence, not authorship detection or prose quotas. Thriller projects use `thriller-evidence.yaml` for exact artifact labels, provenance, access limits, and explicit non-proof statements.
 
+## Chapter drafting outputs
+
+A drafted chapter is submitted as event content, never written to the project root first. Its path must be `books/<book-id>/manuscript/chapters/<file>.md`, and the file name must **begin with the chapter number** followed by a separator — `001-the-midnight-hatch.md` or `001.md`. The leading number must equal the event's `chapter`. A name that merely contains the word "chapter", such as `chapter-001.md`, does not match and is rejected.
+
+Prefer `novel_advance_chapter_step` over composing a whole chapter yourself: it runs bounded context, isolated model jobs, critics, repair, and ordered acceptance. It requires an executable chapter contract at `books/<book-id>/contracts/chapters/CH-NNN.yaml` with `small_model_ready: true`. That contract is authored, not generated — `start_state_ids`, `required_end_state`, `forbidden_changes`, and `knowledge_boundary_ids` carry decisions no compiler can infer from the packet — and its path is allowlisted for `chapter-queue` events.
+
+If no executable contract exists, you may draft the chapter with a `draft-chapter` event, but say plainly in your summary that the chapter was drafted without guarded scene execution, so the writer knows critics and repair did not run. Never silently substitute hand-drafting for the guarded path.
+
 ## Structured event rejections
 
-Treat `EventRejectionDetail.code` as the controlling retry signal. Correct and resubmit only `schema-validation` or `reference-validation`, and do so at most once using the same accepted project state. For `stale-stage` or `stale-project-hash`, reload canonical state and rebuild the proposal with the returned current values. For `wrong-stage`, `allowlist-violation`, `human-gate-required`, `integrity-failure`, `filesystem-failure`, or `unknown`, stop automatic work and surface the rejection.
+Treat `EventRejectionDetail.code` as the controlling retry signal. Correct and resubmit only `schema-validation`, `reference-validation`, or `payload-validation`, and do so at most once using the same accepted project state. For `stale-stage` or `stale-project-hash`, reload canonical state and rebuild the proposal with the returned current values. For `wrong-stage`, `allowlist-violation`, `human-gate-required`, `integrity-failure`, `filesystem-failure`, or `unknown`, stop automatic work and surface the rejection.
+
+A rejection lists every problem found across all validation layers, so fix all of them in one pass rather than resubmitting per problem. An `allowlist-violation` means the submitted path is wrong: correct the path in the payload and surface the rejection. It never authorizes moving, renaming, or deleting files in the project root to make the check pass.
 
 Never infer retryability from message text. Never bypass the allowlist or a human gate. Structured eligibility does not authorize automatic retry execution. Preserve the concise validator message for the writer while using `issues`, `invalidPaths`, `requiresReload`, and `retryable` for deterministic handling. Unknown values must remain sanitized and must not expose stacks, absolute paths, raw objects, credentials, or filesystem internals.
 

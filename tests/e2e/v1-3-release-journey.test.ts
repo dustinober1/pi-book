@@ -9,7 +9,7 @@ test("a clean current project exercises the honest 1.3 evidence journey", async 
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-v13-journey-"));
   try {
     const report = await runV13CleanProjectJourney(parent);
-    assert.equal(report.initializedVersion, "1.9.0");
+    assert.equal(report.initializedVersion, "1.9.1");
     assert.deepEqual(report.invariantFailures, []);
     for (const id of [
       "initialize-project",
