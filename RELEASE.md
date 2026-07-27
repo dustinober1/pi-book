@@ -1,24 +1,31 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v1.9.1
+## Current verified release: v1.10.0
 
-Novel Forge 1.9.1 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 1.10.0 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v1.9.1
+pi install git:github.com/dustinober1/pi-book@v1.10.0
 ```
 
 For one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v1.9.1
+pi -e git:github.com/dustinober1/pi-book@v1.10.0
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.9.1 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 1.10.0 release commit.
 
-## 1.9.1 release record
+## 1.10.0 release record
 
-- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.9.1.
+- [x] Package metadata, package lock, runtime version, and new-project metadata report 1.10.0.
+- [x] A `draft-chapter` event measures the submitted chapter against its packet `target_words`: silent inside 85%–110%, advisory outside it, rejected below 60% or above 150%.
+- [x] Every event checks its submitted paths against Git and rejects a path holding uncommitted changes that differ from the submission.
+- [x] A submitted path written out of band with matching content applies with an advisory rather than a rejection.
+- [x] `novel_apply_event` and `novel_validate_event` render advisories in the tool result text, not only in structured details.
+- [x] A `draft-chapter` event without an executable chapter contract discloses that no scene critics, targeted repair, or ordered acceptance ran, and names the missing contract path.
+- [x] Both new blockers classify as retryable `payload-validation` and name their remedy, including `plan-change` for a wrong `target_words`.
+- [x] `SKILL.md` documents the chapter-length bands, states that the project-root boundary is enforced through Git, requires advisories to reach the writer, and requires summaries to separate tool-verified claims from the agent's own assessment.
 - [x] `SKILL.md` forbids creating, moving, renaming, or deleting any file inside the project root by any means other than a guarded event.
 - [x] `SKILL.md` directs agents to the installed skill and `novel_validate_event` instead of the implementation source.
 - [x] A rejected manuscript path states the required directory and the leading-chapter-number file naming rule.
@@ -32,7 +39,7 @@ Use a copied or backed-up manuscript for the first pilot. Install the tag rather
 - [x] Structural pre-checks — wrong stage, stale stage, stale project hash, duplicate path, allowlist violation — still stop immediately instead of aggregating.
 - [x] The retryable rejection instruction requires resubmitting the complete required file set, not only the corrected payload.
 - [x] `SKILL.md` lists the required output set for `voice-profile`, `series-plan`, and `book-plan`, including the historical-fiction additions.
-- [x] Validation strictness is unchanged: the same events are accepted and rejected as before.
+- [x] Validation strictness changed only in the two ways recorded above; every other event is accepted and rejected as before, and no project schema, workflow state, or evidence content changed.
 - [x] `SKILL.md` states explicitly that `series/decision-ledger.yaml` is never an allowed file for a `book-plan` event, and that decision-ledger evidence must go through its own prior `intake-update` (or historical-fiction `research-update`) event.
 - [x] `SKILL.md` requires quoting YAML scalars containing `: ` and using only schema-exact field names for guarded event payloads.
 - [x] The `remarkability.yaml` template documents the exact allowed keys for `signature_moments`, `productive_disagreements`, and `recurring_motifs`.
@@ -46,7 +53,7 @@ Use a copied or backed-up manuscript for the first pilot. Install the tag rather
 - [x] The release workflow reads the package version at run time instead of a hardcoded per-tag workflow file.
 - [x] Node 22.19.0 and Node 24 pass type, unit, integration, end-to-end, evaluation, benchmark, release, and package checks.
 
-Maintained release notes are in `docs/releases/v1.9.1.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
+Maintained release notes are in `docs/releases/v1.10.0.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
 
 ## Verify the current development tree
 

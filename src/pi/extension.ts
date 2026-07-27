@@ -40,6 +40,16 @@ import { flagValue, parseDraftOptions, parseQualityOverride, parseRunOptions, qu
 
 function errorText(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 
+/**
+ * Advisories are accepted-event findings the writer would otherwise never see,
+ * so they are rendered in the tool result the agent has to read rather than
+ * left in the structured details it can skip.
+ */
+function advisoryText(advisories: readonly string[] | undefined): string {
+  if (!advisories?.length) return "";
+  return `\n\nReport these to the writer in your summary:\n${advisories.map((item) => `- ${item}`).join("\n")}`;
+}
+
 function sendDecision(pi: ExtensionAPI, context: ExtensionCommandContext, decision: RunDecision): void {
   if (!decision.prompt) {
     context.ui.notify(decision.message, decision.action === "blocked" ? "warning" : "info");
@@ -233,7 +243,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
           ...(params.scope ? { scope: params.scope } : {}),
         });
         if (result.valid) {
-          const text = `Validated ${params.event_type}: no problems found. Nothing was applied — call novel_apply_event with the same files to apply it.\nChecked: ${result.submittedPaths.join(", ")}`;
+          const text = `Validated ${params.event_type}: no problems found. Nothing was applied — call novel_apply_event with the same files to apply it.\nChecked: ${result.submittedPaths.join(", ")}${advisoryText(result.advisories)}`;
           return { content: [{ type: "text", text }], details: result };
         }
         const missing = result.missingRequiredPaths.length ? `\nMissing required outputs: ${result.missingRequiredPaths.join(", ")}` : "";
@@ -273,7 +283,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
           ...(params.chapter !== undefined ? { chapter: params.chapter } : {}),
           ...(params.scope ? { scope: params.scope } : {}),
         });
-        const text = `Applied ${params.event_type}.\nStage: ${result.stage}\nChanged: ${result.changed.join(", ")}\nProject hash: ${result.projectHash}\nGit: ${result.gitMessage}`;
+        const text = `Applied ${params.event_type}.\nStage: ${result.stage}\nChanged: ${result.changed.join(", ")}\nProject hash: ${result.projectHash}\nGit: ${result.gitMessage}${advisoryText(result.advisories)}`;
         return { content: [{ type: "text", text }], details: result };
       } catch (error) {
         let currentStage = String(params.expected_stage || "unknown");

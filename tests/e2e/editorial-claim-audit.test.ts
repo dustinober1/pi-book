@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { padDraft } from "../support/draft-fixture.js";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import YAML from "yaml";
@@ -12,8 +13,8 @@ import { stringifyYaml } from "../../src/infrastructure/yaml.js";
 import { readProject } from "../../src/project/store.js";
 import { createDraftableQualityProject } from "../quality-project-fixture.js";
 
-const initialChapter = "# Chapter 1\n\nThe release console required three operators.\n";
-const repairedChapter = "# Chapter 1\n\nThe release console required two authorized operators.\n";
+const initialChapter = padDraft("# Chapter 1\n\nThe release console required three operators.\n", 1800);
+const repairedChapter = padDraft("# Chapter 1\n\nThe release console required two authorized operators.\n", 1800);
 
 function hash(value: string): string { return createHash("sha256").update(value).digest("hex"); }
 function metadata(prompt: string): Record<string, unknown> {

@@ -13,6 +13,7 @@ import { countWords } from "../src/infrastructure/files.js";
 import { writeQualityJobPlanManifest } from "../src/infrastructure/quality-job-plan-store.js";
 import { initializeProject, readProject } from "../src/project/store.js";
 import { completePlot, queueFixture } from "./phase4-fixtures.js";
+import { padDraft } from "./support/draft-fixture.js";
 
 function hash(value: string): string { return createHash("sha256").update(value).digest("hex"); }
 
@@ -94,7 +95,7 @@ class ScriptedWorker implements QualityWorker {
     else if (type === "lane-critique") {
       const lane = String(meta.lane);
       text = JSON.stringify({ ...common, artifact_type: "lane-critique", candidate_id: meta.candidate_id, lane, findings: [{ severity: "medium", evidence: `${lane.toUpperCase()}-MARKER`, required_change: `Address ${lane}.` }], verdict: "revise" });
-    } else if (type === "event-output") text = JSON.stringify({ schema_version: "1.0.0", chapter: 1, files: [{ path: "books/book-01/manuscript/chapters/01-chapter-1.md", content: "# Chapter 1\n\nCAND-02 makes the archive door lie, and Mara pays for believing it.\n" }], summary: "Applied isolated critique without changing the endpoint." });
+    } else if (type === "event-output") text = JSON.stringify({ schema_version: "1.0.0", chapter: 1, files: [{ path: "books/book-01/manuscript/chapters/01-chapter-1.md", content: padDraft("# Chapter 1\n\nCAND-02 makes the archive door lie, and Mara pays for believing it.\n", 1800) }], summary: "Applied isolated critique without changing the endpoint." });
     else if (type === "claim-extraction") text = JSON.stringify({ ...common, artifact_type: "claim-extraction", claims: [] });
     else if (type === "claim-audit") text = JSON.stringify({ ...common, artifact_type: "claim-audit", findings: [] });
     else throw new Error(`Unexpected output type ${type}.`);

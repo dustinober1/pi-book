@@ -7,6 +7,7 @@ import { applyNovelEvent, projectStateHash } from "../src/application/events.js"
 import { chapterContractPath, type ChapterContract } from "../src/domain/chapter-contract.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readProject } from "../src/project/store.js";
+import { commitFixture } from "./support/draft-fixture.js";
 
 function setup(stage: "chapter-queue" | "canon-lock"): { parent: string; root: string } {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-story-semantics-"));
@@ -94,6 +95,7 @@ function setup(stage: "chapter-queue" | "canon-lock"): { parent: string; root: s
       }],
     }), "utf8");
   }
+  commitFixture(root, "story semantics fixture");
   return { parent, root };
 }
 

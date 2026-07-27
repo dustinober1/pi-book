@@ -1,12 +1,23 @@
 {
   "name": "novel-forge-for-pi",
-  "version": "1.9.1",
+  "version": "1.10.0",
   "description": "A guided, series-capable Pi workflow for high-quality thriller, romantasy, and historical-fiction novels.",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
-  "repository": { "type": "git", "url": "https://github.com/dustinober1/pi-book.git" },
-  "keywords": ["pi-package", "novel-writing", "thriller", "romantasy", "historical-fiction", "series-writing", "continuity"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dustinober1/pi-book.git"
+  },
+  "keywords": [
+    "pi-package",
+    "novel-writing",
+    "thriller",
+    "romantasy",
+    "historical-fiction",
+    "series-writing",
+    "continuity"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts tests/e2e/*.test.ts",
@@ -27,10 +38,17 @@
     "benchmark:constrained-runtime": "node --import tsx scripts/benchmark-constrained-runtime.ts",
     "benchmark:prompts": "node --import tsx scripts/benchmark-prompts.ts",
     "eval:journeys": "node --import tsx --test tests/author-journey.test.ts tests/e2e/author-velocity-baseline.test.ts",
-    "verify:release": "node --import tsx scripts/verify-v1-9-1-release.ts",
-    "test:release": "node --import tsx --test tests/v1-9-1-release-checklist.test.ts tests/v1-9-0-release-checklist.test.ts tests/v1-8-0-release-checklist.test.ts tests/v1-7-4-release-checklist.test.ts tests/v1-7-3-release-checklist.test.ts tests/v1-7-2-release-checklist.test.ts tests/v1-7-1-release-checklist.test.ts tests/v1-7-release-checklist.test.ts tests/v1-6-2-release-checklist.test.ts tests/v1-6-1-release-checklist.test.ts tests/v1-5-release-checklist.test.ts tests/e2e/v1-5-release-journey.test.ts tests/package-smoke.test.ts tests/e2e/packed-clean-start.test.ts"
+    "verify:release": "node --import tsx scripts/verify-v1-10-0-release.ts",
+    "test:release": "node --import tsx --test tests/v1-10-0-release-checklist.test.ts tests/v1-9-1-release-checklist.test.ts tests/v1-9-0-release-checklist.test.ts tests/v1-8-0-release-checklist.test.ts tests/v1-7-4-release-checklist.test.ts tests/v1-7-3-release-checklist.test.ts tests/v1-7-2-release-checklist.test.ts tests/v1-7-1-release-checklist.test.ts tests/v1-7-release-checklist.test.ts tests/v1-6-2-release-checklist.test.ts tests/v1-6-1-release-checklist.test.ts tests/v1-5-release-checklist.test.ts tests/e2e/v1-5-release-journey.test.ts tests/package-smoke.test.ts tests/e2e/packed-clean-start.test.ts"
   },
-  "pi": { "skills": ["."], "extensions": ["extensions/novel-forge.ts"] },
+  "pi": {
+    "skills": [
+      "."
+    ],
+    "extensions": [
+      "extensions/novel-forge.ts"
+    ]
+  },
   "files": [
     "SKILL.md",
     "README.md",
@@ -74,5 +92,7 @@
     "@types/turndown": "^5.0.6",
     "typescript": "^5.9.3"
   },
-  "peerDependencies": { "@earendil-works/pi-coding-agent": "^0.80.3" }
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.3"
+  }
 }

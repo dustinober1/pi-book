@@ -241,7 +241,7 @@ export function approvePlanChangeRequest(root: string, requestId: string, input:
     writePlanChangeRequest(root, applied);
     return {
       request: applied,
-      event: { changed: [recordPath, ...existing.control_file_hashes.map((item) => item.path)], stage: project.current_stage, projectHash: projectStateHash(root), gitMessage: "Recovered previously applied plan change." },
+      event: { changed: [recordPath, ...existing.control_file_hashes.map((item) => item.path)], stage: project.current_stage, projectHash: projectStateHash(root), gitMessage: "Recovered previously applied plan change.", advisories: [] },
       recovered: true,
     };
   }

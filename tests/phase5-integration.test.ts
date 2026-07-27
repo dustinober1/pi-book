@@ -9,6 +9,7 @@ import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readProject } from "../src/project/store.js";
 import { completePlot, queueFixture, researchFixture, sourcesFixture } from "./phase4-fixtures.js";
 import { learningStrategy, recurrenceTickets } from "./phase5-fixtures.js";
+import { padDraft } from "./support/draft-fixture.js";
 
 function setup(parent: string, stage: "drafting" | "act-review" | "manuscript-review" = "drafting") {
   const root = initializeProject(parent, { projectName: "Phase 5 Integration", projectType: "standalone", profile: "thriller" });
@@ -56,7 +57,7 @@ function draft(root: string, chapter: number) {
   architecture(root, chapter);
   return applyNovelEvent(root, {
     eventType: "draft-chapter", expectedStage: "drafting", expectedProjectHash: projectStateHash(root), chapter,
-    files: [{ path: `books/book-01/manuscript/chapters/${String(chapter).padStart(2, "0")}-chapter.md`, content: `# Chapter ${chapter}\n\nMara watched the door.\n\n\"Move,\" Jonah said.\n\nWhy now? Her hand tightened on the file.` }],
+    files: [{ path: `books/book-01/manuscript/chapters/${String(chapter).padStart(2, "0")}-chapter.md`, content: padDraft(`# Chapter ${chapter}\n\nMara watched the door.\n\n\"Move,\" Jonah said.\n\nWhy now? Her hand tightened on the file.`, 1800) }],
   });
 }
 

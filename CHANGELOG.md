@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.10.0 — Chapter Length and Working-Tree Enforcement
+
+### Changed
+
+- A `draft-chapter` event now measures the submitted chapter against its packet's `target_words`. Inside 85%–110% of target it passes silently, as before. Outside that band the event still applies and returns an advisory. Below 60% or above 150% of target the event is **rejected** as a retryable `payload-validation` problem. Previously nothing anywhere compared a hand-drafted chapter to its plan: only the guarded scene path enforced a range, so a book planned at 9,000 words per chapter could accumulate 5,000-word chapters silently.
+- Every event now checks its submitted paths against Git. A path already holding uncommitted changes was written outside a guarded event: if that content differs from the submission the event is rejected, because applying it would discard the uncommitted work; if it matches, the event applies with an advisory. `projectStateHash` cannot see these writes — it excludes `chapter-queue.yaml`, `plot-grid.yaml`, `remarkability.yaml`, and the manuscript tree — so the transaction boundary was previously guidance only.
+
+### Added
+
+- `novel_apply_event` and `novel_validate_event` return advisories: accepted-event findings that need no resubmission but that the writer would otherwise never see. They are rendered in the tool result text, under `Report these to the writer in your summary:`, rather than only in structured details.
+- A `draft-chapter` event with no executable chapter contract now discloses that the chapter was drafted without guarded scene execution — no scene critics, no targeted repair, no ordered acceptance — naming the missing contract path. `SKILL.md` already required agents to say this, but the only machine text that said it came from `novel_advance_chapter_step`, which an agent skips entirely once it sees an empty contracts directory.
+- `SKILL.md` documents the chapter-length bands, states that the project-root boundary is enforced rather than merely requested, requires advisories to be reproduced for the writer, and requires summaries to distinguish tool-verified claims from the agent's own assessment of its prose.
+
+### Compatibility and boundaries
+
+- This release adds validation: a `draft-chapter` event more than 40% under or 50% over its packet target, and any event whose submitted path holds differing uncommitted work, are now rejected where they previously applied. Both are retryable and both name their remedy; `target_words` remains changeable through a `plan-change` event. No project schema, workflow state, or evidence content changes. Existing projects remain compatible.
+
 ## 1.9.1 — Drafting Boundary and Path Diagnostics
 
 ### Fixed

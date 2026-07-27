@@ -63,6 +63,8 @@ const PAYLOAD_BLOCKERS = [
   "book strategy validation blocked",
   "packet-window validation blocked",
   "research and reader-friction validation blocked",
+  "draft-length validation blocked",
+  "working-tree validation blocked",
   "is missing required output",
   "is missing its required output file",
   "validation problems must all be fixed",

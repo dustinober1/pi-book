@@ -29,6 +29,7 @@ import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-
 import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
 import { DecisionLedgerSchema, IntakeSchema, PremiseLabSchema, intakeDecisionFindings, type DecisionLedger, type IntakeState, type PremiseLab } from "../domain/v1-4-schemas.js";
 import { HistoricalContextSchema, InventionLedgerSchema, type HistoricalContext, type InventionLedger } from "../domain/historical-fiction.js";
+import { ChapterContractSchema, chapterContractPath, type ChapterContract } from "../domain/chapter-contract.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import type { FileChange } from "../infrastructure/transaction.js";
 import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
@@ -47,6 +48,8 @@ import { projectStateHash } from "./project-hash.js";
 import { premiseLabFindings } from "./premise-lab.js";
 import { normalizeEventRejection, type EventRejectionDetail } from "./event-rejection.js";
 import { ValidationAggregator } from "./validation-aggregate.js";
+import { draftLengthFinding } from "./draft-length.js";
+import { outOfBandWriteFindings } from "./working-tree-guard.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
 import { readerFrictionFindings } from "./review-observations.js";
 import { researchEvidenceFindings } from "./research-evidence.js";
@@ -69,7 +72,7 @@ export interface NovelEventInput {
   scope?: string;
   planChangeApproval?: WriterApprovalEvidence;
 }
-export interface NovelEventResult { changed: string[]; stage: Stage; projectHash: string; gitMessage: string }
+export interface NovelEventResult { changed: string[]; stage: Stage; projectHash: string; gitMessage: string; advisories: string[] }
 
 const eventStages: Record<NovelEventType, Stage[]> = {
   "voice-profile": ["voice-intake"],
@@ -341,6 +344,26 @@ function chapterNumber(path: string): number | null {
   return match ? Number.parseInt(match[1] ?? "", 10) : null;
 }
 
+/**
+ * Reports why a chapter was hand-drafted instead of executed through the
+ * guarded scene path, or null when no such report is owed. `draft-chapter` is a
+ * legitimate route, but it runs no scene critics, no targeted repair, and no
+ * ordered acceptance, and the writer has no other way to learn that.
+ */
+function guardedExecutionSkipReason(root: string, bookId: string, chapter: number): string | null {
+  const path = chapterContractPath(bookId, chapter);
+  const text = readText(join(root, path));
+  const preamble = `Chapter ${chapter} was drafted without guarded scene execution: no scene critics, no targeted repair, and no ordered acceptance ran.`;
+  if (text === null) return `${preamble} No executable chapter contract exists at ${path}. Say so plainly in your summary to the writer.`;
+  let contract: ChapterContract;
+  try { contract = parseYaml<ChapterContract>(text, ChapterContractSchema, path); }
+  catch { return `${preamble} The chapter contract at ${path} could not be read. Say so plainly in your summary to the writer.`; }
+  if (contract.small_model_ready) {
+    return `${preamble} An executable contract exists at ${path}, so novel_advance_chapter_step was available and was not used. Say so plainly in your summary to the writer.`;
+  }
+  return `${preamble} The contract at ${path} is not small-model ready (${contract.missing_small_model_fields.join(", ") || "missing executable fields"}). Say so plainly in your summary to the writer.`;
+}
+
 function projectedWordCount(root: string, bookId: string, changes: FileChange[]): number {
   const rootPath = join(root, "books", bookId);
   const content = new Map<number, string>();
@@ -428,6 +451,7 @@ interface ValidatedEvent {
   changes: FileChange[];
   queue: ChapterQueueState | null;
   plot: PlotGridPhase4 | null;
+  advisories: string[];
 }
 
 /**
@@ -446,8 +470,28 @@ function runEventValidation(root: string, input: NovelEventInput): ValidatedEven
     const architecture = validateArchitecture(root, changes, book, input.eventType, findings, input.chapter);
     if (architecture) ({ queue, plot } = architecture);
   }
+
+  const advisories: string[] = [];
+  for (const finding of outOfBandWriteFindings(root, changes)) {
+    if (finding.severity === "blocker") findings.add(`Working-tree validation blocked ${input.eventType}:\n- ${finding.message}`);
+    else advisories.push(finding.message);
+  }
+  if (input.eventType === "draft-chapter" && input.chapter) {
+    const packet = queue?.packets.find((item) => item.chapter === input.chapter);
+    const draft = changes.find((change) => change.path.startsWith(`books/${book.book_id}/manuscript/chapters/`));
+    const finding = packet && draft ? draftLengthFinding(packet.chapter, packet.target_words, draft.content) : null;
+    if (finding?.severity === "blocker") findings.add(`Draft-length validation blocked draft-chapter:\n- ${finding.message}`);
+    else if (finding) advisories.push(finding.message);
+    // SKILL.md requires the agent to disclose that critics and repair did not
+    // run, but the v1.9.1 remedy text only fired from novel_advance_chapter_step
+    // — which an agent skips entirely once it sees an empty contracts directory.
+    // The disclosure has to come from the path the agent cannot avoid.
+    const skipped = guardedExecutionSkipReason(root, book.book_id, input.chapter);
+    if (skipped) advisories.push(skipped);
+  }
+
   findings.throwIfAny();
-  return { project, book, changes, queue, plot };
+  return { project, book, changes, queue, plot, advisories };
 }
 
 export interface NovelEventValidation {
@@ -456,6 +500,7 @@ export interface NovelEventValidation {
   submittedPaths: string[];
   missingRequiredPaths: string[];
   rejection: EventRejectionDetail | null;
+  advisories: string[];
 }
 
 /**
@@ -474,8 +519,8 @@ export function validateNovelEvent(root: string, input: NovelEventInput): NovelE
     // A project that cannot be read is reported through the rejection below.
   }
   try {
-    runEventValidation(root, input);
-    return { valid: true, eventType: input.eventType, submittedPaths, missingRequiredPaths: missing, rejection: null };
+    const { advisories } = runEventValidation(root, input);
+    return { valid: true, eventType: input.eventType, submittedPaths, missingRequiredPaths: missing, rejection: null, advisories };
   } catch (error) {
     let currentStage = String(input.expectedStage || "unknown");
     let currentProjectHash = String(input.expectedProjectHash || "unknown");
@@ -486,12 +531,12 @@ export function validateNovelEvent(root: string, input: NovelEventInput): NovelE
       // The normalizer classifies project-read failures without exposing paths.
     }
     const rejection = normalizeEventRejection(error, { root, currentStage, currentProjectHash });
-    return { valid: false, eventType: input.eventType, submittedPaths, missingRequiredPaths: missing, rejection: rejection.detail };
+    return { valid: false, eventType: input.eventType, submittedPaths, missingRequiredPaths: missing, rejection: rejection.detail, advisories: [] };
   }
 }
 
 function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEventResult {
-  const { project, book, changes, queue: validatedQueue, plot } = runEventValidation(root, input);
+  const { project, book, changes, queue: validatedQueue, plot, advisories } = runEventValidation(root, input);
   let queue = validatedQueue;
 
   switch (input.eventType) {
@@ -610,7 +655,7 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
   }
   const message = `Novel Forge: ${input.eventType}${input.chapter ? ` chapter-${input.chapter}` : ""}`;
   const applied = applyGuidedProjectEvent(root, changes, message, { lastAction: `${input.eventType}${input.chapter ? ` chapter ${input.chapter}` : ""}` });
-  return { changed: applied.changed, stage: project.current_stage, projectHash: projectStateHash(root), gitMessage: applied.git.message };
+  return { changed: applied.changed, stage: project.current_stage, projectHash: projectStateHash(root), gitMessage: applied.git.message, advisories };
 }
 
 export function applyNovelEvent(root: string, input: NovelEventInput): NovelEventResult {

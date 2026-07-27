@@ -51,6 +51,8 @@ For model-authored voice, series plan, book plan, chapter queue, drafting, revie
 
 **Never create, move, rename, or delete any file inside the project root by any other means.** This covers every path under it — manuscript prose, control YAML, and directories — and every mechanism: a file-write tool, `mv`, `cp`, `rm`, `mkdir`, a shell redirect, or an editor. The project root is transactional state, not a scratch directory: every byte that belongs there arrives as `files` on an event so it is validated, committed, and revertable. Prose you are still composing lives in your own context or under a temporary directory outside the project root, and reaches the project only as event content. A rejected event means the payload was wrong; it never means rearrange the working tree until the check passes. `rm -rf` inside the project root can destroy untracked work permanently and is never a valid response to a rejection.
 
+This is enforced, not merely asked. Every event checks its submitted paths against Git: a path already holding uncommitted changes was written outside a guarded event. If that content differs from what you submitted, the event is **rejected**, because applying it would discard the uncommitted work. If it matches, the event applies with an advisory — the file was still unvalidated on disk in the meantime. Do not stage your work by writing the project tree first.
+
 Read the installed skill and the project's own files to understand the contract. Do not go looking for the implementation's source — a checkout elsewhere on the machine can be a different version than the one running, so anything inferred from it may be wrong. When a rule is unclear, call `novel_validate_event`: it reports the real contract as enforced by the version actually installed.
 
 Use event type `research-update` only for its allowlisted taste, voice-guardrail, voice-experiment, research-ledger, book-strategy, voice-audit, and source-register evidence. It is state-neutral: it must not write manuscript prose, advance stage, alter gates or approvals, or change book status.
@@ -202,7 +204,15 @@ A drafted chapter is submitted as event content, never written to the project ro
 
 Prefer `novel_advance_chapter_step` over composing a whole chapter yourself: it runs bounded context, isolated model jobs, critics, repair, and ordered acceptance. It requires an executable chapter contract at `books/<book-id>/contracts/chapters/CH-NNN.yaml` with `small_model_ready: true`. That contract is authored, not generated — `start_state_ids`, `required_end_state`, `forbidden_changes`, and `knowledge_boundary_ids` carry decisions no compiler can infer from the packet — and its path is allowlisted for `chapter-queue` events.
 
-If no executable contract exists, you may draft the chapter with a `draft-chapter` event, but say plainly in your summary that the chapter was drafted without guarded scene execution, so the writer knows critics and repair did not run. Never silently substitute hand-drafting for the guarded path.
+If no executable contract exists, you may draft the chapter with a `draft-chapter` event, but say plainly in your summary that the chapter was drafted without guarded scene execution, so the writer knows critics and repair did not run. Never silently substitute hand-drafting for the guarded path. Both `novel_validate_event` and `novel_apply_event` return this disclosure as an advisory on every `draft-chapter` event that skips guarded execution; repeat it to the writer rather than dropping it.
+
+### Chapter length
+
+A draft is measured against its packet's `target_words`. Between 85% and 110% of target it passes silently. Outside that band the event still applies but returns an advisory you must report to the writer. Below 60% or above 150% the event is **rejected**: at that distance the draft is not the chapter the packet describes. Write the chapter the packet plans, or change `target_words` through a `plan-change` event if the plan is what is wrong — do not quietly deliver a chapter at a fraction of its planned length.
+
+### Advisories
+
+An accepted event may return advisories under `Report these to the writer in your summary:`. They are not rejections and require no resubmission, but they are the only place some facts appear. Reproduce each one in your summary. When you present a table of what the event verified, do not mix it with your own assessment of your prose: state which claims the tool checked and which are your own judgment.
 
 ## Structured event rejections
 

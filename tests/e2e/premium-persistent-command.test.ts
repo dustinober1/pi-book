@@ -9,6 +9,7 @@ import { stringifyYaml } from "../../src/infrastructure/yaml.js";
 import { readProject } from "../../src/project/store.js";
 import { registerNovelForgeWithRecalibration } from "../../src/pi/recalibration-extension.js";
 import { createDraftableQualityProject } from "../quality-project-fixture.js";
+import { padDraft } from "../support/draft-fixture.js";
 
 function hash(value: string): string { return createHash("sha256").update(value).digest("hex"); }
 function metadata(prompt: string): Record<string, unknown> {
@@ -31,7 +32,7 @@ class CommandPersistentWorker implements QualityWorker {
     else if (type === "draft-candidate") text = JSON.stringify({ ...common, artifact_type: "draft-candidate", candidate_id: meta.candidate_id, text: `# Chapter ${chapter}\n\nCandidate.\n`, proposed_delta: { canon: [], relationships: [], threads: [] } });
     else if (type === "candidate-selection") text = JSON.stringify({ ...common, artifact_type: "candidate-selection", candidate_ids: meta.candidate_ids, selected_candidate_id: "CAND-02", rationale: "Sharper.", evidence: ["Concrete consequence."] });
     else if (type === "lane-critique") text = JSON.stringify({ ...common, artifact_type: "lane-critique", candidate_id: meta.candidate_id, lane: meta.lane, findings: [], verdict: "accept" });
-    else if (type === "event-output") text = JSON.stringify({ schema_version: "1.0.0", chapter, files: [{ path: `books/book-01/manuscript/chapters/${String(chapter).padStart(2, "0")}-chapter-${chapter}.md`, content: `# Chapter ${chapter}\n\nPersistent command drafted Chapter ${chapter}.\n` }], summary: "Done." });
+    else if (type === "event-output") text = JSON.stringify({ schema_version: "1.0.0", chapter, files: [{ path: `books/book-01/manuscript/chapters/${String(chapter).padStart(2, "0")}-chapter-${chapter}.md`, content: padDraft(`# Chapter ${chapter}\n\nPersistent command drafted Chapter ${chapter}.\n`, 1800) }], summary: "Done." });
     else if (type === "claim-extraction") text = JSON.stringify({ ...common, artifact_type: "claim-extraction", claims: [] });
     else if (type === "claim-audit") text = JSON.stringify({ ...common, artifact_type: "claim-audit", findings: [] });
     else throw new Error(`unexpected ${type}`);

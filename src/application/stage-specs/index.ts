@@ -9,7 +9,7 @@ interface EventRuleInput {
 
 function eventToolRules(input: EventRuleInput): string[] {
   return [
-    "Do not write project files directly.",
+    "Do not write project files directly. Every event checks its submitted paths against Git and rejects a path that already holds uncommitted changes differing from the submission.",
     `When the content is ready, call the novel_apply_event tool with event_type ${input.eventType}, expected_stage ${input.expectedStage}, expected_project_hash ${input.projectHash}, and only the allowed changed files.`,
     input.extra ?? "",
     "Call novel_validate_event with the same arguments first: it runs the identical contract, writes nothing, and consumes no retry budget. Iterate until it reports no problems, then apply once.",
@@ -17,6 +17,7 @@ function eventToolRules(input: EventRuleInput): string[] {
     "A rejection reports every problem it found, not just the first. If the structured rejection code is retryable (schema-validation, reference-validation, or payload-validation), fix every listed problem and resubmit the complete required file set once.",
     "For stale-stage or stale-project-hash, reload canonical state and rebuild the proposal.",
     "For all other rejection codes, stop automatic work and surface the failure.",
+    "An accepted event may return advisories. They need no resubmission, but they are the only place some facts reach the writer — reproduce each one in your summary.",
   ].filter(Boolean);
 }
 

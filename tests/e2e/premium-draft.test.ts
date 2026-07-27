@@ -7,6 +7,7 @@ import type { ModelCallReport } from "../../src/domain/run-report.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../../src/domain/quality-worker.js";
 import { registerNovelForgeWithRecalibration } from "../../src/pi/recalibration-extension.js";
 import { createDraftableQualityProject } from "../quality-project-fixture.js";
+import { padDraft } from "../support/draft-fixture.js";
 
 function sha(value: string): string { return createHash("sha256").update(value).digest("hex"); }
 function meta(prompt: string): Record<string, unknown> {
@@ -34,7 +35,7 @@ class PremiumWorker implements QualityWorker {
     else if (outputType === "draft-candidate") text = JSON.stringify({ ...common, artifact_type: "draft-candidate", candidate_id: value.candidate_id, text: `# Chapter 1\n\n${value.candidate_id} opens the lying door.\n`, proposed_delta: { canon: [], relationships: [], threads: [] } });
     else if (outputType === "candidate-selection") text = JSON.stringify({ ...common, artifact_type: "candidate-selection", candidate_ids: value.candidate_ids, selected_candidate_id: "CAND-02", rationale: "The consequence is sharper.", evidence: ["Mara pays for entry."] });
     else if (outputType === "lane-critique") text = JSON.stringify({ ...common, artifact_type: "lane-critique", candidate_id: "CAND-02", lane: value.lane, findings: [], verdict: "accept" });
-    else if (outputType === "event-output") text = JSON.stringify({ schema_version: "1.0.0", chapter: 1, files: [{ path: "books/book-01/manuscript/chapters/01-chapter-1.md", content: "# Chapter 1\n\nThe lying door opened, and Mara lost the authority that brought her there.\n" }], summary: "Premium synthesis complete." });
+    else if (outputType === "event-output") text = JSON.stringify({ schema_version: "1.0.0", chapter: 1, files: [{ path: "books/book-01/manuscript/chapters/01-chapter-1.md", content: padDraft("# Chapter 1\n\nThe lying door opened, and Mara lost the authority that brought her there.\n", 1800) }], summary: "Premium synthesis complete." });
     else if (outputType === "claim-extraction") text = JSON.stringify({ ...common, artifact_type: "claim-extraction", claims: [] });
     else if (outputType === "claim-audit") text = JSON.stringify({ ...common, artifact_type: "claim-audit", findings: [] });
     else throw new Error(`Unexpected output type ${outputType}`);

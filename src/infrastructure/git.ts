@@ -58,6 +58,31 @@ export function gitStagedPaths(root: string): string[] {
   catch { return []; }
 }
 
+/**
+ * Returns the subset of `paths` that differ from HEAD in the working tree,
+ * including untracked files. Ignored files are not reported. Returns an empty
+ * list when Git is unavailable or the repository has no commit yet, so callers
+ * degrade to "no evidence of an out-of-band write" rather than to a false alarm.
+ */
+export function gitDirtyPaths(root: string, paths: string[]): string[] {
+  if (!paths.length) return [];
+  try {
+    if (!run(root, ["rev-parse", "--verify", "HEAD"])) return [];
+    const entries = run(root, ["--literal-pathspecs", "status", "--porcelain", "-z", "-uall", "--", ...paths])
+      .split("\0")
+      .filter(Boolean);
+    const dirty: string[] = [];
+    for (let index = 0; index < entries.length; index += 1) {
+      const entry = entries[index] as string;
+      const status = entry.slice(0, 2);
+      dirty.push(entry.slice(3));
+      // A rename or copy is followed by its origin path as a separate record.
+      if (status.includes("R") || status.includes("C")) index += 1;
+    }
+    return dirty;
+  } catch { return []; }
+}
+
 export function gitTrackedPaths(root: string, paths: string[]): string[] {
   if (!paths.length) return [];
   try { return run(root, ["--literal-pathspecs", "ls-files", "-z", "--", ...paths]).split("\0").filter(Boolean); }
