@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { applyRepositoryOrganization } from "../src/application/organizer/apply.js";
 import { renderOrganizationPreview, scanWritingRepository } from "../src/application/organizer/scan.js";
-import { readBook, readProject } from "../src/project/store.js";
+import { initializeProject, readBook, readProject } from "../src/project/store.js";
 
 function temp(): string { return mkdtempSync(join(tmpdir(), "novel-forge-organizer-")); }
 function sha(bytes: Uint8Array | string): string { return createHash("sha256").update(bytes).digest("hex"); }
@@ -210,4 +210,20 @@ test("rejects stale previews and missing destructive confirmations before mutati
     assert.equal(existsSync(join(root, "PROJECT.yaml")), false);
     assert.equal(existsSync(join(root, "01-opening.md")), true);
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("a sibling Novel Forge project does not block organizing an unrelated directory", () => {
+  // requireProjectRoot's cwd-command fallback (added so /novel works right
+  // after /novel-start without a cd) must stay scoped to that resolver and
+  // never leak into findProjectRoot's ancestor-nesting guard here — a sibling
+  // project one level down from a common parent is not an ancestor, and the
+  // organizer must not mistake it for one.
+  const parent = temp();
+  try {
+    initializeProject(parent, { projectName: "Existing Novel", projectType: "standalone", profile: "thriller" });
+    const messy = join(parent, "messy-notes");
+    mkdirSync(messy, { recursive: true });
+    writeFileSync(join(messy, "01-opening.md"), "# Chapter 1\n\nDraft text goes here for scanning purposes.\n", "utf8");
+    assert.doesNotThrow(() => scanWritingRepository(messy));
+  } finally { rmSync(parent, { recursive: true, force: true }); }
 });

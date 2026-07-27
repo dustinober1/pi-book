@@ -1,24 +1,32 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v2.0.0
+## Current verified release: v2.0.1
 
-Novel Forge 2.0.0 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 2.0.1 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v2.0.0
+pi install git:github.com/dustinober1/pi-book@v2.0.1
 ```
 
 For one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v2.0.0
+pi -e git:github.com/dustinober1/pi-book@v2.0.1
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 2.0.0 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 2.0.1 release commit.
+
+## 2.0.1 release record
+
+- [x] Package metadata, package lock, runtime version, and new-project metadata report 2.0.1.
+- [x] `requireProjectRoot` resolves the project `novel-start` just created when the following command runs from the same, unmoved cwd — the exact sequence the README quick start documents.
+- [x] Two or more Novel Forge projects directly under cwd produce a named, actionable ambiguity error instead of a generic "no project found" message.
+- [x] The cwd-fallback lookup is scoped to `requireProjectRoot` and does not affect `findProjectRoot`'s use in the repository organizer's ancestor-nesting guard; a sibling project cannot block organizing an unrelated directory.
+- [x] A cwd with no project above it and no sibling project below it still fails with the original message.
 
 ## 2.0.0 release record
 
-- [x] Package metadata, package lock, runtime version, and new-project metadata report 2.0.0.
+- [x] Package metadata, package lock, runtime version, and new-project metadata reported 2.0.0 at that release.
 - [x] A `chapter-queue` event compiles a chapter contract skeleton for every ready packet, leaving the four judgement fields empty and named in `missing_small_model_fields`.
 - [x] An authored chapter contract, on disk or submitted with the event, is never overwritten by a skeleton.
 - [x] A `chapter-queue` event reports which ready packets still lack an executable contract, in both a dry run and a real apply.
@@ -72,7 +80,7 @@ Use a copied or backed-up manuscript for the first pilot. Install the tag rather
 - [x] The release workflow reads the package version at run time instead of a hardcoded per-tag workflow file.
 - [x] Node 22.19.0 and Node 24 pass type, unit, integration, end-to-end, evaluation, benchmark, release, and package checks.
 
-Maintained release notes are in `docs/releases/v2.0.0.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
+Maintained release notes are in `docs/releases/v2.0.1.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
 
 ## Verify the current development tree
 

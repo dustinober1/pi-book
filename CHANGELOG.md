@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.1 — Novel-Start Project Discovery Fix
+
+### Fixed
+
+- `requireProjectRoot` now resolves the project a `novel-start` invocation just created, even when the command that follows it — `/novel`, `/novel-status`, `/novel-budget`, `/novel-plan`, `/novel-draft`, `/novel-review`, `/novel-revise`, `/novel-package`, `/novel-adopt`, `/novel-wizard`, either guarded-event tool, chapter-step, or plan-change — runs from the same, unmoved shell directory. `novel-start` creates its project one directory below cwd; every resolver previously walked upward from cwd only, so the exact sequence shown in the README quick start (`/novel-start ...` immediately followed by `/novel`, no `cd` in between) failed with "No Novel Forge project found." The fallback resolves automatically when exactly one immediate subdirectory of cwd is a Novel Forge project, and names every candidate in an actionable error when there is more than one.
+- This fallback is scoped to `requireProjectRoot`, not the lower-level `findProjectRoot` used by the repository organizer's ancestor-nesting guard, so a sibling Novel Forge project next to a directory being organized cannot be mistaken for an ancestor and block the scan.
+
+### Compatibility and boundaries
+
+- Pure discovery fix. No project schema, workflow state, event validation, or evidence content changed. A cwd that already resolved a project resolves the same project as before; a cwd with no project above and no sibling project below still fails the same way.
+
 ## 2.0.0 — Making the Quality Path the Default Path
 
 Novel Forge already contained three subsystems for catching prose that reads as generated — prose-lint's sixteen style-tell rules, repetition memory feeding the style card and context capsule, and the five scene critics. All three were well built, and none could be reached from the path an agent actually took. Guarded scene execution required an executable chapter contract; when `contracts/chapters/` was empty an agent listed it, found nothing, and fell back to a plain `draft-chapter` event, disabling all three at once. This release is mostly wiring, plus the checks that wiring made possible.

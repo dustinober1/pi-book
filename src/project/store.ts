@@ -2,7 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { BookSchema, RevisionTicketsSchema, type BookState, type RevisionTicketsState } from "../domain/schemas.js";
 import { ProjectV14Schema, type ProjectStateV14 } from "../domain/v1-4-project-schema.js";
-import { findProjectRoot, readText, safeSlug } from "../infrastructure/files.js";
+import { childProjectRoots, findProjectRoot, readText, safeSlug } from "../infrastructure/files.js";
 import { parseYaml } from "../infrastructure/yaml.js";
 import { applyTransaction, type FileChange } from "../infrastructure/transaction.js";
 import { commitWorkflowEvent, ensureGit } from "../infrastructure/git.js";
@@ -22,8 +22,16 @@ export function initializeProject(parent: string, options: ProjectTemplateOption
 
 export function requireProjectRoot(cwd: string): string {
   const root = findProjectRoot(cwd);
-  if (!root) throw new Error(`No Novel Forge project found from ${cwd}. Run /novel-start first.`);
-  return root;
+  if (root) return root;
+  // novel-start creates its project one directory below the cwd it was run
+  // from, so a command run immediately afterward from that same, unchanged
+  // shell directory would otherwise fail to find the project it just made.
+  const children = childProjectRoots(cwd);
+  if (children.length === 1) return children[0]!;
+  if (children.length > 1) {
+    throw new Error(`Multiple Novel Forge projects exist directly under ${cwd}: ${children.join(", ")}. Run this command again from inside the one you mean.`);
+  }
+  throw new Error(`No Novel Forge project found from ${cwd}. Run /novel-start first.`);
 }
 
 export function readProject(root: string): ProjectStateV14 {

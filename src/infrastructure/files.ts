@@ -28,6 +28,27 @@ export function findProjectRoot(cwd: string): string | null {
   }
 }
 
+/**
+ * Immediate subdirectories of `cwd` that are themselves a Novel Forge project.
+ * `novel-start` creates its project one level below the directory the command
+ * was run from, so the shell's cwd never moves into it; this is the narrow,
+ * read-only lookup that lets a command run right after `novel-start` resolve
+ * the project it just created without requiring the caller to `cd` first.
+ */
+export function childProjectRoots(cwd: string): string[] {
+  const resolved = resolve(cwd);
+  let entries;
+  try {
+    entries = readdirSync(resolved, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== "node_modules")
+    .map((entry) => join(resolved, entry.name))
+    .filter((path) => existsSync(join(path, "PROJECT.yaml")));
+}
+
 export function listFilesRecursive(root: string, predicate: (path: string) => boolean, depth = 0): string[] {
   if (!existsSync(root) || depth > 8) return [];
   const output: string[] = [];
