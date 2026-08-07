@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { buildChapterContext } from "../context/context-builder.js";
 import { resolveQualityConfig, type QualityProjectState } from "../domain/quality-profile.js";
+import type { ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import type { RuntimeProfile, RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import { PremiseLabSchema, type PremiseLab } from "../domain/v1-4-schemas.js";
@@ -44,6 +45,7 @@ export interface BeginPersistentRunOptions {
   target: string;
   maxChapters: number;
   runtimeProfile?: RuntimeProfileId;
+  modelExecutionProfile?: ModelExecutionProfileId;
   qualitySnapshot?: QualityProjectState;
   now?: string;
 }
@@ -171,6 +173,7 @@ export function beginPersistentRun(root: string, options: BeginPersistentRunOpti
     currentAction: initial.action,
     requestedMaxChapters: limits.maxChapters,
     runtimeProfile: runtimeProfile.id,
+    ...(options.modelExecutionProfile ? { modelExecutionProfile: options.modelExecutionProfile } : {}),
     creativeHash: creativeProjectStateHash(root),
     startedAt: now,
   });

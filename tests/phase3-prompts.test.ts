@@ -15,11 +15,14 @@ test("book planning explains research provenance and review confidence without i
     assert.match(prompt, /story-world/);
     assert.match(prompt, /human-authenticity/);
     assert.match(prompt, /reader-and-market/);
-    assert.match(prompt, /discard reviewer names, handles, and profile URLs/i);
-    assert.match(prompt, /ratings 1–2 as negative, 3 as mixed, and 4–5 as positive/i);
-    assert.match(prompt, /One-star-only evidence can never exceed moderate/i);
-    assert.match(prompt, /positive counterweights/i);
-    assert.match(prompt, /prevent, mitigate, accept-as-tradeoff, or irrelevant-to-project/i);
+    // A fresh project records no public-review observations, so the nine
+    // handling rules are inapplicable and omitted whole; a named guard holds
+    // their place and the rules return with the first recorded observation
+    // (covered in prompt-compile-matrix.test.ts). The invention boundary is
+    // unconditional in both states.
+    assert.match(prompt, /public-review observations may remain empty; never invent them/i);
+    assert.match(prompt, /rebuild the plan so the full public-review evidence rules load/i);
+    assert.doesNotMatch(prompt, /One-star-only evidence can never exceed moderate/i);
     assert.match(prompt, /never invent public-review evidence/i);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });

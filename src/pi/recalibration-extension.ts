@@ -11,6 +11,7 @@ import { runPersistentQualityDraft } from "../application/quality-persistent-run
 import { beginQualityPersistentRun, resumeQualityPersistentRun } from "../application/quality-run.js";
 import { runExplicitVoiceRecalibration } from "../application/recalibration.js";
 import { directDraftDecision } from "../application/run.js";
+import { modelExecutionProfileDeprecationAdvisory } from "../domain/model-execution-profile.js";
 import { qualityStateWithOverride, resolveQualityConfig } from "../domain/quality-profile.js";
 import type { QualityWorker } from "../domain/quality-worker.js";
 import { readProject, requireProjectRoot } from "../project/store.js";
@@ -84,6 +85,8 @@ function withQualityDraft(
       try {
         const root = requireProjectRoot(context.cwd);
         const draft = parseDraftOptions(args);
+        const draftProfileAdvisory = draft.modelExecutionProfile ? modelExecutionProfileDeprecationAdvisory(draft.modelExecutionProfile) : null;
+        if (draftProfileAdvisory) context.ui.notify(draftProfileAdvisory, "warning");
         const project = readProject(root);
         const qualityState = qualityStateWithOverride(project.quality, draft.quality);
         const runtime = resolveRuntimeProfile({ project: project.runtime?.profile });
@@ -137,6 +140,7 @@ function withQualityDraft(
             const result = await runBudgetedQualityDraft({
               root,
               ...(draft.chapter !== undefined ? { chapter: draft.chapter } : {}),
+              ...(draft.modelExecutionProfile ? { modelExecutionProfile: draft.modelExecutionProfile } : {}),
               runtimeProfile: runtime,
               qualityConfig: quality,
               worker,
@@ -175,6 +179,8 @@ function withQualityRun(definition: CommandDefinition, options: NovelForgeExtens
     async handler(args: string, context: ExtensionCommandContext): Promise<void> {
       try {
         const parsed = parseRunOptions(args);
+        const runProfileAdvisory = parsed.modelExecutionProfile ? modelExecutionProfileDeprecationAdvisory(parsed.modelExecutionProfile) : null;
+        if (runProfileAdvisory) context.ui.notify(runProfileAdvisory, "warning");
         if (parsed.pause || parsed.cancel) {
           await original.handler(args, context);
           return;
@@ -210,6 +216,7 @@ function withQualityRun(definition: CommandDefinition, options: NovelForgeExtens
             target: parsed.until ?? "next-milestone",
             maxChapters: parsed.maxChapters ?? project.automation.max_chapters_per_run,
             ...(parsed.runtimeProfile ? { runtimeProfile: parsed.runtimeProfile } : {}),
+            ...(parsed.modelExecutionProfile ? { modelExecutionProfile: parsed.modelExecutionProfile } : {}),
             ...(parsed.quality ? { quality: parsed.quality } : {}),
           });
           if (!started.prompt) {

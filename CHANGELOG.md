@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased — Small-Model Configuration Reachability
+
+### Added
+
+- `--model-profile` now works end to end. `/novel-start` and `/novel-organize` accept it and write `runtime.model_execution_profile` into the new project, which is the setting guarded scene execution and quality drafting already read; `/novel-draft` and `/novel-run` accept it as a per-invocation override that is snapshotted on the persistent run, so a resumed run keeps the profile it started with. The flag was parsed by both option parsers for two releases and then discarded by every caller, so the small-model execution profile — per-job token budgets, constrained decoding, Gemma fingerprint qualification — was unreachable through any shipped path. `custom` is rejected at parse time with the selectable list, because it requires a validated profile definition no flag can carry and writing it to `PROJECT.yaml` would poison every later resolution. The resolved profile now appears in `/novel-status`, `/novel-budget`, and the session handoff beside genre, runtime, and quality, and selecting the deprecated `small-12b-q4` alias surfaces its advisory. A tripwire test asserts every field the option parsers produce is read by a consuming module.
+- A profile × stage × genre prompt-compile matrix (135 cells) runs in CI and in `benchmark:prompts`. Every registered stage spec must compile under every runtime profile and genre with representative worst-case inputs — full lint evidence at the profile's cap, the profile's revision-ticket allowance, genre planning rules, public-review evidence present and absent. The `book-plan` spec exceeded `tiny-local`'s 6,000-character instruction ceiling for two releases, so the profile bricked permanently at stage three of eleven and nothing failed before a live session, because the prompt benchmark only ever compared `full` against `local`. An expected-overflow cell pins that the unsplit spec still exceeds `tiny-local`, so the phase split below cannot silently become dead code.
+
+### Changed
+
+- The nine public-review evidence rules in the book-plan prompt are state-conditional: on a project whose `book-strategy.yaml` records no observations or clusters they are inapplicable and omitted whole, with a named guard in their place; they return unchanged with the first recorded observation. This is omission of whole inapplicable rules, never truncation — the compiler still throws rather than shortening a rule, and a test proves the rules return when the triggering state exists. An unreadable strategy file loads the full rules, the safe direction.
+- Where the whole book-plan contract still exceeds a compact instruction budget, the prompt now compiles as **two phases feeding one guarded event**: architecture (book bible, genre, plot grid, chapter queue, continuity delta, remarkability), then evidence (research ledger, book strategy, provenance, story threads, and the historical-fiction files) via `/novel-plan book --phase evidence`. The architecture phase applies nothing; the evidence phase submits the complete required set from both phases as one `book-plan` event, so splitting the instructions never splits the transaction, and a test asserts the split loses no normative rule relative to the whole spec. `full` and `local` keep the single prompt. With this, `tiny-local` reaches `book-plan-approval` for every genre.
+
+### Compatibility and boundaries
+
+- `modelExecutionProfile` is optional on the automation run schema; runs recorded by earlier versions remain readable.
+- Projects without `runtime.model_execution_profile` resolve to `host-default` exactly as before; status output now says so explicitly.
+- No event validation, gate, or guarded-transaction behavior changed. The book-plan event still validates one complete required set regardless of how many prompts prepared it.
+
 ## 2.1.0 — Relationship Inheritance and Ending-Contract Evidence
 
 ### Added

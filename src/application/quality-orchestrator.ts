@@ -79,12 +79,14 @@ import {
 } from "./quality-risk.js";
 import { createRunReportV3Header } from "./run-telemetry.js";
 import { qualifyGemmaModelForRun } from "./model-fingerprint.js";
+import type { ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import { resolveModelExecutionProfile } from "./model-execution-profile-resolver.js";
 import { resolveWorkerModelBudget } from "../pi/quality-worker.js";
 
 export interface RunQualityDraftInput {
   root: string;
   chapter?: number;
+  modelExecutionProfile?: ModelExecutionProfileId;
   runtimeProfile: RuntimeProfileId | RuntimeProfile;
   qualityConfig: QualityProjectState | ResolvedQualityConfig;
   worker: QualityWorker;
@@ -216,6 +218,7 @@ export async function runQualityDraft(input: RunQualityDraftInput): Promise<RunQ
 
   const startingProject = readProject(input.root);
   const executionProfile = resolveModelExecutionProfile({
+    ...(input.modelExecutionProfile ? { explicit: input.modelExecutionProfile } : {}),
     ...(startingProject.runtime?.model_execution_profile ? { project: startingProject.runtime.model_execution_profile } : {}),
   });
   await qualifyGemmaModelForRun({

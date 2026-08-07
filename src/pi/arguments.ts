@@ -1,5 +1,5 @@
 import type { RunOptions } from "../application/run.js";
-import { parseModelExecutionProfileId, type ModelExecutionProfileId } from "../domain/model-execution-profile.js";
+import { MODEL_EXECUTION_PROFILE_IDS, parseModelExecutionProfileId, type ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import {
   parseBudgetExhaustionPolicy,
   parseQualityTierId,
@@ -15,6 +15,22 @@ import { parseRuntimeProfileId } from "../domain/runtime-profile.js";
 export const allowedUntilTargets = ["voice-approval", "book-plan-approval", "first-chapter-approval", "act-1-review", "midpoint-review", "pre-final-act-review", "manuscript-review", "next-milestone"] as const;
 export function tokens(args: string): string[] { return args.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) => token.replace(/^["']|["']$/g, "")) ?? []; }
 export function flagValue(items: string[], flag: string): string | undefined { const index = items.indexOf(flag); return index >= 0 ? items[index + 1] : undefined; }
+
+/**
+ * `custom` is a real profile ID, but it only resolves alongside a validated
+ * custom profile definition that no CLI flag can carry. Accepting it here would
+ * write a `model_execution_profile` into PROJECT.yaml that every later
+ * resolution throws on — and hand-editing PROJECT.yaml to remove it is
+ * forbidden. Reject it at parse time with the selectable list instead.
+ */
+export function parseSelectableModelExecutionProfileId(value: unknown): ModelExecutionProfileId {
+  const parsed = parseModelExecutionProfileId(value);
+  if (parsed === "custom") {
+    const selectable = MODEL_EXECUTION_PROFILE_IDS.filter((id) => id !== "custom");
+    throw new Error(`--model-profile cannot select custom: it requires a validated custom profile definition that a flag cannot carry. Selectable profiles: ${selectable.join(", ")}.`);
+  }
+  return parsed;
+}
 
 export const qualityValueFlags = [
   "--quality-tier",
@@ -78,7 +94,7 @@ export function parseDraftOptions(args: string): DraftOptions {
   }
   const quality = parseQualityOverride(items);
   const rawModelProfile = requiredFlagValue(items, "--model-profile");
-  const modelExecutionProfile = rawModelProfile === undefined ? undefined : parseModelExecutionProfileId(rawModelProfile);
+  const modelExecutionProfile = rawModelProfile === undefined ? undefined : parseSelectableModelExecutionProfileId(rawModelProfile);
   return {
     ...(chapter !== undefined ? { chapter } : {}),
     ...(quality ? { quality } : {}),
@@ -151,7 +167,7 @@ export function parseRunOptions(args: string): ParsedRunOptions {
   const runtimeProfile = hasRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
   const hasModelProfile = items.includes("--model-profile");
   const rawModelProfile = requiredFlagValue(items, "--model-profile");
-  const modelExecutionProfile = hasModelProfile ? parseModelExecutionProfileId(rawModelProfile) : undefined;
+  const modelExecutionProfile = hasModelProfile ? parseSelectableModelExecutionProfileId(rawModelProfile) : undefined;
   const quality = parseQualityOverride(items);
   const resume = items.includes("--resume");
   const pause = items.includes("--pause");

@@ -89,6 +89,8 @@ book-plan:      books/<book-id>/book-bible.md
 
 A `book-plan` also validates `genre.yaml`, `chapter-queue.yaml`, `series/canon.yaml`, `series/story-threads.yaml`, and `research/source-register.yaml` through the on-disk state, so submit any of those you changed in the same event.
 
+Under a compact runtime profile whose instruction budget cannot hold the whole book-plan contract, the book-plan prompt arrives as **two phases feeding one event**: an architecture phase (book bible, genre, plot grid, chapter queue, continuity delta, remarkability) and an evidence phase (research ledger, book strategy, source provenance, story threads, and the historical-fiction files). The architecture phase applies nothing — hold its drafted files outside the project root and run `/novel-plan book --phase evidence` for the remaining instructions. The evidence phase submits the complete required set from **both** phases as one `book-plan` event; omitting an architecture file is itself a rejection. Splitting the instructions never splits the transaction, and no phase shortens a rule to fit.
+
 A rejection lists every problem the validator found across all layers — required outputs, YAML and schema shape, profile packet fields, cross-artifact references, and domain integrity — not just the first one. Fix all listed problems in one pass before resubmitting; the retry budget is one corrected resubmission.
 
 Because each guarded file is hand-authored YAML text, not structured data the tool serializes for you, two mistakes cause an avoidable rejection and burn the one permitted retry:

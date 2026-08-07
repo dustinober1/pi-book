@@ -50,6 +50,7 @@ function benchmarkSpecs(): Array<{ id: string; spec: StageSpec }> {
         ],
         profileRules: [],
         profileOutputs: [],
+        hasPublicReviewEvidence: true,
         projectHash,
       }),
     },

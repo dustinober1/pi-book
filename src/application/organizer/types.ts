@@ -1,4 +1,5 @@
 import type { ProfileId, ProjectType } from "../../domain/schemas.js";
+import type { ModelExecutionProfileId } from "../../domain/model-execution-profile.js";
 import type { RuntimeProfileId } from "../../domain/runtime-profile.js";
 
 export type OrganizerCategory =
@@ -54,6 +55,7 @@ export interface OrganizationProjectOptions {
   profile: ProfileId;
   targetWords?: number;
   runtimeProfile?: RuntimeProfileId;
+  modelExecutionProfile?: ModelExecutionProfileId;
 }
 
 export interface OrganizationApplyOptions {

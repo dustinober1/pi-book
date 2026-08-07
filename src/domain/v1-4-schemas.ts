@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { ModelExecutionProfileIdSchema } from "./model-execution-profile.js";
 import { RuntimeProfileIdSchema } from "./runtime-profile.js";
 
 export const AssumptionStatusSchema = Type.Union([
@@ -98,6 +99,7 @@ export const AutomationRunStateSchema = Type.Object({
   currentAction: Type.String({ minLength: 1 }),
   requestedMaxChapters: Type.Integer({ minimum: 1, maximum: 10 }),
   runtimeProfile: Type.Optional(RuntimeProfileIdSchema),
+  modelExecutionProfile: Type.Optional(ModelExecutionProfileIdSchema),
   completedEventKeys: Type.Array(Type.String({ minLength: 1 })),
   lastProjectHash: Type.String({ minLength: 1 }),
   refillCount: Type.Integer({ minimum: 0 }),

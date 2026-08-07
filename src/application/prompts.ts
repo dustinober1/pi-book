@@ -2,6 +2,7 @@ import { basename, join } from "node:path";
 import type { ChapterContext } from "../context/context-builder.js";
 import { RUNTIME_PROFILES, type RuntimeProfile, type RuntimeProfileId } from "../domain/runtime-profile.js";
 import { ChapterQueueSchema, type ChapterQueueState, type RevisionTicket } from "../domain/schemas.js";
+import { BookStrategyPhase5Schema, type BookStrategyPhase5 } from "../domain/v1-3-audit-schemas.js";
 import { PlotGridPhase4Schema, type PlotGridPhase4 } from "../domain/v1-3-architecture-schemas.js";
 import { DecisionLedgerSchema, IntakeSchema, PremiseLabSchema, type DecisionLedger, type IntakeState, type PremiseLab } from "../domain/v1-4-schemas.js";
 import { listChapterFiles, readText } from "../infrastructure/files.js";
@@ -14,6 +15,7 @@ import { selectedPremiseContext } from "./premise-lab.js";
 import { intakePromptContext } from "./intake.js";
 import { draftRepetitionConstraints } from "./draft-context.js";
 import { projectStateHash } from "./events.js";
+import { bookPlanPhaseCompiled, bookPlanStagePromptPlan, type BookPlanPromptPhaseId } from "./book-plan-prompt-plan.js";
 import { compilePrompt } from "./prompt-compiler.js";
 import { preparePrompt } from "./prepared-prompt.js";
 import { loadProseLintInput, renderReviewLintEvidence, runProseLint } from "./prose-lint/index.js";
@@ -103,10 +105,28 @@ export function seriesPlanPrompt(root: string, runtimeProfile?: RuntimeProfile):
   }), runtimeProfile);
 }
 
-export function bookPlanPrompt(root: string, runtimeProfile?: RuntimeProfile): string {
+/**
+ * The nine public-review evidence rules only apply when book-strategy.yaml
+ * actually holds observations or clusters. An unreadable strategy file loads
+ * the full rules — the safe direction: over-instructing costs characters,
+ * under-instructing loses a boundary.
+ */
+function hasPublicReviewEvidence(root: string, bookId: string): boolean {
+  const path = `books/${bookId}/book-strategy.yaml`;
+  const text = readText(join(root, path));
+  if (!text) return false;
+  try {
+    const strategy = parseYaml<BookStrategyPhase5>(text, BookStrategyPhase5Schema, path);
+    return strategy.reader_friction.observations.length > 0 || strategy.reader_friction.clusters.length > 0;
+  } catch {
+    return true;
+  }
+}
+
+function bookPlanStageInput(root: string) {
   const book = readBook(root);
   const profile = getProfile(book.profile);
-  return renderPrompt(root, bookPlanStageSpec({
+  return {
     root,
     bookId: book.book_id,
     intakeContext: planningIntakeContext(root),
@@ -114,8 +134,20 @@ export function bookPlanPrompt(root: string, runtimeProfile?: RuntimeProfile): s
     planningQuestions: profile.planningQuestions,
     profileRules: profile.bookPlanRules,
     profileOutputs: profile.bookPlanOutputs,
+    hasPublicReviewEvidence: hasPublicReviewEvidence(root, book.book_id),
     projectHash: projectStateHash(root),
-  }), runtimeProfile);
+  };
+}
+
+export function bookPlanPrompt(root: string, runtimeProfile?: RuntimeProfile): string {
+  const runtime = runtimeForPrompt(root, runtimeProfile);
+  const plan = bookPlanStagePromptPlan(bookPlanStageInput(root), runtime);
+  return plan[0]!.compiled.text;
+}
+
+export function bookPlanPhasePrompt(root: string, phase: Exclude<BookPlanPromptPhaseId, "single">, runtimeProfile?: RuntimeProfile): string {
+  const runtime = runtimeForPrompt(root, runtimeProfile);
+  return bookPlanPhaseCompiled(bookPlanStageInput(root), phase, runtime).text;
 }
 
 export function queuePrompt(root: string, runtimeProfile?: RuntimeProfile): string {

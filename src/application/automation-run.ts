@@ -1,3 +1,4 @@
+import type { ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import type { AutomationRunState } from "../domain/v1-4-schemas.js";
@@ -9,6 +10,7 @@ export interface StartAutomationRunInput {
   currentAction: string;
   requestedMaxChapters: number;
   runtimeProfile?: RuntimeProfileId;
+  modelExecutionProfile?: ModelExecutionProfileId;
   creativeHash: string;
   startedAt: string;
 }
@@ -54,6 +56,7 @@ export function startAutomationRun(project: ProjectStateV14, input: StartAutomat
     currentAction,
     requestedMaxChapters: input.requestedMaxChapters,
     ...(input.runtimeProfile ? { runtimeProfile: input.runtimeProfile } : {}),
+    ...(input.modelExecutionProfile ? { modelExecutionProfile: input.modelExecutionProfile } : {}),
     completedEventKeys: [],
     lastProjectHash: creativeHash,
     refillCount: 0,

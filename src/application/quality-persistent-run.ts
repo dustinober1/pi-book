@@ -150,6 +150,7 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
       const result = await runBudgetedQualityDraft({
         root: input.root,
         runtimeProfile: run.runtimeProfile ?? current.runtime?.profile ?? "full",
+        ...(run.modelExecutionProfile ? { modelExecutionProfile: run.modelExecutionProfile } : {}),
         qualityConfig: snapshot,
         worker: input.worker,
         runId: childRunId,
