@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased — Autonomous Guarded Chapter Execution
+
+### Added
+
+- **A driver loop for chapter execution.** `runChapterExecution` advances the persisted scene state machine until a real stop: a writer gate, a blocker, a pause, budget exhaustion, the scene repair limit, an abort, or a step-count backstop. `novel_advance_chapter_step` and `/novel-chapter-step` accept `until: chapter-complete` to use it, defaulting to the existing one-stage behavior. `advanceChapterExecutionStep` advances exactly one node, and for two releases its only non-test callers returned after a single step — putting roughly two thousand host-driven tool calls between an idea and a novel, each requiring the model to read a checkpoint and decide to continue. That is the judgement load the scene machine exists to remove. The loop adds no authority: it stops exactly where a single step stops, acceptance still ends in the same guarded commit, and it re-asserts the writer-gate check itself rather than trusting whoever resolved the target.
+- **Automation takes the guarded path.** `/novel-run` now routes each chapter through guarded scene execution whenever an executable contract exists, falling back to whole-chapter drafting otherwise, and reports how many chapters used which path. v2.0.0 fixed an agent silently falling back to unguarded drafting when it found no contract; the automated run had the same shape for a different reason — it never used the scene machine at all, because nothing drove it, so critics, targeted repair and ordered acceptance never ran on the automated path regardless of contract availability. A fallback now returns the same disclosure advisory the `draft-chapter` event does, and the run relays it.
+
+### Changed
+
+- **The repair cycle is bounded.** `deterministic-validation → span-repair → deterministic-validation` is a loop that `critic-review` and `state-delta` can both re-enter, and nothing limited it: `RuntimeProfile.maxRepairAttempts` was declared, set to 2 in all three profiles and asserted by a test, but read by no code, and the `repair-limit` blocker code was likewise declared and never raised. A scene that cannot pass validation within its profile's allowance now blocks with `repair-limit`, naming the scene and the failing checks, and the run stays inspectable and resumable. This was a prerequisite for the driver loop, not an accompaniment to it — a loop over an unbounded cycle is a defect amplifier.
+- **No runtime profile caps a run at one chapter.** `tiny-local` and `local` set `maxChaptersPerRun: 1`, so on exactly the profiles a local-model user must choose, a forty-chapter book needed at least forty writer-initiated runs before any gate stopped it. The per-chapter isolation that cap protected is already provided by the loop, which re-reads project state, rebuilds context and re-checks the creative hash every iteration. Runs now stop on gates, blockers, budget exhaustion and repair exhaustion. The `--max-chapters` ceiling and the `max_chapters_per_run` schema maximum rise from 10 to 200; artifact, revision-ticket and graph-depth limits per profile are unchanged, because those bound how much a small model holds at once.
+
+### Compatibility and boundaries
+
+- `PersistentQualityDraftResult.chapters` entries are now outcome records carrying `chapter`, `path` and `reason`; the orchestrator result moves to `draft` and the execution result to `execution`. The result also carries `advisories`, which callers must relay.
+- `modelExecutionProfile` on the automation run and the raised chapter ceilings are additive; runs and projects recorded by earlier versions remain readable.
+- Human gates, guarded event transactions, complete-record context allocation, telemetry contents, and the reader-evidence boundary are unchanged. Nothing in this release lets automation cross a gate or apply a creative change outside one guarded event.
+
 ## Unreleased — Small-Model Configuration Reachability
 
 ### Added

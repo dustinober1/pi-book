@@ -1,14 +1,17 @@
 import type { QualityTierId } from "../domain/quality-profile.js";
 import { resolveQualityConfig } from "../domain/quality-profile.js";
 import type { QualityWorker } from "../domain/quality-worker.js";
+import { SCENE_CRITIC_JOB_TYPES } from "../domain/scene-critic-artifact.js";
 import { stringifyYaml } from "../infrastructure/yaml.js";
-import { readProject } from "../project/store.js";
+import { readBook, readProject } from "../project/store.js";
 import { completeAutomationEvent } from "./automation-run.js";
 import {
   QualityBudgetDowngradeError,
   QualityBudgetStopError,
   runBudgetedQualityDraft,
 } from "./budgeted-quality-draft.js";
+import { resolveChapterStepTarget } from "./chapter-execution-command.js";
+import { chapterExecutionReadiness, runChapterExecution, type ChapterExecutionRunResult } from "./chapter-execution-run.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
 import type { RunQualityDraftResult } from "./quality-orchestrator.js";
 import { creativeProjectStateHash } from "./project-hash.js";
@@ -24,12 +27,35 @@ export interface RunPersistentQualityDraftInput {
   onProgress?: (name: string) => void;
 }
 
+/**
+ * How one chapter was actually drafted.
+ *
+ * v2.0.0 established that an agent finding no executable contract quietly fell
+ * back to unguarded drafting, disabling scene critics, targeted repair and
+ * ordered acceptance in a single step. The automated run had the same shape for
+ * a different reason: it never used the scene machine at all, because nothing
+ * drove it. Now that `runChapterExecution` exists, a persistent run takes the
+ * guarded path whenever the chapter has an executable contract — and records
+ * which path ran either way, so "critics did not run" is never silent.
+ */
+export interface PersistentChapterOutcome {
+  chapter: number;
+  path: "guarded-scene-execution" | "whole-chapter";
+  reason: string;
+  /** Present only on the whole-chapter orchestrator path. */
+  draft?: RunQualityDraftResult;
+  /** Present only on the guarded scene path. */
+  execution?: ChapterExecutionRunResult;
+}
+
 export interface PersistentQualityDraftResult {
   runId: string;
-  chapters: RunQualityDraftResult[];
+  chapters: PersistentChapterOutcome[];
   status: "paused" | "stopped" | "completed";
   stopReason: string;
   downgradedTo?: QualityTierId;
+  /** Advisories the caller must relay, including any unguarded-path disclosure. */
+  advisories: string[];
 }
 
 function timestamp(input: RunPersistentQualityDraftInput): string {
@@ -54,7 +80,7 @@ function stopForCurrentState(project: ReturnType<typeof readProject>): string | 
 function updateAfterChapter(
   root: string,
   runId: string,
-  result: RunQualityDraftResult,
+  chapter: number,
   finalIteration: boolean,
   now: string,
   attemptKey: string,
@@ -62,7 +88,7 @@ function updateAfterChapter(
   const current = readProject(root);
   const updated = completeAutomationEvent(
     current,
-    `draft-chapter:${result.chapter}`,
+    `draft-chapter:${chapter}`,
     current.current_stage,
     creativeProjectStateHash(root),
     now,
@@ -77,7 +103,7 @@ function updateAfterChapter(
     run.status = "paused";
     run.stopReason = "chapter-limit";
   }
-  persistRunState(root, updated, runId, `Updated quality automation ${runId} after Chapter ${result.chapter}`);
+  persistRunState(root, updated, runId, `Updated quality automation ${runId} after Chapter ${chapter}`);
   return updated;
 }
 
@@ -118,7 +144,8 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
   const limit = Math.min(initialRun.requestedMaxChapters, input.maxChapters ?? initialRun.requestedMaxChapters);
   if (!Number.isInteger(limit) || limit < 1) throw new Error("Persistent quality chapter limit must be positive.");
 
-  const chapters: RunQualityDraftResult[] = [];
+  const chapters: PersistentChapterOutcome[] = [];
+  const advisories: string[] = [];
   for (let index = 0; index < limit; index += 1) {
     const current = readProject(input.root);
     const run = current.automation.active_run;
@@ -128,6 +155,7 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
       chapters,
       status: run.status === "completed" ? "completed" : "stopped",
       stopReason: run.stopReason ?? run.status,
+      advisories,
     };
     const snapshot = run.quality_snapshot;
     if (!snapshot) throw new Error(`Automation run ${run.id} has no quality snapshot after reload.`);
@@ -138,7 +166,7 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
       updated.automation.active_run!.stopReason = stateStop;
       updated.automation.active_run!.updatedAt = timestamp(input);
       persistRunState(input.root, updated, run.id, `Stopped quality automation ${run.id} at ${stateStop}`);
-      return { runId: run.id, chapters, status: "stopped", stopReason: stateStop };
+      return { runId: run.id, chapters, status: "stopped", stopReason: stateStop, advisories };
     }
 
     input.onProgress?.(`persistent chapter ${index + 1}`);
@@ -146,22 +174,65 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
     const attemptKey = `quality-child-attempt:${childOrdinal}`;
     const childAttempt = (run.retryCounts[attemptKey] ?? 0) + 1;
     const childRunId = `${run.id}-CH-${String(childOrdinal).padStart(3, "0")}-ATT-${String(childAttempt).padStart(3, "0")}`;
+    // Which chapter is next, and can it take the guarded scene path?
+    const target = resolveChapterStepTarget(input.root);
+    const readiness = chapterExecutionReadiness(input.root, readBook(input.root).book_id, target.chapter);
     try {
-      const result = await runBudgetedQualityDraft({
-        root: input.root,
-        runtimeProfile: run.runtimeProfile ?? current.runtime?.profile ?? "full",
-        ...(run.modelExecutionProfile ? { modelExecutionProfile: run.modelExecutionProfile } : {}),
-        qualityConfig: snapshot,
-        worker: input.worker,
-        runId: childRunId,
-        cacheRetention: "delete-on-success",
-        ...(input.provider ? { provider: input.provider } : {}),
-        ...(input.model ? { model: input.model } : {}),
-        ...(input.signal ? { signal: input.signal } : {}),
-        ...(input.onProgress ? { onProgress: input.onProgress } : {}),
-      });
-      chapters.push(result);
-      const updated = updateAfterChapter(input.root, run.id, result, index === limit - 1, timestamp(input), attemptKey);
+      let outcome: PersistentChapterOutcome;
+      if (readiness.ready) {
+        input.onProgress?.(`guarded scene execution for chapter ${target.chapter}`);
+        const execution = await runChapterExecution({
+          root: input.root,
+          chapter: target.chapter,
+          runId: target.runId,
+          worker: input.worker,
+          requiredCriticJobTypes: SCENE_CRITIC_JOB_TYPES,
+          runtimeProfile: run.runtimeProfile ?? current.runtime?.profile ?? "full",
+          ...(input.provider ? { provider: input.provider } : {}),
+          ...(input.model ? { model: input.model } : {}),
+          ...(input.signal ? { signal: input.signal } : {}),
+          ...(input.onProgress ? { onStep: ({ action }) => input.onProgress?.(`chapter ${target.chapter}: ${action}`) } : {}),
+        });
+        // A chapter that did not reach its guarded commit has not been drafted;
+        // stop the run on the execution's own stop reason rather than counting
+        // it and moving to the next chapter.
+        if (!execution.committed) {
+          const stopped = structuredClone(readProject(input.root));
+          if (stopped.automation.active_run?.id === run.id) {
+            stopped.automation.active_run.status = execution.stopReason === "paused" ? "paused" : "stopped";
+            stopped.automation.active_run.stopReason = `scene-execution:${execution.stopReason}`;
+            stopped.automation.active_run.updatedAt = timestamp(input);
+            persistRunState(input.root, stopped, run.id, `Stopped quality automation ${run.id} at scene execution ${execution.stopReason}`);
+          }
+          advisories.push(`Chapter ${target.chapter} stopped during guarded scene execution at ${execution.stopReason}${execution.state.blocker ? `: ${execution.state.blocker.message}` : "."} No canonical chapter was committed.`);
+          return {
+            runId: run.id,
+            chapters,
+            status: execution.stopReason === "paused" ? "paused" : "stopped",
+            stopReason: `scene-execution:${execution.stopReason}`,
+            advisories,
+          };
+        }
+        outcome = { chapter: target.chapter, path: "guarded-scene-execution", reason: readiness.reason, execution };
+      } else {
+        const result = await runBudgetedQualityDraft({
+          root: input.root,
+          runtimeProfile: run.runtimeProfile ?? current.runtime?.profile ?? "full",
+          ...(run.modelExecutionProfile ? { modelExecutionProfile: run.modelExecutionProfile } : {}),
+          qualityConfig: snapshot,
+          worker: input.worker,
+          runId: childRunId,
+          cacheRetention: "delete-on-success",
+          ...(input.provider ? { provider: input.provider } : {}),
+          ...(input.model ? { model: input.model } : {}),
+          ...(input.signal ? { signal: input.signal } : {}),
+          ...(input.onProgress ? { onProgress: input.onProgress } : {}),
+        });
+        advisories.push(`Chapter ${result.chapter} was drafted without guarded scene execution because ${readiness.reason}: no scene critics, no targeted repair, and no ordered acceptance ran. Say so plainly in your summary to the writer.`);
+        outcome = { chapter: result.chapter, path: "whole-chapter", reason: readiness.reason, draft: result };
+      }
+      chapters.push(outcome);
+      const updated = updateAfterChapter(input.root, run.id, outcome.chapter, index === limit - 1, timestamp(input), attemptKey);
       const updatedRun = updated.automation.active_run!;
       if (updatedRun.status !== "active") {
         return {
@@ -169,6 +240,7 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
           chapters,
           status: updatedRun.status === "paused" ? "paused" : updatedRun.status === "completed" ? "completed" : "stopped",
           stopReason: updatedRun.stopReason ?? updatedRun.status,
+          advisories,
         };
       }
     } catch (error) {
@@ -180,6 +252,7 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
           chapters,
           status: updatedRun.status === "paused" ? "paused" : "stopped",
           stopReason: updatedRun.stopReason ?? "budget-boundary",
+          advisories,
           ...(error instanceof QualityBudgetDowngradeError ? { downgradedTo: error.toTier } : {}),
         };
       }
@@ -200,5 +273,6 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
     chapters,
     status: final.status === "paused" ? "paused" : final.status === "completed" ? "completed" : "stopped",
     stopReason: final.stopReason ?? final.status,
+    advisories,
   };
 }

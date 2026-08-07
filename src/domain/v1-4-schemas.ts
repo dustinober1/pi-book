@@ -97,7 +97,7 @@ export const AutomationRunStateSchema = Type.Object({
   target: Type.String({ minLength: 1 }),
   startedStage: Type.String({ minLength: 1 }),
   currentAction: Type.String({ minLength: 1 }),
-  requestedMaxChapters: Type.Integer({ minimum: 1, maximum: 10 }),
+  requestedMaxChapters: Type.Integer({ minimum: 1, maximum: 200 }),
   runtimeProfile: Type.Optional(RuntimeProfileIdSchema),
   modelExecutionProfile: Type.Optional(ModelExecutionProfileIdSchema),
   completedEventKeys: Type.Array(Type.String({ minLength: 1 })),

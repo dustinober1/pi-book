@@ -238,7 +238,13 @@ function withQualityRun(definition: CommandDefinition, options: NovelForgeExtens
           onProgress(name) { context.ui.notify(`Quality run: ${name}`, "info"); },
         });
         const downgrade = result.downgradedTo ? ` Downgraded to ${result.downgradedTo}.` : "";
-        context.ui.notify(`Persistent quality run ${result.runId} ${result.status} at ${result.stopReason} after ${result.chapters.length} chapter(s).${downgrade}`, result.status === "stopped" ? "warning" : "info");
+        const guarded = result.chapters.filter((item) => item.path === "guarded-scene-execution").length;
+        const paths = result.chapters.length
+          ? ` ${guarded} of ${result.chapters.length} used guarded scene execution.`
+          : "";
+        context.ui.notify(`Persistent quality run ${result.runId} ${result.status} at ${result.stopReason} after ${result.chapters.length} chapter(s).${paths}${downgrade}`, result.status === "stopped" ? "warning" : "info");
+        // Advisories are the only place the unguarded-path disclosure appears.
+        for (const advisory of result.advisories) context.ui.notify(advisory, "warning");
       } catch (error) {
         context.ui.notify(errorText(error), "warning");
       }

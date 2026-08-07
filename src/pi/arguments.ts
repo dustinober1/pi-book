@@ -111,10 +111,20 @@ const CRITIC_ALIASES: Readonly<Record<string, SceneCriticJobType>> = Object.free
   factuality: "critic-factuality",
 });
 
+export const CHAPTER_STEP_TARGETS = ["next-checkpoint", "chapter-complete"] as const;
+export type ChapterStepTargetId = (typeof CHAPTER_STEP_TARGETS)[number];
+
+export function parseChapterStepTarget(value: string | undefined): ChapterStepTargetId {
+  if (value === undefined) return "next-checkpoint";
+  if ((CHAPTER_STEP_TARGETS as readonly string[]).includes(value)) return value as ChapterStepTargetId;
+  throw new Error(`Unknown chapter-step target: ${value}. Allowed: ${CHAPTER_STEP_TARGETS.join(", ")}.`);
+}
+
 export interface ChapterStepOptions {
   chapter?: number;
   runId?: string;
   criticJobTypes: SceneCriticJobType[];
+  until: ChapterStepTargetId;
 }
 
 export function parseSceneCriticSelection(raw: string | undefined): SceneCriticJobType[] {
@@ -131,7 +141,7 @@ export function parseSceneCriticSelection(raw: string | undefined): SceneCriticJ
 
 export function parseChapterStepOptions(args: string): ChapterStepOptions {
   const items = tokens(args);
-  const flags = new Set(["--run", "--critics"]);
+  const flags = new Set(["--run", "--critics", "--until"]);
   const positional: string[] = [];
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index]!;
@@ -149,6 +159,7 @@ export function parseChapterStepOptions(args: string): ChapterStepOptions {
     ...(chapter !== undefined ? { chapter } : {}),
     ...(runId !== undefined ? { runId } : {}),
     criticJobTypes: parseSceneCriticSelection(requiredFlagValue(items, "--critics")),
+    until: parseChapterStepTarget(requiredFlagValue(items, "--until")),
   };
 }
 
@@ -178,7 +189,7 @@ export function parseRunOptions(args: string): ParsedRunOptions {
   }
   if (until && !allowedUntilTargets.includes(until as never)) throw new Error(`Unknown --until target: ${until}. Allowed: ${allowedUntilTargets.join(", ")}.`);
   let maxChapters: number | undefined;
-  if (rawMax !== undefined) { maxChapters = Number.parseInt(rawMax, 10); if (!Number.isInteger(maxChapters) || maxChapters < 1 || maxChapters > 10) throw new Error("--max-chapters must be an integer from 1 to 10."); }
+  if (rawMax !== undefined) { maxChapters = Number.parseInt(rawMax, 10); if (!Number.isInteger(maxChapters) || maxChapters < 1 || maxChapters > 200) throw new Error("--max-chapters must be an integer from 1 to 200."); }
   return {
     ...(approve ? { approve } : {}),
     ...(until ? { until } : {}),

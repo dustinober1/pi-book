@@ -64,7 +64,9 @@ test("novel-run forwards the explicit runtime profile into the persistent run", 
     );
     const run = readProject(root).automation.active_run;
     assert.equal(run?.runtimeProfile, "tiny-local");
-    assert.equal(run?.requestedMaxChapters, 1);
+    // The runtime profile no longer clamps the chapter count to one: a
+    // small-model run stops at a gate, blocker or budget, not at a counter.
+    assert.equal(run?.requestedMaxChapters, 8);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }

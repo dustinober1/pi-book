@@ -237,6 +237,53 @@ export function verifyV210ReleaseTree(root: string): V210ReleaseCheck[] {
       /id === "plan-change"/.test(text(root, "src/pi/extension.ts")),
       "Every guide action the screen can emit has a handler, including plan-change.",
     ),
+
+    check(
+      "model-profile-threaded",
+      /parseSelectableModelExecutionProfileId/.test(text(root, "src/pi/extension.ts"))
+        && /draft\.modelExecutionProfile/.test(text(root, "src/pi/recalibration-extension.ts"))
+        && /parsed\.modelExecutionProfile/.test(text(root, "src/pi/recalibration-extension.ts")),
+      "--model-profile reaches project creation and both the draft and run paths.",
+    ),
+    check(
+      "prompt-compile-matrix",
+      existsSync(join(root, "src/evaluation/prompt-compile-matrix.ts"))
+        && /runPromptCompileMatrix/.test(text(root, "scripts/benchmark-prompts.ts")),
+      "Every stage spec compiles under every runtime and genre profile in CI.",
+    ),
+    check(
+      "book-plan-phase-split",
+      existsSync(join(root, "src/application/book-plan-prompt-plan.ts"))
+        && /bookPlanStagePhases/.test(text(root, "src/application/stage-specs/index.ts"))
+        && /omitting an architecture file is itself a rejection/.test(text(root, "src/application/stage-specs/index.ts")),
+      "A compact instruction budget splits book planning into two phases feeding one guarded event.",
+    ),
+    check(
+      "repair-cycle-bounded",
+      /repairLimitBlocker/.test(text(root, "src/application/chapter-execution-stepper.ts"))
+        && /maxRepairAttempts/.test(text(root, "src/application/chapter-execution-stepper.ts"))
+        && /code: "repair-limit"/.test(text(root, "src/application/chapter-execution-stepper.ts")),
+      "The deterministic-validation and span-repair cycle is bounded by the runtime profile.",
+    ),
+    check(
+      "chapter-execution-driver",
+      existsSync(join(root, "src/application/chapter-execution-run.ts"))
+        && /awaiting-critic-selection/.test(text(root, "src/application/chapter-execution-run.ts"))
+        && /assertNoActiveWriterGate/.test(text(root, "src/application/chapter-execution-run.ts")),
+      "A driver loop advances chapter execution, stops at every single-step boundary, and never crosses a writer gate.",
+    ),
+    check(
+      "guarded-path-is-the-automated-path",
+      /chapterExecutionReadiness/.test(text(root, "src/application/quality-persistent-run.ts"))
+        && /runChapterExecution/.test(text(root, "src/application/quality-persistent-run.ts"))
+        && /guarded-scene-execution/.test(text(root, "src/application/quality-persistent-run.ts")),
+      "Persistent runs take the guarded scene path whenever an executable contract exists and disclose when they do not.",
+    ),
+    check(
+      "chapter-count-not-capped-by-profile",
+      !/maxChaptersPerRun: 1,/.test(text(root, "src/domain/runtime-profile.ts")),
+      "No runtime profile clamps a persistent run to a single chapter.",
+    ),
   ];
 }
 

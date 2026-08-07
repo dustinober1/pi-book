@@ -44,8 +44,8 @@ export function startAutomationRun(project: ProjectStateV14, input: StartAutomat
   const startedAt = input.startedAt.trim();
   if (!/^RUN-[0-9]{3}$/.test(input.id)) throw new Error("Automation run ID must use RUN-NNN format.");
   if (!target || !currentAction || !creativeHash || !startedAt) throw new Error("Automation run target, action, creative hash, and start time are required.");
-  if (!Number.isInteger(input.requestedMaxChapters) || input.requestedMaxChapters < 1 || input.requestedMaxChapters > 10) {
-    throw new Error("Automation run chapter budget must be an integer from 1 to 10.");
+  if (!Number.isInteger(input.requestedMaxChapters) || input.requestedMaxChapters < 1 || input.requestedMaxChapters > 200) {
+    throw new Error("Automation run chapter budget must be an integer from 1 to 200.");
   }
   const result = clone(project);
   result.automation.active_run = {
