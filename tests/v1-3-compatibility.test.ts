@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getProjectStatus } from "../src/application/status.js";
-import { upgradeProjectVersion } from "../src/application/version.js";
+import { NOVEL_FORGE_VERSION, upgradeProjectVersion } from "../src/application/version.js";
 import { addBook } from "../src/project/add-book.js";
 import { initializeProject, readProject } from "../src/project/store.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
@@ -44,7 +44,7 @@ test("new projects seed all Novel Forge 1.3 evidence artifacts", () => {
     const root = initializeProject(parent, { projectName: "Taste Test", projectType: "standalone", profile: "thriller" });
     for (const path of seriesArtifacts) assert.equal(existsSync(join(root, path)), true, path);
     for (const path of bookArtifacts) assert.equal(existsSync(join(root, "books", "book-01", path)), true, path);
-    assert.equal(readProject(root).novel_forge_version, "2.0.1");
+    assert.equal(readProject(root).novel_forge_version, NOVEL_FORGE_VERSION);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
@@ -85,8 +85,8 @@ test("metadata upgrade does not hide missing optional 1.3 evidence", () => {
     removeOptionalArtifacts(root);
     recordVersion(root, "1.2.0");
 
-    assert.equal(upgradeProjectVersion(root), "2.0.1");
-    assert.equal(readProject(root).novel_forge_version, "2.0.1");
+    assert.equal(upgradeProjectVersion(root), NOVEL_FORGE_VERSION);
+    assert.equal(readProject(root).novel_forge_version, NOVEL_FORGE_VERSION);
     assert.ok(getProjectStatus(root).warnings.some((item) => /Optional Novel Forge 1\.3 research setup/i.test(item)));
   } finally {
     rmSync(parent, { recursive: true, force: true });

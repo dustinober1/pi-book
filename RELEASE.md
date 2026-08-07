@@ -1,20 +1,32 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v2.0.1
+## Current verified release: v2.1.0
 
-Novel Forge 2.0.1 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 2.1.0 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v2.0.1
+pi install git:github.com/dustinober1/pi-book@v2.1.0
 ```
 
 For one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v2.0.1
+pi -e git:github.com/dustinober1/pi-book@v2.1.0
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 2.0.1 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 2.1.0 release commit.
+
+## 2.1.0 release record
+
+- [x] Package metadata, package lock, runtime version, and new-project metadata report 2.1.0.
+- [x] Locked `series/canon.yaml` relationships are offered by next-book inheritance and validated against the locked set exactly as inherited canon IDs are.
+- [x] Selected relationships reach the new book's `inherited-context.yaml` as `inherited_relationship_ids` and appear in the inheritance report; the browser next-book wizard exposes the same selection.
+- [x] `book-strategy.yaml` accepts an optional `delivered_ending`, writable through `research-update` at manuscript-review or packaging stage.
+- [x] A blocking `ending-contract` packaging checklist item requires a delivered ending for romantasy books and names both values on a mismatch.
+- [x] The ending-contract check never reads the manuscript and never infers a disposition; thriller and historical-fiction packaging is unaffected.
+- [x] `inherited_relationship_ids` and `delivered_ending` are optional, so files written by earlier versions remain readable.
+- [x] No existing event type, gate, schema field, or validation rule was removed or narrowed.
+- [x] The release set moves together: runtime constant, release notes, install examples, release checker, checklist test, and compatibility tests all report 2.1.0.
 
 ## 2.0.1 release record
 
@@ -80,7 +92,7 @@ Use a copied or backed-up manuscript for the first pilot. Install the tag rather
 - [x] The release workflow reads the package version at run time instead of a hardcoded per-tag workflow file.
 - [x] Node 22.19.0 and Node 24 pass type, unit, integration, end-to-end, evaluation, benchmark, release, and package checks.
 
-Maintained release notes are in `docs/releases/v2.0.1.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
+Maintained release notes are in `docs/releases/v2.1.0.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
 
 ## Verify the current development tree
 

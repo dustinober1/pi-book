@@ -13,6 +13,7 @@ import { refreshGuidance } from "../application/handoff.js";
 import { applyRepositoryOrganization, summarizeArchiveList } from "../application/organizer/apply.js";
 import { renderOrganizationPreview, scanWritingRepository } from "../application/organizer/scan.js";
 import { buildPackagingChecklist } from "../application/package-checklist.js";
+import { approvePlanChangeRequest, listPendingPlanChangeRequests, rejectPlanChangeRequest } from "../application/plan-change.js";
 import { bookPlanPrompt, packagePrompt, readerTestPrompt, reviewPrompt, seriesPlanPrompt, voicePlanPrompt } from "../application/prompts.js";
 import {
   beginQualityAutopilotRun,
@@ -114,6 +115,51 @@ async function guidedAdoption(root: string, context: ExtensionCommandContext, su
   if (suppliedPath) context.ui.notify("The supplied manuscript path is authorized only for this wizard session. Review the detected chapter and asset map before applying.", "info");
 }
 
+/**
+ * The guide screen offers this action whenever a pending plan change exists, so
+ * it needs a handler here. Approval and rejection carry the same writer note and
+ * confirmation requirements as `/novel-plan-change`; the guided route only saves
+ * the writer from having to know the request ID.
+ */
+async function guidedPlanChange(root: string, context: ExtensionCommandContext): Promise<void> {
+  const pending = listPendingPlanChangeRequests(root);
+  if (!pending.length) { context.ui.notify("No pending Novel Forge plan changes.", "info"); return; }
+  const selectedId = pending.length === 1
+    ? pending[0]!.request_id
+    : await context.ui.select("Which plan change?", pending.map((item) => `${item.request_id} [${item.scope}] ${item.proposed_change}`))
+      .then((choice) => choice?.split(" ")[0]);
+  const request = pending.find((item) => item.request_id === selectedId);
+  if (!request) return;
+  const detail = [
+    request.proposed_change,
+    "",
+    `Reason: ${request.reason}`,
+    `Scope: ${request.scope}`,
+    `Future chapters: ${request.affected_chapters.join(", ") || "none"}`,
+    `Control files: ${request.control_files_to_update.join(", ")}`,
+  ].join("\n");
+  const decision = await context.ui.select(`${request.request_id}\n${detail}`, ["Approve this plan change", "Reject this plan change", "Decide later"]);
+  if (!decision || decision === "Decide later") return;
+  if (decision === "Reject this plan change") {
+    const reason = await context.ui.input("Plan-change rejection reason", "Explain why the existing future plan remains authoritative.");
+    if (!reason?.trim()) throw new Error("Plan-change rejection requires a reason.");
+    rejectPlanChangeRequest(root, request.request_id, reason.trim());
+    context.ui.notify(`Rejected plan change ${request.request_id}. Canonical project state is unchanged.`, "info");
+    return;
+  }
+  const confirmed = await context.ui.confirm(`Approve plan change ${request.request_id}?`, detail);
+  if (!confirmed) { context.ui.notify(`Plan change ${request.request_id} was not approved.`, "info"); return; }
+  const note = await context.ui.input("Writer approval note", "Explain why this future-plan change is approved.");
+  if (!note?.trim()) throw new Error("Plan-change approval requires a writer note.");
+  const result = approvePlanChangeRequest(root, request.request_id, {
+    confirmed: true,
+    approved_by: "writer",
+    note: note.trim(),
+    approved_at: new Date().toISOString(),
+  });
+  context.ui.notify(`Applied plan change ${request.request_id}. ${result.event.changed.length} canonical file(s) changed.`, "info");
+}
+
 async function guidedAdvanced(root: string, context: ExtensionCommandContext): Promise<void> {
   const choice = await context.ui.select("Advanced Novel Forge tools:", [
     "Open full browser wizard",
@@ -183,6 +229,7 @@ async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): 
   else if (id === "pause-run") sendDecision(pi, context, pauseQualityPersistentRun(root));
   else if (id === "cancel-run") sendDecision(pi, context, cancelQualityPersistentRun(root));
   else if (id === "premise") await openWizard(root, context, "premise");
+  else if (id === "plan-change") await guidedPlanChange(root, context);
   else if (id === "add-book") await guidedAddBook(root, context);
   else if (id === "adopt") await guidedAdoption(root, context);
   else if (id === "approve") {
@@ -206,6 +253,13 @@ async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): 
       return;
     }
     sendDecision(pi, context, decideQualityNextRun(root));
+  } else {
+    // Exhaustiveness guard. The guide screen offered a `plan-change` action for
+    // a release with no branch for it here, so selecting it did nothing at all
+    // and the writer had no route to the decision. A new GuideActionId now fails
+    // to compile until it is handled, rather than failing silently at runtime.
+    const unhandled: never = id;
+    throw new Error(`Guide action ${String(unhandled)} has no handler.`);
   }
 }
 
