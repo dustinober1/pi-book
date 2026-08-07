@@ -349,6 +349,32 @@ export function verifyV210ReleaseTree(root: string): V210ReleaseCheck[] {
       /NOVEL_FORGE_QUALITY_MODEL/.test(readme) && /Running on a local model/.test(readme),
       "The README documents running on a local model with a local example.",
     ),
+
+    check(
+      "journey-traces-recorded-from-real-runs",
+      existsSync(join(root, "src/infrastructure/journey-trace-store.ts"))
+        && /recordGuardedEvent/.test(text(root, "src/application/events.ts"))
+        && /recordWriterApproval/.test(text(root, "src/application/run.ts")),
+      "Author-journey events are emitted by the real guarded-event and run paths.",
+    ),
+    check(
+      "journey-traces-are-privacy-safe",
+      /assertPrivacySafe/.test(text(root, "src/infrastructure/journey-trace-store.ts"))
+        && /outside its privacy-safe shape/.test(text(root, "src/infrastructure/journey-trace-store.ts")),
+      "A journey event carrying a field outside its declared shape is refused rather than written.",
+    ),
+    check(
+      "journey-traces-are-operational-only",
+      /\.pi-book/.test(text(root, "src/infrastructure/journey-trace-store.ts"))
+        && /\.pi-book\//.test(text(root, "src/project/templates.ts")),
+      "Traces live in the ignored operational tree and new projects ignore it.",
+    ),
+    check(
+      "hand-authored-fixtures-are-not-the-baseline",
+      /evaluator regression/.test(text(root, "scripts/evaluate-fixtures.ts"))
+        && /verify the evaluator, not author velocity/.test(text(root, "scripts/evaluate-fixtures.ts")),
+      "Hand-authored journey fixtures are described as evaluator regression cases, not a velocity baseline.",
+    ),
   ];
 }
 

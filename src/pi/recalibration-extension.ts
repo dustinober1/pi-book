@@ -9,7 +9,9 @@ import { minimumCallReservationTokens } from "../application/budgeted-quality-wo
 import { ForegroundEconomyTelemetry } from "../application/foreground-economy-telemetry.js";
 import { runPersistentQualityDraft } from "../application/quality-persistent-run.js";
 import { beginQualityPersistentRun, resumeQualityPersistentRun } from "../application/quality-run.js";
+import { recordAuthorQuestion } from "../application/journey-trace.js";
 import { runExplicitVoiceRecalibration } from "../application/recalibration.js";
+import { findProjectRoot } from "../infrastructure/files.js";
 import { directDraftDecision } from "../application/run.js";
 import { modelExecutionProfileDeprecationAdvisory } from "../domain/model-execution-profile.js";
 import { qualityStateWithOverride, resolveQualityConfig } from "../domain/quality-profile.js";
@@ -267,6 +269,45 @@ function registerForegroundTelemetryHooks(pi: ExtensionAPI, foreground: Foregrou
   });
 }
 
+/**
+ * Count the questions a command actually put to the writer.
+ *
+ * Author actions are the half of the velocity metric that automation cannot
+ * remove without crossing a boundary this project holds, so they have to be
+ * counted where they happen rather than estimated. Wrapping the UI once here
+ * covers every command instead of threading a counter through each handler,
+ * and a question asked before a project exists is simply not recorded — there
+ * is nowhere to record it, and inventing a home for it would be worse than the
+ * known undercount.
+ */
+function withQuestionRecording(definition: CommandDefinition): CommandDefinition {
+  const original = definition as unknown as ReviewCommandDefinition;
+  const decorated: ReviewCommandDefinition = {
+    ...original,
+    async handler(args: string, context: ExtensionCommandContext): Promise<void> {
+      const ui = context.ui as { input?: unknown; select?: unknown };
+      const note = (): void => {
+        try {
+          const root = findProjectRoot(context.cwd);
+          if (root) recordAuthorQuestion(root, readProject(root).runtime?.telemetry);
+        } catch { /* diagnostic only */ }
+      };
+      const recordingUi = new Proxy(context.ui as object, {
+        get(target, property, receiver) {
+          const value = Reflect.get(target, property, receiver);
+          if ((property === "input" || property === "select") && typeof value === "function") {
+            return (...args: unknown[]) => { note(); return (value as (...items: unknown[]) => unknown).apply(target, args); };
+          }
+          return typeof value === "function" ? (value as (...items: unknown[]) => unknown).bind(target) : value;
+        },
+      });
+      void ui;
+      await original.handler(args, { ...context, ui: recordingUi } as ExtensionCommandContext);
+    },
+  };
+  return decorated as unknown as CommandDefinition;
+}
+
 export function registerNovelForgeWithRecalibration(pi: ExtensionAPI, options: NovelForgeExtensionOptions = {}): void {
   const foreground = options.foregroundTelemetry ?? new ForegroundEconomyTelemetry();
   registerForegroundTelemetryHooks(pi, foreground);
@@ -282,7 +323,7 @@ export function registerNovelForgeWithRecalibration(pi: ExtensionAPI, options: N
               : name === "novel-run"
                 ? withQualityRun(definition, options)
                 : definition;
-          registerCommand(name, decorated);
+          registerCommand(name, withQuestionRecording(decorated));
         };
       }
       const value = Reflect.get(target, property, receiver);

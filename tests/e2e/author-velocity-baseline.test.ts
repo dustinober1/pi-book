@@ -9,7 +9,11 @@ import {
 
 const root = resolve(process.cwd(), "evals", "journeys");
 
-test("all four author-journey baseline fixtures pass with explicit limitations", () => {
+// Hand-authored traces exercising the evaluator itself. They are deliberately
+// not a velocity baseline: they only prove the counter reads a trace correctly.
+// The measured baseline is recorded from real runs — see
+// tests/e2e/recorded-author-journey.test.ts.
+test("all four evaluator regression fixtures pass with explicit limitations", () => {
   const fixtures = loadAuthorJourneyFixtures(root);
   const results = fixtures.map(evaluateAuthorJourneyFixture);
   assert.equal(fixtures.length, 4);
@@ -40,12 +44,13 @@ test("journeys preserve the roadmap's required baseline behaviors", () => {
   assert.equal(revisions?.metrics.stopReason, "human-gate");
 });
 
-test("npm run eval preserves existing sections and prints author-journey baselines", () => {
+test("npm run eval preserves existing sections and prints the evaluator regression", () => {
   const output = execFileSync("npm", ["run", "eval"], { cwd: process.cwd(), encoding: "utf8" });
   assert.match(output, /# Novel Forge architecture and revision evaluation/);
   assert.match(output, /# Novel Forge 1\.3 release evaluation/);
-  assert.match(output, /# Novel Forge author-journey baseline/);
+  assert.match(output, /# Novel Forge author-journey evaluator regression/);
+  assert.match(output, /verify the evaluator, not author velocity/);
   assert.match(output, /- brief-to-book-plan: PASS/);
   assert.match(output, /- resume-after-four-chapters: PASS/);
-  assert.match(output, /4\/4 author journeys passed\./);
+  assert.match(output, /4\/4 evaluator regression cases passed\./);
 });

@@ -13,6 +13,7 @@ import {
 import { resolveChapterStepTarget } from "./chapter-execution-command.js";
 import { chapterExecutionReadiness, runChapterExecution, type ChapterExecutionRunResult } from "./chapter-execution-run.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
+import { recordRunState, recordStop } from "./journey-trace.js";
 import type { RunQualityDraftResult } from "./quality-orchestrator.js";
 import { creativeProjectStateHash } from "./project-hash.js";
 
@@ -268,6 +269,9 @@ export async function runPersistentQualityDraft(input: RunPersistentQualityDraft
   }
 
   const final = readProject(input.root).automation.active_run!;
+  const telemetry = readProject(input.root).runtime?.telemetry;
+  if (final.status === "completed") recordRunState(input.root, telemetry, final.id, "completed");
+  recordStop(input.root, telemetry, final.stopReason ?? final.status);
   return {
     runId: final.id,
     chapters,

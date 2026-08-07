@@ -64,12 +64,17 @@ console.log(`\n${releaseFixtures.length - releaseFailures}/${releaseFixtures.len
 
 const journeyFixtures = loadAuthorJourneyFixtures(join(root, "journeys"));
 let journeyFailures = 0;
-console.log("\n# Novel Forge author-journey baseline\n");
+// These fixtures are hand-authored, so they exercise the evaluator, not the
+// workflow: they prove the counter reads a trace correctly. Real author-velocity
+// measurement comes from traces the workflow emits during a run, evaluated in
+// tests/e2e/recorded-author-journey.test.ts.
+console.log("\n# Novel Forge author-journey evaluator regression\n");
 for (const fixture of journeyFixtures) {
   const result = evaluateAuthorJourneyFixture(fixture);
   console.log(`- ${result.id}: ${result.passed ? "PASS" : `FAIL (${result.failures.join("; ")})`}`);
   for (const limitation of result.limitations) console.log(`  limitation: ${limitation}`);
   if (!result.passed) journeyFailures += 1;
 }
-console.log(`\n${journeyFixtures.length - journeyFailures}/${journeyFixtures.length} author journeys passed.`);
+console.log(`\n${journeyFixtures.length - journeyFailures}/${journeyFixtures.length} evaluator regression cases passed.`);
+console.log("These are hand-authored traces. They verify the evaluator, not author velocity: a real trace is recorded by the workflow and scored in the recorded-author-journey end-to-end test.");
 if (failures || releaseFailures || journeyFailures) process.exitCode = 1;

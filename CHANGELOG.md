@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased — Measuring What a Book Actually Costs
+
+### Added
+
+- **Author-journey traces recorded from real runs.** Guarded events (accepted and rejected, with retries linked to the rejection they correct), writer approvals, host turns, run-state transitions, context size and stops are emitted by the paths that actually do the work — `applyNovelEvent`, the run lifecycle, and the command UI. The project's author-velocity baseline previously evaluated four hand-authored YAML fixtures: the evaluator counted events a person had typed, and a test asserted it reproduced those numbers. That is a schema test for a counter, and "how many author actions does a book cost" is the central question of the whole small-model effort.
+- `summarizeJourneyVelocity` reports chapters completed, author actions (questions answered plus gates decided — the work automation cannot remove without crossing a boundary this project holds), host turns, and the per-chapter rates.
+- New projects ship a `.gitignore` covering `.pi-book/`. Novel Forge's operational tree — run reports, caches, the story index, in-flight transactions, and now traces — was showing up as uncommitted files in the writer's own repository and being reported as a project warning on every status.
+
+### Changed
+
+- The hand-authored `evals/journeys` fixtures are now described as **evaluator regression cases** in `npm run eval` and in their test, not as a velocity baseline. They still verify the counter reads a trace correctly; they were never evidence about the workflow.
+
+### Boundaries
+
+- Traces are diagnostic and never canonical: they live under the ignored `.pi-book` tree, never enter a guarded event, are excluded from the package, and nothing reads them to make a workflow decision.
+- Privacy follows the existing telemetry rule exactly — identifiers, action names, outcomes, gate names, counts and stop reasons; never prompts, prose, source excerpts, model output, reasoning, or credentials. `assertPrivacySafe` refuses any event carrying a field outside its declared shape rather than trusting callers to remember, and a release check enforces that it stays.
+- Recording is skipped entirely when a project sets `runtime.telemetry: false`, and every recording call is best-effort: a diagnostic must never break the work it measures.
+- Questions asked before a project exists are not recorded, because there is nowhere to record them. That is a known undercount, stated rather than papered over.
+
 ## Unreleased — Defaults That Match the Model in the Room
 
 ### Changed
