@@ -101,7 +101,8 @@ export function verifyV210ReleaseTree(root: string): V210ReleaseCheck[] {
     check(
       "contract-skeletons",
       existsSync(join(root, "src/application/chapter-contract-skeletons.ts"))
-        && /are deliberately NOT invented/.test(text(root, "src/application/chapter-contract-skeletons.ts")),
+        && /Nothing semantic is invented here/.test(text(root, "src/application/chapter-contract-skeletons.ts"))
+        && /stay with the author/.test(text(root, "src/application/chapter-contract-skeletons.ts")),
       "Chapter contract skeletons compile the derivable fields and never invent judgement fields.",
     ),
     check(
@@ -369,6 +370,38 @@ export function verifyV210ReleaseTree(root: string): V210ReleaseCheck[] {
         && /\.pi-book\//.test(text(root, "src/project/templates.ts")),
       "Traces live in the ignored operational tree and new projects ignore it.",
     ),
+    check(
+      "contract-fields-derived-from-the-graph",
+      existsSync(join(root, "src/application/contracts/contract-field-derivation.ts"))
+        && /establishedStateRecords/.test(text(root, "src/application/contracts/contract-field-derivation.ts"))
+        && /establishedKnowledgeRecords/.test(text(root, "src/application/contracts/contract-field-derivation.ts")),
+      "start_state_ids and knowledge_boundary_ids are resolved from the story ledgers rather than asked of the model.",
+    ),
+    check(
+      "typed-contract-completion",
+      existsSync(join(root, "src/application/contracts/complete-chapter-contract.ts"))
+        && /name: "novel_complete_chapter_contract"/.test(text(root, "src/pi/complete-contract-command.ts"))
+        && /stringifyYaml\(contract\)/.test(text(root, "src/application/contracts/complete-chapter-contract.ts")),
+      "A chapter contract is completed from typed values that the tool serialises, not hand-authored YAML.",
+    ),
+    check(
+      "typed-completion-still-refuses-invention",
+      /assertKnownIds/.test(text(root, "src/application/contracts/complete-chapter-contract.ts"))
+        && /well-formed nonsense/.test(text(root, "src/application/contracts/complete-chapter-contract.ts")),
+      "Typed completion rejects record IDs that do not exist rather than serialising them.",
+    ),
+    check(
+      "typed-completion-uses-the-guarded-event",
+      /applyNovelEvent/.test(text(root, "src/pi/complete-contract-command.ts"))
+        && /eventType: "chapter-queue"/.test(text(root, "src/pi/complete-contract-command.ts")),
+      "Typed completion applies through the existing guarded chapter-queue event.",
+    ),
+    check(
+      "skill-documents-typed-completion",
+      /novel_complete_chapter_contract/.test(skill) && /rather than hand-authoring the contract file/.test(skill),
+      "SKILL.md directs agents to the typed contract tool instead of hand-authored YAML.",
+    ),
+
     check(
       "hand-authored-fixtures-are-not-the-baseline",
       /evaluator regression/.test(text(root, "scripts/evaluate-fixtures.ts"))

@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — Typed Contracts Instead of Hand-Authored YAML
+
+`SKILL.md` is roughly five thousand words of normative contract that a weak host model must hold while hand-authoring schema-exact YAML, where one unquoted `: ` in a prose field rejects the whole file and burns the single permitted retry. The document documents its own trap. The fix is not a shorter skill — it is to stop asking the model for YAML. This applies that to the highest-value case: the chapter contract, which is the gate to guarded scene execution and therefore to every critic, repair pass and ordered acceptance in the system.
+
+### Added
+
+- **`novel_complete_chapter_contract`.** The model supplies the two decisions that are genuinely its own — `required_end_state` (what this chapter must have changed) and `forbidden_changes` (what it must not touch) — as typed values. The tool derives the rest, serialises the YAML itself so a malformed scalar is impossible rather than merely discouraged, and applies the result through the same guarded `chapter-queue` event.
+- **Derivation of the two contract fields that are graph queries.** `start_state_ids` is which established state records describe this chapter's subjects; `knowledge_boundary_ids` is what the POV has established knowledge of. Both are resolved from `series/state-ledger.yaml` and `series/knowledge-ledger.yaml` during skeleton compilation. A compiled skeleton now asks the author for two fields where it previously asked for four.
+
+### Boundaries
+
+- **Derivation is not invention.** Every derived ID names a record that already exists with an established status, scoped to the chapter's own subjects — another character's state is not a start state here, a proposed plan is not an established fact, and a knowledge boundary is what this POV may know rather than the cast's union. A project with empty ledgers derives nothing and leaves the fields missing, because a contract that merely looks executable is the hollow-contract failure in a new costume.
+- **Typing the input does not remove a check.** Every record ID is verified against the ledgers, so a typed call cannot move invention from malformed YAML into well-formed nonsense; a chapter whose `required_end_state` is empty is rejected, because a chapter that changes nothing has no executable contract. The guarded event still validates schema, references, allowlists, story integrity and the working tree, and still ends in one commit.
+- `required_end_state` and `forbidden_changes` remain the author's. They are decisions about the story, not facts about the graph, and no amount of querying produces them.
+
 ## Unreleased — Measuring What a Book Actually Costs
 
 ### Added

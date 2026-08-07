@@ -1,7 +1,9 @@
 import { join } from "node:path";
 import { Value } from "@sinclair/typebox/value";
 import { ChapterContractSchema, chapterContractPath, type ChapterContract } from "../domain/chapter-contract.js";
+import { KnowledgeLedgerSchema, type KnowledgeLedger } from "../domain/knowledge-ledger.js";
 import type { ChapterQueueState } from "../domain/schemas.js";
+import { StateLedgerSchema, type StateLedger } from "../domain/state-ledger.js";
 import { readText } from "../infrastructure/files.js";
 import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
 import type { FileChange } from "../infrastructure/transaction.js";
@@ -17,14 +19,31 @@ import { compileLegacyChapterContract } from "./contracts/chapter-contract-compi
  * capsule, the style card, the repetition memory and every critic at once. That
  * single fallback is why none of the quality machinery ran in practice.
  *
- * The four semantic fields (`start_state_ids`, `required_end_state`,
- * `forbidden_changes`, `knowledge_boundary_ids`) are deliberately NOT invented
- * here. Generating plausible-looking values would make guarded execution appear
- * available while executing against a hollow contract, which is worse than the
- * current honest failure. What is derivable from the packet is compiled; what
- * requires judgement is named as missing, so the directory is never empty and
- * the remaining work is explicit.
+ * Nothing semantic is invented here. Generating plausible-looking values would
+ * make guarded execution appear available while executing against a hollow
+ * contract, which is worse than an honest failure.
+ *
+ * Two of the four semantic fields are not judgement, though: `start_state_ids`
+ * and `knowledge_boundary_ids` are queries over the state and knowledge
+ * ledgers, and every ID they return names a record that already exists with an
+ * established status. Those are derived. `required_end_state` and
+ * `forbidden_changes` — what this chapter must change and must not touch — are
+ * decisions about the story that no query produces, and stay with the author,
+ * who supplies them through a typed tool call rather than by hand-writing YAML.
  */
+
+/** Ledgers are optional: a project without them derives nothing and says so. */
+function readLedgers(root: string): { state: StateLedger | null; knowledge: KnowledgeLedger | null } {
+  const read = <T>(path: string, schema: Parameters<typeof parseYaml<T>>[1]): T | null => {
+    const text = readText(join(root, path));
+    if (text === null) return null;
+    try { return parseYaml<T>(text, schema, path); } catch { return null; }
+  };
+  return {
+    state: read<StateLedger>("series/state-ledger.yaml", StateLedgerSchema),
+    knowledge: read<KnowledgeLedger>("series/knowledge-ledger.yaml", KnowledgeLedgerSchema),
+  };
+}
 
 const EXECUTABLE_REMEDY = "Complete them in a chapter-queue event, which allowlists that path, then set small_model_ready: true with an empty missing_small_model_fields. Until then this chapter can only be drafted with a draft-chapter event, without scene critics, targeted repair, or ordered acceptance.";
 
@@ -51,13 +70,14 @@ export function appendChapterContractSkeletons(
   queue: ChapterQueueState,
 ): string[] {
   const created: string[] = [];
+  const ledgers = readLedgers(root);
   for (const packet of queue.packets) {
     if (packet.status !== "ready") continue;
     const path = chapterContractPath(bookId, packet.chapter);
     if (changes.some((change) => change.path === path)) continue;
     if (readText(join(root, path)) !== null) continue;
 
-    const contract = compileLegacyChapterContract(packet);
+    const contract = compileLegacyChapterContract(packet, { ledgers });
     if (!Value.Check(ChapterContractSchema, contract)) continue;
     changes.push({ path, content: stringifyYaml(contract) });
     created.push(path);
