@@ -4,12 +4,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runV13CleanProjectJourney } from "../../src/evaluation/v1-3-journey.js";
+import { NOVEL_FORGE_VERSION } from "../../src/application/version-core.js";
 
 test("a clean current project exercises the honest 1.3 evidence journey", async () => {
   const parent = mkdtempSync(join(tmpdir(), "novel-forge-v13-journey-"));
   try {
     const report = await runV13CleanProjectJourney(parent);
-    assert.equal(report.initializedVersion, "2.0.1");
+    assert.equal(report.initializedVersion, NOVEL_FORGE_VERSION);
     assert.deepEqual(report.invariantFailures, []);
     for (const id of [
       "initialize-project",

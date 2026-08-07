@@ -89,6 +89,8 @@ book-plan:      books/<book-id>/book-bible.md
 
 A `book-plan` also validates `genre.yaml`, `chapter-queue.yaml`, `series/canon.yaml`, `series/story-threads.yaml`, and `research/source-register.yaml` through the on-disk state, so submit any of those you changed in the same event.
 
+Under a compact runtime profile whose instruction budget cannot hold the whole book-plan contract, the book-plan prompt arrives as **two phases feeding one event**: an architecture phase (book bible, genre, plot grid, chapter queue, continuity delta, remarkability) and an evidence phase (research ledger, book strategy, source provenance, story threads, and the historical-fiction files). The architecture phase applies nothing — hold its drafted files outside the project root and run `/novel-plan book --phase evidence` for the remaining instructions. The evidence phase submits the complete required set from **both** phases as one `book-plan` event; omitting an architecture file is itself a rejection. Splitting the instructions never splits the transaction, and no phase shortens a rule to fit.
+
 A rejection lists every problem the validator found across all layers — required outputs, YAML and schema shape, profile packet fields, cross-artifact references, and domain integrity — not just the first one. Fix all listed problems in one pass before resubmitting; the retry budget is one corrected resubmission.
 
 Because each guarded file is hand-authored YAML text, not structured data the tool serializes for you, two mistakes cause an avoidable rejection and burn the one permitted retry:
@@ -204,7 +206,15 @@ A drafted chapter is submitted as event content, never written to the project ro
 
 Prefer `novel_advance_chapter_step` over composing a whole chapter yourself: it runs bounded context, isolated model jobs, critics, repair, and ordered acceptance. It requires an executable chapter contract at `books/<book-id>/contracts/chapters/CH-NNN.yaml` with `small_model_ready: true`.
 
-A `chapter-queue` event now compiles a contract skeleton for every ready packet, so that directory is never empty and an empty listing is never a reason to skip the guarded path. The skeleton carries only what the packet determines. The four fields that require judgement — `start_state_ids`, `required_end_state`, `forbidden_changes`, `knowledge_boundary_ids` — are deliberately left empty and listed in `missing_small_model_fields`, because inventing them would make guarded execution appear available while running against a hollow contract. Complete them in a `chapter-queue` event, which allowlists that path, then set `small_model_ready: true` with an empty `missing_small_model_fields`. The event reports which contracts still need completion.
+Pass `until: "chapter-complete"` unless you have a reason not to. It drives the same persisted stages to the chapter's guarded commit and stops at exactly the same boundaries a single step would — a writer gate, a blocker, a pause, budget exhaustion, or the scene repair limit — without a tool call per stage. The default `until: "next-checkpoint"` advances one stage, which is useful when inspecting a specific checkpoint and wasteful otherwise: a chapter is roughly a dozen stages per scene. Repair is bounded by the runtime profile's `maxRepairAttempts`; a scene that cannot pass validation within it blocks with `repair-limit` naming the scene and the failing checks, rather than cycling.
+
+`/novel-run` takes this path automatically for any chapter with an executable contract, and reports how many chapters used it. When it falls back to whole-chapter drafting it returns the same disclosure advisory described below — relay it.
+
+A `chapter-queue` event compiles a contract skeleton for every ready packet, so that directory is never empty and an empty listing is never a reason to skip the guarded path. Nothing semantic is invented: inventing it would make guarded execution appear available while running against a hollow contract.
+
+Two of the four semantic fields are not judgement at all. `start_state_ids` is "which established state records describe the people and things this chapter is about", and `knowledge_boundary_ids` is "what has this POV established knowledge of" — both are queries over `series/state-ledger.yaml` and `series/knowledge-ledger.yaml`, and the skeleton resolves them. Every ID returned names a record that already exists with an established status; a project with empty ledgers derives nothing and says so rather than guessing.
+
+The remaining two are yours: `required_end_state` (what this chapter must have changed by its end) and `forbidden_changes` (what it must not touch). **Use `novel_complete_chapter_contract` rather than hand-authoring the contract file.** You pass those two as typed values; the tool derives the rest, serialises the YAML itself — so a malformed scalar is impossible rather than merely discouraged — and applies the result through the same guarded `chapter-queue` event, which still validates schema, references, allowlists and story integrity. Every record ID you name must already exist in the ledgers; the tool rejects unknown IDs rather than inventing records, because typing the input must not move invention from malformed YAML into well-formed nonsense.
 
 If no executable contract exists, you may draft the chapter with a `draft-chapter` event, but say plainly in your summary that the chapter was drafted without guarded scene execution, so the writer knows critics and repair did not run. Never silently substitute hand-drafting for the guarded path. Both `novel_validate_event` and `novel_apply_event` return this disclosure as an advisory on every `draft-chapter` event that skips guarded execution; repeat it to the writer rather than dropping it.
 
@@ -320,6 +330,16 @@ The checklist must show status, blocking/advisory classification, evidence paths
 Build all outputs before mutation and commit them atomically: manuscript Markdown, DOCX, EPUB, publishing CSV/XLSX, reader CSV/XLSX, retailer copy, launch copy, social posts, ads, audiobook metadata/promotion, series-page copy, manifest, and report. Use source hashes to prevent silent stale overwrite.
 
 For historical fiction, also build a Historical Note when the invention ledger requests disclosure. Never generate a historical note for other profiles.
+
+`/novel-package --apply` produces the complete package without opening a browser, which is the only path available on a headless machine; the wizard remains the default for interactive work. `/novel-run --until packaging` and `--until complete` aim a run at the end of the book. A target names where the writer is aiming, never what may be crossed: every intervening gate still stops the run.
+
+### The human reader checkpoint
+
+A `package` event requires that at least one human has responded to a reader experiment. That requirement is now reported from drafting onward, in status and in the packaging checklist, so it is a planned stop rather than a discovery at the last gate.
+
+A writer who intends to publish without asking a reader records an explicit decision in `series/decision-ledger.yaml` through an `intake-update` event, with subject `package-without-reader-evidence` and a choice beginning `accept:`. Only an active (unreplaced), accepting decision scoped to `project` or the active book counts. With it, packaging proceeds and the blocker becomes a warning that must still reach the writer; the package manifest and report both record that no human has read the book.
+
+The waiver permits packaging. It never becomes reader evidence, never writes `reader-experiments.yaml`, and never licenses describing the book as reader-tested. Real recorded responses always outrank it.
 
 ## Next-book inheritance
 

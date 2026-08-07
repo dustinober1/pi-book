@@ -244,7 +244,7 @@ export function renderHandoff(project: ProjectState, book: BookState, status: Pr
   const continuation = [
     `Continue the Novel Forge project ${project.project_name}.`,
     `The active book is ${book.book_id} (${book.profile}) at stage ${project.current_stage}.`,
-    `Runtime profile is ${status.runtimeProfile}; quality tier is ${status.qualityTier}.`,
+    `Runtime profile is ${status.runtimeProfile}; model execution profile is ${status.modelExecutionProfile}; quality tier is ${status.qualityTier}.`,
     "Read STATUS.md and HANDOFF.md first, then follow the exact recommended action through /novel.",
     `Do not edit PROJECT.yaml, BOOK.yaml, STATUS.md, or HANDOFF.md directly and do not bypass the active human gate ${gate}.`,
   ].join(" ");
@@ -256,6 +256,7 @@ export function renderHandoff(project: ProjectState, book: BookState, status: Pr
     `- Active book: ${book.book_id}`,
     `- Genre profile: ${book.profile}`,
     `- Runtime profile: ${status.runtimeProfile}`,
+    `- Model execution profile: ${status.modelExecutionProfile}`,
     `- Quality tier: ${status.qualityTier}`,
     `- Stage: ${project.current_stage}`,
     `- Git reference: ${branch} @ HEAD`,

@@ -1,3 +1,4 @@
+import type { ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import type { AutomationRunState } from "../domain/v1-4-schemas.js";
@@ -9,6 +10,7 @@ export interface StartAutomationRunInput {
   currentAction: string;
   requestedMaxChapters: number;
   runtimeProfile?: RuntimeProfileId;
+  modelExecutionProfile?: ModelExecutionProfileId;
   creativeHash: string;
   startedAt: string;
 }
@@ -42,8 +44,8 @@ export function startAutomationRun(project: ProjectStateV14, input: StartAutomat
   const startedAt = input.startedAt.trim();
   if (!/^RUN-[0-9]{3}$/.test(input.id)) throw new Error("Automation run ID must use RUN-NNN format.");
   if (!target || !currentAction || !creativeHash || !startedAt) throw new Error("Automation run target, action, creative hash, and start time are required.");
-  if (!Number.isInteger(input.requestedMaxChapters) || input.requestedMaxChapters < 1 || input.requestedMaxChapters > 10) {
-    throw new Error("Automation run chapter budget must be an integer from 1 to 10.");
+  if (!Number.isInteger(input.requestedMaxChapters) || input.requestedMaxChapters < 1 || input.requestedMaxChapters > 200) {
+    throw new Error("Automation run chapter budget must be an integer from 1 to 200.");
   }
   const result = clone(project);
   result.automation.active_run = {
@@ -54,6 +56,7 @@ export function startAutomationRun(project: ProjectStateV14, input: StartAutomat
     currentAction,
     requestedMaxChapters: input.requestedMaxChapters,
     ...(input.runtimeProfile ? { runtimeProfile: input.runtimeProfile } : {}),
+    ...(input.modelExecutionProfile ? { modelExecutionProfile: input.modelExecutionProfile } : {}),
     completedEventKeys: [],
     lastProjectHash: creativeHash,
     refillCount: 0,

@@ -1,7 +1,7 @@
 import type { ChapterExecutionState } from "../domain/chapter-execution-state.js";
 import type { ModelExecutionProfile } from "../domain/model-execution-profile.js";
 import type { QualityThinkingLevel, QualityWorker } from "../domain/quality-worker.js";
-import type { RuntimeProfileId } from "../domain/runtime-profile.js";
+import { RUNTIME_PROFILES, type RuntimeProfileId } from "../domain/runtime-profile.js";
 import {
   isSceneCriticJobType,
   type SceneCriticJobType,
@@ -11,13 +11,14 @@ import { readChapterExecutionManifest } from "../infrastructure/chapter-executio
 import { readSceneCriticArtifact } from "../infrastructure/scene-critic-artifact-store.js";
 import { readSceneCriticSummaryArtifact } from "../infrastructure/scene-critic-summary-store.js";
 import { readSceneDraftArtifact } from "../infrastructure/scene-draft-artifact-store.js";
+import { readSceneValidationArtifact } from "../infrastructure/scene-validation-artifact-store.js";
 import { acceptSceneCandidate } from "./scene-acceptance.js";
 import {
   acceptedSceneDraftAttempt,
   latestSceneDraftAttempt,
 } from "./scene-artifact-discovery.js";
 import { commitValidatedChapter } from "./chapter-commit.js";
-import { transitionChapterExecution } from "./chapter-execution-machine.js";
+import { blockChapterExecution, transitionChapterExecution } from "./chapter-execution-machine.js";
 import { prepareChapterExecution } from "./chapter-execution-preparation.js";
 import { qualifyGemmaModelForRun } from "./model-fingerprint.js";
 import { resolveModelExecutionProfile } from "./model-execution-profile-resolver.js";
@@ -133,6 +134,48 @@ function matchingCriticAttempt(
 
 function sceneContractHashes(manifest: ReturnType<typeof prepareChapterExecution>["manifest"]): Record<string, string> {
   return Object.fromEntries(manifest.scenes.map((scene) => [scene.scene_id, scene.contract_hash]));
+}
+
+/**
+ * Bound the repair cycle.
+ *
+ * `deterministic-validation -> span-repair -> deterministic-validation` is a
+ * loop, and `critic-review` and `state-delta` can both re-enter it. Nothing
+ * limited how many times a scene could go round: `RuntimeProfile.maxRepairAttempts`
+ * was declared, set to 2 in all three profiles and asserted by a test, but read
+ * by no code, and the `repair-limit` blocker code was likewise declared and
+ * never raised. That was survivable while a human called the tool once per
+ * node — they would notice. Inside a driver loop it is not, so this bound is a
+ * prerequisite for `runChapterExecution`, not an accompaniment to it.
+ *
+ * Blocking rather than throwing keeps the run inspectable and resumable: the
+ * writer can read the scene's validation findings, fix the contract or accept a
+ * different approach, and resume. The message names the scene and what is still
+ * failing so that decision does not require reading artifacts by hand.
+ */
+function repairLimitBlocker(
+  input: AdvanceChapterExecutionStepInput,
+  state: ChapterExecutionState,
+  currentScene: string,
+  manifestRuntimeProfile?: RuntimeProfileId,
+): ChapterExecutionState | null {
+  const runtimeProfileId = input.runtimeProfile ?? manifestRuntimeProfile ?? "full";
+  const limit = RUNTIME_PROFILES[runtimeProfileId].maxRepairAttempts;
+  const used = state.attempts[`${currentScene}:span-repair`] ?? 0;
+  if (used < limit) return null;
+  const attempt = latestSceneDraftAttempt(input.root, input.runId, currentScene);
+  const validation = attempt === null ? null : readSceneValidationArtifact(input.root, input.runId, currentScene, attempt);
+  const blockers = (validation?.findings ?? []).filter((finding) => finding.severity === "blocker");
+  const detail = blockers.length
+    ? ` Still failing: ${blockers.map((finding) => finding.code).join(", ")}.`
+    : " The last repair produced no new deterministic blocker, so the remaining objection is a critic verdict.";
+  const blocked = blockChapterExecution(state, {
+    code: "repair-limit",
+    message: `Scene ${currentScene} reached the ${runtimeProfileId} profile limit of ${limit} span-repair attempt(s) without passing validation.${detail} Inspect the scene's validation and critic artifacts, then repair the contract or accept a different approach before resuming.`,
+    recordIds: [currentScene],
+  }, input.now);
+  writeChapterExecutionState(input.root, blocked);
+  return blocked;
 }
 
 export async function advanceChapterExecutionStep(
@@ -309,6 +352,8 @@ export async function advanceChapterExecutionStep(
   }
   if (state.current_node === "span-repair") {
     const currentScene = sceneId(state);
+    const exhausted = repairLimitBlocker(input, state, currentScene, prepared.manifest.runtime_profile);
+    if (exhausted) return { action: "stopped", state: exhausted };
     const draft = currentDraft(input.root, input.runId, state);
     const summary = readSceneCriticSummaryArtifact(input.root, input.runId, currentScene, draft.attempt);
     const repairCritics: Partial<Record<SceneCriticJobType, number>> = {};

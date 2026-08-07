@@ -12,6 +12,7 @@ import { readBook, readProject } from "../../project/store.js";
 import { exportWithPandoc } from "../../conversion/pandoc-export.js";
 import { readReaderExperiment, readReaderIndex } from "../readers/store.js";
 import { readMarketingMetadata, readPublishingMetadata } from "./metadata.js";
+import { packageWithoutReadersDecision } from "../reader-checkpoint.js";
 
 export interface PackageBuildOptions { preferPandoc?: boolean; pandocBinary?: string }
 export interface PackageBuildResult { changes: TransactionFileChange[]; sourceHash: string; engine: string; chapters: number; words: number }
@@ -250,13 +251,23 @@ export async function buildPackageArtifacts(root: string, options: PackageBuildO
     ...(renderedHistoricalNote ? [{ path: `${base}/historical-note.md`, format: "markdown", content: renderedHistoricalNote, required: true }] : []),
   ];
   const generatedAt = new Date().toISOString();
+  // A package produced under the reader-evidence waiver must say so in its own
+  // manifest and report. The waiver permits packaging; it never converts an
+  // absence of readers into evidence, so the record travels with the artifacts.
+  const readerWaiver = packageWithoutReadersDecision(root, book.book_id);
+  const waiverWarning = readerWaiver
+    ? `No human reader has read this book. Packaged under writer decision ${readerWaiver.id} (${readerWaiver.choice}, recorded ${readerWaiver.decidedAt}). Nothing here is reader-validated; do not describe it as reader-tested.`
+    : null;
   const manifest: PackageManifest = {
     schema_version: "1.0.0",
     generated_at: generatedAt,
     source_hash: sourceHash,
     engine,
     outputs: artifacts.map((artifact) => ({ path: artifact.path, format: artifact.format, hash: sha(artifact.content), required: artifact.required, status: "generated", warning: artifact.warning ?? "" })),
-    warnings: [...new Set(artifacts.map((artifact) => artifact.warning ?? "").filter(Boolean))],
+    warnings: [
+      ...(waiverWarning ? [waiverWarning] : []),
+      ...new Set(artifacts.map((artifact) => artifact.warning ?? "").filter(Boolean)),
+    ],
   };
   const report = [
     "# Novel Forge Packaging Report",

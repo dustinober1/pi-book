@@ -1,5 +1,6 @@
 import type { QualityProjectState, QualityRunOverride, QualityTierId } from "../domain/quality-profile.js";
 import { qualityStateWithOverride, resolveQualityConfig } from "../domain/quality-profile.js";
+import type { ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import type { RuntimeProfileId } from "../domain/runtime-profile.js";
 import { readProject } from "../project/store.js";
 import { beginAutopilotRun } from "./autopilot.js";
@@ -22,6 +23,7 @@ export interface BeginQualityPersistentRunOptions {
   target: string;
   maxChapters: number;
   runtimeProfile?: RuntimeProfileId;
+  modelExecutionProfile?: ModelExecutionProfileId;
   quality?: QualityRunOverride;
   now?: string;
 }
@@ -51,6 +53,7 @@ function persistentOptions(options: BeginQualityPersistentRunOptions, quality: Q
     maxChapters: options.maxChapters,
     qualitySnapshot: quality,
     ...(options.runtimeProfile ? { runtimeProfile: options.runtimeProfile } : {}),
+    ...(options.modelExecutionProfile ? { modelExecutionProfile: options.modelExecutionProfile } : {}),
     ...(options.now ? { now: options.now } : {}),
   };
 }

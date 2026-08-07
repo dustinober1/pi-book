@@ -55,6 +55,7 @@ test("book planning standard prompt retains the current controlling requirements
     planningQuestions: ["What pressure makes delay costly?"],
     profileRules: [],
     profileOutputs: [],
+    hasPublicReviewEvidence: true,
     projectHash: "hash-123",
   });
   const standard = compilePrompt(stage, RUNTIME_PROFILES.full).text;

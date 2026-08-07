@@ -129,8 +129,12 @@ test("status and run decisions expose the resolved runtime profile separately fr
   }
 });
 
-test("drafting decisions enforce tiny and local chapter caps while full preserves the request", () => {
-  for (const [profile, expected] of [["tiny-local", 1], ["local", 1], ["full", 8]] as const) {
+test("drafting decisions preserve the requested chapter count on every runtime profile", () => {
+  // tiny-local and local used to clamp this to one, so a 40-chapter book needed
+  // at least 40 writer-initiated runs on exactly the profiles a local-model user
+  // must choose. Per-stage work limits still differ by profile; see
+  // runtime-profiles.test.ts.
+  for (const [profile, expected] of [["tiny-local", 8], ["local", 8], ["full", 8]] as const) {
     const { parent, root } = setup("drafting", profile);
     try {
       const decision = decideNextRun(root, { maxChapters: 8 });
@@ -161,7 +165,7 @@ test("direct revision decisions enforce profile ticket caps even for explicit ti
   }
 });
 
-test("persistent runs store the resolved profile and normalized chapter budget", () => {
+test("persistent runs store the resolved profile and the requested chapter budget", () => {
   const { parent, root } = setup("drafting", "tiny-local");
   try {
     const decision = beginPersistentRun(root, {
@@ -172,7 +176,7 @@ test("persistent runs store the resolved profile and normalized chapter budget",
     });
     const run = readProject(root).automation.active_run;
     assert.equal(decision.runtimeProfile, "tiny-local");
-    assert.equal(run?.requestedMaxChapters, 1);
+    assert.equal(run?.requestedMaxChapters, 8);
     assert.equal(run?.runtimeProfile, "tiny-local");
   } finally {
     rmSync(parent, { recursive: true, force: true });

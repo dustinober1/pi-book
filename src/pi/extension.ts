@@ -12,8 +12,11 @@ import { buildGuideScreen, type GuideActionId } from "../application/guide.js";
 import { refreshGuidance } from "../application/handoff.js";
 import { applyRepositoryOrganization, summarizeArchiveList } from "../application/organizer/apply.js";
 import { renderOrganizationPreview, scanWritingRepository } from "../application/organizer/scan.js";
+import { recommendProfilesForCapacity } from "../application/capacity-profile-advisor.js";
 import { buildPackagingChecklist } from "../application/package-checklist.js";
-import { bookPlanPrompt, packagePrompt, readerTestPrompt, reviewPrompt, seriesPlanPrompt, voicePlanPrompt } from "../application/prompts.js";
+import { applyPackageArtifacts } from "../application/packaging/apply.js";
+import { approvePlanChangeRequest, listPendingPlanChangeRequests, rejectPlanChangeRequest } from "../application/plan-change.js";
+import { bookPlanPhasePrompt, bookPlanPrompt, packagePrompt, readerTestPrompt, reviewPrompt, seriesPlanPrompt, voicePlanPrompt } from "../application/prompts.js";
 import {
   beginQualityAutopilotRun,
   beginQualityPersistentRun,
@@ -36,7 +39,8 @@ import { listProfiles } from "../profiles/index.js";
 import { addBook } from "../project/add-book.js";
 import { initializeProject, requireProjectRoot, readProject } from "../project/store.js";
 import type { WizardWorkflow } from "../wizard/types.js";
-import { flagValue, parseDraftOptions, parseQualityOverride, parseRunOptions, qualityValueFlags, tokens } from "./arguments.js";
+import { modelExecutionProfileDeprecationAdvisory } from "../domain/model-execution-profile.js";
+import { flagValue, parseDraftOptions, parseQualityOverride, parseRunOptions, parseSelectableModelExecutionProfileId, qualityValueFlags, tokens } from "./arguments.js";
 
 function errorText(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 
@@ -67,13 +71,33 @@ function sendPrompt(pi: ExtensionAPI, context: ExtensionCommandContext, prompt: 
   sendDecision(pi, context, { action: "guided", prompt, message });
 }
 
-function planPromptFor(root: string, requested: string): string {
+function planPromptFor(root: string, requested: string, phase?: string): string {
   const project = readProject(root);
   const scope = requested || (project.current_stage === "voice-intake" ? "voice" : project.current_stage === "series-planning" ? "series" : "book");
+  if (phase && scope !== "book") throw new Error("--phase applies only to book planning. Use /novel-plan book --phase architecture or --phase evidence.");
   if (scope === "voice") { assertOperationAllowed(project, "plan-voice"); return voicePlanPrompt(root); }
   if (scope === "series") { assertOperationAllowed(project, "plan-series"); return seriesPlanPrompt(root); }
-  if (scope === "book") { assertOperationAllowed(project, "plan-book"); return bookPlanPrompt(root); }
+  if (scope === "book") {
+    assertOperationAllowed(project, "plan-book");
+    if (phase === undefined) return bookPlanPrompt(root);
+    // Under a compact instruction budget the book plan compiles as two phases
+    // feeding one guarded event; the phase-1 prompt directs the agent here.
+    if (phase !== "architecture" && phase !== "evidence") throw new Error(`Unknown book-plan phase: ${phase}. Use architecture or evidence.`);
+    return bookPlanPhasePrompt(root, phase);
+  }
   throw new Error(`Unknown planning scope: ${scope}. Use voice, series, or book.`);
+}
+
+/**
+ * The host context window, when the harness reports one. `getContextUsage`
+ * returns undefined before the first turn and may be absent entirely on an
+ * older harness, so both are treated as "capacity unknown" — which asks the
+ * writer rather than assuming, and never throws inside project creation.
+ */
+function hostContextWindow(context: ExtensionCommandContext): number | undefined {
+  const usage = typeof context.getContextUsage === "function" ? context.getContextUsage() : undefined;
+  const window = usage?.contextWindow;
+  return typeof window === "number" && Number.isFinite(window) && window > 0 ? window : undefined;
 }
 
 function formatChecklist(root: string): string {
@@ -112,6 +136,51 @@ async function guidedAdoption(root: string, context: ExtensionCommandContext, su
   const authorizedPaths = suppliedPath ? [suppliedPath] : [];
   await openWizard(root, context, "adoption", authorizedPaths);
   if (suppliedPath) context.ui.notify("The supplied manuscript path is authorized only for this wizard session. Review the detected chapter and asset map before applying.", "info");
+}
+
+/**
+ * The guide screen offers this action whenever a pending plan change exists, so
+ * it needs a handler here. Approval and rejection carry the same writer note and
+ * confirmation requirements as `/novel-plan-change`; the guided route only saves
+ * the writer from having to know the request ID.
+ */
+async function guidedPlanChange(root: string, context: ExtensionCommandContext): Promise<void> {
+  const pending = listPendingPlanChangeRequests(root);
+  if (!pending.length) { context.ui.notify("No pending Novel Forge plan changes.", "info"); return; }
+  const selectedId = pending.length === 1
+    ? pending[0]!.request_id
+    : await context.ui.select("Which plan change?", pending.map((item) => `${item.request_id} [${item.scope}] ${item.proposed_change}`))
+      .then((choice) => choice?.split(" ")[0]);
+  const request = pending.find((item) => item.request_id === selectedId);
+  if (!request) return;
+  const detail = [
+    request.proposed_change,
+    "",
+    `Reason: ${request.reason}`,
+    `Scope: ${request.scope}`,
+    `Future chapters: ${request.affected_chapters.join(", ") || "none"}`,
+    `Control files: ${request.control_files_to_update.join(", ")}`,
+  ].join("\n");
+  const decision = await context.ui.select(`${request.request_id}\n${detail}`, ["Approve this plan change", "Reject this plan change", "Decide later"]);
+  if (!decision || decision === "Decide later") return;
+  if (decision === "Reject this plan change") {
+    const reason = await context.ui.input("Plan-change rejection reason", "Explain why the existing future plan remains authoritative.");
+    if (!reason?.trim()) throw new Error("Plan-change rejection requires a reason.");
+    rejectPlanChangeRequest(root, request.request_id, reason.trim());
+    context.ui.notify(`Rejected plan change ${request.request_id}. Canonical project state is unchanged.`, "info");
+    return;
+  }
+  const confirmed = await context.ui.confirm(`Approve plan change ${request.request_id}?`, detail);
+  if (!confirmed) { context.ui.notify(`Plan change ${request.request_id} was not approved.`, "info"); return; }
+  const note = await context.ui.input("Writer approval note", "Explain why this future-plan change is approved.");
+  if (!note?.trim()) throw new Error("Plan-change approval requires a writer note.");
+  const result = approvePlanChangeRequest(root, request.request_id, {
+    confirmed: true,
+    approved_by: "writer",
+    note: note.trim(),
+    approved_at: new Date().toISOString(),
+  });
+  context.ui.notify(`Applied plan change ${request.request_id}. ${result.event.changed.length} canonical file(s) changed.`, "info");
 }
 
 async function guidedAdvanced(root: string, context: ExtensionCommandContext): Promise<void> {
@@ -183,6 +252,7 @@ async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): 
   else if (id === "pause-run") sendDecision(pi, context, pauseQualityPersistentRun(root));
   else if (id === "cancel-run") sendDecision(pi, context, cancelQualityPersistentRun(root));
   else if (id === "premise") await openWizard(root, context, "premise");
+  else if (id === "plan-change") await guidedPlanChange(root, context);
   else if (id === "add-book") await guidedAddBook(root, context);
   else if (id === "adopt") await guidedAdoption(root, context);
   else if (id === "approve") {
@@ -206,6 +276,13 @@ async function guidedNovel(pi: ExtensionAPI, context: ExtensionCommandContext): 
       return;
     }
     sendDecision(pi, context, decideQualityNextRun(root));
+  } else {
+    // Exhaustiveness guard. The guide screen offered a `plan-change` action for
+    // a release with no branch for it here, so selecting it did nothing at all
+    // and the writer had no route to the decision. A new GuideActionId now fails
+    // to compile until it is handled, rather than failing silently at runtime.
+    const unhandled: never = id;
+    throw new Error(`Guide action ${String(unhandled)} has no handler.`);
   }
 }
 
@@ -308,7 +385,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
   pi.registerCommand("novel-wizard", { description: "Open the temporary local browser wizard for adoption, readers, packaging, next-book, research, or premise work", getArgumentCompletions: (prefix) => { const filtered = ["adoption", "readers", "packaging", "next-book", "research", "premise"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const requested = tokens(args)[0] as WizardWorkflow | undefined; if (requested && !["adoption", "readers", "packaging", "next-book", "research", "premise"].includes(requested)) throw new Error("Wizard workflow must be adoption, readers, packaging, next-book, research, or premise."); await openWizard(root, context, requested); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-start", { description: "Create a project from an idea or authorized brief and optionally auto-advance to the next writer gate", handler: async (args, context) => {
     const supplied = tokens(args);
-    const flagsWithValues = new Set<string>(["--profile", "--type", "--target-words", "--brief", "--auto-to", "--runtime-profile", ...qualityValueFlags]);
+    const flagsWithValues = new Set<string>(["--profile", "--type", "--target-words", "--brief", "--auto-to", "--runtime-profile", "--model-profile", ...qualityValueFlags]);
     const positional: string[] = [];
     for (let index = 0; index < supplied.length; index += 1) {
       const item = supplied[index]!;
@@ -324,7 +401,35 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     const targetInput = flagValue(supplied, "--target-words") || await context.ui.input("Book 1 target words:", profileInput === "romantasy" ? "110000" : "100000");
     const targetWords = Number.parseInt(targetInput ?? "100000", 10) || 100000;
     const rawRuntimeProfile = flagValue(supplied, "--runtime-profile");
-    const runtimeProfile = rawRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
+    const explicitRuntimeProfile = rawRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
+    const rawModelProfile = flagValue(supplied, "--model-profile");
+    const explicitModelProfile = rawModelProfile ? parseSelectableModelExecutionProfileId(rawModelProfile) : undefined;
+
+    // New projects defaulted to the widest context (`full`) regardless of what
+    // the host model could hold, even though the context window is available to
+    // every command. Detect it, recommend from it, and say so — an explicit
+    // flag always wins, and an undetectable window asks rather than assumes.
+    const recommendation = recommendProfilesForCapacity({
+      contextWindowTokens: hostContextWindow(context),
+      hasExplicitWorkerModel: Boolean(process.env.NOVEL_FORGE_QUALITY_MODEL?.trim()),
+    });
+    let runtimeProfile = explicitRuntimeProfile;
+    let modelExecutionProfile = explicitModelProfile;
+    if (!runtimeProfile) {
+      // Reported, never asked. A fully-specified `/novel-start` must stay
+      // scriptable, and blocking it on a question about a value that has a
+      // defensible default would be a worse failure than choosing one — the
+      // undetected-capacity default is `local`, which is conservative in the
+      // safe direction and strictly better than the previous unconditional
+      // `full`. The reason names the flag that overrides it.
+      runtimeProfile = recommendation.runtimeProfile;
+      context.ui.notify(recommendation.reason, recommendation.unknownCapacity ? "warning" : "info");
+      if (!modelExecutionProfile && recommendation.modelExecutionProfile) {
+        modelExecutionProfile = recommendation.modelExecutionProfile;
+      }
+    }
+    const modelProfileAdvisory = modelExecutionProfile ? modelExecutionProfileDeprecationAdvisory(modelExecutionProfile) : null;
+    if (modelProfileAdvisory) context.ui.notify(modelProfileAdvisory, "warning");
     const quality = qualityStateWithOverride(defaultQualityProjectState(), parseQualityOverride(supplied));
     const root = initializeProject(context.cwd, {
       projectName,
@@ -333,15 +438,19 @@ export function registerNovelForge(pi: ExtensionAPI): void {
       targetWords,
       quality,
       ...(runtimeProfile ? { runtimeProfile } : {}),
+      ...(modelExecutionProfile ? { modelExecutionProfile } : {}),
     });
+    // The four independent controls, reported together at creation so the
+    // writer sees what was chosen for them rather than discovering it later.
+    const configuredSummary = ` (genre ${profileInput}, runtime ${runtimeProfile ?? "full"}, model profile ${modelExecutionProfile ?? "host-default"}, quality ${quality.tier})`;
     const briefPath = flagValue(supplied, "--brief");
     if (briefPath) bootstrapProjectFromBrief(root, briefPath, { profile: profileInput, targetWords });
     refreshGuidance(root, { lastAction: briefPath ? "Initialized project from authorized brief" : "Initialized project" });
     const autoTo = flagValue(supplied, "--auto-to");
     if (autoTo) {
       sendDecision(pi, context, beginQualityAutopilotRun(root, { target: autoTo, maxChapters: readProject(root).automation.max_chapters_per_run }));
-      context.ui.notify(`Novel Forge project created at ${root}. Autopilot stops at ${autoTo} or the next required writer decision.`, "info");
-    } else context.ui.notify(`Novel Forge project created at ${root}. Run /novel.`, "info");
+      context.ui.notify(`Novel Forge project created at ${root}${configuredSummary}. Autopilot stops at ${autoTo} or the next required writer decision.`, "info");
+    } else context.ui.notify(`Novel Forge project created at ${root}${configuredSummary}. Run /novel.`, "info");
   } });
   pi.registerCommand("novel-status", { description: "Show Novel Forge decisions, blockers, warnings, progress, and next action", handler: async (_args, context) => { try { const root = requireProjectRoot(context.cwd); context.ui.notify(refreshGuidance(root).markdown, "info"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-budget", { description: "Show the quality tier, token and call ceilings, and locally recorded usage", handler: async (_args, context) => { try { context.ui.notify(renderBudgetStatus(requireProjectRoot(context.cwd)), "info"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
@@ -361,13 +470,42 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     if (!sceneId) throw new Error("novel-context requires --scene <CH-NNN-SC-NN-VN> when --chapter is supplied.");
     context.ui.notify(renderContextInspection(inspectActiveContext(root, { chapter, sceneId, jobType: jobRaw })), "info");
   } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
-  pi.registerCommand("novel-plan", { description: "Build or repair voice, series, or active-book architecture", getArgumentCompletions: (prefix) => { const filtered = ["voice", "series", "book"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const items = tokens(args); if (items.includes("--add-book")) { if (items.includes("--force")) { const target = Number.parseInt(flagValue(items, "--target-words") ?? "100000", 10) || 100000; const bookId = addBook(root, target, { force: true }); context.ui.notify(`Force-created ${bookId} and made it active. Run /novel.`, "info"); } else await openWizard(root, context, "next-book"); return; } const prompt = planPromptFor(root, items[0] ?? ""); if (!context.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" }); else pi.sendUserMessage(prompt); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
-  pi.registerCommand("novel-run", { description: "Start, resume, pause, or cancel persistent safe work until a gate, blocker, or requested limit", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const options = parseRunOptions(args); const decision = options.resume ? resumeQualityPersistentRun(root) : options.pause ? pauseQualityPersistentRun(root) : options.cancel ? cancelQualityPersistentRun(root) : (options.until || options.maxChapters) ? beginQualityPersistentRun(root, { target: options.until ?? "next-milestone", maxChapters: options.maxChapters ?? readProject(root).automation.max_chapters_per_run, ...(options.runtimeProfile ? { runtimeProfile: options.runtimeProfile } : {}), ...(options.quality ? { quality: options.quality } : {}) }) : decideQualityNextRun(root, options); sendDecision(pi, context, decision); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-plan", { description: "Build or repair voice, series, or active-book architecture", getArgumentCompletions: (prefix) => { const filtered = ["voice", "series", "book"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const items = tokens(args); if (items.includes("--add-book")) { if (items.includes("--force")) { const target = Number.parseInt(flagValue(items, "--target-words") ?? "100000", 10) || 100000; const bookId = addBook(root, target, { force: true }); context.ui.notify(`Force-created ${bookId} and made it active. Run /novel.`, "info"); } else await openWizard(root, context, "next-book"); return; } const phase = flagValue(items, "--phase"); const positional = items.filter((item, index) => !item.startsWith("--") && items[index - 1] !== "--phase" && items[index - 1] !== "--target-words"); const prompt = planPromptFor(root, positional[0] ?? "", phase); if (!context.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" }); else pi.sendUserMessage(prompt); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-run", { description: "Start, resume, pause, or cancel persistent safe work until a gate, blocker, or requested limit", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const options = parseRunOptions(args); const decision = options.resume ? resumeQualityPersistentRun(root) : options.pause ? pauseQualityPersistentRun(root) : options.cancel ? cancelQualityPersistentRun(root) : (options.until || options.maxChapters) ? beginQualityPersistentRun(root, { target: options.until ?? "next-milestone", maxChapters: options.maxChapters ?? readProject(root).automation.max_chapters_per_run, ...(options.runtimeProfile ? { runtimeProfile: options.runtimeProfile } : {}), ...(options.modelExecutionProfile ? { modelExecutionProfile: options.modelExecutionProfile } : {}), ...(options.quality ? { quality: options.quality } : {}) }) : decideQualityNextRun(root, options); sendDecision(pi, context, decision); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-draft", { description: "Draft the next approved chapter packet with bounded context", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const options = parseDraftOptions(args); sendDecision(pi, context, directQualityDraftDecision(root, options.chapter, options.quality)); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-review", { description: "Review a chapter, act, manuscript, or series through profile-specific lanes", getArgumentCompletions: (prefix) => { const filtered = ["chapter", "act", "manuscript", "series"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const scope = tokens(args)[0] ?? "act"; assertReviewAllowed(readProject(root), scope); sendDecision(pi, context, { action: "review", prompt: reviewPrompt(root, scope), message: `Queued ${scope} review.` }); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-readers", { description: "Open the guided reader-kit and CSV evidence wizard", handler: async (_args, context) => { try { await guidedReaders(requireProjectRoot(context.cwd), context); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-revise", { description: "Apply open revision tickets with acceptance and regression checks", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); sendDecision(pi, context, directRevisionDecision(root, tokens(args).filter((item) => /^B\d+-T\d+$/i.test(item)))); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
-  pi.registerCommand("novel-package", { description: "Open the packaging checklist, metadata, and complete-export wizard", handler: async (_args, context) => { try { const root = requireProjectRoot(context.cwd); assertOperationAllowed(readProject(root), "package"); context.ui.notify(formatChecklist(root), "info"); await openWizard(root, context, "packaging"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-package", {
+    description: "Show the packaging checklist and open the export wizard; --apply produces the complete package without a browser",
+    getArgumentCompletions: (prefix) => {
+      const filtered = ["--apply", "--regenerate", "--no-pandoc"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value }));
+      return filtered.length ? filtered : null;
+    },
+    handler: async (args, context) => {
+      try {
+        const root = requireProjectRoot(context.cwd);
+        assertOperationAllowed(readProject(root), "package");
+        const items = tokens(args);
+        context.ui.notify(formatChecklist(root), "info");
+        // applyPackageArtifacts had exactly one caller — the browser wizard
+        // handler — so on a headless box the manuscript, EPUB, DOCX and metadata
+        // could not be produced at all. The wizard stays the default; it is no
+        // longer the only door.
+        if (items.includes("--apply")) {
+          const result = await applyPackageArtifacts(root, {
+            preferPandoc: !items.includes("--no-pandoc"),
+            regenerate: items.includes("--regenerate"),
+          });
+          context.ui.notify(result.current
+            ? `Package outputs already match source hash ${result.sourceHash}. Pass --regenerate to rebuild them.`
+            : `Packaged ${result.changed.length} file(s) with the ${result.engine} engine at source hash ${result.sourceHash}. Run /novel to approve the package gate.`, "info");
+          return;
+        }
+        await openWizard(root, context, "packaging");
+      } catch (error) { context.ui.notify(errorText(error), "warning"); }
+    },
+  });
   pi.registerCommand("novel-adopt", { description: "Preview and adopt an existing DOCX, EPUB, Markdown, text, or chapter-directory manuscript", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); await guidedAdoption(root, context, tokens(args).join(" ") || undefined); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-organize", { description: "Scan and safely organize a mixed writing repository into Novel Forge", handler: async (args, context) => { try {
     const items = tokens(args);
@@ -377,7 +515,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     context.ui.notify(rendered, "info");
     if (items.includes("--dry-run")) return;
     if (!preview.totals.selected) throw new Error("No supported writing files were found to organize.");
-    const flagsWithValues = new Set(["--path", "--profile", "--type", "--target-words", "--runtime-profile"]);
+    const flagsWithValues = new Set(["--path", "--profile", "--type", "--target-words", "--runtime-profile", "--model-profile"]);
     const positional: string[] = [];
     for (let index = 0; index < items.length; index += 1) {
       const item = items[index]!;
@@ -395,6 +533,8 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     if (!Number.isInteger(targetWords) || targetWords < 1000) throw new Error("Target words must be an integer of at least 1000.");
     const rawRuntimeProfile = flagValue(items, "--runtime-profile");
     const runtimeProfile = rawRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
+    const rawModelProfile = flagValue(items, "--model-profile");
+    const modelExecutionProfile = rawModelProfile ? parseSelectableModelExecutionProfileId(rawModelProfile) : undefined;
     const confirmed = await context.ui.confirm("Apply proposed repository structure", "Create Novel Forge files in this repository and copy the confirmed writing files?");
     if (!confirmed) return;
     const provisionalConfirmed = await context.ui.confirm("Acknowledge provisional classifications", "Confirm that filename/folder classifications are provisional source-material mappings only and will not become canon, plot state, approvals, research claims, review findings, or reader evidence.");
@@ -402,7 +542,7 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     const archiveConfirmed = await context.ui.confirm("Archive superseded originals", summarizeArchiveList(preview));
     if (!archiveConfirmed) return;
     const result = applyRepositoryOrganization(root, preview, {
-      project: { projectName, projectType, profile, targetWords, ...(runtimeProfile ? { runtimeProfile } : {}) },
+      project: { projectName, projectType, profile, targetWords, ...(runtimeProfile ? { runtimeProfile } : {}), ...(modelExecutionProfile ? { modelExecutionProfile } : {}) },
       confirmApply: true,
       confirmArchive: true,
       confirmProvisional: true,

@@ -15,9 +15,10 @@ import { readReaderExperiment, readReaderIndex } from "./readers/store.js";
 import { marketingMetadataFindings, publishingMetadataFindings, readMarketingMetadata, readPublishingMetadata } from "./packaging/metadata.js";
 import { historicalIntegrityFindings } from "./historical-integrity.js";
 import { endingContractFindings } from "./ending-contract.js";
+import { readerCheckpointProgress } from "./reader-checkpoint.js";
 
 export type PackagingChecklistId =
-  | "manuscript" | "manuscript-approval" | "canon-lock" | "blocking-tickets" | "reader-claims"
+  | "manuscript" | "manuscript-approval" | "canon-lock" | "blocking-tickets" | "reader-claims" | "reader-checkpoint"
   | "publishing-metadata" | "marketing-metadata" | "assets" | "audiobook" | "export-readiness" | "package-artifact"
   | "historical-disclosure" | "ending-contract";
 
@@ -58,6 +59,19 @@ function manuscriptReadiness(root: string, bookId: string): { complete: boolean;
   const maximum = Math.max(0, ...unique);
   for (let number = 1; number <= maximum; number += 1) if (!unique.has(number)) return { complete: false, detail: `Chapter ${number} is missing.` };
   return { complete: true, detail: `${files.length} contiguous chapter file${files.length === 1 ? "" : "s"} are available.` };
+}
+
+function readerCheckpointItem(root: string, bookId: string, base: string): PackagingChecklistItem {
+  const progress = readerCheckpointProgress(root, bookId);
+  return {
+    id: "reader-checkpoint",
+    label: "Human reader checkpoint",
+    complete: progress.satisfied,
+    blocking: !progress.satisfied,
+    detail: progress.summary,
+    evidencePaths: [`${base}/reader-experiments.yaml`, "series/decision-ledger.yaml"],
+    repairAction: "Collect at least one real reader response through the reader-kit workflow and record it with a reader-test event, or record an explicit writer decision to package without reader evidence.",
+  };
 }
 
 function readerClaimDetail(root: string, bookId: string): string {
@@ -199,6 +213,10 @@ export function buildPackagingChecklist(root: string): PackagingChecklist {
     item("canon-lock", "Book canon lock", book.canon_locked || ["locked", "packaged"].includes(book.status), true, book.canon_locked ? "Accepted book facts are locked into series canon." : "Canon lock has not completed.", ["series/canon.yaml", "series/story-threads.yaml", `${base}/BOOK.yaml`], "Run the canon-lock workflow."),
     item("blocking-tickets", "Blocking revision tickets", tickets.length === 0, true, tickets.length ? `${tickets.length} blocking ticket${tickets.length === 1 ? " remains" : "s remain"}.` : "No blocking revision tickets remain.", [`${base}/revision-tickets.yaml`], "Resolve or explicitly accept every blocking revision ticket."),
     item("reader-claims", "Reader-evidence claim limit", true, false, readerClaimDetail(root, book.book_id), [`${base}/reader-kits/`, `${base}/reader-experiments.yaml`], "Review reader experiment limitations before writing validation claims."),
+    // The package event enforces this too. Listing it here means the writer
+    // meets the requirement while there is still time to act on it, rather than
+    // discovering it at the last gate in the book.
+    readerCheckpointItem(root, book.book_id, base),
     item("publishing-metadata", "Publishing metadata", publishingComplete, true, publishingDetail, [`${base}/publishing.yaml`], "Complete the missing title, author, language, copyright, descriptions, keywords, and categories."),
     item("marketing-metadata", "Marketing draft package", marketingComplete, true, marketingDetail, [`${base}/marketing.yaml`], "Draft the missing positioning, audience, hook, retailer, launch, social, ad, audiobook, and series-page groups."),
     item("assets", "Publishing assets", missingAssets.length === 0, false, missingAssets.length ? `${missingAssets.length} referenced asset${missingAssets.length === 1 ? " is" : "s are"} missing.` : assets.length ? `${assets.length} referenced asset${assets.length === 1 ? " is" : "s are"} available.` : "No publishing assets are declared.", [`${base}/publishing.yaml`, `${base}/assets/`], "Repair missing asset paths and alt text."),

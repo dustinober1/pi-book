@@ -9,8 +9,11 @@ import { minimumCallReservationTokens } from "../application/budgeted-quality-wo
 import { ForegroundEconomyTelemetry } from "../application/foreground-economy-telemetry.js";
 import { runPersistentQualityDraft } from "../application/quality-persistent-run.js";
 import { beginQualityPersistentRun, resumeQualityPersistentRun } from "../application/quality-run.js";
+import { recordAuthorQuestion } from "../application/journey-trace.js";
 import { runExplicitVoiceRecalibration } from "../application/recalibration.js";
+import { findProjectRoot } from "../infrastructure/files.js";
 import { directDraftDecision } from "../application/run.js";
+import { modelExecutionProfileDeprecationAdvisory } from "../domain/model-execution-profile.js";
 import { qualityStateWithOverride, resolveQualityConfig } from "../domain/quality-profile.js";
 import type { QualityWorker } from "../domain/quality-worker.js";
 import { readProject, requireProjectRoot } from "../project/store.js";
@@ -84,6 +87,8 @@ function withQualityDraft(
       try {
         const root = requireProjectRoot(context.cwd);
         const draft = parseDraftOptions(args);
+        const draftProfileAdvisory = draft.modelExecutionProfile ? modelExecutionProfileDeprecationAdvisory(draft.modelExecutionProfile) : null;
+        if (draftProfileAdvisory) context.ui.notify(draftProfileAdvisory, "warning");
         const project = readProject(root);
         const qualityState = qualityStateWithOverride(project.quality, draft.quality);
         const runtime = resolveRuntimeProfile({ project: project.runtime?.profile });
@@ -137,6 +142,7 @@ function withQualityDraft(
             const result = await runBudgetedQualityDraft({
               root,
               ...(draft.chapter !== undefined ? { chapter: draft.chapter } : {}),
+              ...(draft.modelExecutionProfile ? { modelExecutionProfile: draft.modelExecutionProfile } : {}),
               runtimeProfile: runtime,
               qualityConfig: quality,
               worker,
@@ -175,6 +181,8 @@ function withQualityRun(definition: CommandDefinition, options: NovelForgeExtens
     async handler(args: string, context: ExtensionCommandContext): Promise<void> {
       try {
         const parsed = parseRunOptions(args);
+        const runProfileAdvisory = parsed.modelExecutionProfile ? modelExecutionProfileDeprecationAdvisory(parsed.modelExecutionProfile) : null;
+        if (runProfileAdvisory) context.ui.notify(runProfileAdvisory, "warning");
         if (parsed.pause || parsed.cancel) {
           await original.handler(args, context);
           return;
@@ -210,6 +218,7 @@ function withQualityRun(definition: CommandDefinition, options: NovelForgeExtens
             target: parsed.until ?? "next-milestone",
             maxChapters: parsed.maxChapters ?? project.automation.max_chapters_per_run,
             ...(parsed.runtimeProfile ? { runtimeProfile: parsed.runtimeProfile } : {}),
+            ...(parsed.modelExecutionProfile ? { modelExecutionProfile: parsed.modelExecutionProfile } : {}),
             ...(parsed.quality ? { quality: parsed.quality } : {}),
           });
           if (!started.prompt) {
@@ -231,7 +240,13 @@ function withQualityRun(definition: CommandDefinition, options: NovelForgeExtens
           onProgress(name) { context.ui.notify(`Quality run: ${name}`, "info"); },
         });
         const downgrade = result.downgradedTo ? ` Downgraded to ${result.downgradedTo}.` : "";
-        context.ui.notify(`Persistent quality run ${result.runId} ${result.status} at ${result.stopReason} after ${result.chapters.length} chapter(s).${downgrade}`, result.status === "stopped" ? "warning" : "info");
+        const guarded = result.chapters.filter((item) => item.path === "guarded-scene-execution").length;
+        const paths = result.chapters.length
+          ? ` ${guarded} of ${result.chapters.length} used guarded scene execution.`
+          : "";
+        context.ui.notify(`Persistent quality run ${result.runId} ${result.status} at ${result.stopReason} after ${result.chapters.length} chapter(s).${paths}${downgrade}`, result.status === "stopped" ? "warning" : "info");
+        // Advisories are the only place the unguarded-path disclosure appears.
+        for (const advisory of result.advisories) context.ui.notify(advisory, "warning");
       } catch (error) {
         context.ui.notify(errorText(error), "warning");
       }
@@ -254,6 +269,45 @@ function registerForegroundTelemetryHooks(pi: ExtensionAPI, foreground: Foregrou
   });
 }
 
+/**
+ * Count the questions a command actually put to the writer.
+ *
+ * Author actions are the half of the velocity metric that automation cannot
+ * remove without crossing a boundary this project holds, so they have to be
+ * counted where they happen rather than estimated. Wrapping the UI once here
+ * covers every command instead of threading a counter through each handler,
+ * and a question asked before a project exists is simply not recorded — there
+ * is nowhere to record it, and inventing a home for it would be worse than the
+ * known undercount.
+ */
+function withQuestionRecording(definition: CommandDefinition): CommandDefinition {
+  const original = definition as unknown as ReviewCommandDefinition;
+  const decorated: ReviewCommandDefinition = {
+    ...original,
+    async handler(args: string, context: ExtensionCommandContext): Promise<void> {
+      const ui = context.ui as { input?: unknown; select?: unknown };
+      const note = (): void => {
+        try {
+          const root = findProjectRoot(context.cwd);
+          if (root) recordAuthorQuestion(root, readProject(root).runtime?.telemetry);
+        } catch { /* diagnostic only */ }
+      };
+      const recordingUi = new Proxy(context.ui as object, {
+        get(target, property, receiver) {
+          const value = Reflect.get(target, property, receiver);
+          if ((property === "input" || property === "select") && typeof value === "function") {
+            return (...args: unknown[]) => { note(); return (value as (...items: unknown[]) => unknown).apply(target, args); };
+          }
+          return typeof value === "function" ? (value as (...items: unknown[]) => unknown).bind(target) : value;
+        },
+      });
+      void ui;
+      await original.handler(args, { ...context, ui: recordingUi } as ExtensionCommandContext);
+    },
+  };
+  return decorated as unknown as CommandDefinition;
+}
+
 export function registerNovelForgeWithRecalibration(pi: ExtensionAPI, options: NovelForgeExtensionOptions = {}): void {
   const foreground = options.foregroundTelemetry ?? new ForegroundEconomyTelemetry();
   registerForegroundTelemetryHooks(pi, foreground);
@@ -269,7 +323,7 @@ export function registerNovelForgeWithRecalibration(pi: ExtensionAPI, options: N
               : name === "novel-run"
                 ? withQualityRun(definition, options)
                 : definition;
-          registerCommand(name, decorated);
+          registerCommand(name, withQuestionRecording(decorated));
         };
       }
       const value = Reflect.get(target, property, receiver);

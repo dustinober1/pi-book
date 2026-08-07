@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { budgetLedgerUsage } from "./budget-ledger.js";
 import { resolveQualityConfig } from "../domain/quality-profile.js";
 import { readBudgetLedger } from "../infrastructure/budget-ledger-store.js";
+import { canonicalModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import { readProject } from "../project/store.js";
 
 interface RecordedUsage {
@@ -71,6 +72,7 @@ export function renderBudgetStatus(root: string): string {
     "# Quality Budget",
     "",
     `Quality tier: ${quality.tier}`,
+    `Model execution profile: ${canonicalModelExecutionProfileId(project.runtime?.model_execution_profile ?? "host-default")}`,
     `Adaptive allocation: ${quality.adaptive ? "enabled" : "disabled"}`,
     `Maximum total tokens: ${limit(quality.budget.maximumTotalTokens)}`,
     `Maximum tokens per chapter: ${limit(quality.budget.maximumTokensPerChapter)}`,

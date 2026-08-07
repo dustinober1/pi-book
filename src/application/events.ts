@@ -52,6 +52,7 @@ import { draftLengthFinding } from "./draft-length.js";
 import { draftLintReport } from "./draft-lint.js";
 import { appendChapterContractSkeletons, chapterContractReadinessAdvisories } from "./chapter-contract-skeletons.js";
 import { structuralRhythmFindings } from "./structural-rhythm.js";
+import { recordGuardedEvent } from "./journey-trace.js";
 import { packageReaderCheckpointFindings } from "./reader-checkpoint.js";
 import { outOfBandWriteFindings } from "./working-tree-guard.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
@@ -691,16 +692,24 @@ function applyNovelEventInternal(root: string, input: NovelEventInput): NovelEve
 export function applyNovelEvent(root: string, input: NovelEventInput): NovelEventResult {
   let currentStage = String(input.expectedStage || "unknown");
   let currentProjectHash = String(input.expectedProjectHash || "unknown");
+  // Read before the attempt: a rejection may leave the project unreadable, and
+  // the trace should still record that the attempt happened.
+  let telemetry: boolean | undefined;
   try {
     const current = readProject(root);
     currentStage = current.current_stage;
     currentProjectHash = projectStateHash(root);
+    telemetry = current.runtime?.telemetry;
   } catch {
     // The normalizer will classify project-read failures without exposing paths.
   }
+  const journeyInput = { action: input.eventType, ...(input.chapter !== undefined ? { chapter: input.chapter } : {}) };
   try {
-    return applyNovelEventInternal(root, input);
+    const result = applyNovelEventInternal(root, input);
+    recordGuardedEvent(root, telemetry, { ...journeyInput, outcome: "accepted" });
+    return result;
   } catch (error) {
+    recordGuardedEvent(root, telemetry, { ...journeyInput, outcome: "rejected" });
     throw normalizeEventRejection(error, { root, currentStage, currentProjectHash });
   }
 }

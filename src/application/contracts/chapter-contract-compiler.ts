@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import type { ChapterPacket } from "../../domain/schemas.js";
 import type { ChapterContract } from "../../domain/chapter-contract.js";
+import type { KnowledgeLedger } from "../../domain/knowledge-ledger.js";
+import type { StateLedger } from "../../domain/state-ledger.js";
+import { deriveContractFields, remainingContractFields } from "./contract-field-derivation.js";
 
 function normalizedHash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -18,6 +21,12 @@ function requiredBeats(packet: ChapterPacket): string[] {
 
 export interface LegacyChapterContractCompileOptions {
   activeThreadIds?: readonly string[];
+  /**
+   * Story ledgers, when available. Supplying them lets the compiler resolve the
+   * two contract fields that are graph queries rather than judgement, so the
+   * author is left only with the decisions that are genuinely theirs.
+   */
+  ledgers?: { state?: StateLedger | null; knowledge?: KnowledgeLedger | null };
 }
 
 function activeThreads(packet: ChapterPacket, options: LegacyChapterContractCompileOptions): string[] {
@@ -36,8 +45,9 @@ export function compileLegacyChapterContract(
 ): ChapterContract {
   const minimum = Math.max(300, Math.floor(packet.target_words * 0.85));
   const maximum = Math.max(minimum, Math.ceil(packet.target_words * 1.1));
-  const missing = ["start_state_ids", "required_end_state", "forbidden_changes", "knowledge_boundary_ids"];
   const activeThreadIds = activeThreads(packet, options);
+  const derived = deriveContractFields(packet, options.ledgers ?? {});
+  const missing = remainingContractFields(derived);
   return {
     schema_version: "2.0.0",
     contract_id: `CH-${String(packet.chapter).padStart(3, "0")}`,
@@ -51,10 +61,10 @@ export function compileLegacyChapterContract(
     required_beats: requiredBeats(packet),
     active_thread_ids: activeThreadIds,
     required_record_ids: [...new Set([...packet.continuity_refs, ...packet.character_refs, ...activeThreadIds, ...packet.required_research])],
-    start_state_ids: [],
+    start_state_ids: derived.startStateIds,
     required_end_state: [],
     forbidden_changes: [],
-    knowledge_boundary_ids: [],
+    knowledge_boundary_ids: derived.knowledgeBoundaryIds,
     target_words: { minimum, maximum },
     ending_hook: packet.ending_hook,
     small_model_ready: false,

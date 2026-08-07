@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { buildChapterContext } from "../context/context-builder.js";
 import { resolveQualityConfig, type QualityProjectState } from "../domain/quality-profile.js";
+import type { ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import type { RuntimeProfile, RuntimeProfileId } from "../domain/runtime-profile.js";
 import type { ProjectStateV14 } from "../domain/v1-4-project-schema.js";
 import { PremiseLabSchema, type PremiseLab } from "../domain/v1-4-schemas.js";
@@ -13,6 +14,7 @@ import { cancelAutomationRun, pauseAutomationRun, resumeAutomationRun, startAuto
 import { canRetryEvent, rejectionInstruction, type EventRejectionDetail } from "./event-rejection.js";
 import { approveGate } from "./gates.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
+import { recordContextSize, recordModelPrompt, recordRunState, recordStop, recordWriterApproval } from "./journey-trace.js";
 import { compileActiveBook } from "./package.js";
 import { recordPreparedPersistentRun } from "./persistent-run-telemetry.js";
 import { creativeProjectStateHash } from "./project-hash.js";
@@ -44,6 +46,7 @@ export interface BeginPersistentRunOptions {
   target: string;
   maxChapters: number;
   runtimeProfile?: RuntimeProfileId;
+  modelExecutionProfile?: ModelExecutionProfileId;
   qualitySnapshot?: QualityProjectState;
   now?: string;
 }
@@ -83,7 +86,9 @@ function persistRunProject(root: string, project: ProjectStateV14, subject: stri
 }
 
 export function approveProjectGate(root: string, gate: string, note = ""): RunDecision {
-  const runtimeProfile = runtimeFor(projectV14(root));
+  const before = projectV14(root);
+  const runtimeProfile = runtimeFor(before);
+  recordWriterApproval(root, before.runtime?.telemetry, gate);
   const project = approveGate(root, structuredClone(readProject(root)), gate, note);
   applyGuidedProjectEvent(root, [{ path: "PROJECT.yaml", content: stringifyYaml(project) }], `Novel Forge: approve ${gate}`, { lastAction: `Approved ${gate}` });
   return runtimeDecision(runtimeProfile, { action: "approved", prompt: null, message: `Approved ${gate}. Current stage: ${project.current_stage}.` });
@@ -111,7 +116,13 @@ export function rejectProjectGate(root: string, gate: string, note: string): Run
 export function decideNextRun(root: string, options: RunOptions = {}): RunDecision {
   const project = projectV14(root);
   const runtimeProfile = runtimeFor(project, options.runtimeProfile);
-  const finish = (decision: Omit<RunDecision, "runtimeProfile">): RunDecision => runtimeDecision(runtimeProfile, decision);
+  const finish = (decision: Omit<RunDecision, "runtimeProfile">): RunDecision => {
+    // A decision carrying a prompt is one host turn; a decision without one is
+    // a stop, and the reason is what the velocity trace needs to explain it.
+    if (decision.prompt) recordModelPrompt(root, project.runtime?.telemetry);
+    else recordStop(root, project.runtime?.telemetry, decision.action);
+    return runtimeDecision(runtimeProfile, decision);
+  };
   if (options.approve) {
     const approved = approveProjectGate(root, options.approve);
     return { ...approved, runtimeProfile: runtimeProfile.id, message: approved.message.replace(/ Runtime profile: [^.]+\.$/, ` Runtime profile: ${runtimeProfile.id}.`) };
@@ -171,6 +182,7 @@ export function beginPersistentRun(root: string, options: BeginPersistentRunOpti
     currentAction: initial.action,
     requestedMaxChapters: limits.maxChapters,
     runtimeProfile: runtimeProfile.id,
+    ...(options.modelExecutionProfile ? { modelExecutionProfile: options.modelExecutionProfile } : {}),
     creativeHash: creativeProjectStateHash(root),
     startedAt: now,
   });
@@ -179,6 +191,7 @@ export function beginPersistentRun(root: string, options: BeginPersistentRunOpti
   }
   const run = updated.automation.active_run!;
   persistRunProject(root, updated, `start automation ${run.id}`, `Started automation run ${run.id}`);
+  recordRunState(root, project.runtime?.telemetry, run.id, "started");
   const telemetryMessage = recordPreparedPersistentRun(root, {
     telemetryEnabled: updated.runtime?.telemetry,
     runId: run.id,
@@ -194,7 +207,10 @@ export function pausePersistentRun(root: string, now = new Date().toISOString())
   const project = projectV14(root);
   const runtimeProfile = runtimeForActiveRun(project);
   const updated = pauseAutomationRun(project, now);
-  if (updated !== project) persistRunProject(root, updated, `pause automation ${updated.automation.active_run!.id}`, `Paused automation run ${updated.automation.active_run!.id}`);
+  if (updated !== project) {
+    persistRunProject(root, updated, `pause automation ${updated.automation.active_run!.id}`, `Paused automation run ${updated.automation.active_run!.id}`);
+    recordRunState(root, project.runtime?.telemetry, updated.automation.active_run!.id, "paused");
+  }
   return runtimeDecision(runtimeProfile, { action: "paused-run", prompt: null, message: `Automation run ${updated.automation.active_run!.id} is paused.` });
 }
 
@@ -214,7 +230,10 @@ export function resumePersistentRun(root: string, now = new Date().toISOString()
     persistRunProject(root, updated, `stop automation ${updated.automation.active_run.id}`, `Stopped automation run ${updated.automation.active_run.id}`);
     return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: `Automation run ${updated.automation.active_run.id} stopped because creative state changed. Reload and start a new run.` });
   }
-  if (updated !== project) persistRunProject(root, updated, `resume automation ${updated.automation.active_run!.id}`, `Resumed automation run ${updated.automation.active_run!.id}`);
+  if (updated !== project) {
+    persistRunProject(root, updated, `resume automation ${updated.automation.active_run!.id}`, `Resumed automation run ${updated.automation.active_run!.id}`);
+    recordRunState(root, project.runtime?.telemetry, updated.automation.active_run!.id, "resumed");
+  }
   const activeRun = updated.automation.active_run!;
   let decision: RunDecision;
   if (updated.current_stage === "book-planning") {
@@ -236,6 +255,8 @@ export function directDraftDecision(root: string, chapter?: number): RunDecision
   const status = getProjectStatus(root);
   if (status.blockers.length) return runtimeDecision(runtimeProfile, { action: "blocked", prompt: null, message: status.blockers[0] ?? "Project is blocked." });
   const context = buildChapterContext(root, chapter, runtimeProfile.maxContextChars, runtimeProfile.graphDepth);
+  recordContextSize(root, project.runtime?.telemetry, context.text.length);
+  recordModelPrompt(root, project.runtime?.telemetry);
   return runtimeDecision(runtimeProfile, { action: "draft", prompt: draftPrompt(context, runtimeProfile), message: `Queued Chapter ${context.packet.chapter}.` });
 }
 
@@ -247,6 +268,7 @@ export function directRevisionDecision(root: string, ticketIds: string[] = []): 
   const ticketLimit = runtimeProfile.maxRevisionTickets ?? 3;
   const selected = (ticketIds.length ? tickets.filter((ticket) => ticketIds.includes(ticket.id)) : tickets).slice(0, ticketLimit);
   if (!selected.length) return runtimeDecision(runtimeProfile, { action: "no-tickets", prompt: null, message: "No open tickets matched the request." });
+  recordModelPrompt(root, project.runtime?.telemetry);
   return runtimeDecision(runtimeProfile, { action: "revise", prompt: revisionPrompt(root, selected, runtimeProfile), message: `Queued revision for ${selected.map((ticket) => ticket.id).join(", ")}.` });
 }
 

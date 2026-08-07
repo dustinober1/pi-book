@@ -139,7 +139,82 @@ export interface BookPlanStageInput {
   planningQuestions: readonly string[];
   profileRules: readonly string[];
   profileOutputs: readonly string[];
+  /**
+   * Whether book-strategy.yaml holds real public-review observations or
+   * clusters. The nine public-review evidence rules only govern content that
+   * exists; on a project with none they are inapplicable and cost roughly a
+   * thousand instruction characters that a compact profile cannot spare. This
+   * is omission of whole inapplicable rules, never truncation: when evidence
+   * exists, every rule loads unchanged.
+   */
+  hasPublicReviewEvidence: boolean;
   projectHash: string;
+}
+
+function publicReviewRules(hasEvidence: boolean): string[] {
+  if (!hasEvidence) {
+    return [
+      "book-strategy.yaml public-review observations may remain empty; never invent them. When real observations are recorded, rebuild the plan so the full public-review evidence rules load.",
+    ];
+  }
+  return [
+    "Public-review observations are market evidence, never reader evidence for this manuscript.",
+    "Accept only user-supplied manual, pasted, linked, or CSV public-review observations.",
+    "Store a paraphrase and at most a short excerpt; discard reviewer names, handles, and profile URLs.",
+    "Derive ratings 1–2 as negative, 3 as mixed, and 4–5 as positive.",
+    "Keep praise as positive counterweights instead of flattening it into complaint clusters.",
+    "Confidence is weak below three observations or on one title, moderate at three observations across two titles, and strong only at six observations across three titles with high execution relevance and a positive counterweight.",
+    "One-star-only evidence can never exceed moderate.",
+    "Every project-relevant public-review cluster requires the writer to choose prevent, mitigate, accept-as-tradeoff, or irrelevant-to-project.",
+    "Only prevent or mitigate clusters may become approved review-derived guardrails.",
+  ];
+}
+
+const intakeUpdateRule = "Use the state-neutral intake-update event for any intake or decision-ledger evidence.";
+
+const architectureMust = [
+  "Resolve the four primary author decisions: What is the safe, predictable version of this book that must be avoided? What can this project uniquely deliver? What moment should readers retell to someone else? What should remain alive after the ending?",
+  "The finished plan must define the book promise, POV rules, conflicts, opposition, ending contract, research dependencies, acts, chapter causality, setup/payoff IDs, profile obligations, productive discomfort, 2–5 signature moments, productive disagreements, restrained motifs, a hand-sell reason, and accepted reader costs.",
+  "Build a decision-and-consequence ledger in plot-grid.yaml.",
+  "Every consequential choice records the chapter, the choice, its immediate gain, deferred cost, irreversible effect, and a forward payoff window inside planned chapters.",
+  "Preserve fair setup-before-payoff order and avoid three consecutive chapters with the same scene engine.",
+  intakeUpdateRule,
+];
+
+function evidenceMust(input: BookPlanStageInput): string[] {
+  return [
+    "Before book-plan approval, resolve all ten stress concerns with rationale and evidence: early genre promise, middle repetition, motivated risk, fair information, uneven alternatives or suspects, avoidable silence, redundant characters, the external ending contract, the emotional ending contract, and reference similarity plus intentional tradeoffs.",
+    "A stress check may pass or be linked to an explicit accepted tradeoff; pending or blocked checks cannot proceed to approval.",
+    "Research uses exactly four lanes: taste-and-voice, story-world, human-authenticity, and reader-and-market.",
+    "A claim may remain planned or researching while evidence is incomplete.",
+    "Mark a research claim ready only when it has registered source IDs, source reliability, an observation or verification date, confidence, fictionalization status, knowledge scope, risks, at least one dramatic use, and the exact story decision it affects.",
+    ...publicReviewRules(input.hasPublicReviewEvidence),
+    intakeUpdateRule,
+    "The research ledger may contain planned or researching items, but do not mark unsupported claims ready.",
+    "The book strategy may begin with empty public-review observations, but its expectation decisions and plan stress test must be complete for approval.",
+    ...input.profileRules,
+  ];
+}
+
+function architectureOutputs(bookId: string): string[] {
+  return [
+    `books/${bookId}/book-bible.md`,
+    `books/${bookId}/genre.yaml`,
+    `books/${bookId}/plot-grid.yaml`,
+    `books/${bookId}/chapter-queue.yaml`,
+    `books/${bookId}/continuity-delta.yaml`,
+    `books/${bookId}/remarkability.yaml`,
+  ];
+}
+
+function evidenceOutputs(input: BookPlanStageInput): string[] {
+  return [
+    `books/${input.bookId}/research-ledger.yaml`,
+    `books/${input.bookId}/book-strategy.yaml`,
+    "research/source-register.yaml when provenance changes",
+    "series/story-threads.yaml",
+    ...input.profileOutputs.map((output) => `books/${input.bookId}/${output}`),
+  ];
 }
 
 export function bookPlanStageSpec(input: BookPlanStageInput): StageSpec {
@@ -155,31 +230,7 @@ export function bookPlanStageSpec(input: BookPlanStageInput): StageSpec {
       interviewRule,
       ...input.planningQuestions.map((question) => `Profile planning question: ${question}`),
     ],
-    must: [
-      "Resolve the four primary author decisions: What is the safe, predictable version of this book that must be avoided? What can this project uniquely deliver? What moment should readers retell to someone else? What should remain alive after the ending?",
-      "The finished plan must define the book promise, POV rules, conflicts, opposition, ending contract, research dependencies, acts, chapter causality, setup/payoff IDs, profile obligations, productive discomfort, 2–5 signature moments, productive disagreements, restrained motifs, a hand-sell reason, and accepted reader costs.",
-      "Build a decision-and-consequence ledger in plot-grid.yaml.",
-      "Every consequential choice records the chapter, the choice, its immediate gain, deferred cost, irreversible effect, and a forward payoff window inside planned chapters.",
-      "Preserve fair setup-before-payoff order and avoid three consecutive chapters with the same scene engine.",
-      "Before book-plan approval, resolve all ten stress concerns with rationale and evidence: early genre promise, middle repetition, motivated risk, fair information, uneven alternatives or suspects, avoidable silence, redundant characters, the external ending contract, the emotional ending contract, and reference similarity plus intentional tradeoffs.",
-      "A stress check may pass or be linked to an explicit accepted tradeoff; pending or blocked checks cannot proceed to approval.",
-      "Research uses exactly four lanes: taste-and-voice, story-world, human-authenticity, and reader-and-market.",
-      "A claim may remain planned or researching while evidence is incomplete.",
-      "Mark a research claim ready only when it has registered source IDs, source reliability, an observation or verification date, confidence, fictionalization status, knowledge scope, risks, at least one dramatic use, and the exact story decision it affects.",
-      "Public-review observations are market evidence, never reader evidence for this manuscript.",
-      "Accept only user-supplied manual, pasted, linked, or CSV public-review observations.",
-      "Store a paraphrase and at most a short excerpt; discard reviewer names, handles, and profile URLs.",
-      "Derive ratings 1–2 as negative, 3 as mixed, and 4–5 as positive.",
-      "Keep praise as positive counterweights instead of flattening it into complaint clusters.",
-      "Confidence is weak below three observations or on one title, moderate at three observations across two titles, and strong only at six observations across three titles with high execution relevance and a positive counterweight.",
-      "One-star-only evidence can never exceed moderate.",
-      "Every project-relevant public-review cluster requires the writer to choose prevent, mitigate, accept-as-tradeoff, or irrelevant-to-project.",
-      "Only prevent or mitigate clusters may become approved review-derived guardrails.",
-      "Use the state-neutral intake-update event for any intake or decision-ledger evidence.",
-      "The research ledger may contain planned or researching items, but do not mark unsupported claims ready.",
-      "The book strategy may begin with empty public-review observations, but its expectation decisions and plan stress test must be complete for approval.",
-      ...input.profileRules,
-    ],
+    must: [...architectureMust.filter((rule) => rule !== intakeUpdateRule), ...evidenceMust(input)],
     avoid: [
       "Do not make the writer fill out the schema field by field.",
       "Never invent public-review evidence.",
@@ -187,19 +238,7 @@ export function bookPlanStageSpec(input: BookPlanStageInput): StageSpec {
       "Never silently rewrite assumption history or decision history.",
       "Do not mark unsupported research claims ready.",
     ],
-    outputs: [
-      `books/${input.bookId}/book-bible.md`,
-      `books/${input.bookId}/genre.yaml`,
-      `books/${input.bookId}/plot-grid.yaml`,
-      `books/${input.bookId}/chapter-queue.yaml`,
-      `books/${input.bookId}/continuity-delta.yaml`,
-      `books/${input.bookId}/remarkability.yaml`,
-      `books/${input.bookId}/research-ledger.yaml`,
-      `books/${input.bookId}/book-strategy.yaml`,
-      "research/source-register.yaml when provenance changes",
-      "series/story-threads.yaml",
-      ...input.profileOutputs.map((output) => `books/${input.bookId}/${output}`),
-    ],
+    outputs: [...architectureOutputs(input.bookId), ...evidenceOutputs(input)],
     validation: [
       "All required typed artifacts are complete.",
       "All ten stress concerns are passed or linked to an explicit accepted tradeoff.",
@@ -211,6 +250,86 @@ export function bookPlanStageSpec(input: BookPlanStageInput): StageSpec {
       ...(input.profileRules.length ? ["Every profile-specific planning and evidence rule is satisfied."] : []),
     ],
     toolRules: eventToolRules({ eventType: "book-plan", expectedStage: "book-planning", projectHash: input.projectHash }),
+  };
+}
+
+export interface BookPlanStagePhases {
+  architecture: StageSpec;
+  evidence: StageSpec;
+}
+
+/**
+ * The whole book-plan spec does not fit every runtime profile's instruction
+ * budget, and the compiler rightly refuses to truncate a normative rule. These
+ * two phases carry the same rules split by subject — architecture, then
+ * research/strategy evidence — each independently within budget, feeding ONE
+ * guarded book-plan event: the architecture phase applies nothing, and the
+ * evidence phase submits the complete required set from both phases together.
+ * Splitting the instructions never splits the transaction.
+ */
+export function bookPlanStagePhases(input: BookPlanStageInput): BookPlanStagePhases {
+  return {
+    architecture: {
+      id: "book-plan-architecture",
+      role: "a book architecture planner (phase 1 of 2)",
+      objective: "Derive the typed genre, plot, queue, continuity, and remarkability architecture for writer approval; a second phase adds the research and reader-strategy evidence before anything applies.",
+      inputs: [
+        `Project root: ${input.root}`,
+        `Active book: ${input.bookId}`,
+        input.intakeContext || "No additional intake context is currently recorded.",
+        input.premiseContext || "No selected premise context is currently recorded.",
+        interviewRule,
+        ...input.planningQuestions.map((question) => `Profile planning question: ${question}`),
+      ],
+      must: architectureMust,
+      avoid: [
+        "Do not make the writer fill out the schema field by field.",
+        "Never silently rewrite assumption history or decision history.",
+      ],
+      outputs: architectureOutputs(input.bookId),
+      validation: [
+        "Every architecture artifact is complete.",
+        "Every setup precedes its payoff.",
+        "No three consecutive chapters use the same scene engine.",
+        "The writer retains premise and gate approval authority.",
+      ],
+      toolRules: [
+        "Do not call novel_apply_event in this phase. A book-plan event validates one complete required set that includes the evidence files prepared in the next phase; hold these drafted files in your working context or a temporary directory outside the project root.",
+        "This is the architecture phase of a two-phase book plan compiled for a compact instruction budget. When these files are drafted, run /novel-plan book --phase evidence for the remaining instructions and required outputs.",
+        "novel_validate_event may check file shape early; until the evidence phase completes it will correctly list the evidence files as missing required outputs.",
+      ],
+    },
+    evidence: {
+      id: "book-plan-evidence",
+      role: "a book research and reader-strategy planner (phase 2 of 2)",
+      objective: "Complete the research ledger, book strategy, and provenance evidence, then submit the full book plan — architecture files included — as one guarded event.",
+      inputs: [
+        `Project root: ${input.root}`,
+        `Active book: ${input.bookId}`,
+        input.premiseContext || "No selected premise context is currently recorded.",
+        "The architecture phase has already drafted book-bible.md, genre.yaml, plot-grid.yaml, chapter-queue.yaml, continuity-delta.yaml, and remarkability.yaml; do not re-open its interview or rework its decisions. If that phase has not run, run /novel-plan book --phase architecture first.",
+      ],
+      must: evidenceMust(input),
+      avoid: [
+        "Never invent public-review evidence.",
+        "Never update reader-experiments.yaml or manuscript validation claims from public observations.",
+        "Never silently rewrite assumption history or decision history.",
+        "Do not mark unsupported research claims ready.",
+      ],
+      outputs: evidenceOutputs(input),
+      validation: [
+        "All ten stress concerns are passed or linked to an explicit accepted tradeoff.",
+        "Every ready research claim has complete provenance and dramatic use.",
+        "Public-review evidence remains separate from human reader evidence.",
+        ...(input.profileRules.length ? ["Every profile-specific planning and evidence rule is satisfied."] : []),
+      ],
+      toolRules: eventToolRules({
+        eventType: "book-plan",
+        expectedStage: "book-planning",
+        projectHash: input.projectHash,
+        extra: "Submit the architecture files drafted in the previous phase together with these evidence files as one complete book-plan event; omitting an architecture file is itself a rejection.",
+      }),
+    },
   };
 }
 

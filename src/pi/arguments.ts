@@ -1,5 +1,5 @@
 import type { RunOptions } from "../application/run.js";
-import { parseModelExecutionProfileId, type ModelExecutionProfileId } from "../domain/model-execution-profile.js";
+import { MODEL_EXECUTION_PROFILE_IDS, parseModelExecutionProfileId, type ModelExecutionProfileId } from "../domain/model-execution-profile.js";
 import {
   parseBudgetExhaustionPolicy,
   parseQualityTierId,
@@ -12,9 +12,31 @@ import {
 } from "../domain/scene-critic-artifact.js";
 import { parseRuntimeProfileId } from "../domain/runtime-profile.js";
 
-export const allowedUntilTargets = ["voice-approval", "book-plan-approval", "first-chapter-approval", "act-1-review", "midpoint-review", "pre-final-act-review", "manuscript-review", "next-milestone"] as const;
+// Gate targets stop when that gate opens for a writer decision; stage targets
+// stop on arrival at that stage. "packaging" and "complete" exist so a run can
+// be aimed at the end of the book — previously the furthest a single command
+// could aim was the manuscript-review gate, several stages short of a finished
+// package.
+export const allowedUntilTargets = ["voice-approval", "book-plan-approval", "first-chapter-approval", "act-1-review", "midpoint-review", "pre-final-act-review", "manuscript-review", "packaging", "complete", "next-milestone"] as const;
+export const stageUntilTargets = ["packaging", "complete"] as const;
 export function tokens(args: string): string[] { return args.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) => token.replace(/^["']|["']$/g, "")) ?? []; }
 export function flagValue(items: string[], flag: string): string | undefined { const index = items.indexOf(flag); return index >= 0 ? items[index + 1] : undefined; }
+
+/**
+ * `custom` is a real profile ID, but it only resolves alongside a validated
+ * custom profile definition that no CLI flag can carry. Accepting it here would
+ * write a `model_execution_profile` into PROJECT.yaml that every later
+ * resolution throws on — and hand-editing PROJECT.yaml to remove it is
+ * forbidden. Reject it at parse time with the selectable list instead.
+ */
+export function parseSelectableModelExecutionProfileId(value: unknown): ModelExecutionProfileId {
+  const parsed = parseModelExecutionProfileId(value);
+  if (parsed === "custom") {
+    const selectable = MODEL_EXECUTION_PROFILE_IDS.filter((id) => id !== "custom");
+    throw new Error(`--model-profile cannot select custom: it requires a validated custom profile definition that a flag cannot carry. Selectable profiles: ${selectable.join(", ")}.`);
+  }
+  return parsed;
+}
 
 export const qualityValueFlags = [
   "--quality-tier",
@@ -78,7 +100,7 @@ export function parseDraftOptions(args: string): DraftOptions {
   }
   const quality = parseQualityOverride(items);
   const rawModelProfile = requiredFlagValue(items, "--model-profile");
-  const modelExecutionProfile = rawModelProfile === undefined ? undefined : parseModelExecutionProfileId(rawModelProfile);
+  const modelExecutionProfile = rawModelProfile === undefined ? undefined : parseSelectableModelExecutionProfileId(rawModelProfile);
   return {
     ...(chapter !== undefined ? { chapter } : {}),
     ...(quality ? { quality } : {}),
@@ -95,10 +117,20 @@ const CRITIC_ALIASES: Readonly<Record<string, SceneCriticJobType>> = Object.free
   factuality: "critic-factuality",
 });
 
+export const CHAPTER_STEP_TARGETS = ["next-checkpoint", "chapter-complete"] as const;
+export type ChapterStepTargetId = (typeof CHAPTER_STEP_TARGETS)[number];
+
+export function parseChapterStepTarget(value: string | undefined): ChapterStepTargetId {
+  if (value === undefined) return "next-checkpoint";
+  if ((CHAPTER_STEP_TARGETS as readonly string[]).includes(value)) return value as ChapterStepTargetId;
+  throw new Error(`Unknown chapter-step target: ${value}. Allowed: ${CHAPTER_STEP_TARGETS.join(", ")}.`);
+}
+
 export interface ChapterStepOptions {
   chapter?: number;
   runId?: string;
   criticJobTypes: SceneCriticJobType[];
+  until: ChapterStepTargetId;
 }
 
 export function parseSceneCriticSelection(raw: string | undefined): SceneCriticJobType[] {
@@ -115,7 +147,7 @@ export function parseSceneCriticSelection(raw: string | undefined): SceneCriticJ
 
 export function parseChapterStepOptions(args: string): ChapterStepOptions {
   const items = tokens(args);
-  const flags = new Set(["--run", "--critics"]);
+  const flags = new Set(["--run", "--critics", "--until"]);
   const positional: string[] = [];
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index]!;
@@ -133,6 +165,7 @@ export function parseChapterStepOptions(args: string): ChapterStepOptions {
     ...(chapter !== undefined ? { chapter } : {}),
     ...(runId !== undefined ? { runId } : {}),
     criticJobTypes: parseSceneCriticSelection(requiredFlagValue(items, "--critics")),
+    until: parseChapterStepTarget(requiredFlagValue(items, "--until")),
   };
 }
 
@@ -151,7 +184,7 @@ export function parseRunOptions(args: string): ParsedRunOptions {
   const runtimeProfile = hasRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
   const hasModelProfile = items.includes("--model-profile");
   const rawModelProfile = requiredFlagValue(items, "--model-profile");
-  const modelExecutionProfile = hasModelProfile ? parseModelExecutionProfileId(rawModelProfile) : undefined;
+  const modelExecutionProfile = hasModelProfile ? parseSelectableModelExecutionProfileId(rawModelProfile) : undefined;
   const quality = parseQualityOverride(items);
   const resume = items.includes("--resume");
   const pause = items.includes("--pause");
@@ -162,7 +195,7 @@ export function parseRunOptions(args: string): ParsedRunOptions {
   }
   if (until && !allowedUntilTargets.includes(until as never)) throw new Error(`Unknown --until target: ${until}. Allowed: ${allowedUntilTargets.join(", ")}.`);
   let maxChapters: number | undefined;
-  if (rawMax !== undefined) { maxChapters = Number.parseInt(rawMax, 10); if (!Number.isInteger(maxChapters) || maxChapters < 1 || maxChapters > 10) throw new Error("--max-chapters must be an integer from 1 to 10."); }
+  if (rawMax !== undefined) { maxChapters = Number.parseInt(rawMax, 10); if (!Number.isInteger(maxChapters) || maxChapters < 1 || maxChapters > 200) throw new Error("--max-chapters must be an integer from 1 to 200."); }
   return {
     ...(approve ? { approve } : {}),
     ...(until ? { until } : {}),

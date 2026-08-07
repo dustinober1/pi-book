@@ -5,13 +5,13 @@ import { join } from "node:path";
 import { verifyV15ReleaseTree } from "../scripts/verify-v1-5-release.js";
 import { NOVEL_FORGE_VERSION } from "../src/application/version-core.js";
 
-test("the historical v1.5 release checker rejects current v2.0.1 metadata", () => {
+test("the historical v1.5 release checker rejects current v2.1.0 metadata", () => {
   const root = process.cwd();
   const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"));
-  assert.equal(packageJson.version, "2.0.1");
-  assert.equal(lock.version, "2.0.1");
-  assert.equal(lock.packages[""].version, "2.0.1");
-  assert.equal(NOVEL_FORGE_VERSION, "2.0.1");
+  assert.equal(packageJson.version, "2.1.0");
+  assert.equal(lock.version, "2.1.0");
+  assert.equal(lock.packages[""].version, "2.1.0");
+  assert.equal(NOVEL_FORGE_VERSION, "2.1.0");
   assert.ok(verifyV15ReleaseTree(root).some((item) => item.id === "package-version" && !item.passed));
 });

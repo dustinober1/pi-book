@@ -17,7 +17,7 @@ test("runtime profiles expose the locked constrained budgets", () => {
     graphDepth: 1,
     promptStyle: "compact",
     maxArtifactsPerStage: 1,
-    maxChaptersPerRun: 1,
+    maxChaptersPerRun: null,
     maxRevisionTickets: 1,
     preferStructuredIR: true,
     maxRepairAttempts: 2,
@@ -36,7 +36,7 @@ test("runtime profiles expose the locked constrained budgets", () => {
     graphDepth: 2,
     promptStyle: "compact",
     maxArtifactsPerStage: 2,
-    maxChaptersPerRun: 1,
+    maxChaptersPerRun: null,
     maxRevisionTickets: 2,
     preferStructuredIR: true,
     maxRepairAttempts: 2,
@@ -77,7 +77,11 @@ test("unknown runtime profiles fail instead of silently falling back", () => {
   assert.throws(() => resolveRuntimeProfile({ local: "small" }), /Unknown runtime profile: small/);
 });
 
-test("tiny-local and local normalize work into hard micro-step budgets", () => {
+test("tiny-local and local normalize per-stage work into hard micro-step budgets", () => {
+  // Artifacts, revision tickets and graph depth remain clamped: those bound how
+  // much a small model holds at once. Chapter count is not that kind of limit —
+  // it bounded how many times the writer had to restart a run, so it is set by
+  // the request and stopped by gates, blockers and budgets instead.
   assert.deepEqual(applyRuntimeLimits({
     profile: RUNTIME_PROFILES["tiny-local"],
     projectMaxChapters: 7,
@@ -85,7 +89,7 @@ test("tiny-local and local normalize work into hard micro-step budgets", () => {
     availableArtifacts: 8,
     availableRevisionTickets: 9,
   }), {
-    maxChapters: 1,
+    maxChapters: 5,
     maxArtifacts: 1,
     maxRevisionTickets: 1,
     graphDepth: 1,
@@ -98,11 +102,23 @@ test("tiny-local and local normalize work into hard micro-step budgets", () => {
     availableArtifacts: 8,
     availableRevisionTickets: 9,
   }), {
-    maxChapters: 1,
+    maxChapters: 5,
     maxArtifacts: 2,
     maxRevisionTickets: 2,
     graphDepth: 2,
   });
+});
+
+test("a small-model profile can be asked for a whole book in one run", () => {
+  // A 40-chapter book previously needed at least 40 writer-initiated runs on
+  // exactly the profiles a local-model user must choose.
+  for (const id of ["tiny-local", "local", "full"] as const) {
+    assert.equal(applyRuntimeLimits({
+      profile: RUNTIME_PROFILES[id],
+      projectMaxChapters: 40,
+      requestedMaxChapters: 40,
+    }).maxChapters, 40);
+  }
 });
 
 test("full preserves current explicit and project automation limits", () => {

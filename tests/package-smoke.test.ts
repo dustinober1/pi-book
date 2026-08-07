@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-test("the packed extension imports, registers, and contains the 2.0.1 release surface", async () => {
+test("the packed extension imports, registers, and contains the 2.1.0 release surface", async () => {
   const temp = mkdtempSync(join(tmpdir(), "novel-forge-pack-"));
   try {
     const json = execFileSync("npm", ["pack", "--json", "--pack-destination", temp], { cwd: process.cwd() }).toString();
@@ -30,7 +30,7 @@ test("the packed extension imports, registers, and contains the 2.0.1 release su
     assert.ok(commands.includes("novel-readers"));
     assert.ok(commands.includes("novel-adopt"));
     assert.ok(commands.includes("novel-organize"));
-    assert.deepEqual(tools, ["novel_validate_event", "novel_apply_event", "novel_propose_plan_change", "novel_advance_chapter_step"]);
+    assert.deepEqual(tools, ["novel_validate_event", "novel_apply_event", "novel_propose_plan_change", "novel_complete_chapter_contract", "novel_advance_chapter_step"]);
     const project = store.initializeProject(temp, { projectName: "Packed Prose Audit", projectType: "standalone", profile: "thriller" });
     writeFileSync(resolve(project, "books", "book-01", "manuscript", "chapters", "01-opening.md"), "# Opening\n\nThe the lantern failed.\n", "utf8");
     const proseOutput = execFileSync("npm", ["run", "audit:prose", "--", project], { cwd: packageRoot, encoding: "utf8" });
@@ -38,10 +38,10 @@ test("the packed extension imports, registers, and contains the 2.0.1 release su
     assert.match(proseOutput, /mechanics\/doubled-word/);
     assert.match(legacyOutput, /^# Novel Forge copy-mechanics audit$/m);
     assert.match(legacyOutput, /mechanics\/doubled-word/);
-    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "2.0.1");
+    assert.equal(JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")).version, "2.1.0");
     for (const asset of [
       "README.md", "SKILL.md", "CHANGELOG.md", "RELEASE.md",
-      "docs/quality-and-cost.md", "docs/grounded-accuracy.md", "docs/releases/v2.0.1.md",
+      "docs/quality-and-cost.md", "docs/grounded-accuracy.md", "docs/releases/v2.1.0.md",
       "evals/quality/fixtures/thriller-key-scene.yaml", "evals/quality/rubrics/automated-diagnostic.md",
       "wizard/index.html", "wizard/app.js", "wizard/styles.css",
       "src/domain/quality-profile.ts", "src/application/budget-status.ts", "src/application/quality-run.ts",

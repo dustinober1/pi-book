@@ -110,6 +110,7 @@ export function applyRepositoryOrganization(inputRoot: string, preview: Organiza
     profile: options.project.profile,
     ...(options.project.targetWords !== undefined ? { targetWords: options.project.targetWords } : {}),
     ...(options.project.runtimeProfile !== undefined ? { runtimeProfile: options.project.runtimeProfile } : {}),
+    ...(options.project.modelExecutionProfile !== undefined ? { modelExecutionProfile: options.project.modelExecutionProfile } : {}),
   });
   const templateWrites: OrganizationWrite[] = Object.entries(templates).map(([path, content]) => ({ path, content }));
   for (const write of templateWrites) {

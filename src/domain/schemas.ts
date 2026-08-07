@@ -54,7 +54,7 @@ export const ProjectSchema = Type.Object({
   gates: Type.Record(Type.String(), GateStateSchema),
   approvals: Type.Array(ApprovalSchema),
   automation: Type.Object({
-    max_chapters_per_run: Type.Integer({ minimum: 1, maximum: 10 }),
+    max_chapters_per_run: Type.Integer({ minimum: 1, maximum: 200 }),
     require_first_chapter_approval: Type.Boolean(),
     git_checkpoints: Type.Boolean(),
   }),

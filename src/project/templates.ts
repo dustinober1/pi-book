@@ -147,6 +147,13 @@ export function projectTemplateFiles(options: ProjectTemplateOptions): Record<st
     migration_history: [],
   };
   return {
+    // Novel Forge's operational tree — run reports, caches, the story index,
+    // in-flight transactions and journey traces — is diagnostic, not canonical.
+    // Without this it shows up as uncommitted files in the writer's own
+    // repository and is reported as a project warning on every status.
+    ".gitignore": `# Novel Forge operational state. Diagnostic only: never canon.
+.pi-book/
+`,
     "PROJECT.yaml": stringifyYaml(project),
     "START-HERE.md": `# Start Here
 

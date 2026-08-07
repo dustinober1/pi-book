@@ -111,3 +111,42 @@ test("novel-plan-change approval command requires UI confirmation and applies th
     assert.ok(notifications.some((message) => /applied plan change PC-001/i.test(message)));
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
+
+test("the guided /novel screen routes its plan-change action to the writer decision", async () => {
+  const { parent, root, manuscriptPath } = setup();
+  try {
+    const before = projectStateHash(root);
+    const { tools, commands } = surfaces();
+    await tools.get("novel_propose_plan_change").execute("tool-plan-change", {
+      project_root: root, request_id: "PC-001", scope: "local",
+      proposed_change: "Use the river route in Chapter 2.", reason: "Accepted prose makes the archive route unusable.",
+      manuscript_evidence: [{ chapter: 1, manuscript_path: manuscriptPath, manuscript_hash: hash(chapterText), quote: "archive route is unusable" }],
+      affected_chapters: [2], affected_contract_ids: ["CH-002"], affected_arc_ids: [], affected_thread_ids: [], affected_payoff_ids: [],
+      proposed_files: [{ path: "books/book-01/contracts/chapters/CH-002.yaml", content: futureContract() }], source_project_hash: before,
+    }, undefined, undefined, { cwd: root });
+
+    const notifications: string[] = [];
+    const offered: string[][] = [];
+    const context = {
+      cwd: root,
+      isIdle: () => true,
+      ui: {
+        confirm: async () => true,
+        input: async () => "Writer approves the route correction.",
+        notify: (message: string) => { notifications.push(message); },
+        async select(_prompt: string, options: string[]) {
+          offered.push(options);
+          return options.find((option) => /^Review plan change PC-001/.test(option))
+            ?? options.find((option) => option === "Approve this plan change");
+        },
+      },
+    };
+    await commands.get("novel").handler("", context);
+
+    assert.ok(offered[0]?.some((option) => /^Review plan change PC-001/.test(option)), "the guide screen offers the plan-change action");
+    assert.equal(readPlanChangeRequest(root, "PC-001")?.status, "applied");
+    assert.ok(existsSync(join(root, "books/book-01/contracts/chapters/CH-002.yaml")));
+    assert.ok(notifications.some((message) => /applied plan change PC-001/i.test(message)));
+    assert.ok(!notifications.some((message) => /has no handler/i.test(message)), "the action is dispatched rather than falling through");
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});

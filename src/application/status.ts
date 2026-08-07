@@ -14,6 +14,8 @@ import { actBoundaryFindings, overdueMilestone } from "./act-boundaries.js";
 import { gateDetail } from "./gate-metadata.js";
 import { collectProjectIntegrityFindings } from "./integrity.js";
 import { readerExperimentFindings, remarkabilityFindings } from "./reader-impact.js";
+import { canonicalModelExecutionProfileId, type ModelExecutionProfileId } from "../domain/model-execution-profile.js";
+import { readerCheckpointProgress } from "./reader-checkpoint.js";
 import { resolveRuntimeProfile } from "./runtime-profile-resolver.js";
 import { versionFindings } from "./version-core.js";
 
@@ -26,6 +28,7 @@ export interface ProjectStatus {
   recommendedCommand: string;
   primaryBlocker: string | null;
   runtimeProfile: RuntimeProfileId;
+  modelExecutionProfile: ModelExecutionProfileId;
   qualityTier: QualityTierId;
   markdown: string;
 }
@@ -110,6 +113,7 @@ function optionalV13ArtifactPaths(bookId: string): string[] {
 export function getProjectStatus(root: string, options: ProjectStatusOptions = {}): ProjectStatus {
   const project = readProject(root);
   const runtimeProfile = resolveRuntimeProfile({ project: project.runtime?.profile });
+  const modelExecutionProfile = canonicalModelExecutionProfileId(project.runtime?.model_execution_profile ?? "host-default");
   const quality = resolveQualityConfig(project.quality);
   const book = readBook(root);
   const tickets = readTickets(root);
@@ -187,6 +191,15 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
 
   const git = gitState(root);
   const dirty = options.gitDirtyOverride ?? git.dirty;
+  // The reader checkpoint blocks the last gate in the book. Surfacing it only
+  // there means a writer can do everything else right and meet the requirement
+  // with nothing left to do about it, so it is reported from drafting onward
+  // while there is still time to arrange readers.
+  const readerCheckpoint = ["drafting", "act-review", "revision", "manuscript-review", "canon-lock", "packaging"].includes(project.current_stage)
+    ? readerCheckpointProgress(root, book.book_id)
+    : null;
+  if (readerCheckpoint && !readerCheckpoint.satisfied) warnings.push(readerCheckpoint.summary);
+
   if (!git.initialized) warnings.push("Git is not initialized; workflow checkpoints are unavailable.");
   else if (dirty) warnings.push(`${dirty} uncommitted file(s) exist.`);
 
@@ -216,7 +229,9 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     `- Type: ${project.project_type}`,
     `- Genre profile: ${book.profile}`,
     `- Runtime profile: ${runtimeProfile.id}`,
+    `- Model execution profile: ${modelExecutionProfile}`,
     `- Quality tier: ${quality.tier}`,
+    ...(readerCheckpoint ? [`- Reader checkpoint: ${readerCheckpoint.satisfied ? (readerCheckpoint.waived ? "waived by writer decision" : "satisfied") : "not yet satisfied"}`] : []),
     `- Active book: ${book.book_id}`,
     `- Stage: ${project.current_stage}`,
     `- Next gate: ${project.next_gate ?? "none"}${project.next_gate ? ` (${project.gates[project.next_gate] ?? "unknown"})` : ""}`,
@@ -246,6 +261,7 @@ export function getProjectStatus(root: string, options: ProjectStatusOptions = {
     recommendedCommand: decision.command,
     primaryBlocker: blockers[0] ?? null,
     runtimeProfile: runtimeProfile.id,
+    modelExecutionProfile,
     qualityTier: quality.tier,
     markdown,
   };
