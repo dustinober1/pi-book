@@ -12,6 +12,7 @@ import { buildGuideScreen, type GuideActionId } from "../application/guide.js";
 import { refreshGuidance } from "../application/handoff.js";
 import { applyRepositoryOrganization, summarizeArchiveList } from "../application/organizer/apply.js";
 import { renderOrganizationPreview, scanWritingRepository } from "../application/organizer/scan.js";
+import { recommendProfilesForCapacity } from "../application/capacity-profile-advisor.js";
 import { buildPackagingChecklist } from "../application/package-checklist.js";
 import { applyPackageArtifacts } from "../application/packaging/apply.js";
 import { approvePlanChangeRequest, listPendingPlanChangeRequests, rejectPlanChangeRequest } from "../application/plan-change.js";
@@ -85,6 +86,18 @@ function planPromptFor(root: string, requested: string, phase?: string): string 
     return bookPlanPhasePrompt(root, phase);
   }
   throw new Error(`Unknown planning scope: ${scope}. Use voice, series, or book.`);
+}
+
+/**
+ * The host context window, when the harness reports one. `getContextUsage`
+ * returns undefined before the first turn and may be absent entirely on an
+ * older harness, so both are treated as "capacity unknown" — which asks the
+ * writer rather than assuming, and never throws inside project creation.
+ */
+function hostContextWindow(context: ExtensionCommandContext): number | undefined {
+  const usage = typeof context.getContextUsage === "function" ? context.getContextUsage() : undefined;
+  const window = usage?.contextWindow;
+  return typeof window === "number" && Number.isFinite(window) && window > 0 ? window : undefined;
 }
 
 function formatChecklist(root: string): string {
@@ -388,9 +401,33 @@ export function registerNovelForge(pi: ExtensionAPI): void {
     const targetInput = flagValue(supplied, "--target-words") || await context.ui.input("Book 1 target words:", profileInput === "romantasy" ? "110000" : "100000");
     const targetWords = Number.parseInt(targetInput ?? "100000", 10) || 100000;
     const rawRuntimeProfile = flagValue(supplied, "--runtime-profile");
-    const runtimeProfile = rawRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
+    const explicitRuntimeProfile = rawRuntimeProfile ? parseRuntimeProfileId(rawRuntimeProfile) : undefined;
     const rawModelProfile = flagValue(supplied, "--model-profile");
-    const modelExecutionProfile = rawModelProfile ? parseSelectableModelExecutionProfileId(rawModelProfile) : undefined;
+    const explicitModelProfile = rawModelProfile ? parseSelectableModelExecutionProfileId(rawModelProfile) : undefined;
+
+    // New projects defaulted to the widest context (`full`) regardless of what
+    // the host model could hold, even though the context window is available to
+    // every command. Detect it, recommend from it, and say so — an explicit
+    // flag always wins, and an undetectable window asks rather than assumes.
+    const recommendation = recommendProfilesForCapacity({
+      contextWindowTokens: hostContextWindow(context),
+      hasExplicitWorkerModel: Boolean(process.env.NOVEL_FORGE_QUALITY_MODEL?.trim()),
+    });
+    let runtimeProfile = explicitRuntimeProfile;
+    let modelExecutionProfile = explicitModelProfile;
+    if (!runtimeProfile) {
+      // Reported, never asked. A fully-specified `/novel-start` must stay
+      // scriptable, and blocking it on a question about a value that has a
+      // defensible default would be a worse failure than choosing one — the
+      // undetected-capacity default is `local`, which is conservative in the
+      // safe direction and strictly better than the previous unconditional
+      // `full`. The reason names the flag that overrides it.
+      runtimeProfile = recommendation.runtimeProfile;
+      context.ui.notify(recommendation.reason, recommendation.unknownCapacity ? "warning" : "info");
+      if (!modelExecutionProfile && recommendation.modelExecutionProfile) {
+        modelExecutionProfile = recommendation.modelExecutionProfile;
+      }
+    }
     const modelProfileAdvisory = modelExecutionProfile ? modelExecutionProfileDeprecationAdvisory(modelExecutionProfile) : null;
     if (modelProfileAdvisory) context.ui.notify(modelProfileAdvisory, "warning");
     const quality = qualityStateWithOverride(defaultQualityProjectState(), parseQualityOverride(supplied));
@@ -403,14 +440,17 @@ export function registerNovelForge(pi: ExtensionAPI): void {
       ...(runtimeProfile ? { runtimeProfile } : {}),
       ...(modelExecutionProfile ? { modelExecutionProfile } : {}),
     });
+    // The four independent controls, reported together at creation so the
+    // writer sees what was chosen for them rather than discovering it later.
+    const configuredSummary = ` (genre ${profileInput}, runtime ${runtimeProfile ?? "full"}, model profile ${modelExecutionProfile ?? "host-default"}, quality ${quality.tier})`;
     const briefPath = flagValue(supplied, "--brief");
     if (briefPath) bootstrapProjectFromBrief(root, briefPath, { profile: profileInput, targetWords });
     refreshGuidance(root, { lastAction: briefPath ? "Initialized project from authorized brief" : "Initialized project" });
     const autoTo = flagValue(supplied, "--auto-to");
     if (autoTo) {
       sendDecision(pi, context, beginQualityAutopilotRun(root, { target: autoTo, maxChapters: readProject(root).automation.max_chapters_per_run }));
-      context.ui.notify(`Novel Forge project created at ${root}. Autopilot stops at ${autoTo} or the next required writer decision.`, "info");
-    } else context.ui.notify(`Novel Forge project created at ${root}. Run /novel.`, "info");
+      context.ui.notify(`Novel Forge project created at ${root}${configuredSummary}. Autopilot stops at ${autoTo} or the next required writer decision.`, "info");
+    } else context.ui.notify(`Novel Forge project created at ${root}${configuredSummary}. Run /novel.`, "info");
   } });
   pi.registerCommand("novel-status", { description: "Show Novel Forge decisions, blockers, warnings, progress, and next action", handler: async (_args, context) => { try { const root = requireProjectRoot(context.cwd); context.ui.notify(refreshGuidance(root).markdown, "info"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-budget", { description: "Show the quality tier, token and call ceilings, and locally recorded usage", handler: async (_args, context) => { try { context.ui.notify(renderBudgetStatus(requireProjectRoot(context.cwd)), "info"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });

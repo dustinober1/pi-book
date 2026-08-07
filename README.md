@@ -29,15 +29,37 @@ Run `/novel` after each action. It reads durable project state and presents only
 
 For an existing manuscript, work from a copy and use `/novel-adopt`. The source remains unchanged; Novel Forge creates a managed project with guarded Git checkpoints.
 
-## Genre, runtime, and quality are separate
+## Genre, runtime, model, and quality are separate
 
 - **Genre profile:** thriller, romantasy, or historical fiction.
 - **Runtime profile:** tiny-local, local, or full context budgets.
+- **Model execution profile:** per-job token budgets and decoding tuned for the model doing the work.
 - **Quality tier:** economy, balanced, premium, or editorial.
 
 Economy preserves the existing single host-prompt drafting path. Higher tiers use isolated Pi print-mode passes for planning, candidate generation, independent critics, revision, and verification. Every accepted creative change still ends in one guarded event with stage/hash checks, allowlists, schemas, references, rollback, status/handoff generation, and a Git checkpoint.
 
+`/novel-start` reads the host model's context window and recommends a runtime profile from it, reporting the choice. Pass `--runtime-profile` or `--model-profile` to decide explicitly; when the window cannot be detected, it asks rather than assuming. All four controls appear in `/novel-status`, `/novel-budget`, and the session handoff.
+
 Use `/novel-budget` to inspect token and call limits, settled usage, active reservations, downgrades, and stops. Quality can be selected in project configuration or with command overrides; Novel Forge never silently increases spend.
+
+## Running on a local model
+
+Novel Forge is built to work on models that are not the largest available. Point the isolated workers at a local model and select the matching execution profile:
+
+```bash
+export NOVEL_FORGE_QUALITY_PROVIDER=local
+export NOVEL_FORGE_QUALITY_MODEL=google/gemma-3-12b-it-qat-q4_0-gguf
+```
+
+```text
+/novel-start My Novel --profile thriller --type standalone \
+  --runtime-profile local --model-profile gemma-3-12b-it-qat-q4_0
+/novel-run --until packaging --max-chapters 40
+```
+
+The exact-model profile carries per-job token budgets and constrained decoding, and is verified by fingerprint on the first guarded call — a different model fails loudly rather than running under the wrong budgets. Naming an exact model is what makes that profile selectable at all.
+
+Drafting takes the guarded scene path — bounded context, isolated jobs, deterministic validation, five scene critics, targeted repair, ordered acceptance, one guarded commit per chapter — for every chapter with an executable contract, and says so when it falls back. A run stops at writer gates, blockers, budget limits, and the scene repair limit, not at a chapter counter.
 
 ## Safety boundaries
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased — Defaults That Match the Model in the Room
+
+### Changed
+
+- **`/novel-start` chooses a runtime profile from the host model's context window.** New projects defaulted to `runtime.profile: "full"` — 72,000 evidence characters and 24,000 instruction characters — paired with the `economy` quality tier, which drafts a whole chapter in one host call with no scene plan, no critics and no final reviewer. That is the widest context and the least supervision: the combination least likely to work on a weak model, handed out by default, in a package whose stated differentiator is constrained runtimes. Nothing detected the host model, although the context window was already available to every command. The choice and its evidence are reported at creation, alongside all four controls; `--runtime-profile` and `--model-profile` always win.
+- Affordability thresholds are derived from each runtime profile's own instruction, evidence, reserved-output and safety budget rather than hardcoded window sizes, so changing a profile's budget moves its own threshold instead of letting it silently outgrow one.
+
+### Added
+
+- A **Running on a local model** section in the README, with a local example. `NOVEL_FORGE_QUALITY_PROVIDER` and `NOVEL_FORGE_QUALITY_MODEL` are the only way to point the isolated workers at a local model and previously appeared exactly once, in `docs/quality-and-cost.md`, with an OpenAI example.
+
+### Boundaries
+
+- The exact-model execution profile is recommended **only** when the environment names a model. `qualifyGemmaModelForRun` throws without an explicit selection to fingerprint, so recommending it blind would write a value into `PROJECT.yaml` that makes the first guarded call fail — the same shape of defect as a flag that parses and does nothing. Without a named model the reason says exactly which variables to set.
+- An undetectable context window warns and defaults to `local` rather than blocking on a question: a fully-specified `/novel-start` must stay scriptable, and `local` is conservative in the safe direction and strictly better than the previous unconditional `full`. `getContextUsage` being absent or pre-first-turn is treated as unknown, never as an error inside project creation.
+- The `economy` quality-tier default is unchanged. Raising it would increase spend, and this project does not silently increase spend.
+
 ## Unreleased — Reaching the End of the Book
 
 ### Added

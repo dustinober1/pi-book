@@ -324,6 +324,31 @@ export function verifyV210ReleaseTree(root: string): V210ReleaseCheck[] {
         && /Do not describe it as reader-tested/.test(text(root, "src/application/reader-checkpoint.ts")),
       "The reader checkpoint only reads state, and a waived package is never described as reader-tested.",
     ),
+
+    check(
+      "capacity-derived-defaults",
+      existsSync(join(root, "src/application/capacity-profile-advisor.ts"))
+        && /recommendProfilesForCapacity/.test(text(root, "src/pi/extension.ts"))
+        && /hostContextWindow/.test(text(root, "src/pi/extension.ts")),
+      "New projects choose a runtime profile from the host model's detected context window.",
+    ),
+    check(
+      "capacity-thresholds-derived-from-profiles",
+      /RUNTIME_PROFILES\[id\]/.test(text(root, "src/application/capacity-profile-advisor.ts"))
+        && !/16_?384|32_?768|65_?536/.test(text(root, "src/application/capacity-profile-advisor.ts")),
+      "Affordability thresholds come from each profile's own budget rather than hardcoded window sizes.",
+    ),
+    check(
+      "exact-model-profile-needs-a-fingerprint",
+      /hasExplicitWorkerModel/.test(text(root, "src/application/capacity-profile-advisor.ts"))
+        && /requires an exact model to fingerprint/.test(text(root, "src/application/capacity-profile-advisor.ts")),
+      "An exact-model execution profile is only recommended when a model exists to fingerprint.",
+    ),
+    check(
+      "local-model-documented",
+      /NOVEL_FORGE_QUALITY_MODEL/.test(readme) && /Running on a local model/.test(readme),
+      "The README documents running on a local model with a local example.",
+    ),
   ];
 }
 
