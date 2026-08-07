@@ -13,6 +13,7 @@ import { refreshGuidance } from "../application/handoff.js";
 import { applyRepositoryOrganization, summarizeArchiveList } from "../application/organizer/apply.js";
 import { renderOrganizationPreview, scanWritingRepository } from "../application/organizer/scan.js";
 import { buildPackagingChecklist } from "../application/package-checklist.js";
+import { applyPackageArtifacts } from "../application/packaging/apply.js";
 import { approvePlanChangeRequest, listPendingPlanChangeRequests, rejectPlanChangeRequest } from "../application/plan-change.js";
 import { bookPlanPhasePrompt, bookPlanPrompt, packagePrompt, readerTestPrompt, reviewPrompt, seriesPlanPrompt, voicePlanPrompt } from "../application/prompts.js";
 import {
@@ -435,7 +436,36 @@ export function registerNovelForge(pi: ExtensionAPI): void {
   pi.registerCommand("novel-review", { description: "Review a chapter, act, manuscript, or series through profile-specific lanes", getArgumentCompletions: (prefix) => { const filtered = ["chapter", "act", "manuscript", "series"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value })); return filtered.length ? filtered : null; }, handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); const scope = tokens(args)[0] ?? "act"; assertReviewAllowed(readProject(root), scope); sendDecision(pi, context, { action: "review", prompt: reviewPrompt(root, scope), message: `Queued ${scope} review.` }); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-readers", { description: "Open the guided reader-kit and CSV evidence wizard", handler: async (_args, context) => { try { await guidedReaders(requireProjectRoot(context.cwd), context); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-revise", { description: "Apply open revision tickets with acceptance and regression checks", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); sendDecision(pi, context, directRevisionDecision(root, tokens(args).filter((item) => /^B\d+-T\d+$/i.test(item)))); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
-  pi.registerCommand("novel-package", { description: "Open the packaging checklist, metadata, and complete-export wizard", handler: async (_args, context) => { try { const root = requireProjectRoot(context.cwd); assertOperationAllowed(readProject(root), "package"); context.ui.notify(formatChecklist(root), "info"); await openWizard(root, context, "packaging"); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
+  pi.registerCommand("novel-package", {
+    description: "Show the packaging checklist and open the export wizard; --apply produces the complete package without a browser",
+    getArgumentCompletions: (prefix) => {
+      const filtered = ["--apply", "--regenerate", "--no-pandoc"].filter((item) => item.startsWith(prefix)).map((value) => ({ value, label: value }));
+      return filtered.length ? filtered : null;
+    },
+    handler: async (args, context) => {
+      try {
+        const root = requireProjectRoot(context.cwd);
+        assertOperationAllowed(readProject(root), "package");
+        const items = tokens(args);
+        context.ui.notify(formatChecklist(root), "info");
+        // applyPackageArtifacts had exactly one caller — the browser wizard
+        // handler — so on a headless box the manuscript, EPUB, DOCX and metadata
+        // could not be produced at all. The wizard stays the default; it is no
+        // longer the only door.
+        if (items.includes("--apply")) {
+          const result = await applyPackageArtifacts(root, {
+            preferPandoc: !items.includes("--no-pandoc"),
+            regenerate: items.includes("--regenerate"),
+          });
+          context.ui.notify(result.current
+            ? `Package outputs already match source hash ${result.sourceHash}. Pass --regenerate to rebuild them.`
+            : `Packaged ${result.changed.length} file(s) with the ${result.engine} engine at source hash ${result.sourceHash}. Run /novel to approve the package gate.`, "info");
+          return;
+        }
+        await openWizard(root, context, "packaging");
+      } catch (error) { context.ui.notify(errorText(error), "warning"); }
+    },
+  });
   pi.registerCommand("novel-adopt", { description: "Preview and adopt an existing DOCX, EPUB, Markdown, text, or chapter-directory manuscript", handler: async (args, context) => { try { const root = requireProjectRoot(context.cwd); await guidedAdoption(root, context, tokens(args).join(" ") || undefined); } catch (error) { context.ui.notify(errorText(error), "warning"); } } });
   pi.registerCommand("novel-organize", { description: "Scan and safely organize a mixed writing repository into Novel Forge", handler: async (args, context) => { try {
     const items = tokens(args);

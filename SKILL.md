@@ -327,6 +327,16 @@ Build all outputs before mutation and commit them atomically: manuscript Markdow
 
 For historical fiction, also build a Historical Note when the invention ledger requests disclosure. Never generate a historical note for other profiles.
 
+`/novel-package --apply` produces the complete package without opening a browser, which is the only path available on a headless machine; the wizard remains the default for interactive work. `/novel-run --until packaging` and `--until complete` aim a run at the end of the book. A target names where the writer is aiming, never what may be crossed: every intervening gate still stops the run.
+
+### The human reader checkpoint
+
+A `package` event requires that at least one human has responded to a reader experiment. That requirement is now reported from drafting onward, in status and in the packaging checklist, so it is a planned stop rather than a discovery at the last gate.
+
+A writer who intends to publish without asking a reader records an explicit decision in `series/decision-ledger.yaml` through an `intake-update` event, with subject `package-without-reader-evidence` and a choice beginning `accept:`. Only an active (unreplaced), accepting decision scoped to `project` or the active book counts. With it, packaging proceeds and the blocker becomes a warning that must still reach the writer; the package manifest and report both record that no human has read the book.
+
+The waiver permits packaging. It never becomes reader evidence, never writes `reader-experiments.yaml`, and never licenses describing the book as reader-tested. Real recorded responses always outrank it.
+
 ## Next-book inheritance
 
 Require the active book to be canon-locked or packaged unless force is explicitly confirmed. Preview locked canon, open threads, previous profile/length, series role, and reader limitations.

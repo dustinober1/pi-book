@@ -12,7 +12,13 @@ import {
 } from "../domain/scene-critic-artifact.js";
 import { parseRuntimeProfileId } from "../domain/runtime-profile.js";
 
-export const allowedUntilTargets = ["voice-approval", "book-plan-approval", "first-chapter-approval", "act-1-review", "midpoint-review", "pre-final-act-review", "manuscript-review", "next-milestone"] as const;
+// Gate targets stop when that gate opens for a writer decision; stage targets
+// stop on arrival at that stage. "packaging" and "complete" exist so a run can
+// be aimed at the end of the book — previously the furthest a single command
+// could aim was the manuscript-review gate, several stages short of a finished
+// package.
+export const allowedUntilTargets = ["voice-approval", "book-plan-approval", "first-chapter-approval", "act-1-review", "midpoint-review", "pre-final-act-review", "manuscript-review", "packaging", "complete", "next-milestone"] as const;
+export const stageUntilTargets = ["packaging", "complete"] as const;
 export function tokens(args: string): string[] { return args.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) => token.replace(/^["']|["']$/g, "")) ?? []; }
 export function flagValue(items: string[], flag: string): string | undefined { const index = items.indexOf(flag); return index >= 0 ? items[index + 1] : undefined; }
 

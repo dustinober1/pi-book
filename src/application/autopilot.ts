@@ -13,8 +13,19 @@ function premiseLab(root: string): PremiseLab | null {
   return text ? parseYaml<PremiseLab>(text, PremiseLabSchema, path) : null;
 }
 
+/**
+ * A run target is either a gate ID or a stage ID. Gate targets are reached when
+ * that gate opens for a writer decision; stage targets are reached on arrival at
+ * the stage, which is what lets a run be aimed at `packaging` or `complete`
+ * rather than stopping at the last gate before them. Either way every
+ * intervening gate still stops the run — a target names where the writer is
+ * aiming, never what may be crossed on the way.
+ */
 export function autopilotDecision(root: string, target: string): RunDecision {
   const project = readProject(root);
+  if (project.current_stage === target) {
+    return { action: "target-reached", prompt: null, message: `Requested target ${target} has been reached.` };
+  }
   const gate = project.next_gate;
   if (gate && project.gates[gate] === "pending") {
     if (gate === target) return { action: "target-reached", prompt: null, message: `Requested target ${target} is ready for writer approval.` };

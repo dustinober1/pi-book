@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — Reaching the End of the Book
+
+### Added
+
+- **A run can be aimed at the end.** `--until packaging` and `--until complete` join the gate targets; the furthest a single command could previously aim was the manuscript-review gate, several stages short of a finished package. A stage target is reached on arrival at that stage. A target names where the writer is aiming, never what may be crossed — every intervening gate still stops the run.
+- **Headless packaging.** `/novel-package --apply` produces the manuscript, EPUB, DOCX, CSV/XLSX metadata, marketing copy, manifest and report without starting a browser. `applyPackageArtifacts` previously had exactly one caller — the packaging wizard handler — so on a machine with no browser the package could not be produced at all. The wizard remains the default for interactive work.
+- **The human reader checkpoint is visible from drafting onward.** It appears in status warnings, in the project snapshot, and as a blocking packaging-checklist item with its remaining distance named. The requirement blocks the last gate in the book, so surfacing it only there meant a writer could do everything else right and meet it with nothing left to do about it.
+- **A recorded waiver for packaging without reader evidence.** A writer who intends to publish without asking a reader records an explicit decision in `series/decision-ledger.yaml` — subject `package-without-reader-evidence`, choice beginning `accept:` — through the existing `intake-update` event. Only an active, unreplaced, accepting decision scoped to `project` or the active book counts, matching how historical inventions already work. It is a recorded decision rather than a command-line flag because a choice this consequential should leave a durable, attributable record instead of living in one invocation's argv.
+
+### Boundaries
+
+- Without the decision the `package` block is **unchanged**: still `human-gate-required`, still not retryable, now naming both remedies.
+- The waiver permits packaging and nothing else. It downgrades the blocker to a warning that must still reach the writer, never writes `reader-experiments.yaml`, never counts as reader evidence, and never licenses describing the book as reader-tested. Real recorded responses always outrank it. The package manifest and report both state that no human has read the book, so the absence travels with the artifacts rather than being lost at the moment of packaging.
+- The `reader-checkpoint` module is read-only by construction, and a release check enforces that it acquires no write — a waiver must never be able to manufacture the evidence it explicitly is not.
+
 ## Unreleased — Autonomous Guarded Chapter Execution
 
 ### Added

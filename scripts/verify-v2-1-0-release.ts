@@ -284,6 +284,46 @@ export function verifyV210ReleaseTree(root: string): V210ReleaseCheck[] {
       !/maxChaptersPerRun: 1,/.test(text(root, "src/domain/runtime-profile.ts")),
       "No runtime profile clamps a persistent run to a single chapter.",
     ),
+
+    check(
+      "run-targets-reach-the-end",
+      /"packaging", "complete"/.test(text(root, "src/pi/arguments.ts"))
+        && /project\.current_stage === target/.test(text(root, "src/application/autopilot.ts")),
+      "A run can be aimed at packaging or completion, and a stage target is reached on arrival.",
+    ),
+    check(
+      "headless-packaging",
+      /applyPackageArtifacts/.test(text(root, "src/pi/extension.ts"))
+        && /items\.includes\("--apply"\)/.test(text(root, "src/pi/extension.ts")),
+      "The complete package can be produced without starting a browser wizard.",
+    ),
+    check(
+      "reader-checkpoint-visible-early",
+      /readerCheckpointProgress/.test(text(root, "src/application/status.ts"))
+        && /readerCheckpointItem/.test(text(root, "src/application/package-checklist.ts")),
+      "The human reader requirement is reported from drafting onward, not only at the last gate.",
+    ),
+    check(
+      "reader-waiver-is-a-recorded-decision",
+      /PACKAGE_WITHOUT_READERS_SUBJECT/.test(text(root, "src/application/reader-checkpoint.ts"))
+        && /packageWithoutReadersDecision/.test(text(root, "src/application/reader-checkpoint.ts"))
+        && /reader-evidence-waived/.test(text(root, "src/application/reader-checkpoint.ts")),
+      "Packaging without reader evidence requires an explicit recorded writer decision, not a flag.",
+    ),
+    check(
+      "reader-waiver-recorded-in-the-package",
+      /No human reader has read this book/.test(text(root, "src/application/packaging/export.ts")),
+      "A package built under the reader waiver states the absence in its own manifest and report.",
+    ),
+    check(
+      "reader-waiver-never-becomes-evidence",
+      // The reader-checkpoint module is read-only by construction: it reports,
+      // it never records. If it ever gained a write, a waiver could start
+      // manufacturing the evidence it is explicitly not.
+      !/writeFileSync|applyGuidedProjectEvent|applyTransaction/.test(text(root, "src/application/reader-checkpoint.ts"))
+        && /Do not describe it as reader-tested/.test(text(root, "src/application/reader-checkpoint.ts")),
+      "The reader checkpoint only reads state, and a waived package is never described as reader-tested.",
+    ),
   ];
 }
 
