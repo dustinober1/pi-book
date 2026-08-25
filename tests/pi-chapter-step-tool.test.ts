@@ -52,6 +52,10 @@ function chapterContract() {
     pov: "CHAR-MARA",
     purpose: "Enter the archive and secure the terminal log.",
     required_beats: ["Enter the archive", "Cross the patrol corridor", "Reach the terminal", "Secure the access log"],
+    scene_beats: [
+      { objective: "Enter the archive", conflict: "The patrol corridor is watched", turn: "Mara is inside, unseen but logged" },
+      { objective: "Secure the terminal access log", conflict: "The terminal refuses her credentials", turn: "The log is hers, and the access light stays dark" },
+    ],
     active_thread_ids: [],
     required_record_ids: [],
     start_state_ids: [],

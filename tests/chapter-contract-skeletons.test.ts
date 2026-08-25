@@ -94,8 +94,12 @@ test("a skeleton derives its word band from the packet and never invents semanti
     assert.deepEqual(contract.required_end_state, []);
     assert.deepEqual(contract.forbidden_changes, []);
     assert.deepEqual(contract.knowledge_boundary_ids, []);
+    // Scene structure is missing for the same reason: this packet is longer than
+    // one scene, and dealing the chapter's five unlike axes into piles was
+    // inventing a division, not deriving one.
+    assert.equal(contract.scene_beats, undefined);
     assert.deepEqual(contract.missing_small_model_fields.slice().sort(), [
-      "forbidden_changes", "knowledge_boundary_ids", "required_end_state", "start_state_ids",
+      "forbidden_changes", "knowledge_boundary_ids", "required_end_state", "scene_beats", "start_state_ids",
     ]);
   } finally {
     rmSync(parent, { recursive: true, force: true });
@@ -170,7 +174,12 @@ test("readiness advisories name the incomplete contracts and the remedy in a dry
   }
 });
 
-test("a fully authored contract set produces no readiness advisory", () => {
+/**
+ * A contract written before scene structure was authored says it is ready and
+ * is not. Readiness is recomputed so the writer learns at the queue event,
+ * where the remedy is one tool call, rather than part-way through a run.
+ */
+test("a stale contract claiming readiness without scene structure is reported, not trusted", () => {
   const { parent, root, queue } = setup();
   try {
     const extra = queue.packets.filter((packet) => packet.status === "ready").map((packet) => ({
@@ -181,10 +190,51 @@ test("a fully authored contract set produces no readiness advisory", () => {
         required_end_state: [{ record_id: "ST-001", field: "status", operation: "set", value: "advanced" }],
         forbidden_changes: ["Mara loses archive access."],
         knowledge_boundary_ids: ["CAN-001"],
+        // Claims readiness, carries no scene structure, and is longer than one
+        // scene: exactly the shape every pre-existing contract has.
         small_model_ready: true,
         missing_small_model_fields: [],
       }),
     }));
+    const result = validateNovelEvent(root, queueEvent(root, queue, extra));
+    assert.equal(result.valid, true, "a stale contract is an advisory, never a rejection");
+    const advisory = result.advisories.find((item) => /no executable chapter contract yet/.test(item));
+    assert.ok(advisory, `expected a readiness advisory, got: ${result.advisories.join(" | ")}`);
+    assert.match(advisory, /declares no scene structure/);
+    assert.match(advisory, /novel_complete_chapter_contract/);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("a fully authored contract set produces no readiness advisory", () => {
+  const { parent, root, queue } = setup();
+  try {
+    const extra = queue.packets.filter((packet) => packet.status === "ready").map((packet) => {
+      const skeleton = compileLegacyChapterContract(packet);
+      // A complete contract includes its scene structure. Readiness is
+      // recomputed from the contract rather than taken from the stored flag, so
+      // claiming small_model_ready without scene beats no longer suffices.
+      const sceneBeats = skeleton.target_words.maximum > 1_000
+        ? [
+            { objective: "Reach the archive floor", conflict: "The corridor is watched", turn: "Mara is inside" },
+            { objective: "Reach the terminal", conflict: "Her credential is refused", turn: "She is at the terminal anyway" },
+          ]
+        : undefined;
+      return {
+        path: chapterContractPath("book-01", packet.chapter),
+        content: renderChapterContract({
+          ...skeleton,
+          ...(sceneBeats ? { scene_beats: sceneBeats } : {}),
+          start_state_ids: ["ST-001"],
+          required_end_state: [{ record_id: "ST-001", field: "status", operation: "set", value: "advanced" }],
+          forbidden_changes: ["Mara loses archive access."],
+          knowledge_boundary_ids: ["CAN-001"],
+          small_model_ready: true,
+          missing_small_model_fields: [],
+        }),
+      };
+    });
     const result = validateNovelEvent(root, queueEvent(root, queue, extra));
     assert.equal(result.valid, true);
     assert.equal(result.advisories.some((item) => /no executable chapter contract yet/.test(item)), false);

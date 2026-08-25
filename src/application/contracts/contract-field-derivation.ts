@@ -25,14 +25,16 @@ import { establishedStateRecords } from "../state-ledger.js";
  * already exists with an established status. Nothing is fabricated, and a
  * project with empty ledgers derives nothing rather than guessing.
  *
- * The other two stay with the author. `required_end_state` is what this chapter
- * must change, and `forbidden_changes` is what it must not touch: both are
- * decisions about the story, not facts about the graph, and no amount of
- * querying produces them.
+ * The others stay with the author. `required_end_state` is what this chapter
+ * must change, `forbidden_changes` is what it must not touch, and `scene_beats`
+ * is how the chapter divides into scenes: all are decisions about the story,
+ * not facts about the graph, and no amount of querying produces them. Scene
+ * structure joined that list once it became clear that deriving it — dealing
+ * the chapter's five unlike axes round-robin into piles — was inventing it.
  */
 
 export const DERIVABLE_CONTRACT_FIELDS = ["start_state_ids", "knowledge_boundary_ids"] as const;
-export const AUTHORED_CONTRACT_FIELDS = ["required_end_state", "forbidden_changes"] as const;
+export const AUTHORED_CONTRACT_FIELDS = ["required_end_state", "forbidden_changes", "scene_beats"] as const;
 
 export interface DerivedContractFields {
   startStateIds: string[];
@@ -92,12 +94,23 @@ export function deriveContractFields(
  */
 export function remainingContractFields(
   derived: DerivedContractFields,
-  authored: { requiredEndState?: readonly unknown[]; forbiddenChanges?: readonly unknown[] } = {},
+  authored: {
+    requiredEndState?: readonly unknown[];
+    forbiddenChanges?: readonly unknown[];
+    /**
+     * Findings from `sceneStructureFindings`. Scene structure is not missing
+     * merely because it was not authored — a chapter short enough to be one
+     * scene derives it from named fields — so this reports whether the contract
+     * can actually compile to scenes, not whether a field is present.
+     */
+    sceneStructureFindings?: readonly string[];
+  } = {},
 ): string[] {
   const missing: string[] = [];
   if (derived.startStateIds.length === 0) missing.push("start_state_ids");
   if (authored.requiredEndState === undefined || authored.requiredEndState.length === 0) missing.push("required_end_state");
   if (authored.forbiddenChanges === undefined) missing.push("forbidden_changes");
   if (derived.knowledgeBoundaryIds.length === 0) missing.push("knowledge_boundary_ids");
+  if (authored.sceneStructureFindings?.length) missing.push("scene_beats");
   return missing;
 }

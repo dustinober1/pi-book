@@ -8,6 +8,7 @@ import { readText } from "../infrastructure/files.js";
 import { parseYaml, stringifyYaml } from "../infrastructure/yaml.js";
 import type { FileChange } from "../infrastructure/transaction.js";
 import { compileLegacyChapterContract } from "./contracts/chapter-contract-compiler.js";
+import { sceneStructureFindings } from "./contracts/scene-contract-compiler.js";
 
 /**
  * Chapter contract skeletons for every ready packet.
@@ -107,7 +108,14 @@ export function chapterContractReadinessAdvisories(
     if (!contract.small_model_ready) {
       const missing = contract.missing_small_model_fields.join(", ") || "executable fields";
       incomplete.push(`chapter ${packet.chapter} (${path}, missing ${missing})`);
+      continue;
     }
+    // Readiness is recomputed rather than taken from the stored flag. A
+    // contract written before scene structure was authored says it is ready and
+    // is not, and trusting the flag would defer that discovery to the middle of
+    // a run instead of reporting it here, where the remedy is one tool call.
+    const structure = sceneStructureFindings(contract);
+    if (structure.length) incomplete.push(`chapter ${packet.chapter} (${path}, ${structure.join("; ")})`);
   }
   if (incomplete.length === 0) return [];
   return [

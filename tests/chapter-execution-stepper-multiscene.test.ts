@@ -66,6 +66,10 @@ function setup() {
     source_kind: "approved-contract", source_packet_hash: "a".repeat(64), pov: "CHAR-MARA",
     purpose: "Enter the archive and copy the access log.",
     required_beats: ["Enter the archive", "Reach the terminal", "Discover revoked access", "Copy the access log"],
+    scene_beats: [
+      { objective: "Enter the archive", conflict: "The terminal is across an open floor", turn: "Mara reaches the terminal" },
+      { objective: "Copy the access log", conflict: "Her access has been revoked", turn: "She copies the log anyway" },
+    ],
     active_thread_ids: [], required_record_ids: ["CAN-ACCESS"], start_state_ids: [], required_end_state: [],
     forbidden_changes: ["Do not identify the prior user."], knowledge_boundary_ids: [],
     target_words: { minimum: 800, maximum: 1200 }, ending_hook: "Mara leaves with the access log.",
@@ -96,11 +100,13 @@ class MultiSceneWorker implements QualityWorker {
         steps: first
           ? [
               { required_beat: "Enter the archive", execution: "Mara enters through maintenance.", pressure: "A patrol turns toward her." },
-              { required_beat: "Discover revoked access", execution: "The reader rejects her credential.", pressure: "The rejection logs her presence." },
+              { required_beat: "The terminal is across an open floor", execution: "The floor is lit end to end.", pressure: "The patrol sweep is due." },
+              { required_beat: "Mara reaches the terminal", execution: "She crosses during the sweep's turn.", pressure: "She is now past her exit." },
             ]
           : [
-              { required_beat: "Reach the terminal", execution: "Mara reaches the terminal bank.", pressure: "The patrol seals the corridor." },
-              { required_beat: "Copy the access log", execution: "Mara copies the access log.", pressure: "The transfer exposes her location." },
+              { required_beat: "Copy the access log", execution: "Mara starts the transfer.", pressure: "The transfer exposes her location." },
+              { required_beat: "Her access has been revoked", execution: "The reader rejects her credential.", pressure: "The rejection logs her presence." },
+              { required_beat: "She copies the log anyway", execution: "She reroutes through a local port.", pressure: "The reroute leaves a second record." },
             ],
         turn_execution: first ? "She finds the maintenance conduit." : "She reroutes the transfer through a local port.",
         ending_execution: first ? "She reaches the terminal bank." : "She leaves with the access log.",

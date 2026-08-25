@@ -4,6 +4,7 @@ import type { ChapterContract } from "../../domain/chapter-contract.js";
 import type { KnowledgeLedger } from "../../domain/knowledge-ledger.js";
 import type { StateLedger } from "../../domain/state-ledger.js";
 import { deriveContractFields, remainingContractFields } from "./contract-field-derivation.js";
+import { sceneStructureFindings } from "./scene-contract-compiler.js";
 
 function normalizedHash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -47,8 +48,7 @@ export function compileLegacyChapterContract(
   const maximum = Math.max(minimum, Math.ceil(packet.target_words * 1.1));
   const activeThreadIds = activeThreads(packet, options);
   const derived = deriveContractFields(packet, options.ledgers ?? {});
-  const missing = remainingContractFields(derived);
-  return {
+  const skeleton = {
     schema_version: "2.0.0",
     contract_id: `CH-${String(packet.chapter).padStart(3, "0")}`,
     version: 1,
@@ -68,7 +68,17 @@ export function compileLegacyChapterContract(
     target_words: { minimum, maximum },
     ending_hook: packet.ending_hook,
     small_model_ready: false,
-    missing_small_model_fields: missing,
+    missing_small_model_fields: [] as string[],
+  } satisfies ChapterContract;
+  // Scene structure is judged on the compiled skeleton rather than the packet,
+  // because whether a chapter needs authored scenes depends on the contract's
+  // own word range. A chapter short enough to be one scene derives its
+  // structure from named packet fields and is not missing anything.
+  return {
+    ...skeleton,
+    missing_small_model_fields: remainingContractFields(derived, {
+      sceneStructureFindings: sceneStructureFindings(skeleton),
+    }),
   };
 }
 

@@ -126,12 +126,14 @@ test("a project with no ledgers derives nothing rather than guessing", () => {
   );
 });
 
-test("a compiled skeleton now asks the author for two fields instead of four", () => {
+test("a compiled skeleton asks the author only for what no query produces", () => {
   const withoutLedgers = compileLegacyChapterContract(packet());
-  assert.deepEqual(withoutLedgers.missing_small_model_fields.sort(), ["forbidden_changes", "knowledge_boundary_ids", "required_end_state", "start_state_ids"]);
+  assert.deepEqual(withoutLedgers.missing_small_model_fields.sort(), ["forbidden_changes", "knowledge_boundary_ids", "required_end_state", "scene_beats", "start_state_ids"]);
 
   const withLedgers = compileLegacyChapterContract(packet(), { ledgers: { state: stateLedger() as never, knowledge: knowledgeLedger() as never } });
-  assert.deepEqual(withLedgers.missing_small_model_fields.sort(), ["forbidden_changes", "required_end_state"]);
+  // Scene structure survives derivation: this packet is longer than one scene,
+  // and no query over the graph says where its scenes divide.
+  assert.deepEqual(withLedgers.missing_small_model_fields.sort(), ["forbidden_changes", "required_end_state", "scene_beats"]);
   assert.deepEqual(withLedgers.start_state_ids, ["STATE-MARA-CREDENTIAL", "STATE-MARA-LOCATION"]);
   assert.deepEqual(withLedgers.knowledge_boundary_ids, ["KNOW-MARA-ACCESS"]);
   assert.equal(withLedgers.small_model_ready, false, "derivation alone never claims readiness");
@@ -145,9 +147,14 @@ test("typed completion produces an executable contract without the model writing
       chapter: 1,
       requiredEndState: [{ record_id: "STATE-MARA-LOCATION", field: "location", operation: "set", value: "LOC-TERMINAL" }],
       forbiddenChanges: ["Do not identify the prior user."],
+      sceneBeats: [
+        { objective: "Reach the archive floor", conflict: "The corridor is watched", turn: "Mara is inside" },
+        { objective: "Reach the terminal", conflict: "Her credential is refused", turn: "She is at the terminal anyway" },
+      ],
     });
     assert.equal(result.contract.small_model_ready, true);
     assert.deepEqual(result.stillMissing, []);
+    assert.deepEqual(result.sceneStructure, { sceneCount: 2, authored: true });
     assert.deepEqual(result.derivedFields.sort(), ["knowledge_boundary_ids", "start_state_ids"]);
     // Authoring supersedes the compiled skeleton.
     assert.equal(result.contract.source_kind, "approved-contract");
@@ -155,6 +162,74 @@ test("typed completion produces an executable contract without the model writing
     // The tool serialised it, so the result is schema-valid by construction.
     const reparsed = parseYaml<ChapterContract>(result.content, ChapterContractSchema, result.path);
     assert.deepEqual(reparsed, result.contract);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+/**
+ * Typing the input must not move invention out of malformed YAML and into
+ * well-formed nonsense. A scene brief that names one fact three times is
+ * well-formed and useless, so it is refused at authoring rather than discovered
+ * at inference.
+ */
+test("a scene structure that cannot compile is refused at authoring", () => {
+  const { parent, root } = setup();
+  try {
+    writeSkeleton(root, true);
+    const base = {
+      chapter: 1,
+      requiredEndState: [{ record_id: "STATE-MARA-LOCATION", field: "location", operation: "set" as const, value: "LOC-TERMINAL" }],
+      forbiddenChanges: ["Do not identify the prior user."],
+    };
+
+    assert.throws(
+      () => completeChapterContract(root, {
+        ...base,
+        sceneBeats: [
+          { objective: "Interrogation", conflict: "Interrogation", turn: "Interrogation" },
+          { objective: "Reach the terminal", conflict: "Her credential is refused", turn: "She is at the terminal" },
+        ],
+      }),
+      /cannot compile[\s\S]*objective/,
+    );
+
+    // A scene may not claim a thread the chapter does not carry.
+    assert.throws(
+      () => completeChapterContract(root, {
+        ...base,
+        sceneBeats: [
+          { objective: "Reach the archive floor", conflict: "The corridor is watched", turn: "Mara is inside", thread_ids: ["THREAD-GHOST"] },
+          { objective: "Reach the terminal", conflict: "Her credential is refused", turn: "She is at the terminal" },
+        ],
+      }),
+      /THREAD-GHOST/,
+    );
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+test("completing a contract twice does not silently discard its scene plan", () => {
+  const { parent, root } = setup();
+  try {
+    writeSkeleton(root, true);
+    const sceneBeats = [
+      { objective: "Reach the archive floor", conflict: "The corridor is watched", turn: "Mara is inside" },
+      { objective: "Reach the terminal", conflict: "Her credential is refused", turn: "She is at the terminal anyway" },
+    ];
+    const first = completeChapterContract(root, {
+      chapter: 1,
+      requiredEndState: [{ record_id: "STATE-MARA-LOCATION", field: "location", operation: "set", value: "LOC-TERMINAL" }],
+      forbiddenChanges: ["Do not identify the prior user."],
+      sceneBeats,
+    });
+    writeFileSync(join(root, first.path), first.content, "utf8");
+
+    const second = completeChapterContract(root, {
+      chapter: 1,
+      requiredEndState: [{ record_id: "STATE-MARA-LOCATION", field: "location", operation: "set", value: "LOC-TERMINAL" }],
+      forbiddenChanges: ["Do not identify the prior user.", "Do not resolve the audit."],
+    });
+    assert.deepEqual(second.contract.scene_beats, sceneBeats);
+    assert.equal(second.contract.small_model_ready, true);
+    assert.deepEqual(second.sceneStructure, { sceneCount: 2, authored: true });
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 
@@ -227,9 +302,15 @@ test("the tool applies through the guarded chapter-queue event", async () => {
       chapter: 1,
       required_end_state: [{ record_id: "STATE-MARA-LOCATION", field: "location", operation: "set", value: "LOC-TERMINAL" }],
       forbidden_changes: ["Do not identify the prior user."],
+      scene_beats: [
+        { objective: "Reach the archive floor", conflict: "The corridor is watched", turn: "Mara is inside" },
+        { objective: "Reach the terminal", conflict: "Her credential is refused", turn: "She is at the terminal anyway" },
+      ],
     }, undefined, undefined, { cwd: root });
 
     assert.equal(result.details.small_model_ready, true);
+    assert.equal(result.details.scene_count, 2);
+    assert.equal(result.details.scene_structure_authored, true);
     assert.match(result.content[0].text, /is now executable/);
     assert.match(result.content[0].text, /Derived from the story ledgers, not asked of you/);
     // The contract reached disk through the guarded event, not a direct write.

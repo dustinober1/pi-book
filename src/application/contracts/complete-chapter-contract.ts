@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { Value } from "@sinclair/typebox/value";
-import { ChapterContractSchema, chapterContractPath, type ChapterContract, type StateMutation } from "../../domain/chapter-contract.js";
+import { ChapterContractSchema, chapterContractPath, type ChapterContract, type SceneBeat, type StateMutation } from "../../domain/chapter-contract.js";
 import { KnowledgeLedgerSchema, type KnowledgeLedger } from "../../domain/knowledge-ledger.js";
 import { ChapterQueueSchema, type ChapterQueueState } from "../../domain/schemas.js";
 import { StateLedgerSchema, type StateLedger } from "../../domain/state-ledger.js";
@@ -8,6 +8,7 @@ import { readText } from "../../infrastructure/files.js";
 import { parseYaml, stringifyYaml } from "../../infrastructure/yaml.js";
 import { readBook } from "../../project/store.js";
 import { deriveContractFields, remainingContractFields } from "./contract-field-derivation.js";
+import { compileSceneContracts, sceneStructureFindings } from "./scene-contract-compiler.js";
 
 /**
  * Complete a chapter contract from typed input.
@@ -37,6 +38,13 @@ export interface CompleteChapterContractInput {
   /** What this chapter must not change, in the author's own words. */
   forbiddenChanges: readonly string[];
   /**
+   * How this chapter divides into scenes, in order. Each entry says what the
+   * viewpoint is trying to do, what stops it, and what has changed by the end.
+   * Omitted, the chapter compiles to one scene derived from named packet
+   * fields, which is executable only for a chapter short enough to be one.
+   */
+  sceneBeats?: readonly SceneBeat[];
+  /**
    * Optional overrides for the derived fields. Supplying them is authoring, not
    * derivation, so every ID is still checked against the ledgers.
    */
@@ -57,6 +65,8 @@ export interface CompleteChapterContractResult {
   contract: ChapterContract;
   /** Which fields the graph resolved, so the writer can see what was not asked of the model. */
   derivedFields: string[];
+  /** How many scenes this contract compiles to, and whether the author chose them. */
+  sceneStructure: { sceneCount: number; authored: boolean };
   /** Empty when the contract is executable. */
   stillMissing: string[];
 }
@@ -132,11 +142,25 @@ export function completeChapterContract(root: string, input: CompleteChapterCont
     "Every required end state must name a record in series/state-ledger.yaml.",
   );
 
+  // Scene structure is the author's, like the two fields above it. Supplying
+  // beats replaces whatever the skeleton carried; omitting them keeps any the
+  // contract already had, so completing a contract twice does not silently
+  // discard a scene plan.
+  const sceneBeats = input.sceneBeats
+    ? input.sceneBeats.map((beat) => ({
+        objective: beat.objective,
+        conflict: beat.conflict,
+        turn: beat.turn,
+        ...(beat.thread_ids ? { thread_ids: [...beat.thread_ids] } : {}),
+      }))
+    : existing.scene_beats?.map((beat) => ({ ...beat }));
+
   const contract: ChapterContract = {
     ...existing,
     // Authoring a contract supersedes the compiled skeleton.
     source_kind: "approved-contract",
     version: existing.version + 1,
+    ...(sceneBeats?.length ? { scene_beats: sceneBeats } : {}),
     start_state_ids: [...startStateIds].sort(),
     required_end_state: requiredEndState,
     forbidden_changes: [...input.forbiddenChanges],
@@ -144,9 +168,10 @@ export function completeChapterContract(root: string, input: CompleteChapterCont
     small_model_ready: false,
     missing_small_model_fields: [],
   };
+  const structureFindings = sceneStructureFindings(contract);
   const stillMissing = remainingContractFields(
     { ...derived, startStateIds, knowledgeBoundaryIds },
-    { requiredEndState, forbiddenChanges: contract.forbidden_changes },
+    { requiredEndState, forbiddenChanges: contract.forbidden_changes, sceneStructureFindings: structureFindings },
   );
   contract.small_model_ready = stillMissing.length === 0;
   contract.missing_small_model_fields = stillMissing;
@@ -155,9 +180,21 @@ export function completeChapterContract(root: string, input: CompleteChapterCont
     throw new Error("The completed chapter contract failed schema validation before serialisation.");
   }
 
+  // A scene plan that cannot compile is not a plan. Reporting it here, against
+  // the author's own input, is the difference between one clear rejection now
+  // and a hollow contract discovered at inference time.
+  if (input.sceneBeats && structureFindings.length) {
+    throw new Error(`The submitted scene structure cannot compile:\n${structureFindings.map((item) => `- ${item}`).join("\n")}`);
+  }
+  // Compiling proves the contract executes before it is committed. Only a
+  // ready contract can be compiled, so an incomplete one is left to the
+  // readiness advisory rather than failed here.
+  if (contract.small_model_ready) compileSceneContracts(contract);
+
   const derivedFields: string[] = [];
   if (input.startStateIds === undefined && startStateIds.length) derivedFields.push("start_state_ids");
   if (input.knowledgeBoundaryIds === undefined && knowledgeBoundaryIds.length) derivedFields.push("knowledge_boundary_ids");
+  if (!contract.scene_beats?.length) derivedFields.push("scene_beats (single derived scene)");
 
   const path = chapterContractPath(book.book_id, input.chapter);
   const content = stringifyYaml(contract);
@@ -171,6 +208,10 @@ export function completeChapterContract(root: string, input: CompleteChapterCont
     ],
     contract,
     derivedFields,
+    sceneStructure: {
+      sceneCount: contract.scene_beats?.length ?? 1,
+      authored: Boolean(contract.scene_beats?.length),
+    },
     stillMissing,
   };
 }
