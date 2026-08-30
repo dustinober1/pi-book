@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startWizardSession } from "../src/wizard/session.js";
 import type { WizardActionRegistry } from "../src/wizard/types.js";
+import { NOVEL_FORGE_VERSION } from "../src/application/version-core.js";
 
 function temp(): string { return mkdtempSync(join(tmpdir(), "novel-forge-wizard-")); }
 
@@ -35,6 +36,20 @@ test("wizard binds to loopback and requires token plus exact origin", async () =
     const body = await response.json() as any;
     assert.equal(body.project_root, undefined);
     assert.equal(body.token, undefined);
+  } finally {
+    await handle.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the served wizard page renders the installed version, not a stale literal", async () => {
+  const root = temp();
+  const handle = await startWizardSession({ projectRoot: root, registry, openBrowser: false });
+  try {
+    const origin = new URL(handle.url).origin;
+    const page = await (await fetch(`${origin}/`)).text();
+    assert.match(page, new RegExp(`Novel Forge ${NOVEL_FORGE_VERSION.replace(/\./g, "\\.")}`));
+    assert.doesNotMatch(page, /\{\{NOVEL_FORGE_VERSION\}\}/);
   } finally {
     await handle.close();
     rmSync(root, { recursive: true, force: true });

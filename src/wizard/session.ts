@@ -6,6 +6,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { NOVEL_FORGE_VERSION } from "../application/version-core.js";
 import { NovelEventRejection } from "../application/event-rejection.js";
 import { openWizardBrowser } from "./browser.js";
 import { readJson, requireApiAuthorization, sendJson, sendText } from "./server.js";
@@ -35,6 +36,10 @@ function staticPath(urlPath: string): string | null {
   if (urlPath === "/app.js") return join(staticRoot, "app.js");
   if (urlPath === "/styles.css") return join(staticRoot, "styles.css");
   return null;
+}
+
+export function renderStaticAsset(filePath: string, contents: string): string {
+  return filePath.endsWith("index.html") ? contents.replace("{{NOVEL_FORGE_VERSION}}", NOVEL_FORGE_VERSION) : contents;
 }
 
 async function upload(req: IncomingMessage, uploadRoot: string, limit: number): Promise<WizardSource> {
@@ -129,7 +134,7 @@ export async function startWizardSession(options: WizardSessionOptions): Promise
     try {
       const requestUrl = new URL(req.url ?? "/", origin || "http://127.0.0.1");
       const file = staticPath(requestUrl.pathname);
-      if (req.method === "GET" && file) { sendText(res, 200, contentType(file), readFileSync(file, "utf8")); return; }
+      if (req.method === "GET" && file) { sendText(res, 200, contentType(file), renderStaticAsset(file, readFileSync(file, "utf8"))); return; }
       if (!requireApiAuthorization(req, res, token, origin)) return;
       lastActivity = Date.now();
       if ((req.method === "GET" || req.method === "POST") && requestUrl.pathname === "/api/session") {

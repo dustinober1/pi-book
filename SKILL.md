@@ -359,12 +359,16 @@ Undo requires initialized Git, a clean worktree, and a `Novel Forge:` commit at 
 
 ```text
 /novel
-/novel-wizard [adoption|readers|packaging|next-book]
+/novel-wizard [adoption|readers|packaging|next-book|research|premise]
 /novel-start
 /novel-status
+/novel-budget
+/novel-context
 /novel-plan
+/novel-plan-change
 /novel-run
 /novel-draft
+/novel-chapter-step
 /novel-review
 /novel-readers
 /novel-revise
@@ -378,4 +382,4 @@ Specialist commands are compatibility and precision tools. They do not replace `
 
 ## Release qualification
 
-Before publishing any Novel Forge release, run the complete Node 22.19.0 and Node 24 matrix, deterministic architecture and release fixtures, author-journey evaluations, clean-project and packed-extension tests, `npm run verify:release`, and `npm pack --dry-run`. Installable releases must use a pinned tag; Novel Forge 1.6.2 is `v1.6.2`. Release checks verify contracts, compatibility, packaging, and safety boundaries only. Never describe them as proof of historical truth, full-book model behavior, or literary excellence, or substitute them for expert, human editorial, or reader judgment.
+Before publishing any Novel Forge release, run the complete Node 22.19.0 and Node 24 matrix, deterministic architecture and release fixtures, author-journey evaluations, clean-project and packed-extension tests, `npm run verify:release`, and `npm pack --dry-run`. Installable releases must use a pinned tag; Novel Forge 2.2.0 is `v2.2.0`. Release checks verify contracts, compatibility, packaging, and safety boundaries only. Never describe them as proof of historical truth, full-book model behavior, or literary excellence, or substitute them for expert, human editorial, or reader judgment.
