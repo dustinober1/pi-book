@@ -1,20 +1,28 @@
 # Novel Forge Release Status and Checklist
 
-## Current verified release: v2.2.0
+## Current verified release: v2.2.1
 
-Novel Forge 2.2.0 is the pinned release for installation and supervised live-book pilots.
+Novel Forge 2.2.1 is the pinned release for installation and supervised live-book pilots.
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v2.2.0
+pi install git:github.com/dustinober1/pi-book@v2.2.1
 ```
 
 For one Pi session without changing persistent package settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v2.2.0
+pi -e git:github.com/dustinober1/pi-book@v2.2.1
 ```
 
-Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 2.2.0 release commit.
+Use a copied or backed-up manuscript for the first pilot. Install the tag rather than an unpinned branch: `main` may contain unreleased work after the 2.2.1 release commit.
+
+## 2.2.1 release record
+
+- [x] Package metadata, package lock, runtime version, and new-project metadata report 2.2.1.
+- [x] 18 near-duplicate release verifier scripts and 18 near-duplicate checklist test files collapse into shared `check()`/`text()` helpers in `scripts/lib/release-check.ts`, one `scripts/lib/release-registry.ts`, one stable `scripts/verify-release.ts`, and one consolidated `tests/release-checklist.test.ts`.
+- [x] Every historical release's own frozen check function is preserved byte-for-byte; only the shared CLI-runner and `check()`/`text()` boilerplate moved, verified by an automated diff of every check's output before and after.
+- [x] `verify:release` and `test:release` target the consolidated, version-independent scripts and require no further changes when a future release is cut — only a new check file and one registry entry.
+- [x] No project schema, workflow state, human gate, or guarded-transaction rule was removed or narrowed.
 
 ## 2.2.0 release record
 
@@ -110,7 +118,7 @@ Use a copied or backed-up manuscript for the first pilot. Install the tag rather
 - [x] The release workflow reads the package version at run time instead of a hardcoded per-tag workflow file.
 - [x] Node 22.19.0 and Node 24 pass type, unit, integration, end-to-end, evaluation, benchmark, release, and package checks.
 
-Maintained release notes are in `docs/releases/v2.2.0.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
+Maintained release notes are in `docs/releases/v2.2.1.md`. Focused operating guidance is in `docs/quality-and-cost.md`, `docs/grounded-accuracy.md`, and `evals/quality/README.md`. Earlier release notes and tags remain immutable.
 
 ## Verify the current development tree
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.1 — Release Verifier Consolidation
+
+### Fixed
+
+- Replaced 18 near-duplicate `scripts/verify-vX-Y-Z-release.ts` files and their 18 matching `tests/vX-Y-Z-release-checklist.test.ts` files with shared `check()`/`text()` helpers (`scripts/lib/release-check.ts`), a `scripts/lib/release-registry.ts` mapping each shipped version to its own preserved check function, one stable `scripts/verify-release.ts` CLI entry point, and one consolidated `tests/release-checklist.test.ts`. Cutting a future release now means adding one check file and one registry entry; `verify:release` and `test:release` do not change again.
+- Every historical release's own frozen check function is preserved exactly as it shipped — verified by an automated diff of every check's output against the pre-consolidation source before any file was deleted — so each historical entry still reports itself correctly superseded against a later tree instead of passing.
+
+### Compatibility and boundaries
+
+- No manuscript text, project schema, workflow state, or evidence content changes.
+
 ## 2.2.0 — One Run to a Packaged Book on a Local Model
 
 Novel Forge already contained everything a one-run completion on a non-frontier model needed — a per-scene execution machine, bounded repair, run targets, headless packaging, capacity detection, journey instrumentation, and the beginning of typed event input. All of it was built and almost none of it could be reached from the path a writer or an automated run actually took: `--model-profile` was parsed and discarded, the scene machine advanced one node per tool call with nothing driving it, no run target reached past manuscript review, headless packaging had no caller outside the browser wizard, and every project defaulted to the widest context with the least supervision regardless of the model running it. This release is the wiring, in the order that made each next piece reachable: make the small-model profile selectable and its prompts fit, bound the repair cycle so a loop over it is safe, add the loop, let a run aim at the finished book, choose sane defaults automatically, measure what a run actually costs, and take the first step away from hand-authored YAML entirely.

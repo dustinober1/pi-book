@@ -1,22 +1,8 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { check, text, type ReleaseCheck } from "./lib/release-check.js";
 
-export interface V172ReleaseCheck {
-  id: string;
-  passed: boolean;
-  detail: string;
-}
-
-function text(root: string, path: string): string {
-  return readFileSync(join(root, path), "utf8");
-}
-
-function check(id: string, passed: boolean, detail: string): V172ReleaseCheck {
-  return { id, passed, detail };
-}
-
-export function verifyV172ReleaseTree(root: string): V172ReleaseCheck[] {
+export function verifyV172ReleaseTree(root: string): ReleaseCheck[] {
   const packageJson = JSON.parse(text(root, "package.json")) as { version: string; scripts: Record<string, string>; files: string[] };
   const lock = JSON.parse(text(root, "package-lock.json")) as { version: string; packages: Record<string, { version?: string }> };
   const versionSource = text(root, "src/application/version-core.ts");
@@ -41,12 +27,4 @@ export function verifyV172ReleaseTree(root: string): V172ReleaseCheck[] {
     check("remarkability-template-documents-fields", ["signature_moments items use exactly these keys", "productive_disagreements items use exactly these keys", "recurring_motifs items use exactly these keys"].every((phrase) => remarkabilityTemplate.includes(phrase)), "remarkability.yaml template documents the exact allowed nested keys."),
     check("package-assets", ["src/", "scripts/", "SKILL.md", "README.md", "RELEASE.md"].every((path) => packageJson.files.includes(path)), "Package allowlist includes runtime and guidance assets."),
   ];
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const checks = verifyV172ReleaseTree(process.cwd());
-  for (const item of checks) console.log(`- ${item.id}: ${item.passed ? "PASS" : `FAIL (${item.detail})`}`);
-  const failures = checks.filter((item) => !item.passed);
-  console.log(`\n${checks.length - failures.length}/${checks.length} release checks passed.`);
-  if (failures.length) process.exitCode = 1;
 }
