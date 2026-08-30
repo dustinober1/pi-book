@@ -59,6 +59,8 @@ Use event type `research-update` only for its allowlisted taste, voice-guardrail
 
 For a `historical-fiction` book, `research-update` may also update that book's `historical-context.yaml`, `invention-ledger.yaml`, and the exact associated writer decision in `series/decision-ledger.yaml`. It remains state-neutral and must satisfy the complete cross-artifact historical integrity contract atomically.
 
+For a `thriller` book, `research-update` may also update that book's `thriller-evidence.yaml`. Every entry requires at least one exact label and an explicit statement of what it does not prove; an entry missing either blocks the event.
+
 `novel_apply_event` remains UTF-8 text-only. It owns stage/hash checks, file allowlists, schema/reference validation, state transitions, rollback, status/handoff generation, and Git checkpoints.
 
 Trusted internal application services may use the same transaction engine for binary adopted assets and generated DOCX, EPUB, and XLSX files. Do not expose binary writes through the model-facing tool.
