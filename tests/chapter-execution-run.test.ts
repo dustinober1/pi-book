@@ -4,9 +4,11 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chapterExecutionReadiness, runChapterExecution } from "../src/application/chapter-execution-run.js";
+import { summarizeJourneyVelocity } from "../src/application/journey-trace.js";
 import { chapterContractPath } from "../src/domain/chapter-contract.js";
 import type { QualityWorker, QualityWorkerRequest, QualityWorkerResult } from "../src/domain/quality-worker.js";
 import { readChapterExecutionState } from "../src/infrastructure/chapter-execution-store.js";
+import { readJourneyTrace } from "../src/infrastructure/journey-trace-store.js";
 import { stringifyYaml } from "../src/infrastructure/yaml.js";
 import { initializeProject, readProject } from "../src/project/store.js";
 
@@ -134,6 +136,28 @@ test("one call drives a chapter from contract compile to guarded commit", async 
     assert.equal(run.state.accepted_scene_ids.includes(sceneId), true);
     // The loop adds no authority: acceptance still ends in the same guarded commit.
     assert.equal(existsSync(join(root, "books/book-01/manuscript/chapters")), true);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+// Before this fix, commitValidatedChapter applied its guarded transaction
+// through applyGuidedProjectEvent directly, bypassing the telemetry wrapper
+// applyNovelEvent provides for the whole-chapter draft-chapter event. A book
+// drafted end to end through guarded scene execution — the path this whole
+// program exists to make reachable — left summarizeJourneyVelocity's
+// chaptersCompleted at 0: the one number the small-model effort cares most
+// about was silently unmeasurable for its own flagship path.
+test("a guarded-scene chapter commit is recorded in the journey trace", async () => {
+  const { parent, root } = setup();
+  try {
+    const run = await runChapterExecution({
+      root, chapter: 1, runId, worker: new CleanWorker(), requiredCriticJobTypes: critics,
+    });
+    assert.equal(run.committed, true);
+    const trace = readJourneyTrace(root);
+    const guardedEvents = trace.filter((event) => event.type === "guarded-event");
+    assert.equal(guardedEvents.length, 1);
+    assert.deepEqual(guardedEvents[0], { type: "guarded-event", id: "E-001", action: "draft-chapter", outcome: "accepted", chapter: 1 });
+    assert.equal(summarizeJourneyVelocity(trace).chaptersCompleted, 1);
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });
 

@@ -35,6 +35,7 @@ import { appendMilestoneVoiceAudit } from "./audit-events.js";
 import { buildChapterDeltaSummary, renderChapterDeltaSummary } from "./chapter-delta-summary.js";
 import { transitionChapterExecution } from "./chapter-execution-machine.js";
 import { applyGuidedProjectEvent } from "./handoff.js";
+import { recordGuardedEvent } from "./journey-trace.js";
 import { compactPacketWindow, packetWindowDecision } from "./packet-window.js";
 import { projectStateHash } from "./project-hash.js";
 import { rebuildStoryRecordIndex, readStoryRecordIndex } from "./rebuild-story-index.js";
@@ -404,10 +405,17 @@ function applyInternalDraftCommit(root: string, prepared: PreparedCommit): Inter
   }
   setChange(changes, "PROJECT.yaml", stringifyYaml(project));
   setChange(changes, `books/${book.book_id}/BOOK.yaml`, stringifyYaml(book));
-  const applied = applyGuidedProjectEvent(root, changes, `Novel Forge: draft-chapter chapter-${prepared.artifact.chapter}`, {
-    lastAction: `draft-chapter chapter ${prepared.artifact.chapter}`,
-  });
-  return { changed: applied.changed, gitMessage: applied.git.message };
+  const telemetry = project.runtime?.telemetry;
+  try {
+    const applied = applyGuidedProjectEvent(root, changes, `Novel Forge: draft-chapter chapter-${prepared.artifact.chapter}`, {
+      lastAction: `draft-chapter chapter ${prepared.artifact.chapter}`,
+    });
+    recordGuardedEvent(root, telemetry, { action: "draft-chapter", outcome: "accepted", chapter: prepared.artifact.chapter });
+    return { changed: applied.changed, gitMessage: applied.git.message };
+  } catch (error) {
+    recordGuardedEvent(root, telemetry, { action: "draft-chapter", outcome: "rejected", chapter: prepared.artifact.chapter });
+    throw error;
+  }
 }
 
 function actualHash(root: string, path: string): string | null {
