@@ -1,17 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { existsSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
+import { check, text, type ReleaseCheck } from "./lib/release-check.js";
 
-export interface ReleaseCheck {
-  id: string;
-  passed: boolean;
-  detail: string;
-}
-
-function text(root: string, path: string): string {
-  return readFileSync(join(root, path), "utf8");
-}
 function allFiles(root: string, path = root): string[] {
   const output: string[] = [];
   for (const entry of readdirSync(path, { withFileTypes: true })) {
@@ -22,7 +13,6 @@ function allFiles(root: string, path = root): string[] {
   }
   return output.sort();
 }
-function check(id: string, passed: boolean, detail: string): ReleaseCheck { return { id, passed, detail }; }
 function countOccurrences(value: string, needle: string): number { return value.split(needle).length - 1; }
 
 export function verifyV13ReleaseTree(root: string): ReleaseCheck[] {
@@ -96,12 +86,4 @@ export function verifyV13ReleaseTree(root: string): ReleaseCheck[] {
   }
 
   return checks;
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const checks = verifyV13ReleaseTree(process.cwd());
-  for (const item of checks) console.log(`- ${item.id}: ${item.passed ? "PASS" : `FAIL (${item.detail})`}`);
-  const failures = checks.filter((item) => !item.passed);
-  console.log(`\n${checks.length - failures.length}/${checks.length} release checks passed.`);
-  if (failures.length) process.exitCode = 1;
 }

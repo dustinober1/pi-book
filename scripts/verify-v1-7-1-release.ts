@@ -1,20 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-
-export interface V171ReleaseCheck {
-  id: string;
-  passed: boolean;
-  detail: string;
-}
-
-function text(root: string, path: string): string {
-  return readFileSync(join(root, path), "utf8");
-}
-
-function check(id: string, passed: boolean, detail: string): V171ReleaseCheck {
-  return { id, passed, detail };
-}
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { check, text, type ReleaseCheck } from "./lib/release-check.js";
 
 const retiredWorkflows = [
   ".github/workflows/release-v1.3.yml",
@@ -24,7 +10,7 @@ const retiredWorkflows = [
   ".github/workflows/release-v1-7.yml",
 ];
 
-export function verifyV171ReleaseTree(root: string): V171ReleaseCheck[] {
+export function verifyV171ReleaseTree(root: string): ReleaseCheck[] {
   const packageJson = JSON.parse(text(root, "package.json")) as { version: string; scripts: Record<string, string>; files: string[] };
   const lock = JSON.parse(text(root, "package-lock.json")) as { version: string; packages: Record<string, { version?: string }> };
   const versionSource = text(root, "src/application/version-core.ts");
@@ -47,12 +33,4 @@ export function verifyV171ReleaseTree(root: string): V171ReleaseCheck[] {
     check("release-workflow-consolidated", /require\(['"]\.\/package\.json['"]\)\.version/.test(workflow) && /npm run verify:release/.test(workflow) && /npm pack --dry-run/.test(workflow), "The single release workflow reads the package version at run time and still verifies and packages the release."),
     check("retired-workflows-removed", retiredWorkflows.every((path) => !existsSync(join(root, path))), "The version-pinned per-release workflow files no longer exist."),
   ];
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const checks = verifyV171ReleaseTree(process.cwd());
-  for (const item of checks) console.log(`- ${item.id}: ${item.passed ? "PASS" : `FAIL (${item.detail})`}`);
-  const failures = checks.filter((item) => !item.passed);
-  console.log(`\n${checks.length - failures.length}/${checks.length} release checks passed.`);
-  if (failures.length) process.exitCode = 1;
 }

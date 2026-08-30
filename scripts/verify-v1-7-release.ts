@@ -1,17 +1,8 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { check, text, type ReleaseCheck } from "./lib/release-check.js";
 
-export interface V17ReleaseCheck {
-  id: string;
-  passed: boolean;
-  detail: string;
-}
-
-function text(root: string, path: string): string { return readFileSync(join(root, path), "utf8"); }
-function check(id: string, passed: boolean, detail: string): V17ReleaseCheck { return { id, passed, detail }; }
-
-export function verifyV17ReleaseTree(root: string): V17ReleaseCheck[] {
+export function verifyV17ReleaseTree(root: string): ReleaseCheck[] {
   const pkg = JSON.parse(text(root, "package.json")) as { version: string; scripts: Record<string, string>; files: string[] };
   const lock = JSON.parse(text(root, "package-lock.json")) as { version: string; packages: Record<string, { version?: string }> };
   const version = text(root, "src/application/version-core.ts");
@@ -62,12 +53,4 @@ export function verifyV17ReleaseTree(root: string): V17ReleaseCheck[] {
     check("release-status", /Current verified release: v1\.7\.0/.test(release), "Release status identifies v1.7.0."),
     check("release-boundaries", /paid evaluation/i.test(notes) && /human reader evidence/i.test(notes) && /one validated `applyNovelEvent`/.test(notes), "Release notes document evaluation and authority boundaries."),
   ];
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const checks = verifyV17ReleaseTree(process.cwd());
-  for (const item of checks) console.log(`- ${item.id}: ${item.passed ? "PASS" : `FAIL (${item.detail})`}`);
-  const failures = checks.filter((item) => !item.passed);
-  console.log(`\n${checks.length - failures.length}/${checks.length} release checks passed.`);
-  if (failures.length) process.exitCode = 1;
 }

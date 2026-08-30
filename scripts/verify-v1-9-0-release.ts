@@ -1,22 +1,8 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { check, text, type ReleaseCheck } from "./lib/release-check.js";
 
-export interface V190ReleaseCheck {
-  id: string;
-  passed: boolean;
-  detail: string;
-}
-
-function text(root: string, path: string): string {
-  return readFileSync(join(root, path), "utf8");
-}
-
-function check(id: string, passed: boolean, detail: string): V190ReleaseCheck {
-  return { id, passed, detail };
-}
-
-export function verifyV190ReleaseTree(root: string): V190ReleaseCheck[] {
+export function verifyV190ReleaseTree(root: string): ReleaseCheck[] {
   const packageJson = JSON.parse(text(root, "package.json")) as { version: string; scripts: Record<string, string>; files: string[] };
   const lock = JSON.parse(text(root, "package-lock.json")) as { version: string; packages: Record<string, { version?: string }> };
   const versionSource = text(root, "src/application/version-core.ts");
@@ -45,12 +31,4 @@ export function verifyV190ReleaseTree(root: string): V190ReleaseCheck[] {
     check("skill-source-provenance-rule", /never a raw file path or the name of an existing project document/.test(skill), "SKILL.md requires source_ids to resolve to a registered source-register entry."),
     check("package-assets", ["src/", "scripts/", "SKILL.md", "README.md", "RELEASE.md"].every((path) => packageJson.files.includes(path)), "Package allowlist includes runtime and guidance assets."),
   ];
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const checks = verifyV190ReleaseTree(process.cwd());
-  for (const item of checks) console.log(`- ${item.id}: ${item.passed ? "PASS" : `FAIL (${item.detail})`}`);
-  const failures = checks.filter((item) => !item.passed);
-  console.log(`\n${checks.length - failures.length}/${checks.length} release checks passed.`);
-  if (failures.length) process.exitCode = 1;
 }

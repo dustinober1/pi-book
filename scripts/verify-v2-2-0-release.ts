@@ -2,26 +2,27 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { check, text, type ReleaseCheck } from "./lib/release-check.js";
 
-export function verifyV210ReleaseTree(root: string): ReleaseCheck[] {
+export function verifyV220ReleaseTree(root: string): ReleaseCheck[] {
   const packageJson = JSON.parse(text(root, "package.json")) as { version: string; scripts: Record<string, string>; files: string[] };
   const lock = JSON.parse(text(root, "package-lock.json")) as { version: string; packages: Record<string, { version?: string }> };
   const versionSource = text(root, "src/application/version-core.ts");
   const readme = text(root, "README.md");
   const release = text(root, "RELEASE.md");
   const changelog = text(root, "CHANGELOG.md");
-  const notes = text(root, "docs/releases/v2.1.0.md");
+  const notes = text(root, "docs/releases/v2.2.0.md");
   const skill = text(root, "SKILL.md");
 
   return [
-    check("package-version", packageJson.version === "2.1.0", `package.json version is ${packageJson.version}.`),
-    check("lock-version", lock.version === "2.1.0" && lock.packages[""]?.version === "2.1.0", `Lock versions are ${lock.version} and ${lock.packages[""]?.version ?? "missing"}.`),
-    check("runtime-version", /NOVEL_FORGE_VERSION\s*=\s*"2\.1\.0"/.test(versionSource), "Runtime version constant reports 2.1.0."),
-    check("release-script", packageJson.scripts["verify:release"] === "node --import tsx scripts/verify-v2-1-0-release.ts", "verify:release targets the v2.1.0 checker."),
-    check("release-files", ["docs/releases/v2.1.0.md", "scripts/verify-v2-1-0-release.ts", "tests/v2-1-0-release-checklist.test.ts"].every((path) => existsSync(join(root, path))), "All v2.1.0 release files exist."),
-    check("pinned-install", /pi install git:github\.com\/dustinober1\/pi-book@v2\.1\.0/.test(readme) && /@v2\.1\.0/.test(release), "README and release status pin v2.1.0."),
-    check("changelog", /## 2\.1\.0 — Relationship Inheritance and Ending-Contract Evidence/.test(changelog), "Changelog contains the v2.1.0 heading."),
-    check("release-notes", /inherited_relationship_ids/.test(notes) && /delivered_ending/.test(notes), "Release notes describe relationship inheritance and the delivered-ending declaration."),
-    check("release-record", /## 2\.1\.0 release record/.test(release), "RELEASE.md carries a 2.1.0 release record."),
+    check("package-version", packageJson.version === "2.2.0", `package.json version is ${packageJson.version}.`),
+    check("lock-version", lock.version === "2.2.0" && lock.packages[""]?.version === "2.2.0", `Lock versions are ${lock.version} and ${lock.packages[""]?.version ?? "missing"}.`),
+    check("runtime-version", /NOVEL_FORGE_VERSION\s*=\s*"2\.2\.0"/.test(versionSource), "Runtime version constant reports 2.2.0."),
+    check("release-script", packageJson.scripts["verify:release"] === "node --import tsx scripts/verify-v2-2-0-release.ts", "verify:release targets the v2.2.0 checker."),
+    check("release-files", ["docs/releases/v2.2.0.md", "scripts/verify-v2-2-0-release.ts", "tests/v2-2-0-release-checklist.test.ts"].every((path) => existsSync(join(root, path))), "All v2.2.0 release files exist."),
+    check("pinned-install", /pi install git:github\.com\/dustinober1\/pi-book@v2\.2\.0/.test(readme) && /@v2\.2\.0/.test(release), "README and release status pin v2.2.0."),
+    check("changelog", /## 2\.2\.0 — One Run to a Packaged Book on a Local Model/.test(changelog), "Changelog contains the v2.2.0 heading."),
+    check("no-unreleased-sections", !/## Unreleased/.test(changelog), "CHANGELOG.md carries no unreleased sections; 2.2.0 consolidates the six that preceded it."),
+    check("release-notes", /`--model-profile` reaches every path/.test(notes) && /A driver loop for chapter execution/.test(notes), "Release notes describe model-profile reachability and the chapter-execution driver loop."),
+    check("release-record", /## 2\.2\.0 release record/.test(release), "RELEASE.md carries a 2.2.0 release record."),
     check("draft-length-module", existsSync(join(root, "src/application/draft-length.ts")) && /DRAFT_LENGTH_BLOCKING_FLOOR/.test(text(root, "src/application/draft-length.ts")), "Chapter drafts are measured against their packet target."),
     check("draft-length-wired", /Draft-length validation blocked draft-chapter/.test(text(root, "src/application/events.ts")), "A draft far from its packet target is rejected."),
     check("working-tree-guard", existsSync(join(root, "src/application/working-tree-guard.ts")) && /would discard that work/.test(text(root, "src/application/working-tree-guard.ts")), "An out-of-band write to a submitted path is detected through Git."),

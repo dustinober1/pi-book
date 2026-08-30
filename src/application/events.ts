@@ -29,6 +29,7 @@ import { SourceRegisterV13Schema, type SourceRegisterV13 } from "../domain/v1-3-
 import { ResearchLedgerSchema, type ResearchLedger } from "../domain/v1-3-schemas.js";
 import { DecisionLedgerSchema, IntakeSchema, PremiseLabSchema, intakeDecisionFindings, type DecisionLedger, type IntakeState, type PremiseLab } from "../domain/v1-4-schemas.js";
 import { HistoricalContextSchema, InventionLedgerSchema, type HistoricalContext, type InventionLedger } from "../domain/historical-fiction.js";
+import { ThrillerEvidenceLedgerSchema, validateThrillerEvidenceLedger, type ThrillerEvidenceLedger } from "../domain/thriller-evidence.js";
 import { ChapterContractSchema, chapterContractPath, type ChapterContract } from "../domain/chapter-contract.js";
 import { countWords, listChapterFiles, readText } from "../infrastructure/files.js";
 import type { FileChange } from "../infrastructure/transaction.js";
@@ -98,12 +99,13 @@ const eventStages: Record<NovelEventType, Stage[]> = {
 
 function normalized(path: string): string { return path.replace(/\\/g, "/").replace(/^\.\//, ""); }
 
-function allowedPath(event: NovelEventType, path: string, bookId: string, profile: ProfileId, chapter?: number): boolean {
+export function allowedPath(event: NovelEventType, path: string, bookId: string, profile: ProfileId, chapter?: number): boolean {
   const book = `books/${bookId}`;
   if (event === "plan-change") return isPlanChangeControlPathAllowed(path, bookId);
   if (profile === "historical-fiction" && ["book-plan", "research-update"].includes(event)
     && [`${book}/historical-context.yaml`, `${book}/invention-ledger.yaml`].includes(path)) return true;
   if (profile === "historical-fiction" && event === "research-update" && path === "series/decision-ledger.yaml") return true;
+  if (profile === "thriller" && event === "research-update" && path === `${book}/thriller-evidence.yaml`) return true;
   if (isStoryControlPathAllowed(event, path, bookId)) return true;
   const exact: Record<NovelEventType, string[]> = {
     "voice-profile": ["series/voice-profile.md", "series/taste-profile.yaml", "series/voice-guardrails.yaml", "series/voice-experiments/index.yaml"],
@@ -311,6 +313,9 @@ function validateFiles(root: string, input: NovelEventInput, project: ProjectSta
   if (input.eventType === "research-update" && book.profile === "historical-fiction") {
     findings.run(() => validateHistoricalIntegrity(root, input.files, book));
   }
+  if (input.eventType === "research-update" && book.profile === "thriller") {
+    findings.run(() => validateThrillerEvidence(root, input.files, book));
+  }
   if (input.eventType === "premise-update" || (input.eventType === "book-plan" && overlay(root, input.files, `books/${book.book_id}/premise-lab.yaml`))) {
     findings.run(() => {
       const lab = parseOverlay<PremiseLab>(root, input.files, `books/${book.book_id}/premise-lab.yaml`, PremiseLabSchema);
@@ -346,6 +351,14 @@ function validateHistoricalIntegrity(root: string, files: FileChange[], book: Bo
   }).filter((finding) => finding.severity === "blocker");
   if (blockers.length) {
     throw new Error(`Historical integrity validation blocked the event:\n${blockers.map((item) => `- ${item.message}`).join("\n")}`);
+  }
+}
+
+function validateThrillerEvidence(root: string, files: FileChange[], book: BookState): void {
+  const ledger = parseOverlay<ThrillerEvidenceLedger>(root, files, `books/${book.book_id}/thriller-evidence.yaml`, ThrillerEvidenceLedgerSchema);
+  const findings = validateThrillerEvidenceLedger(ledger);
+  if (findings.length) {
+    throw new Error(`Thriller evidence validation blocked research-update:\n${findings.map((item) => `- ${item}`).join("\n")}`);
   }
 }
 

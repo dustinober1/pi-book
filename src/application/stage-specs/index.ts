@@ -364,34 +364,6 @@ export function queueStageSpec(input: QueueStageInput): StageSpec {
   };
 }
 
-export interface DraftStageInput {
-  root: string;
-  bookId: string;
-  chapter: number;
-  estimatedTokens: number;
-  excluded: readonly string[];
-  projectHash: string;
-}
-
-export function draftStageSpec(input: DraftStageInput): StageSpec {
-  return {
-    id: "draft-chapter",
-    role: "the approved novel's chapter drafter",
-    objective: `Draft exactly Chapter ${input.chapter} for ${input.bookId}.`,
-    inputs: [`Context: ~${input.estimatedTokens} tokens; excluded: ${input.excluded.join(", ")}.`],
-    must: ["Make prose specific to the approved voice, characters, pressure, omissions, scene, and compact remarkability contract.", "Include the complete chapter Markdown plus any justified continuity, story-thread, or ticket deltas."],
-    avoid: ["Do not chase AI-detector patterns.", "Do not mechanically restate the hook.", "Do not manufacture quotable lines.", "Do not pad to target length.", "Do not turn audit metrics into prose quotas.", "Do not submit PROJECT.yaml, BOOK.yaml, STATUS.md, or HANDOFF.md; they are derived."],
-    outputs: [`Chapter ${input.chapter} Markdown`, "only justified continuity, story-thread, or ticket deltas"],
-    validation: ["Chapter satisfies its approved packet and context.", "Canon and reveal order remain intact.", "No excluded context is invented."],
-    toolRules: [
-      "Use one guarded novel_apply_event; never write project files directly.",
-      `Send event_type=draft-chapter, expected_stage=drafting, expected_project_hash=${input.projectHash}, chapter=${input.chapter}, and only allowed files.`,
-      "Tool validation of schemas, references, stage, allowlists, stale state, and atomic commit is authoritative.",
-      "Retry once only for schema-validation, reference-validation, or payload-validation. Reload for stale-stage or stale-project-hash; stop on any other rejection.",
-    ],
-  };
-}
-
 export interface AutomationDraftStageInput {
   root: string;
   bookId: string;

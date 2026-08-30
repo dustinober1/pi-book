@@ -4,16 +4,16 @@ Novel Forge is a guarded, series-capable workflow for planning, drafting, review
 
 ## Install
 
-Install the verified 2.1.0 release from its pinned tag:
+Install the verified 2.2.1 release from its pinned tag:
 
 ```bash
-pi install git:github.com/dustinober1/pi-book@v2.1.0
+pi install git:github.com/dustinober1/pi-book@v2.2.1
 ```
 
 Load it for one session without changing persistent Pi settings:
 
 ```bash
-pi -e git:github.com/dustinober1/pi-book@v2.1.0
+pi -e git:github.com/dustinober1/pi-book@v2.2.1
 ```
 
 Pi packages execute with the user's system permissions. Use a copied or backed-up manuscript for the first live pilot.
@@ -77,7 +77,7 @@ Drafting takes the guarded scene path — bounded context, isolated jobs, determ
 - [Quality tiers, budgets, telemetry, and cache](docs/quality-and-cost.md)
 - [Grounded research and claim auditing](docs/grounded-accuracy.md)
 - [Opt-in quality evaluation](evals/quality/README.md)
-- [Novel Forge 2.1.0 release notes](docs/releases/v2.1.0.md)
+- [Novel Forge 2.2.1 release notes](docs/releases/v2.2.1.md)
 - [Current release status and qualification](RELEASE.md)
 
 ## Verification

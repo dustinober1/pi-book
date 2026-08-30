@@ -2,11 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { preparePrompt } from "../src/application/prepared-prompt.js";
 import { normativeEntries } from "../src/application/prompt-compiler.js";
-import { draftStageSpec } from "../src/application/stage-specs/index.js";
+import { sceneExecutionDraftStageSpec } from "../src/application/stage-specs/draft-execution.js";
 import { RUNTIME_PROFILES } from "../src/domain/runtime-profile.js";
 
 function draftSpec() {
-  return draftStageSpec({
+  return sceneExecutionDraftStageSpec({
     root: "/project",
     bookId: "book-01",
     chapter: 7,

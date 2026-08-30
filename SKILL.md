@@ -59,6 +59,8 @@ Use event type `research-update` only for its allowlisted taste, voice-guardrail
 
 For a `historical-fiction` book, `research-update` may also update that book's `historical-context.yaml`, `invention-ledger.yaml`, and the exact associated writer decision in `series/decision-ledger.yaml`. It remains state-neutral and must satisfy the complete cross-artifact historical integrity contract atomically.
 
+For a `thriller` book, `research-update` may also update that book's `thriller-evidence.yaml`. Every entry requires at least one exact label and an explicit statement of what it does not prove; an entry missing either blocks the event.
+
 `novel_apply_event` remains UTF-8 text-only. It owns stage/hash checks, file allowlists, schema/reference validation, state transitions, rollback, status/handoff generation, and Git checkpoints.
 
 Trusted internal application services may use the same transaction engine for binary adopted assets and generated DOCX, EPUB, and XLSX files. Do not expose binary writes through the model-facing tool.
@@ -359,12 +361,16 @@ Undo requires initialized Git, a clean worktree, and a `Novel Forge:` commit at 
 
 ```text
 /novel
-/novel-wizard [adoption|readers|packaging|next-book]
+/novel-wizard [adoption|readers|packaging|next-book|research|premise]
 /novel-start
 /novel-status
+/novel-budget
+/novel-context
 /novel-plan
+/novel-plan-change
 /novel-run
 /novel-draft
+/novel-chapter-step
 /novel-review
 /novel-readers
 /novel-revise
@@ -378,4 +384,4 @@ Specialist commands are compatibility and precision tools. They do not replace `
 
 ## Release qualification
 
-Before publishing any Novel Forge release, run the complete Node 22.19.0 and Node 24 matrix, deterministic architecture and release fixtures, author-journey evaluations, clean-project and packed-extension tests, `npm run verify:release`, and `npm pack --dry-run`. Installable releases must use a pinned tag; Novel Forge 1.6.2 is `v1.6.2`. Release checks verify contracts, compatibility, packaging, and safety boundaries only. Never describe them as proof of historical truth, full-book model behavior, or literary excellence, or substitute them for expert, human editorial, or reader judgment.
+Before publishing any Novel Forge release, run the complete Node 22.19.0 and Node 24 matrix, deterministic architecture and release fixtures, author-journey evaluations, clean-project and packed-extension tests, `npm run verify:release`, and `npm pack --dry-run`. Installable releases must use a pinned tag; Novel Forge 2.2.1 is `v2.2.1`. Release checks verify contracts, compatibility, packaging, and safety boundaries only. Never describe them as proof of historical truth, full-book model behavior, or literary excellence, or substitute them for expert, human editorial, or reader judgment.

@@ -4,7 +4,6 @@ import {
   automationDraftStageSpec,
   bookPlanStageSpec,
   canonLockStageSpec,
-  draftStageSpec,
   packageStageSpec,
   premisePlanStageSpec,
   queueStageSpec,
@@ -170,18 +169,6 @@ function scenarios(): StageScenario[] {
           projectHash: HASH,
         }), runtime);
       },
-    },
-    {
-      stageId: "draft-chapter",
-      variant: "direct",
-      compile: (_genre, runtime) => single(draftStageSpec({
-        root: ROOT,
-        bookId: BOOK_ID,
-        chapter: 7,
-        estimatedTokens: 4_200,
-        excluded: ["RES-004", "SRC-011", "HIST-020"],
-        projectHash: HASH,
-      }), runtime),
     },
     {
       stageId: "draft-chapter",
