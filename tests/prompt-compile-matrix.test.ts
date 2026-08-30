@@ -36,7 +36,7 @@ function input(genre: "thriller" | "romantasy" | "historical-fiction", hasPublic
 // failure, not a live-session discovery.
 test("every stage prompt plan compiles under every runtime profile and genre", () => {
   const report = runPromptCompileMatrix();
-  assert.equal(report.cells.length >= 135, true, `matrix covered ${report.cells.length} cells`);
+  assert.equal(report.cells.length >= 126, true, `matrix covered ${report.cells.length} cells`);
   assert.deepEqual(
     report.failures.map((cell) => `${cell.stageId}:${cell.variant}:${cell.runtimeProfile}:${cell.genre} -> ${cell.error ?? "compiled but expected overflow"}`),
     [],

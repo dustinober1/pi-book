@@ -4,10 +4,11 @@ import { join } from "node:path";
 import YAML from "yaml";
 import { preparePrompt } from "../application/prepared-prompt.js";
 import { compilePrompt } from "../application/prompt-compiler.js";
+import { draftRepetitionConstraints } from "../application/draft-context.js";
 import { projectStateHash } from "../application/events.js";
 import { bookPlanPrompt, revisionPrompt } from "../application/prompts.js";
 import { estimateInputTokens } from "../application/run-telemetry.js";
-import { draftStageSpec } from "../application/stage-specs/index.js";
+import { sceneExecutionDraftStageSpec } from "../application/stage-specs/draft-execution.js";
 import type { StageSpec } from "../application/stage-specs/types.js";
 import { allocateContext, type ContextRecord } from "../context/context-budget.js";
 import { buildChapterContext } from "../context/context-builder.js";
@@ -186,13 +187,14 @@ function draftingResult(evalRoot: string): ConstrainedRuntimeBenchmarkResult {
       })),
     }), "utf8");
     const context = buildChapterContext(root, fixture.packet.chapter, RUNTIME_PROFILES.full.modelBudget.maxEvidenceChars, 2);
-    const prepared = preparePrompt(draftStageSpec({
+    const prepared = preparePrompt(sceneExecutionDraftStageSpec({
       root,
       bookId: "book-01",
       chapter: fixture.packet.chapter,
       estimatedTokens: context.report.estimatedTokens,
       excluded: context.report.excluded,
       projectHash: projectStateHash(root),
+      repetitionConstraints: draftRepetitionConstraints(root),
     }), context.text, RUNTIME_PROFILES.full);
     return {
       scenario: "drafting-context",

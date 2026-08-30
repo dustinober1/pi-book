@@ -91,6 +91,14 @@ ceil((instructionChars + evidenceChars) / 4)
 
 Elapsed time and RSS remain informational only and are excluded from deterministic comparisons.
 
+## Drafting-context correction — 2026-08-30
+
+The `drafting-context` row above measured `draftStageSpec`, a stage spec with no caller anywhere in the product — `draftPrompt()`, the one function that actually builds a chapter-drafting prompt, has always called `sceneExecutionDraftStageSpec` instead. The benchmark was silently measuring a spec the product never compiled. `src/evaluation/constrained-runtime.ts` now measures `sceneExecutionDraftStageSpec` (with `repetitionConstraints`, exactly as `draftPrompt()` supplies it), matching what a real drafting turn actually sends.
+
+The corrected `drafting-context` measurement under `full`: **4,957** instruction characters, **4,202** evidence characters, 2,290 estimated input tokens (previously 1,653 / 3,296 / 1,238 for the uncalled spec). The increase reflects the real scene-execution tool-loop instructions — critics, repair, ordered acceptance, run-id continuity — that the dead spec never described. All three runtime profiles still pass: `tests/prompt-tiny-budget.test.ts` and the `draft-chapter:scene-execution` cell of the prompt-compile matrix (`tests/prompt-compile-matrix.test.ts`) confirm `sceneExecutionDraftStageSpec` fits `tiny-local`, `local`, and `full` without truncation.
+
+The other five rows above are unmodified historical measurements from the original PR and are not claimed to be current — the book-planning prompt in particular has grown across several intervening releases (public-review evidence rules, ending-contract checks). Re-baselining those is a separate, unstarted piece of work; this correction is scoped to the one row this session's fix actually changed.
+
 ## Behavior verified
 
 - Missing runtime configuration resolves to compatibility profile `full`.
